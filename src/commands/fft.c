@@ -80,9 +80,22 @@
     } \
     }
 
-// Window functions for FFTs
+//! fftwindow_rectangular - Apply a rectangular window function (i.e. no windowing) to a sample of data before
+//! Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_rectangular(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
 }
+
+//! fftwindow_hamming - Apply a Hamming window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_hamming(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
@@ -94,6 +107,13 @@ static void fftwindow_hamming(pplObj *x, const int Ndim, int *Npos, int *Nstep) 
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_hann - Apply a Hann window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_hann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
@@ -105,6 +125,13 @@ static void fftwindow_hann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_cosine - Apply a cosine window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_cosine(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
@@ -116,6 +143,13 @@ static void fftwindow_cosine(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_lanczos - Apply a Lanczos window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_lanczos(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0, z;
     int i;
@@ -130,6 +164,13 @@ static void fftwindow_lanczos(pplObj *x, const int Ndim, int *Npos, int *Nstep) 
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_bartlett - Apply a Bartlett window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_bartlett(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
@@ -143,6 +184,13 @@ static void fftwindow_bartlett(pplObj *x, const int Ndim, int *Npos, int *Nstep)
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_triangular - Apply a triangular window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_triangular(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
@@ -154,6 +202,13 @@ static void fftwindow_triangular(pplObj *x, const int Ndim, int *Npos, int *Nste
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_gauss - Apply a Gaussian window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_gauss(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     const double sigma = 0.5;
@@ -168,6 +223,14 @@ static void fftwindow_gauss(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_bartletthann - Apply a Bartlett-Hann window function to a sample of data before Fourier transforming
+//! it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_bartletthann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
@@ -182,6 +245,13 @@ static void fftwindow_bartletthann(pplObj *x, const int Ndim, int *Npos, int *Ns
         x->flagComplex = 0;
     }
 }
+
+//! fftwindow_blackman - Apply a Blackman window function to a sample of data before Fourier transforming it
+//! \param [in|out] x - The data sample, which is multiplied by the window function
+//! \param [in] Ndim - The number of dimensions of the data grid
+//! \param [in] Npos - The position of the sample along each dimension of the data grid
+//! \param [in] Nstep - The number of samples along each dimension of the data grid
+
 static void fftwindow_blackman(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     const double alpha = 0.16;
@@ -198,7 +268,14 @@ static void fftwindow_blackman(pplObj *x, const int Ndim, int *Npos, int *Nstep)
     }
 }
 
-// Main entry point for the FFT command
+//! ppl_directive_fft - Implement the fft and ifft commands, which compute the Fourier transform of data from a file
+//! or of a function sampled on a regular grid, and store the result as a new function
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     dataTable *data;
@@ -497,11 +574,13 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         int i, fnlen;
         int pos = PARSE_ifft_fnnames;
-        char *scratchpad = (char *) ppl_memAlloc(LSTR_LENGTH);
+        char *scratchpad = (char *) malloc(LSTR_LENGTH);
 
         // Allocate workspace in which to do FFT
         datagrid = (fftw_complex *) fftw_malloc(Nsamples * sizeof(fftw_complex));
-        if (datagrid == NULL) {
+        if ((datagrid == NULL) || (scratchpad == NULL)) {
+            if (datagrid != NULL) fftw_free(datagrid);
+            free(scratchpad);
             sprintf(c->errStat.errBuff, "Out of memory.");
             TBADD2(ERR_MEMORY, 0);
             return;
@@ -545,10 +624,12 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                            &errType, c->errStat.errBuff);
             if (c->errStat.status || (errPos >= 0)) {
                 fftw_free(datagrid);
+                free(scratchpad);
                 return;
             }
             if (explen2 < explen1) {
                 fftw_free(datagrid);
+                free(scratchpad);
                 strcpy(c->errStat.errBuff, "Unexpected trailing matter at the end of expression.");
                 pplExpr_free(e);
                 TBADD2(ERR_SYNTAX, 0);
@@ -558,10 +639,12 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             pplExpr_free(e);
             if (c->errStat.status) {
                 fftw_free(datagrid);
+                free(scratchpad);
                 return;
             }
             if (out->objType != PPLOBJ_NUM) {
                 fftw_free(datagrid);
+                free(scratchpad);
                 sprintf(c->errStat.errBuff,
                         "The supplied function to fit produces a value which is not a number but has type <%s>.",
                         pplObjTypeNames[out->objType]);
@@ -584,6 +667,8 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 sprintf(c->errStat.errBuff + j, ")");
                 TBADD2(ERR_NUMERICAL, 0);
                 STACK_CLEAN;
+                fftw_free(datagrid);
+                free(scratchpad);
                 return;
             }
 
@@ -598,6 +683,8 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         ppl_printUnit(c, &firstEntry, NULL, NULL, 0, 1, 0), ppl_printUnit(c, out, NULL, NULL, 1, 1, 0));
                 TBADD2(ERR_NUMERICAL, 0);
                 STACK_CLEAN;
+                fftw_free(datagrid);
+                free(scratchpad);
                 return;
             }
             (*WindowType)(out, Ndims, Npos, Nsteps); // Apply window function to data
@@ -610,6 +697,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
 #endif
             STACK_CLEAN;
         }
+        free(scratchpad);
     }
 
     // We're finished... can now free DataTable
@@ -752,7 +840,16 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
     return;
 }
 
-// Function which is called whenever an FFT function is evaluated, to extract value out of data grid
+//! ppl_fft_evaluate - Evaluate a function created by the fft command, by looking up the value of the Fourier
+//! transform at the requested point in its data grid
+//! \param [in] c - The Pyxplot context
+//! \param [in] FuncName - The name of the function, used in error messages
+//! \param [in] desc - The descriptor of the Fourier transform
+//! \param [in] in - Array of the arguments passed to the function
+//! \param [out] out - The value of the Fourier transform
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errout - Character buffer into which to write an error message, if an error occurred
+
 void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplObj *in, pplObj *out, int *status,
                       char *errout) {
     int i, j;

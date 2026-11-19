@@ -38,6 +38,10 @@
 #include "defaultObjs/defaultUnits.h"
 #include "defaultObjs/defaultVars.h"
 
+//! ppl_makeDefaultUnits - Populate the database of physical units which Pyxplot recognises, including SI, CGS,
+//! imperial, US customary, Planck and ancient units, and the SI prefixes which may be applied to them
+//! \param [in|out] context - The Pyxplot context, in which the unit database is stored
+
 void ppl_makeDefaultUnits(ppl_context *context) {
     int i = 0, j = 0;
     int unit_pos = 0;

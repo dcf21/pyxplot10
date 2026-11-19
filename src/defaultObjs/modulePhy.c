@@ -45,6 +45,16 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
+//! pplfunc_planck_Bv - Implement the function phy.Bv(nu,T) in the phy module, which returns the power emitted by a
+//! blackbody of temperature T per unit area, per unit solid angle, per unit frequency
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Bv(nu,T)";
     int i;
@@ -65,6 +75,16 @@ void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status,
             expm1(GSL_CONST_MKSA_PLANCKS_CONSTANT_H * in[0].real / GSL_CONST_MKSA_BOLTZMANN / kelvin.real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_planck_Bvmax - Implement the function phy.Bvmax(T) in the phy module, which returns the frequency of the
+//! maximum of the function Bv(nu,T)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Bvmax(T)";

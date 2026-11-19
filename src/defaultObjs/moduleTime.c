@@ -44,11 +44,31 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
+//! pplfunc_timefromUnix - Implement the function time.fromUnix(t) in the time module, which creates a date object from
+//! the specified unix time
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_timefromUnix(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromUnix(t)";
     pplObjDate(&OUTPUT, 0, in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_timefromJD - Implement the function time.fromJD(t) in the time module, which creates a date object from the
+//! specified Julian date
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timefromJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromJD(t)";
@@ -56,11 +76,31 @@ void pplfunc_timefromJD(ppl_context *c, pplObj *in, const int nArgs, int *status
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_timefromMJD - Implement the function time.fromMJD(t) in the time module, which creates a date object from
+//! the specified modified Julian date
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_timefromMJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromMJD(t)";
     pplObjDate(&OUTPUT, 0, 86400.0 * (in[0].real - 40587.0));
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_timefromCalendar - Implement the function time.fromCalendar(year,month,day,hour,min,sec) in the time module,
+//! which creates a date object from the specified calendar date. See also 'set calendar'
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromCalendar(year,month,day,hour,min,sec)";
@@ -94,6 +134,16 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_timeInterval - Implement the function time.interval(t2,t1) in the time module, which returns the numerical
+//! time interval between date objects t1 and t2
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "interval(t2,t1)";
     if (in[0].objType != PPLOBJ_DATE) {
@@ -113,6 +163,17 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *stat
     pplObjNum(&OUTPUT, 0, in[0].real - in[1].real, 0);
     CLEANUP_APPLYUNIT(UNIT_TIME);
 }
+
+//! pplfunc_timeIntervalStr - Implement the function time.intervalStr(t2,t1,<s>) in the time module, which returns a
+//! string representation of the time interval between date objects t1 and t2; a format string may optionally be
+//! supplied
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "intervalStr(t2,t1,<s>)";
@@ -183,11 +244,31 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
+//! pplfunc_timenow - Implement the function time.now() in the time module, which returns a date object representing the
+//! current time
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_timenow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "now()";
     pplObjDate(&OUTPUT, 0, (double) time(NULL));
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_timestring - Implement the function time.string(t,<s>) in the time module, which returns a string
+//! representation of the date object t; a format string may optionally be supplied
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "string(t,<s>,<timezone>)";
@@ -237,6 +318,16 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
+//! pplfunc_sleep - Implement the function time.sleep(t) in the time module, which sleeps for t seconds, or for time
+//! period t if it has dimensions of time
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "sleep(t)";
@@ -249,6 +340,16 @@ void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int
         else waitperiod = waitperiod2;
     pplObjNum(&OUTPUT, 0, 0, 0);
 }
+
+//! pplfunc_sleepUntil - Implement the function time.sleepUntil(d) in the time module, which sleeps until the specified
+//! date and time. Its argument should be a date object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;

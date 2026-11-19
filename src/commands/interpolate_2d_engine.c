@@ -38,6 +38,18 @@
 
 #include "datafile.h"
 
+//! ppl_interp2d_eval - Evaluate a two-dimensional interpolation of scattered data at a single point, using the
+//! interpolation method selected in the graph settings
+//! \param [in] c - The Pyxplot context
+//! \param [out] output - The interpolated value
+//! \param [in] sg - The graph settings, which select the interpolation method
+//! \param [in] in - The input data, stored column by column
+//! \param [in] InSize - The number of data points
+//! \param [in] ColNum - The number of the column to interpolate
+//! \param [in] NCols - The number of columns of input data
+//! \param [in] x - The x coordinate at which to evaluate the interpolation
+//! \param [in] y - The y coordinate at which to evaluate the interpolation
+
 void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph *sg, const double *in,
                        const long InSize, const int ColNum, const int NCols, const double x, const double y) {
     long i;
@@ -106,6 +118,19 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
     return;
 }
 
+//! ppl_interp2d_grid - Resample scattered data onto a regular two-dimensional grid by interpolation
+//! \param [in] c - The Pyxplot context
+//! \param [out] output - Set to point to a new data table containing the resampled data, allocated in the current
+//! ppl_memAlloc context, or NULL on failure
+//! \param [in] sg - The graph settings, which select the interpolation method and grid size
+//! \param [in] in - The input data
+//! \param [in] axis_x - The x axis, which determines the spacing of the grid in x
+//! \param [in] axis_y - The y axis, which determines the spacing of the grid in y
+//! \param [in] SampleToEdge - If true, the grid extends to the edges of the axes; otherwise grid points are placed at
+//! the centres of cells which span the axes
+//! \param [out] XSizeOut - Set to the number of grid points in the x direction
+//! \param [out] YSizeOut - Set to the number of grid points in the y direction
+
 void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, const dataTable *in,
                        pplset_axis *axis_x, pplset_axis *axis_y, const unsigned char SampleToEdge, int *XSizeOut,
                        int *YSizeOut) {
@@ -138,7 +163,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     // Extract data into a temporary array
     tempContext = ppl_memAlloc_DescendIntoNewContext();
 
-    indata = (double *) ppl_memAlloc(k * (InSize + 2) * sizeof(double));
+    indata = (double *) malloc(k * (InSize + 2) * sizeof(double));
     if (indata == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory whilst resampling data.");
         *output = NULL;
@@ -186,6 +211,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     }
 
     // Delete temporary array
+    free(indata);
     ppl_memAlloc_AscendOutOfContext(tempContext);
     return;
 }

@@ -38,6 +38,13 @@
 
 list *pplParserCmdList[27];
 
+//! ppl_parserStartNode - Open a new node in the syntax tree being built from the command list, and push it onto the
+//! stack of open nodes
+//! \param [in] c - The error-reporting context
+//! \param [in|out] stk - The stack of open nodes
+//! \param [in|out] i - The number of nodes on the stack
+//! \param [in] type - The type of the new node, one of the PN_TYPE_* constants
+
 static void ppl_parserStartNode(pplerr_context *c, parserNode **stk, int *i, const int type) {
     parserNode *newNode = (parserNode *) malloc(sizeof(parserNode));
     if (newNode == NULL) {
@@ -67,6 +74,16 @@ static void ppl_parserStartNode(pplerr_context *c, parserNode **stk, int *i, con
     stk[(*i)++] = newNode; // Add new node structure to context stack
     return;
 }
+
+//! ppl_parserRollBack - Close the node at the top of the stack of open nodes in the syntax tree being built, reading
+//! any storage information which follows its closing bracket in the command list. A fatal error is raised if the
+//! brackets in the command list are incorrectly nested.
+//! \param [in] c - The error-reporting context
+//! \param [in|out] stk - The stack of open nodes
+//! \param [in|out] i - The number of nodes on the stack
+//! \param [in] type - The type of node being closed, one of the PN_TYPE_* constants
+//! \param [in] cmdText - The text of the command list, starting at the closing bracket
+//! \param [out] NcharsTaken - Set to the number of characters of <cmdText> which were read
 
 static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int type, const char *cmdText,
                                int *NcharsTaken) {
@@ -143,6 +160,11 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
     *NcharsTaken = j;
     return;
 }
+
+//! ppl_parserInit - Build the tree describing the syntax of each of Pyxplot's commands, from the command list
+//! generated from buildScripts/parser_data.dat
+//! \param [in] c - The Pyxplot context
+//! \return Zero
 
 int ppl_parserInit(ppl_context *c) {
     pplerr_context *e = &c->errcontext;

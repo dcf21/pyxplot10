@@ -100,7 +100,13 @@ typedef struct fitComm {
 
 #define TBADD2(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
-// Routine for printing a GSL matrix in pythonesque format
+//! matrixPrint - Write a GSL matrix as a nested list, e.g. [[1,2],[3,4]]
+//! \param [in] c - The Pyxplot context
+//! \param [in] m - The matrix to print
+//! \param [in] size - The number of rows and columns in the matrix
+//! \param [out] out - Character buffer into which to write the matrix
+//! \return Pointer to <out>
+
 static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size, char *out) {
     size_t i, j, p = 0;
     strcpy(out + p, "[ [");
@@ -121,7 +127,11 @@ static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size,
     return out;
 }
 
-// Low-level routine for working out the mismatch between function and data for a given set of free parameter values
+//! fitResidual - Compute the mismatch between the function being fitted and the data, for the current values of
+//! the free parameters, as the negative log-likelihood of the data
+//! \param [in] p - The fitComm structure describing the fit
+//! \return The mismatch, or NaN if the function could not be evaluated
+
 static double fitResidual(fitComm *p) {
     ppl_context *c = p->c;
     char *errText = p->errtext;
@@ -212,6 +222,12 @@ static double fitResidual(fitComm *p) {
 
 // Slave routines called by the differentiation operation when working out the Hessian matrix
 
+//! GetHessian_diff2 - Slave routine for GetHessian_diff1(), which evaluates the residual as a function of the
+//! second of the two free parameters being differentiated with respect to
+//! \param [in] x - The trial value of the second free parameter
+//! \param [in] p_void - Pointer to the fitComm structure describing the fit
+//! \return The residual
+
 static double GetHessian_diff2(const double x, void *p_void) {
     double tmp, output;
     fitComm *p = (fitComm *) p_void;
@@ -221,6 +237,12 @@ static double GetHessian_diff2(const double x, void *p_void) {
     gsl_vector_set(p->paramValsHessian, p->diff2, tmp); // Restore old parameter value
     return output;
 }
+
+//! GetHessian_diff1 - Slave routine for GetHessian(), which evaluates the derivative of the residual with respect
+//! to the second of two free parameters, as a function of the first
+//! \param [in] x - The trial value of the first free parameter
+//! \param [in] p_void - Pointer to the fitComm structure describing the fit
+//! \return The derivative of the residual with respect to the second free parameter
 
 static double GetHessian_diff1(const double x, void *p_void) {
     double tmp, output, output_error;
@@ -238,7 +260,11 @@ static double GetHessian_diff1(const double x, void *p_void) {
     return output;
 }
 
-// Routine for working out the Hessian matrix
+//! GetHessian - Compute the Hessian matrix of second derivatives of the residual with respect to the free
+//! parameters, at their best-fitting values, using numerical differentiation
+//! \param [in] p - The fitComm structure describing the fit
+//! \return The Hessian matrix, allocated with gsl_matrix_alloc(), or NULL if it could not be computed
+
 static gsl_matrix *GetHessian(fitComm *p) {
     gsl_matrix *out;
     int i, j;
@@ -274,11 +300,23 @@ static gsl_matrix *GetHessian(fitComm *p) {
 
 // Slave routines called by minimisers
 
+//! ResidualMinimiserSlave - Cost function passed to the GSL minimiser when fitting a function to data
+//! \param [in] x - The trial values of the free parameters, in the minimiser's coordinate system
+//! \param [in] p_void - Pointer to the fitComm structure describing the fit
+//! \return The residual for these parameter values
+
 static double ResidualMinimiserSlave(const gsl_vector *x, void *p_void) {
     fitComm *p = (fitComm *) p_void;
     p->paramVals = x;
     return fitResidual(p);
 }
+
+//! FitsigmaData - Cost function passed to the GSL minimiser when estimating the uncertainty in the data, for fits
+//! where no error bars were supplied. It returns minus the log of the Bayesian evidence of the fit, as a function
+//! of the assumed uncertainty.
+//! \param [in] x - The trial value of the uncertainty, in the minimiser's coordinate system
+//! \param [in] p_void - Pointer to the fitComm structure describing the fit
+//! \return Minus the log of the evidence
 
 static double FitsigmaData(const gsl_vector *x, void *p_void) {
     double term1, term2, term3;
@@ -308,6 +346,14 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
 }
 
 // Top-level routine for managing the GSL minimiser
+
+//! FitMinimiseIterate - Run the GSL simplex minimiser repeatedly, in a sequence of coordinate systems, until the
+//! solution converges
+//! \param [in|out] commlink - The fitComm structure describing the fit; the solution is stored in it
+//! \param [in] slave - The cost function to minimise
+//! \param [in] FittingsigmaData - If true, the uncertainty in the data is being fitted, rather than the free
+//! parameters of the function
+//! \return Zero on success, or one if an error occurred
 
 static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vector *, void *),
                               const unsigned char FittingsigmaData) {
@@ -402,7 +448,14 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
     return 0;
 }
 
-// Main entry point for the implementation of the fit command
+//! ppl_directive_fit - Implement the fit command, which fits a function to data by maximum likelihood, and reports
+//! the best-fitting values of the free parameters, their uncertainties and correlations
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     int status = 0, Nargs, Nvars, NExpect, Nusing;

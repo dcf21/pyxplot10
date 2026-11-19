@@ -50,6 +50,10 @@
 #include "defaultObjs/moduleStats.h"
 #include "defaultObjs/moduleTime.h"
 
+//! ppl_makeDefaultVars - Populate the default namespace with Pyxplot's built-in variables, functions, types and
+//! modules (ast, colors, os, phy, random, stats, time, etc.)
+//! \param [in|out] out - The Pyxplot context, whose default namespace is populated
+
 void ppl_makeDefaultVars(ppl_context *out) {
     out->ns_ptr = 1;
     out->ns_branch = 0;

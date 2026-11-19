@@ -46,6 +46,12 @@
 #define MAX_HELP_DEPTH 16 // The maximum possible depth of a help hierarchy
 #define MAX_HELP_HITS  12 // The maximum possible number of help topics which match the same autocomplete strings
 
+//! help_PagerDisplay - Display a page of help text, through the user's pager if the session is interactive
+//! \param [in] c - The error-reporting context
+//! \param [in] PageName - The name of the help topic, displayed as a heading
+//! \param [in] node - The XML node containing the help text
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+
 static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *node, const int interactive) {
     xmlNode *cur_node;
     char textBuffer[LSTR_LENGTH];
@@ -129,6 +135,11 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     return;
 }
 
+//! help_TopicPrint - Write the name of a help topic, made up of a list of words
+//! \param [out] out - Character buffer into which to write the topic name
+//! \param [in] words - Array of the words making up the topic name
+//! \param [in] Nwords - The number of words in <words>
+
 static void help_TopicPrint(char *out, char **words, const int Nwords) {
     int i, j;
     for (i = 0, j = 0; i <= Nwords; i++) {
@@ -138,6 +149,18 @@ static void help_TopicPrint(char *out, char **words, const int Nwords) {
     }
     out[j] = '\0';
 }
+
+//! help_MatchFound - Record that a node in the help XML document matches the user's request. If more than one
+//! node matches, and neither is an abbreviation of the other, the request is flagged as ambiguous.
+//! \param [in] c - The error-reporting context
+//! \param [in] node - The XML node which matched
+//! \param [in|out] matchNode - Pointer to the best match found so far
+//! \param [in] topicWords - The words of the user's help request
+//! \param [in|out] matchTextPos - The position in <helpTexts> of the best match found so far
+//! \param [in|out] Nmatches - The number of matches found so far
+//! \param [in|out] ambiguous - Set to one if the request matches more than one topic
+//! \param [in] helpPosition - The names of the nodes on the path from the root of the XML document to <node>
+//! \param [in|out] helpTexts - Array of the names of all the topics which have matched
 
 static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *topicWords, int *matchTextPos,
                             int *Nmatches, int *ambiguous, char **helpPosition, char **helpTexts) {
@@ -183,6 +206,18 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
     return;
 }
 
+//! help_explore - Recursively search the help XML document for topics matching the user's request
+//! \param [in] c - The error-reporting context
+//! \param [in] node - The XML node at which to start searching
+//! \param [in|out] matchNode - Pointer to the best match found so far
+//! \param [in] topicWords - The words of the user's help request
+//! \param [in|out] matchTextPos - The position in <helpTexts> of the best match found so far
+//! \param [in|out] Nmatches - The number of matches found so far
+//! \param [in|out] ambiguous - Set to one if the request matches more than one topic
+//! \param [in|out] helpPosition - The names of the nodes on the path from the root of the XML document to <node>
+//! \param [in|out] helpTexts - Array of the names of all the topics which have matched
+//! \param [in] depth - The depth of <node> within the XML document
+
 void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *topicWords, int *matchTextPos,
                   int *Nmatches, int *ambiguous, char **helpPosition, char **helpTexts, const int depth) {
     xmlNode *cur_node = NULL;
@@ -215,6 +250,12 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
     return;
 }
 
+//! ppl_directive_help - Implement the help command, which displays help on a topic from Pyxplot's help XML document
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+
 void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplerr_context *e = &c->errcontext;
     list *topicWords = NULL; // A list of the help topic words supplied by the user
@@ -245,10 +286,12 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
         return;
     }
 
+    for (i = 0; i < MAX_HELP_DEPTH; i++) helpPosition[i] = NULL;
+    for (i = 0; i < MAX_HELP_HITS; i++) helpTexts[i] = NULL;
     for (i = 0; i < MAX_HELP_DEPTH; i++)
-        if ((helpPosition[i] = (char *) ppl_memAlloc(SSTR_LENGTH * sizeof(char))) == NULL) return;
+        if ((helpPosition[i] = (char *) malloc(SSTR_LENGTH * sizeof(char))) == NULL) goto cleanup;
     for (i = 0; i < MAX_HELP_HITS; i++)
-        if ((helpTexts[i] = (char *) ppl_memAlloc(SSTR_LENGTH * sizeof(char))) == NULL) return;
+        if ((helpTexts[i] = (char *) malloc(SSTR_LENGTH * sizeof(char))) == NULL) goto cleanup;
 
     root_element = xmlDocGetRootElement(doc);
     help_explore(e, root_element, &matchNode, topicWords, &matchTextPos, &Nmatches, &ambiguous, helpPosition, helpTexts,
@@ -264,6 +307,9 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
         help_PagerDisplay(e, helpTexts[matchTextPos], matchNode, interactive);
     }
 
+cleanup:
+    for (i = 0; i < MAX_HELP_DEPTH; i++) free(helpPosition[i]);
+    for (i = 0; i < MAX_HELP_HITS; i++) free(helpTexts[i]);
     xmlFreeDoc(doc); // Tidy up
     xmlCleanupParser();
     return;

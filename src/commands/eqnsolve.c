@@ -49,8 +49,14 @@
 #include "userspace/unitsArithmetic.h"
 #include "stringTools/strConstants.h"
 
-// Functions which we use to optimise in a log-log type space to help when
-// solutions are many orders of magnitude different from initial guess
+//! ppl_optimise_RealToLog - Transform a free parameter into the coordinate system in which the minimiser searches.
+//! On some iterations the parameter is normalised by its initial magnitude; on others it is mapped into a
+//! logarithmic space, to help find solutions which are many orders of magnitude different from the initial guess.
+//! \param [in] in - The value of the free parameter
+//! \param [in] iter - The number of the current pass of the minimiser, which selects the transformation
+//! \param [out] norm - Set to the normalisation used, on passes where the parameter is normalised
+//! \return The transformed value of the free parameter
+
 double ppl_optimise_RealToLog(const double in, const int iter, double *norm) {
     double a = -2;
 
@@ -63,6 +69,13 @@ double ppl_optimise_RealToLog(const double in, const int iter, double *norm) {
     if (in >= exp(a)) return log(in);
     else return 2 * a - log(2 * exp(a) - in);
 }
+
+//! ppl_optimise_LogToReal - Transform a free parameter from the coordinate system in which the minimiser searches
+//! back into its true value. This is the inverse of ppl_optimise_RealToLog().
+//! \param [in] in - The transformed value of the free parameter
+//! \param [in] iter - The number of the current pass of the minimiser, which selects the transformation
+//! \param [in] norm - The normalisation returned by ppl_optimise_RealToLog()
+//! \return The true value of the free parameter
 
 double ppl_optimise_LogToReal(const double in, const int iter, const double *norm) {
     double a = -2;
@@ -98,6 +111,11 @@ typedef struct MMComm {
 
 #define WORSTSCORE_INIT -(DBL_MAX / 1e10)
 
+//! printParameterValues - Write a list of the current values of the free parameters, for use in error messages
+//! \param [in] data - The state of the minimiser
+//! \param [out] output - Character buffer into which to write the list
+//! \return Pointer to <output>
+
 static char *printParameterValues(MMComm *data, char *output) {
     int i = 0, j = 0;
 
@@ -120,6 +138,12 @@ static char *printParameterValues(MMComm *data, char *output) {
 
     return output;
 }
+
+//! MultiMinSlave - Cost function passed to the GSL minimiser by the solve, minimise and maximise commands. It sets
+//! the free parameters to the values requested, and evaluates the expressions being solved or optimised.
+//! \param [in] x - The trial values of the free parameters, in the minimiser's coordinate system
+//! \param [in] params - Pointer to the MMComm structure describing the problem
+//! \return The value of the cost function, or NaN if the expressions could not be evaluated
 
 static double MultiMinSlave(const gsl_vector *x, void *params) {
     pplObj output1, output2, *tmp;
@@ -240,6 +264,11 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
     return output;
 }
 
+//! multiMinIterate - Run the GSL simplex minimiser repeatedly, in a sequence of coordinate systems, until the
+//! solution converges
+//! \param [in|out] commlink - The MMComm structure describing the problem; the solution is stored in it
+//! \param [in] pl - The compiled command line, used to report errors
+
 static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     ppl_context *c = commlink->context;
     size_t iter = 0, iter2 = 0;
@@ -349,6 +378,16 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     return;
 }
 
+//! minOrMax - Implement the minimise and maximise commands, which vary free parameters to find the minimum or
+//! maximum of an expression
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \param [in] sign - The factor by which to multiply the expression before minimising it: 1 to minimise it, or -1
+//! to maximise it
+
 static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive, const int iterDepth,
                      const double sign) {
     pplObj *stk = in->stk, *pos;
@@ -410,6 +449,14 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
     if (commlink.warnPos >= 0) ppl_warning(&c->errcontext, ERR_NUMERICAL, commlink.warntext);
     return;
 }
+
+//! ppl_directive_solve - Implement the solve command, which varies free parameters to solve a set of simultaneous
+//! equations
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
@@ -499,10 +546,26 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
     return;
 }
 
+//! ppl_directive_minimise - Implement the minimise command, which varies free parameters to find the minimum of an
+//! expression
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_minimise(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                             const int iterDepth) {
     minOrMax(c, pl, in, interactive, iterDepth, 1.0);
 }
+
+//! ppl_directive_maximise - Implement the maximise command, which varies free parameters to find the maximum of an
+//! expression
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_maximise(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                             const int iterDepth) {

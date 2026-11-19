@@ -58,6 +58,15 @@
         strcpy(X, Y); \
     }
 
+//! pplfunc_osChdir - Implement the function os.chdir(x) in the os module, which changes working directory to x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osChdir(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
@@ -75,39 +84,129 @@ void pplfunc_osChdir(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     c->errcontext.session_default.cwd[FNAME_LENGTH - 1] = '\0';
 }
 
+//! pplfunc_osGetCwd - Implement the function os.getcwd() in the os module, which returns the path of the current
+//! working directory
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osGetCwd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *tmp;
     COPYSTR(tmp, c->errcontext.session_default.cwd);
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
+//! pplfunc_osGetEgid - Implement the function os.getegid() in the os module, which returns the effective group id of
+//! the Pyxplot process
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osGetEgid(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjNum(&OUTPUT, 0, getegid(), 0);
 }
+
+//! pplfunc_osGetEuid - Implement the function os.geteuid() in the os module, which returns the effective user id of the
+//! Pyxplot process
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetEuid(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjNum(&OUTPUT, 0, geteuid(), 0);
 }
 
+//! pplfunc_osGetGid - Implement the function os.getgid() in the os module, which returns the group id of the Pyxplot
+//! process
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osGetGid(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjNum(&OUTPUT, 0, getgid(), 0);
 }
+
+//! pplfunc_osGetPid - Implement the function os.getpid() in the os module, which returns the process id of the Pyxplot
+//! process
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetPid(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjNum(&OUTPUT, 0, getpid(), 0);
 }
 
+//! pplfunc_osGetPgrp - Implement the function os.getpgrp() in the os module, which returns the process group id of the
+//! Pyxplot process
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osGetPgrp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjNum(&OUTPUT, 0, getpgrp(), 0);
 }
+
+//! pplfunc_osGetPpid - Implement the function os.getppid() in the os module, which returns the parent process id of the
+//! Pyxplot process
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetPpid(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjNum(&OUTPUT, 0, getppid(), 0);
 }
 
+//! pplfunc_osGetUid - Implement the function os.getuid() in the os module, which returns the user id of the Pyxplot
+//! process
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osGetUid(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjNum(&OUTPUT, 0, getuid(), 0);
 }
+
+//! pplfunc_osGetHome - Implement the function os.gethomedir() in the os module, which returns the path of the user's
+//! home directory
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetHome(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *out, *tmp;
@@ -123,6 +222,15 @@ void pplfunc_osGetHome(ppl_context *c, pplObj *in, const int nArgs, int *status,
     pplObjStr(&OUTPUT, 0, 1, out);
     return;
 }
+
+//! pplfunc_osGetHost - Implement the function os.gethostname() in the os module, which returns the system's host name
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetHost(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const int outlen = FNAME_LENGTH;
@@ -140,6 +248,16 @@ void pplfunc_osGetHost(ppl_context *c, pplObj *in, const int nArgs, int *status,
     return;
 }
 
+//! pplfunc_osGetLogin - Implement the function os.getlogin() in the os module, which returns the system login of the
+//! user
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osGetLogin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *out, *tmp;
     tmp = getlogin();
@@ -155,6 +273,15 @@ void pplfunc_osGetLogin(ppl_context *c, pplObj *in, const int nArgs, int *status
     return;
 }
 
+//! pplfunc_osGetRealName - Implement the function os.getrealname() in the os module, which returns the user's real name
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osGetRealName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *out, *tmp;
     tmp = ppl_unixGetIRLName(&c->errcontext);
@@ -169,6 +296,16 @@ void pplfunc_osGetRealName(ppl_context *c, pplObj *in, const int nArgs, int *sta
     pplObjStr(&OUTPUT, 0, 1, out);
     return;
 }
+
+//! pplfunc_osGlob - Implement the function os.glob(x) in the os module, which returns a list of files which match the
+//! supplied wildcard
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     wordexp_t w;
@@ -214,6 +351,16 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     return;
 }
 
+//! pplfunc_osPopen - Implement the function os.popen(x[,y]) in the os module, which opens a pipe to the command x with
+//! access mode y, and returns a file object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     FILE *f;
     char *mode;
@@ -240,6 +387,16 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     }
     pplObjFile(&OUTPUT, 0, 1, f, 1);
 }
+
+//! pplfunc_osStat - Implement the function os.stat(x) in the os module, which returns a dictionary of information about
+//! the file x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *tmp, permissions[] = "---------";
@@ -319,6 +476,15 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     return;
 }
 
+//! pplfunc_osSystem - Implement the function os.system(x) in the os module, which executes a command in a subshell
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osSystem(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
@@ -329,9 +495,29 @@ void pplfunc_osSystem(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     pplObjNum(&OUTPUT, 0, system((char *) in[0].auxil), 0);
 }
 
+//! pplfunc_osTmpfile - Implement the function os.tmpfile() in the os module, which returns a file handle for a
+//! temporary file
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osTmpfile(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjFile(&OUTPUT, 0, 1, tmpfile(), 0);
 }
+
+//! pplfunc_osUname - Implement the function os.uname() in the os module, which returns a dictionary of information
+//! about the operating system
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *tmp;
@@ -373,6 +559,16 @@ void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 // Path operations
 
+//! pplfunc_osPathExists - Implement the function os.path.exists(x) in the os.path module, which returns a boolean flag
+//! indicating whether a file with pathname x exists
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osPathExists(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
@@ -382,6 +578,16 @@ void pplfunc_osPathExists(ppl_context *c, pplObj *in, const int nArgs, int *stat
     }
     pplObjBool(&OUTPUT, 0, !access((char *) in[0].auxil, F_OK));
 }
+
+//! pplfunc_osPathFilesize - Implement the function os.path.filesize(x) in the os.path module, which returns the size,
+//! in bytes, of the file with pathname x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
@@ -402,6 +608,16 @@ void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *st
     CLEANUP_APPLYUNIT(UNIT_BIT);
 }
 
+//! pplfunc_osPathATime - Implement the function os.path.atime(x) in the os.path module, which returns a date object
+//! representing the time of the last access of the file with pathname x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
     int st;
@@ -419,6 +635,16 @@ void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *statu
     }
     pplObjDate(&OUTPUT, 0, buffer.st_atime);
 }
+
+//! pplfunc_osPathCTime - Implement the function os.path.ctime(x) in the os.path module, which returns a date object
+//! representing the time of the last status change to the file with pathname x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
@@ -438,6 +664,16 @@ void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
     pplObjDate(&OUTPUT, 0, buffer.st_ctime);
 }
 
+//! pplfunc_osPathMTime - Implement the function os.path.mtime(x) in the os.path module, which returns a date object
+//! representing the time of the last modification of the file with pathname x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
     int st;
@@ -455,6 +691,16 @@ void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
     }
     pplObjDate(&OUTPUT, 0, buffer.st_mtime);
 }
+
+//! pplfunc_osPathExpandUser - Implement the function os.path.expanduser(x) in the os.path module, which returns its
+//! argument with ~s indicating home directories expanded
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osPathExpandUser(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const int outlen = LSTR_LENGTH;
@@ -476,6 +722,16 @@ void pplfunc_osPathExpandUser(ppl_context *c, pplObj *in, const int nArgs, int *
     pplObjStr(&OUTPUT, 0, 1, out);
     return;
 }
+
+//! pplfunc_osPathJoin - Implement the function os.path.join(...) in the os.path module, which joins a series of strings
+//! intelligently into a pathname
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const int outstep = FNAME_LENGTH;

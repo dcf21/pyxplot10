@@ -98,6 +98,9 @@
         OUT = out; \
     }
 
+//! tics_rm - Free the list of manually-specified tick positions and labels stored in a tick descriptor
+//! \param [in|out] a - The tick descriptor
+
 static void tics_rm(pplset_tics *a) {
     a->tickMinSet = a->tickMaxSet = a->tickStepSet = 0;
     if (a->tickList != NULL) {
@@ -111,6 +114,11 @@ static void tics_rm(pplset_tics *a) {
         a->tickStrs = NULL;
     }
 }
+
+//! tics_cp - Make a deep copy of a tick descriptor, including its list of manually-specified tick positions and
+//! labels
+//! \param [out] o - The copy
+//! \param [in] i - The tick descriptor to copy
 
 static void tics_cp(pplset_tics *o, pplset_tics *i) {
     *o = *i;
@@ -333,6 +341,12 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
             (T).tickStrs[i] = NULL; \
         } \
     }
+
+//! ppl_directive_set - Implement the set and unset commands, which change Pyxplot's settings
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive) {
     pplset_graph *sg;
@@ -2331,7 +2345,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
         if (got2 || got3) {
             int i;
-            char *buf = (char *) ppl_memAlloc(LSTR_LENGTH);
+            char *buf = (char *) malloc(LSTR_LENGTH);
             PreferredUnit *pu;
             if (buf == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
@@ -2348,6 +2362,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     ppl_newPreferredUnit(c, &pu, tempstr, 0, &errpos, buf);
                     if (errpos >= 0) {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, buf);
+                        free(pu);
                         continue;
                     }
 
@@ -2372,7 +2387,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
                     // Add new preferred unit
                     if (i == 0) ppl_listAppendCpy(c->unit_PreferredUnits, (void *) pu, sizeof(PreferredUnit));
+                    free(pu);
                 }
+            free(buf);
         }
 
         // set unit of length meter

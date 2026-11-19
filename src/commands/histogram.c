@@ -57,11 +57,24 @@
     } \
     }
 
+//! hcompare - Comparison function for sorting arrays of doubles into ascending order with qsort()
+//! \param [in] x - Pointer to the first double
+//! \param [in] y - Pointer to the second double
+//! \return -1, 0 or 1 if the first double is less than, equal to or greater than the second
+
 static int hcompare(const void *x, const void *y) {
     if (*((const double *) x) > *((const double *) y)) return 1.0;
     else if (*((const double *) x) < *((const double *) y)) return -1.0;
     else return 0.0;
 }
+
+//! ppl_directive_histogram - Implement the histogram command, which bins data from a file into a histogram, and
+//! stores it as a new function
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                              const int iterDepth) {
@@ -562,6 +575,16 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     ppl_memAlloc_AscendOutOfContext(contextLocalVec);
     return;
 }
+
+//! ppl_histogram_evaluate - Evaluate a function created by the histogram command, by looking up the bin which
+//! contains the requested value
+//! \param [in] c - The Pyxplot context
+//! \param [in] FuncName - The name of the function, used in error messages
+//! \param [in] desc - The descriptor of the histogram
+//! \param [in] in - The argument passed to the function
+//! \param [out] out - The value of the histogram
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errout - Character buffer into which to write an error message, if an error occurred
 
 void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor *desc, pplObj *in, pplObj *out,
                             int *status, char *errout) {

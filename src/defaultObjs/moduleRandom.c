@@ -52,11 +52,24 @@
 
 static gsl_rng *rndgen = NULL; // Random number generator
 
+//! pplfunc_setRandomSeed - Seed the random number generator used by the random module, creating it if necessary
+//! \param [in] i - The seed
+
 void pplfunc_setRandomSeed(const long i) {
     if (rndgen == NULL) rndgen = gsl_rng_alloc(gsl_rng_default);
     gsl_rng_set(rndgen, i);
     return;
 }
+
+//! pplfunc_frandom - Implement the function random.random() in the random module, which returns a random number between
+//! 0 and 1
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandom(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if (rndgen == NULL) {
@@ -65,6 +78,16 @@ void pplfunc_frandom(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     }
     OUTPUT.real = gsl_rng_uniform(rndgen);
 }
+
+//! pplfunc_frandombin - Implement the function random.binomial(p,n) in the random module, which returns a random sample
+//! from a binomial distribution with n independent trials and a success probability p
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomial(p,n)";
@@ -77,6 +100,16 @@ void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_frandomcs - Implement the function random.chisq(nu) in the random module, which returns a random sample from
+//! a chi-squared distribution with nu degrees of freedom
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisq(nu)";
     if (rndgen == NULL) {
@@ -87,6 +120,16 @@ void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status,
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_frandomg - Implement the function random.gaussian(sigma) in the random module, which returns a random sample
+//! from a Gaussian (normal) distribution of standard deviation sigma
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussian(sigma)";
     if (rndgen == NULL) {
@@ -96,6 +139,16 @@ void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     OUTPUT.real = gsl_ran_gaussian(rndgen, in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_frandomln - Implement the function random.lognormal(zeta,sigma) in the random module, which returns a random
+//! sample from the log normal distribution centred on zeta, and of width sigma
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormal(zeta,sigma)";
@@ -111,6 +164,16 @@ void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status,
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
+//! pplfunc_frandomp - Implement the function random.poisson(n) in the random module, which returns a random integer
+//! from a Poisson distribution with mean n
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poisson(n)";
     if (rndgen == NULL) {
@@ -120,6 +183,16 @@ void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     OUTPUT.real = gsl_ran_poisson(rndgen, in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_frandomt - Implement the function random.tdist(nu) in the random module, which returns a random sample from
+//! a t-distribution with nu degrees of freedom
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandomt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdist(nu)";

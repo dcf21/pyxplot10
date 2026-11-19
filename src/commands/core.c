@@ -71,6 +71,12 @@
 
 #define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
+//! ppl_directive_assert - Implement the assert command, which raises an error if an expression is false, or if a
+//! version requirement is not met
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+
 void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     pplObj *stk = in->stk;
     int lt;
@@ -152,6 +158,11 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
     return;
 }
 
+//! ppl_directive_cd - Implement the cd command, which changes the current working directory
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+
 void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     pplObj *stk = in->stk;
     int pos = PARSE_cd_path;
@@ -198,6 +209,13 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
     return;
 }
 
+//! ppl_directive_exec - Implement the exec command, which executes a string as a Pyxplot command
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                         const int iterDepth) {
     pplObj *stk = in->stk;
@@ -226,6 +244,14 @@ void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput
     ppl_parserStatFree(&ps2);
     return;
 }
+
+//! ppl_directive_global - Implement the global command, which declares that variables referred to within a
+//! subroutine should refer to global variables, rather than local ones
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                           const int iterDepth) {
@@ -276,6 +302,12 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
     return;
 }
 
+//! ppl_directive_history - Implement the history command, which displays the commands typed in the current
+//! interactive session
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+
 void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOutput *in) {
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
@@ -300,6 +332,14 @@ void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOut
     return;
 #endif
 }
+
+//! ppl_directive_load - Implement the load command, which executes the commands in a script file, or in all files
+//! matching a wildcard
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                         const int iterDepth) {
@@ -350,6 +390,14 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
     return;
 }
 
+//! ppl_directive_local - Implement the local command, which declares that variables referred to within a subroutine
+//! should be local to it
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
     pplObj *stk = in->stk;
@@ -383,6 +431,11 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
     }
     return;
 }
+
+//! ppl_directive_print - Implement the print command, which displays the values of a list of expressions
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     pplObj *stk = in->stk;
@@ -421,6 +474,12 @@ void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutpu
     }
     return;
 }
+
+//! ppl_directive_save - Implement the save command, which writes the commands typed in the current interactive
+//! session to a file
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput *in) {
 #ifdef HAVE_READLINE
@@ -466,6 +525,13 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
 #endif
 }
 
+//! ppl_directive_seterror - Implement the "set xerrorbars" family of commands, which select a plot style with
+//! error bars
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+
 void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplObj *o = &in->stk[PARSE_set_error_set_option];
     char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
@@ -489,6 +555,13 @@ void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *
     return;
 }
 
+//! ppl_directive_unseterror - Implement the "unset xerrorbars" family of commands, which revert the default plot
+//! style
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+
 void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplObj *o = &in->stk[PARSE_set_error_set_option];
     char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
@@ -511,6 +584,14 @@ void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput
     }
     return;
 }
+
+//! ppl_directive_varset - Implement assignments to variables, including hierarchical names such as a.b and
+//! subscripted names such as a[2], and the =~ string substitution operator
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                           const int iterDepth) {

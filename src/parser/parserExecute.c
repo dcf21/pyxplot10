@@ -50,6 +50,10 @@
 
 #define TBADD(et, pos) ppl_tbAdd(c, in->srcLineN, in->srcId, in->srcFname, 0, et, pos, in->linetxt, NULL)
 
+//! ppl_parserLinePrint - Print a description of a compiled command line and its atoms, for debugging
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The compiled command line to print
+
 void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
     char *t = c->errcontext.tempErrStr;
     parserAtom *a = in->firstAtom;
@@ -77,6 +81,9 @@ void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
     return;
 }
 
+//! ppl_parserOutFree - Free the output stack of an executed command, releasing references to the objects in it
+//! \param [in] in - The parser output to free. The structure itself is not freed.
+
 void ppl_parserOutFree(parserOutput *in) {
     int i;
     if (in == NULL) return;
@@ -100,6 +107,15 @@ void ppl_parserOutFree(parserOutput *in) {
 
 #define STACK_CLEAN \
     while (c->stackPtr > stkLevelOld) { STACK_POP; }
+
+//! ppl_parserExecute - Execute a compiled command line: evaluate its atoms to fill an output stack, and pass the
+//! result to ppl_parserShell() to run the command
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The compiled command line to execute
+//! \param [in] dirName - If not NULL, only commands of this type are allowed (used for sections of configuration
+//! files, e.g. "set")
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, const int interactive,
                        const int iterDepth) {

@@ -57,6 +57,11 @@
         } \
     }
 
+//! strDup - Copy the first N characters of a string into a newly malloced, null-terminated string
+//! \param [in] in - The string to copy
+//! \param [in] N - The number of characters to copy
+//! \return The copy, or NULL if memory allocation failed
+
 static char *strDup(const char *in, int N) {
     char *out = (char *) malloc(N + 1);
     if (out == NULL) return NULL;
@@ -64,6 +69,15 @@ static char *strDup(const char *in, int N) {
     out[N] = '\0';
     return out;
 }
+
+//! ppl_parserAtomAdd - Append an atom to a compiled command line. Each atom places one value (a literal, or the
+//! result of evaluating an expression) into a position in the output stack when the command is executed.
+//! \param [in|out] in - The compiled command line
+//! \param [in] stackOutPos - The position in the output stack at which to place the value
+//! \param [in] linePos - The position of the value within the command line, used to report errors
+//! \param [in] options - String of characters listing the types of value which are allowed, e.g. "d" for an integer
+//! \param [in] expr - An expression to evaluate to obtain the value, or NULL if <literal> is given
+//! \param [in] literal - A literal value to place in the stack, or NULL if <expr> is given
 
 void ppl_parserAtomAdd(parserLine *in, const int stackOutPos, const int linePos, const char *options, pplExpr *expr,
                        const pplObj *literal) {
@@ -93,6 +107,28 @@ void ppl_parserAtomAdd(parserLine *in, const int stackOutPos, const int linePos,
     }
     in->lastAtom = output;
 }
+
+//! parse_descend - Recursively match a command line against a node of the tree which describes the syntax of
+//! Pyxplot's commands, writing atoms describing the values matched into a compiled command line
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] s - The parser status, which tracks the progress of compiling multi-line blocks of commands
+//! \param [in] writeOut - If true, write atoms into the compiled command line; otherwise only test for a match
+//! \param [in] srcLineN - The line number of the source of the command, used to report errors
+//! \param [in] srcId - The ID of the source of the command, used to report errors
+//! \param [in] srcFname - The filename of the source of the command, used to report errors
+//! \param [in] line - The command line being compiled
+//! \param [in|out] linepos - The position in <line> reached so far
+//! \param [in] node - The syntax node to match, or NULL to resume matching a sequence of nodes descended out of on a
+//! previous line
+//! \param [in|out] tabCompNo - When performing tab completion, the number of the completion requested; NULL otherwise
+//! \param [in] tabCompStart - When performing tab completion, the position in <line> at which the word being
+//! completed starts, or -1 otherwise
+//! \param [out] tabCompTxt - Character buffer into which to write the tab completion, if requested
+//! \param [in] level - The depth of <node> within the syntax tree
+//! \param [in] blockDepth - The depth of nesting of code blocks
+//! \param [out] match - Set to true if the command line matched the node
+//! \return 0 if the command line did not match, 1 if it matched, 2 if a tab completion was found, or 3 if another
+//! line of input is required
 
 static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, const int srcLineN, const long srcId,
                          char *srcFname, char *line, int *linepos, parserNode *node, int *tabCompNo,
@@ -1072,6 +1108,9 @@ cleanup:
     return status;
 }
 
+//! ppl_parserAtomFree - Free a linked list of atoms, including any expressions and literals they contain
+//! \param [in|out] in - Pointer to the first atom in the list, which is set to NULL
+
 void ppl_parserAtomFree(parserAtom **in) {
     parserAtom *i;
     if (in == NULL) return;
@@ -1087,6 +1126,11 @@ void ppl_parserAtomFree(parserAtom **in) {
     return;
 }
 
+//! ppl_parserStatInit - Create a new parser status structure, which tracks the progress of compiling multi-line
+//! blocks of commands
+//! \param [out] in - Set to point to the new parser status, or NULL if memory allocation failed
+//! \param [in] pl - Pointer to the variable which will hold the root compiled command line
+
 void ppl_parserStatInit(parserStatus **in, parserLine **pl) {
     *in = (parserStatus *) malloc(sizeof(parserStatus));
     if (*in == NULL) return;
@@ -1095,6 +1139,9 @@ void ppl_parserStatInit(parserStatus **in, parserLine **pl) {
     ppl_parserStatReInit(*in);
     return;
 }
+
+//! ppl_parserStatReInit - Reset a parser status structure, freeing any partially-compiled block of commands
+//! \param [in|out] in - The parser status to reset
 
 void ppl_parserStatReInit(parserStatus *in) {
     int i, j;
@@ -1115,6 +1162,12 @@ void ppl_parserStatReInit(parserStatus *in) {
     return;
 }
 
+//! ppl_parserStatAdd - Append a compiled command line to the chain of command lines being compiled at a given depth
+//! of nesting of code blocks
+//! \param [in|out] in - The parser status
+//! \param [in] bd - The depth of nesting of code blocks
+//! \param [in] pl - The compiled command line to append
+
 void ppl_parserStatAdd(parserStatus *in, const int bd, parserLine *pl) {
     if (in->pl[bd] != NULL) {
         pl->prev = in->pl[bd];
@@ -1128,6 +1181,9 @@ void ppl_parserStatAdd(parserStatus *in, const int bd, parserLine *pl) {
     return;
 }
 
+//! ppl_parserStatFree - Free a parser status structure, including any partially-compiled block of commands
+//! \param [in|out] in - Pointer to the parser status, which is set to NULL
+
 void ppl_parserStatFree(parserStatus **in) {
     parserLine **pl = (*in)->rootpl;
     if (*pl != NULL) ppl_parserLineFree(*pl);
@@ -1135,6 +1191,13 @@ void ppl_parserStatFree(parserStatus **in) {
     free(*in);
     *in = NULL;
 }
+
+//! ppl_parserLineInit - Create a new, empty compiled command line
+//! \param [out] in - Set to point to the new compiled command line, or NULL if memory allocation failed
+//! \param [in] srcLineN - The line number of the source of the command, used to report errors
+//! \param [in] srcId - The ID of the source of the command, used to report errors
+//! \param [in] srcFname - The filename of the source of the command, used to report errors
+//! \param [in] line - The text of the command, which is copied
 
 void ppl_parserLineInit(parserLine **in, const int srcLineN, const long srcId, char *srcFname, char *line) {
     parserLine *output = NULL;
@@ -1170,6 +1233,10 @@ void ppl_parserLineInit(parserLine **in, const int srcLineN, const long srcId, c
     *in = output;
     return;
 }
+
+//! ppl_parserLineFree - Free a chain of compiled command lines, including their atoms and any code blocks nested
+//! within them
+//! \param [in] in - The first compiled command line in the chain
 
 void ppl_parserLineFree(parserLine *in) {
     parserLine *item = in;
@@ -1224,6 +1291,19 @@ void ppl_parserLineFree(parserLine *in) {
         break; \
     } \
     LOOP_END(0)
+
+//! ppl_parserCompile - Compile a command line into a sequence of atoms which can be executed by ppl_parserExecute().
+//! Lines which open code blocks, e.g. for loops, are accumulated in the parser status until the block is closed.
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] s - The parser status, which tracks the progress of compiling multi-line blocks of commands
+//! \param [in] srcLineN - The line number of the source of the command, used to report errors
+//! \param [in] srcId - The ID of the source of the command, used to report errors
+//! \param [in] srcFname - The filename of the source of the command, used to report errors
+//! \param [in] line - The command line to compile
+//! \param [in] expandMacros - If true, expand macros and backtick substitutions now; otherwise, if the line contains
+//! any, store it to be compiled when it is executed
+//! \param [in] blockDepth - The depth of nesting of code blocks
+//! \return Zero on success, or one if an error occurred, in which case <c->errStat> describes it
 
 int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const long srcId, char *srcFname, char *line,
                       const int expandMacros, const int blockDepth) {
@@ -1500,10 +1580,20 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 #ifdef HAVE_READLINE
 static ppl_context *rootContext = NULL;
 
+//! ppl_parseAutocompleteSetContext - Set the Pyxplot context used by readline's tab completion callbacks
+//! \param [in] c - The Pyxplot context
+
 void ppl_parseAutocompleteSetContext(ppl_context *c) {
     rootContext = c;
     return;
 }
+
+//! ppl_parseAutocomplete - Readline generator function, which returns successive tab completions for the command
+//! line being typed
+//! \param [in] dummy - The word being completed (unused; the whole line is read from readline's buffer)
+//! \param [in] status - Zero or more to return the Nth completion; a negative value -1-N to reset the generator to
+//! complete the word starting at position N of the line
+//! \return The next completion, in a newly malloced string, or NULL when there are no more
 
 char *ppl_parseAutocomplete(const char *dummy, const int status) {
     static int matchNum = 0, start = 0;
@@ -1584,6 +1674,13 @@ char *ppl_parseAutocomplete(const char *dummy, const int status) {
     }
     return NULL; // Tell readline we have no more matches to offer
 }
+
+//! ppl_rl_completion - Readline attempted-completion callback, which offers completions of Pyxplot command words,
+//! falling back to filename completion within quoted strings
+//! \param [in] text - The word being completed
+//! \param [in] start - The position of the start of the word within the line
+//! \param [in] end - The position of the end of the word within the line
+//! \return Array of completions, or NULL to request readline's default filename completion
 
 char **ppl_rl_completion(const char *text, const int start, const int end) {
     char **matches;

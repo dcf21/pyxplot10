@@ -49,6 +49,12 @@ typedef struct Lcdm_comm {
     double OmegaM, OmegaL, H, t;
 } Lcdm_comm;
 
+//! __Lcdm_DA_integrand - The integrand used to compute the angular-size distance in a Lambda-CDM cosmology, 1/E(z),
+//! following Hogg (1999), astro-ph/9905116. Passed to the GSL integration routines.
+//! \param [in] z - Redshift
+//! \param [in] params - Pointer to an Lcdm_comm structure holding the cosmological parameters
+//! \return The value of the integrand
+
 double __Lcdm_DA_integrand(const double z, void *params) {
     // All equations below are from
     // Distance Measured in Cosmology
@@ -60,6 +66,12 @@ double __Lcdm_DA_integrand(const double z, void *params) {
                  p->OmegaL); // Eq (14), as substituted into eq (15) and (16). Assume omega_k is zero
 }
 
+//! __Lcdm_t_integrand - The integrand used to compute the age of the Universe at a given redshift in a Lambda-CDM
+//! cosmology, following Carroll & Press, equation (16). Passed to the GSL integration routines.
+//! \param [in] z - Redshift
+//! \param [in] params - Pointer to an Lcdm_comm structure holding the cosmological parameters
+//! \return The value of the integrand
+
 double __Lcdm_t_integrand(const double z, void *params) {
     // The equations for the following are taken from:
     // THE COSMOLOGICAL CONSTANT
@@ -70,11 +82,25 @@ double __Lcdm_t_integrand(const double z, void *params) {
 }
 
 
+//! Lcdm_age - Compute the current age of the Universe in a Lambda-CDM cosmology, using the approximation of Carroll
+//! & Press
+//! \param [in] H - The Hubble constant, in s^-1
+//! \param [in] OmegaM - The density of matter, as a fraction of the critical density
+//! \param [in] OmegaL - The density of dark energy, as a fraction of the critical density
+//! \return The age of the Universe, in seconds
+
 double Lcdm_age(const double H, const double OmegaM, const double OmegaL) {
     const double OmegaA = OmegaM - 0.3 * (OmegaM + OmegaL) + 0.3;
     if (OmegaA <= 1.0) return 2.0 / 3.0 / H * gsl_asinh(sqrt(fabs(1.0 - OmegaA) / OmegaA)) / sqrt(fabs(1.0 - OmegaA));
     else return 2.0 / 3.0 / H * asin(sqrt(fabs(1.0 - OmegaA) / OmegaA)) / sqrt(fabs(1.0 - OmegaA));
 }
+
+//! Lcdm_DA - Compute the angular-size distance to an object at a given redshift in a Lambda-CDM cosmology
+//! \param [in] z - The redshift of the object
+//! \param [in] H - The Hubble constant, in s^-1
+//! \param [in] OmegaM - The density of matter, as a fraction of the critical density
+//! \param [in] OmegaL - The density of dark energy, as a fraction of the critical density
+//! \return The angular-size distance, in metres, or NaN if it could not be computed
 
 double Lcdm_DA(const double z, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
@@ -96,6 +122,13 @@ double Lcdm_DA(const double z, const double H, const double OmegaM, const double
     return (GSL_CONST_MKSA_SPEED_OF_LIGHT / H) * result / (1 + z);
 }
 
+//! Lcdm_t_from_z - Compute the age of the Universe at a given redshift in a Lambda-CDM cosmology
+//! \param [in] z - The redshift
+//! \param [in] H - The Hubble constant, in s^-1
+//! \param [in] OmegaM - The density of matter, as a fraction of the critical density
+//! \param [in] OmegaL - The density of dark energy, as a fraction of the critical density
+//! \return The age of the Universe at redshift <z>, in seconds, or NaN if it could not be computed
+
 double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
     gsl_integration_workspace *ws;
@@ -116,10 +149,24 @@ double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const 
     return (1 / H) * result;
 }
 
+//! __Lcdm_z_from_t_slave - Cost function minimised by Lcdm_z_from_t(), which is the absolute difference between the
+//! age of the Universe at a trial redshift and the target age
+//! \param [in] z - The base-10 logarithm of the trial redshift
+//! \param [in] params - Pointer to an Lcdm_comm structure holding the cosmological parameters and the target age
+//! \return The absolute difference between the age at the trial redshift and the target age, in seconds
+
 double __Lcdm_z_from_t_slave(const double z, void *params) {
     Lcdm_comm *p = (Lcdm_comm *) params;
     return fabs(Lcdm_t_from_z(pow(10.0, z), p->H, p->OmegaM, p->OmegaL) - p->t);
 }
+
+//! Lcdm_z_from_t - Compute the redshift at which the Universe had a given age, in a Lambda-CDM cosmology, by
+//! numerically inverting Lcdm_t_from_z()
+//! \param [in] t - The age of the Universe, in seconds
+//! \param [in] H - The Hubble constant, in s^-1
+//! \param [in] OmegaM - The density of matter, as a fraction of the critical density
+//! \param [in] OmegaL - The density of dark energy, as a fraction of the critical density
+//! \return The redshift, or NaN if it could not be computed
 
 double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
@@ -180,6 +227,16 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
         return; \
     }
 
+//! pplfunc_Lcdm_age - Implement the function ast.Lcdm_age(H0,w_m,w_l) in the ast module, which returns the current age
+//! of the Universe in an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(H0,w_m,w_l)";
     int i;
@@ -188,6 +245,16 @@ void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     CLEANUP_APPLYUNIT(UNIT_TIME);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_Lcdm_angscale - Implement the function ast.Lcdm_angscale(z,H0,w_m,w_l) in the ast module, which returns the
+//! angular scale of the sky in distance per unit angle for an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(z,H0,w_m,w_l)";
@@ -200,6 +267,16 @@ void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *sta
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_Lcdm_DA - Implement the function ast.Lcdm_DA(z,H0,w_m,w_l) in the ast module, which returns the angular size
+//! distance corresponding to redshift z in an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DA(z,H0,w_m,w_l)";
     int i;
@@ -209,6 +286,16 @@ void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CLEANUP_APPLYUNIT(UNIT_LENGTH);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_Lcdm_DL - Implement the function ast.Lcdm_DL(z,H0,w_m,w_l) in the ast module, which returns the luminosity
+//! distance corresponding to redshift z in an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DL(z,H0,w_m,w_l)";
@@ -220,6 +307,16 @@ void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_Lcdm_DM - Implement the function ast.Lcdm_DM(z,H0,w_m,w_l) in the ast module, which returns the comoving
+//! distance corresponding to redshift z in an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DM(z,H0,w_m,w_l)";
     int i;
@@ -229,6 +326,16 @@ void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CLEANUP_APPLYUNIT(UNIT_LENGTH);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_Lcdm_t - Implement the function ast.Lcdm_t(z,H0,w_m,w_l) in the ast module, which returns the lookback time
+//! corresponding to redshift z in an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_t(z,H0,w_m,w_l)";
@@ -240,6 +347,16 @@ void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_Lcdm_z - Implement the function ast.Lcdm_z(t,H0,w_m,w_l) in the ast module, which returns the redshift
+//! corresponding to a lookback time t in an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_z(t,H0,w_m,w_l)";
     int i;
@@ -248,6 +365,16 @@ void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     OUTPUT.real = Lcdm_z_from_t(in[0].real, in[1].real, in[2].real, in[3].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_sidereal_time - Implement the function ast.siderealTime(d) in the ast module, which returns the sidereal
+//! time at Greenwich at time d, specified either as a date object or a Unix time
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "siderealTime(d)";
@@ -273,6 +400,16 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
     CLEANUP_APPLYUNIT(UNIT_ANGLE);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_moonphase - Implement the function ast.moonPhase(d) in the ast module, which returns the phase of the Moon
+//! at time d, specified either as a date object or a Unix time
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "moonPhase(d)";

@@ -38,6 +38,11 @@
     *dq = gsl_complex_add(*dq, gsl_complex_mul(g, c)); \
     c = gsl_complex_mul(c, zd)
 
+//! airy_series_y1 - Evaluate the first of the two Maclaurin series from which the Airy functions are built,
+//! f(z) = 1 + z^3/3! + 1*4 z^6/6! + ... (Abramowitz & Stegun 10.4.3)
+//! \param [in] z - The point at which to evaluate the series
+//! \return The value of the series
+
 gsl_complex airy_series_y1(gsl_complex z) {
     int i;
     gsl_complex c, d;
@@ -52,6 +57,10 @@ gsl_complex airy_series_y1(gsl_complex z) {
     }
     return d;
 }
+
+//! airy_series_y1_diff - Evaluate the derivative of the series f(z) computed by airy_series_y1()
+//! \param [in] z - The point at which to evaluate the derivative
+//! \return The derivative of the series
 
 gsl_complex airy_series_y1_diff(gsl_complex z) {
     int i;
@@ -68,6 +77,11 @@ gsl_complex airy_series_y1_diff(gsl_complex z) {
     return d;
 }
 
+//! airy_series_y2 - Evaluate the second of the two Maclaurin series from which the Airy functions are built,
+//! g(z) = z + 2 z^4/4! + 2*5 z^7/7! + ... (Abramowitz & Stegun 10.4.3)
+//! \param [in] z - The point at which to evaluate the series
+//! \return The value of the series
+
 gsl_complex airy_series_y2(gsl_complex z) {
     int i;
     gsl_complex c, d;
@@ -82,6 +96,10 @@ gsl_complex airy_series_y2(gsl_complex z) {
     }
     return d;
 }
+
+//! airy_series_y2_diff - Evaluate the derivative of the series g(z) computed by airy_series_y2()
+//! \param [in] z - The point at which to evaluate the derivative
+//! \return The derivative of the series
 
 gsl_complex airy_series_y2_diff(gsl_complex z) {
     int i;
@@ -98,6 +116,15 @@ gsl_complex airy_series_y2_diff(gsl_complex z) {
     }
     return d;
 }
+
+//! airy_lookup_ai - Choose the point about which to perform a Taylor expansion of Ai(z), in the intermediate region
+//! of the complex plane where neither the Maclaurin series nor the asymptotic expansion converges quickly, and look
+//! up the precomputed values of Ai and Ai' at that point
+//! \param [in] mod - The modulus of z
+//! \param [in] arg - The argument of z
+//! \param [out] a - The value of Ai at the expansion point
+//! \param [out] b - The value of Ai' at the expansion point
+//! \param [out] z0 - The expansion point
 
 void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
     int sector;
@@ -400,6 +427,15 @@ void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b
     return;
 }
 
+//! airy_lookup_bi - Choose the point about which to perform a Taylor expansion of Bi(z), in the intermediate region
+//! of the complex plane where neither the Maclaurin series nor the asymptotic expansion converges quickly, and look
+//! up the precomputed values of Bi and Bi' at that point
+//! \param [in] mod - The modulus of z
+//! \param [in] arg - The argument of z
+//! \param [out] a - The value of Bi at the expansion point
+//! \param [out] b - The value of Bi' at the expansion point
+//! \param [out] z0 - The expansion point
+
 void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
     int sector;
     if (mod > 6.0) {
@@ -685,6 +721,14 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
     }
     return;
 }
+
+//! airy_series_taylor - Compute the coefficients of a Taylor expansion of an Airy function about a point z0, using
+//! the Airy differential equation w'' = z w to generate the higher derivatives
+//! \param [out] dp - The coefficient multiplying the value of the Airy function at z0
+//! \param [out] dq - The coefficient multiplying the derivative of the Airy function at z0
+//! \param [in] zd - The displacement z - z0 of the point at which the function is required
+//! \param [in] z0 - The point about which the expansion is made
+//! \param [in] k - Zero to compute the function itself (Ai or Bi), or one to compute its derivative (Ai' or Bi')
 
 void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_complex z0, const double k) {
     // If k=0, compute Ai or Bi; if k=1, compute Ai' or Bi'.
@@ -993,6 +1037,12 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
     return;
 }
 
+//! airy_ai - Evaluate the Airy function Ai(z) for complex z
+//! \param [in] in - The argument z
+//! \param [out] out - The value of Ai(z)
+//! \param [out] status - Set to a non-zero value if the function could not be evaluated accurately
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     int conjugate, i, max;
     double mod, arg;
@@ -1089,6 +1139,12 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
         return;
     }
 }
+
+//! airy_bi - Evaluate the Airy function Bi(z) for complex z
+//! \param [in] in - The argument z
+//! \param [out] out - The value of Bi(z)
+//! \param [out] status - Set to a non-zero value if the function could not be evaluated accurately
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     int conjugate, i, max;
@@ -1199,6 +1255,12 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     }
 }
 
+//! airy_ai_diff - Evaluate the derivative of the Airy function, Ai'(z), for complex z
+//! \param [in] in - The argument z
+//! \param [out] out - The value of Ai'(z)
+//! \param [out] status - Set to a non-zero value if the function could not be evaluated accurately
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     int conjugate, i, max;
     double mod, arg;
@@ -1295,6 +1357,12 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
         return;
     }
 }
+
+//! airy_bi_diff - Evaluate the derivative of the Airy function, Bi'(z), for complex z
+//! \param [in] in - The argument z
+//! \param [out] out - The value of Bi'(z)
+//! \param [out] status - Set to a non-zero value if the function could not be evaluated accurately
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     int conjugate, i, max;

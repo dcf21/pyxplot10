@@ -45,6 +45,16 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
+//! pplfunc_julia - Implement the function fractals.julia(z,cz,MaxIter) in the fractals module, which returns the number
+//! of iterations required before the Julia set iterator diverges outside the circle |z'|<2
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "julia(z,cz,MaxIter)";
     CHECK_NEEDLONG(in[2], "MaxIter", "function's third argument must be");
@@ -62,6 +72,16 @@ void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     }
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_mandelbrot - Implement the function fractals.mandelbrot(z,MaxIter) in the fractals module, which returns the
+//! number of iterations required before the Mandelbrot set iterator diverges outside the circle |z'|<2
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_mandelbrot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "mandelbrot(z,MaxIter)";

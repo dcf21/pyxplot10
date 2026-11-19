@@ -108,6 +108,16 @@ static double cie_color_match[N_CIE_STEPS][3] = {
         {0.0000, 0.0000, 0.0000}};
 
 
+//! xyz_to_rgb - Convert a color from CIE xyz chromaticity coordinates into RGB components, in a specified RGB color
+//! system. The RGB components may be negative if the color lies outside the system's gamut.
+//! \param [in] cs - The RGB color system, defined by the chromaticities of its primaries and white point
+//! \param [in] xc - The CIE x chromaticity coordinate
+//! \param [in] yc - The CIE y chromaticity coordinate
+//! \param [in] zc - The CIE z chromaticity coordinate
+//! \param [out] r - Red component
+//! \param [out] g - Green component
+//! \param [out] b - Blue component
+
 static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const double yc, const double zc, double *r,
                        double *g, double *b) {
     double xr, yr, zr, xg, yg, zg, xb, yb, zb;
@@ -163,9 +173,22 @@ static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const doub
     return;
 }
 
+//! inside_gamut - Test whether a set of RGB components lies inside the RGB gamut, i.e. whether none is negative
+//! \param [in] r - Red component
+//! \param [in] g - Green component
+//! \param [in] b - Blue component
+//! \return One if the color is inside the gamut, zero otherwise
+
 static int inside_gamut(const double r, const double g, const double b) {
     return (r >= 0) && (g >= 0) && (b >= 0);
 }
+
+//! constrain_rgb - Bring a color which lies outside the RGB gamut inside it, by adding just enough white to make
+//! none of its components negative
+//! \param [in|out] r - Red component
+//! \param [in|out] g - Green component
+//! \param [in|out] b - Blue component
+//! \return One if the color was modified, zero if it was already within the gamut
 
 static int constrain_rgb(double *r, double *g, double *b) {
     double w;
@@ -187,6 +210,16 @@ static int constrain_rgb(double *r, double *g, double *b) {
     }
     return 0; // Colour within RGB gamut
 }
+
+//! pplfunc_colWavelen - Implement the function colors.wavelength(lambda,norm) in the colors module, which returns a
+//! color representation of monochromatic light at wavelength lambda, normalised to brightness norm
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "wavelength(lambda,norm)";
@@ -261,6 +294,17 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
             return; \
         } \
     }
+
+//! pplfunc_colSpectrum - Implement the function colors.spectrum(spec,norm) in the colors module, which returns a color
+//! representation of the spectrum spec, normalised to brightness norm. spec should be a function that takes a single
+//! input (wavelength) with units of length, and may return an output with arbitrary units
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "spectrum(spec,norm)";

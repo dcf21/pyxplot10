@@ -50,6 +50,13 @@
 
 #define TBADD(et, charpos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, charpos, pl->linetxt, "")
 
+//! ppl_directive_funcset - Implement function definitions, such as f(x)=x**2, including definitions restricted to
+//! ranges of their arguments, e.g. f(x)[0:1]=x, and the deletion of functions with f(x)=
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+
 void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     pplObj *stk = in->stk;
     pplFunc *f = NULL;

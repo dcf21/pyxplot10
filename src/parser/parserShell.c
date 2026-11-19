@@ -82,6 +82,15 @@
         } \
     }
 
+//! ppl_parserShell - Run a command whose parameters have been placed in an output stack by ppl_parserExecute(), by
+//! dispatching it to the function which implements it. Expressions typed on their own are evaluated and their values
+//! printed.
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     int contextNew;
     pplObj *stk = in->stk;
@@ -217,8 +226,13 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     else if (strcmp(d, "quit") == 0) c->shellExiting = 1;
     else if (strcmp(d, "refresh") == 0) {
         if (c->set->term_current.display == SW_ONOFF_ON) {
-            unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
-            ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
+            unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+            if (unsuccessful_ops == NULL) {
+                ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            } else {
+                ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
+                free(unsuccessful_ops);
+            }
         }
     } else if (strcmp(d, "replot") == 0) ppl_directive_plot(c, pl, in, interactive, iterDepth, 1);
     else if (strcmp(d, "reset") == 0) {

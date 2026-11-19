@@ -458,7 +458,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             DO_CRANGE(2, "3")
             DO_CRANGE(3, "4")
 
-                    else if (strcmp(setkey, "DATASTYLE") == 0) {
+            else if (strcmp(setkey, "DATASTYLE") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_STYLE_INT, SW_STYLE_STR)) > 0) {
                     c->set->graph_default.dataStyle.linespoints = i;
                     c->set->graph_default.dataStyle.USElinespoints = 1;

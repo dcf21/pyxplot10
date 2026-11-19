@@ -75,11 +75,25 @@
 
 static double *compareZeroPoint;
 
+//! interpolateSorter - Comparison function for qsort(), used to sort data points into ascending order of x
+//! \param [in] x - Pointer to the index of the first data point
+//! \param [in] y - Pointer to the index of the second data point
+//! \return -1, 0 or 1 if the first data point's x value is less than, equal to or greater than the second's
+
 static int interpolateSorter(const void *x, const void *y) {
     if (*(compareZeroPoint + (*((long *) x))) > *(compareZeroPoint + (*((long *) y)))) return 1;
     else if (*(compareZeroPoint + (*((long *) x))) < *(compareZeroPoint + (*((long *) y)))) return -1;
     else return 0;
 }
+
+//! ppl_directive_interpolate - Implement the interpolate command, and the spline command which is a synonym for
+//! it, which interpolate data from a file or bitmap image and store the result as a new function
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \param [in] mode - The interpolation method, one of the INTERP_* constants
 
 void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                                const int iterDepth, const int mode) {
@@ -457,7 +471,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
         // Sort data vectors according to x values
         {
-            long int *sortArray = (long int *) ppl_memAlloc(2 * i * sizeof(long int));
+            long int *sortArray = (long int *) malloc(2 * i * sizeof(long int));
             long int *sortArrayI = sortArray + i;
             long int j;
             if (sortArray == NULL) {
@@ -485,6 +499,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                 sortArray[sortArrayI[j]] = tmp3;
                 sortArrayI[tmp3] = sortArrayI[j];
             }
+            free(sortArray);
         }
 
         // Filter out repeat values of x
@@ -653,6 +668,15 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     return;
 }
 
+//! ppl_spline_evaluate - Evaluate a function created by the interpolate command from one-dimensional data
+//! \param [in] c - The Pyxplot context
+//! \param [in] FuncName - The name of the function, used in error messages
+//! \param [in] desc - The descriptor of the interpolation
+//! \param [in] in - The argument passed to the function
+//! \param [out] out - The interpolated value
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errout - Character buffer into which to write an error message, if an error occurred
+
 void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc, pplObj *in, pplObj *out, int *status,
                          char *errout) {
     double dblin, dblout;
@@ -743,6 +767,19 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     return;
 }
 
+
+//! ppl_interp2d_evaluate - Evaluate a function created by the interpolate command from two-dimensional data or a
+//! bitmap image
+//! \param [in] c - The Pyxplot context
+//! \param [in] FuncName - The name of the function, used in error messages
+//! \param [in] desc - The descriptor of the interpolation
+//! \param [in] in1 - The first argument passed to the function
+//! \param [in] in2 - The second argument passed to the function
+//! \param [in] bmp - If true, the function interpolates a bitmap image, and returns the value of the pixel at the
+//! requested position; otherwise it interpolates two-dimensional data
+//! \param [out] out - The interpolated value
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errout - Character buffer into which to write an error message, if an error occurred
 
 void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescriptor *desc, const pplObj *in1,
                            const pplObj *in2, const unsigned char bmp, pplObj *out, int *status, char *errout) {

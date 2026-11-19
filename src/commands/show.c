@@ -132,6 +132,19 @@
     ppl_directive_show3(c, out + i, itemSet, 1, interactive, temp1, buf, \
                         (T.tickDir == TD.tickDir) && (pplaxis_cmpTics(c, &T, &TD, &U, &UD, amLog, amLogD)), buf2);
 
+//! ppl_directive_show3 - Write the value of a single setting, in the syntax of the set command that would set it
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - Character buffer into which to write the setting
+//! \param [in] itemSet - The text inserted after "set" to identify the plot item the setting applies to, if any,
+//! e.g. "item 2"
+//! \param [in] itemSetShow - If true, include <itemSet> in the output; otherwise pad it with spaces
+//! \param [in] interactive - Flag indicating whether the session is interactive, in which case settings which differ
+//! from their defaults are highlighted
+//! \param [in] setting_name - The name of the setting, as used in the set command
+//! \param [in] setting_value - The value of the setting. "on" and "off" are written as "set name" and "set noname".
+//! \param [in] modified - Flag indicating whether the setting differs from its default value
+//! \param [in] description - A description of the setting, written as a comment (may be NULL)
+
 static void ppl_directive_show3(ppl_context *c, char *out, char *itemSet, unsigned char itemSetShow,
                                 const int interactive, char *setting_name, char *setting_value, const int modified,
                                 char *description) {
@@ -171,6 +184,19 @@ static void ppl_directive_show3(ppl_context *c, char *out, char *itemSet, unsign
     return;
 }
 
+//! ppl_directive_show2 - Display the settings matching one word of a show command, e.g. "settings" or "xrange"
+//! \param [in] c - The Pyxplot context
+//! \param [in] word - The word of the show command, which may be an abbreviation of a setting name
+//! \param [in] itemSet - The text inserted after "set" to identify the plot item the settings apply to, if any
+//! \param [in] interactive - Flag indicating whether the session is interactive
+//! \param [in] sg - The graph settings to display
+//! \param [in] al - The list of arrows to display
+//! \param [in] ll - The list of labels to display
+//! \param [in] xa - The array of x axes to display
+//! \param [in] ya - The array of y axes to display
+//! \param [in] za - The array of z axes to display
+//! \return One if any settings were displayed, zero if none matched, or one on memory allocation failure
+
 static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, const int interactive, pplset_graph *sg,
                                pplarrow_object **al, ppllabel_object **ll, pplset_axis *xa, pplset_axis *ya,
                                pplset_axis *za) {
@@ -180,9 +206,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     unit *ud = c->unit_database;
     int outLen = 8 * LSTR_LENGTH;
 
-    out = (char *) ppl_memAlloc(outLen); // Accumulate our whole output text here
-    buf = (char *) ppl_memAlloc(LSTR_LENGTH); // Put the value of each setting in here
-    buf2 = (char *) ppl_memAlloc(FNAME_LENGTH);
+    out = (char *) malloc(outLen); // Accumulate our whole output text here
+    buf = (char *) malloc(LSTR_LENGTH); // Put the value of each setting in here
+    buf2 = (char *) malloc(FNAME_LENGTH);
 
     if ((out == NULL) || (buf == NULL) || (buf2 == NULL)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1,
@@ -555,9 +581,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         pplObj *item = NULL;
         char *key = NULL;
         while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
-            ppl_strEscapify(key, buf + 16);
+            ppl_strEscapify(key, buf);
             ppl_strEscapify((char *) item->auxil, buf2);
-            sprintf(buf, "%s %s", buf + 16, buf2);
+            strcat(buf, " ");
+            strcat(buf, buf2);
             ppl_directive_show3(c, out + i, itemSet, 0, interactive, "filter", buf, 1,
                                 "Sets an input filter to be used when reading datafiles");
             i += strlen(out + i);
@@ -1756,10 +1783,19 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
 
     if (p != 0) ppl_report(&c->errcontext, out);
+    free(out);
+    free(buf);
+    free(buf2);
     return p;
 }
 
 #define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
+
+//! ppl_directive_show - Implement the show command, which displays the values of Pyxplot's settings
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive) {
     pplObj *stk = in->stk;

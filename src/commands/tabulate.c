@@ -48,7 +48,19 @@
 
 #include "datafile.h"
 
-// Display data from a data block
+//! ppl_tab_dataGridDisplay - Write a block of tabulated data to a file, applying any range restrictions and
+//! formatting each column
+//! \param [in] c - The Pyxplot context
+//! \param [in] output - The file handle to write to
+//! \param [in] data - The data to write
+//! \param [in] minSet - Array of flags indicating whether a lower limit is set on each column
+//! \param [in] min - Array of lower limits on each column
+//! \param [in] maxSet - Array of flags indicating whether an upper limit is set on each column
+//! \param [in] max - Array of upper limits on each column
+//! \param [in] unit - Array of the physical units of each column
+//! \param [in] format - A format string to apply to each row, or NULL to use the default format
+//! \return Zero on success, or one if an error occurred
+
 static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data, const int *minSet, const double *min,
                                    const int *maxSet, const double *max, pplObj *unit, char *format) {
     dataBlock *blk;
@@ -221,6 +233,14 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
 }
 
 #define TBADD2(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
+
+//! ppl_directive_tabulate - Implement the tabulate command, which writes data from files or functions to a text
+//! file
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                             const int iterDepth) {

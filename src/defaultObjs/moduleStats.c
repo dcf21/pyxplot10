@@ -57,6 +57,16 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
+//! pplfunc_binomialPDF - Implement the function stats.binomialPDF(k,p,n) in the stats module, which evaulates the
+//! probability of getting k successes out of n trials in a binomial distribution with success probability p
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_binomialPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomialPDF(k,p,n)";
     CHECK_NEEDINT(in[0], "k", "function's first argument must be");
@@ -64,6 +74,17 @@ void pplfunc_binomialPDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
     OUTPUT.real = gsl_ran_binomial_pdf((unsigned int) in[0].real, in[1].real, (unsigned int) in[2].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_binomialCDF - Implement the function stats.binomialCDF(k,p,n) in the stats module, which evaulates the
+//! probability of getting fewer than or exactly k successes out of n trials in a binomial distribution with success
+//! probability p
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_binomialCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomialCDF(k,p,n)";
@@ -73,11 +94,31 @@ void pplfunc_binomialCDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_chisqPDF - Implement the function stats.chisqPDF(x,nu) in the stats module, which returns the probability
+//! density at x in a chi-squared distribution with nu degrees of freedom
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_chisqPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqPDF(x,nu)";
     OUTPUT.real = gsl_ran_chisq_pdf(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_chisqCDF - Implement the function stats.chisqCDF(x,nu) in the stats module, which returns the cumulative
+//! probability density at x in a chi-squared distribution with nu degrees of freedom
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_chisqCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqCDF(x,nu)";
@@ -85,11 +126,31 @@ void pplfunc_chisqCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_chisqCDFi - Implement the function stats.chisqCDFi(P,nu) in the stats module, which returns the point x at
+//! which the cumulative probability density in a chi-squared distribution with nu degrees of freedom is P
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqCDFi(P,nu)";
     OUTPUT.real = gsl_cdf_chisq_Pinv(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_gaussianPDF - Implement the function stats.gaussianPDF(x,sigma) in the stats module, which evaluates the
+//! Gaussian probability density function of standard deviation sigma at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussianPDF(x,sigma)";
@@ -99,12 +160,32 @@ void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
     ppl_unitsDimInverse(&OUTPUT, &in[0]);
 }
 
+//! pplfunc_gaussianCDF - Implement the function stats.gaussianCDF(x,sigma) in the stats module, which evaluates the
+//! Gaussian cumulative distribution function of standard deviation sigma at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_gaussianCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussianCDF(x,sigma)";
     CHECK_2INPUT_DIMMATCH;
     OUTPUT.real = gsl_cdf_gaussian_P(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_gaussianCDFi - Implement the function stats.gaussianCDFi(x,sigma) in the stats module, which evaluates the
+//! inverse Gaussian cumulative distribution function of standard deviation sigma at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussianCDFi(x,sigma)";
@@ -113,6 +194,16 @@ void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, const int nArgs, int *stat
     CHECK_OUTPUT_OKAY;
     ppl_unitsDimCpy(&OUTPUT, &in[1]);
 }
+
+//! pplfunc_lognormalPDF - Implement the function stats.lognormalPDF(x,zeta,sigma) in the stats module, which evaluates
+//! the log normal probability density function of standard deviation sigma at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormalPDF(x,zeta,sigma)";
@@ -125,6 +216,16 @@ void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, const int nArgs, int *stat
     ppl_unitsDimInverse(&OUTPUT, &in[0]);
 }
 
+//! pplfunc_lognormalCDF - Implement the function stats.lognormalCDF(x,zeta,sigma) in the stats module, which evaluates
+//! the log normal cumulative distribution function of standard deviation sigma at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormalCDF(x,zeta,sigma)";
     in += 2;
@@ -134,6 +235,16 @@ void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, const int nArgs, int *stat
     OUTPUT.real = gsl_cdf_lognormal_P(in[0].real, in[1].real, in[2].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_lognormalCDFi - Implement the function stats.lognormalCDFi(x,zeta,sigma) in the stats module, which
+//! evaluates the inverse log normal cumulative distribution function of standard deviation sigma at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormalCDFi(x,zeta,sigma)";
@@ -146,11 +257,31 @@ void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, const int nArgs, int *sta
     ppl_unitsDimCpy(&OUTPUT, &in[1]);
 }
 
+//! pplfunc_poissonPDF - Implement the function stats.poissonPDF(x,mu) in the stats module, which returns the
+//! probability of getting x from a Poisson distribution with mean mu
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_poissonPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poissonPDF(x,mu)";
     OUTPUT.real = gsl_ran_poisson_pdf(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_poissonCDF - Implement the function stats.poissonCDF(x,mu) in the stats module, which returns the
+//! probability of getting <= x from a Poisson distribution with mean mu
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_poissonCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poissonCDF(x,mu)";
@@ -158,17 +289,47 @@ void pplfunc_poissonCDF(ppl_context *c, pplObj *in, const int nArgs, int *status
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_tdistPDF - Implement the function stats.tdistPDF(x,nu) in the stats module, which returns the probability
+//! density at x in a t-distribution with nu degrees of freedom
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_tdistPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistPDF(x,nu)";
     OUTPUT.real = gsl_ran_tdist_pdf(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_tdistCDF - Implement the function stats.tdistCDF(x,nu) in the stats module, which returns the cumulative
+//! probability density at x in a t-distribution with nu degrees of freedom
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_tdistCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistCDF(x,nu)";
     OUTPUT.real = gsl_cdf_tdist_P(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_tdistCDFi - Implement the function stats.tdistCDFi(P,nu) in the stats module, which returns the point x at
+//! which the cumulative probability density in a t-distribution with nu degrees of freedom is P
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_tdistCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistCDFi(P,nu)";

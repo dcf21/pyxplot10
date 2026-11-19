@@ -39,6 +39,15 @@
 
 #include "defaultObjs/zetaRiemann.h"
 
+//! riemann_zeta_complex__ - Evaluate the Riemann zeta function for complex arguments with real part of at least
+//! one half, using Peter Borwein's algorithm (Algorithm 3 of his 2000 Canadian Math. Soc. Proc. paper), or a Laurent
+//! series close to the pole at z=1
+//! \param [in] x - The real part of the argument
+//! \param [in] y - The imaginary part of the argument
+//! \param [out] output - The value of the zeta function
+//! \param [in] status - Unused
+//! \param [in] errText - Unused
+
 void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *status, const char *errText) {
     gsl_complex a, am, b, c, d, e;
     double g, h;
@@ -119,6 +128,14 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
     *output = e;
     return;
 }
+
+//! riemann_zeta_complex - Evaluate the Riemann zeta function for complex arguments. Arguments with real part less
+//! than one half are evaluated using the reflection formula.
+//! \param [in] in - The argument
+//! \param [out] output - The value of the zeta function
+//! \param [out] status - Set to one if the function could not be evaluated, e.g. at the pole at z=1, or where it
+//! would overflow or take too long to evaluate
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char *errText) {
     double x, y;

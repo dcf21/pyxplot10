@@ -74,6 +74,15 @@
         if (c->stack[c->stackPtr].refCount != 0) { fprintf(stderr, "Stack forward reference detected."); } \
     }
 
+//! ppl_addMagicFunction - Add a "magic" function, such as diff_d or int_d, to a namespace. Magic functions are
+//! handled specially by the expression evaluator, because their arguments are not evaluated in the usual way.
+//! \param [in|out] n - The namespace to add the function to
+//! \param [in] name - The name of the function
+//! \param [in] id - The number which identifies the magic function to the expression evaluator
+//! \param [in] shortdesc - A short description of the function's syntax, e.g. "int_dx(e,min,max)"
+//! \param [in] latex - A template for rendering calls to the function in LaTeX
+//! \param [in] desc - A description of the function, displayed by the help command
+
 void ppl_addMagicFunction(dict *n, const char *name, const int id, char *shortdesc, char *latex, char *desc) {
     pplObj v;
     pplFunc *f = malloc(sizeof(pplFunc));
@@ -99,6 +108,21 @@ void ppl_addMagicFunction(dict *n, const char *name, const int id, char *shortde
     if (pplObjFunc(&v, 1, 1, f) != NULL) ppl_dictAppendCpy(n, name, (void *) &v, sizeof(v));
     return;
 }
+
+//! ppl_addSystemFunc - Add a function implemented in C to a namespace
+//! \param [in|out] n - The namespace to add the function to
+//! \param [in] name - The name of the function
+//! \param [in] minArgs - The minimum number of arguments the function accepts
+//! \param [in] maxArgs - The maximum number of arguments the function accepts
+//! \param [in] numOnly - If true, all arguments must be numbers
+//! \param [in] notNan - If true, all arguments must be finite
+//! \param [in] realOnly - If true, all arguments must be real
+//! \param [in] dimlessOnly - If true, all arguments must be dimensionless
+//! \param [in] fn - Pointer to the C function which implements the function
+//! \param [in] shortdesc - A short description of the function's syntax, e.g. "abs(z)"
+//! \param [in] latex - A template for rendering calls to the function in LaTeX
+//! \param [in] desc - A description of the function, displayed by the help command
+//! \return The descriptor of the new function, or NULL if memory allocation failed
 
 pplFunc *ppl_addSystemFunc(dict *n, const char *name, const int minArgs, const int maxArgs, const int numOnly,
                            const int notNan, const int realOnly, const int dimlessOnly, void *fn, char *shortdesc,
@@ -128,6 +152,21 @@ pplFunc *ppl_addSystemFunc(dict *n, const char *name, const int minArgs, const i
     return f;
 }
 
+//! ppl_addSystemMethod - Add a method implemented in C to the dictionary of methods of an object type. This is the
+//! same as ppl_addSystemFunc(), except that the method is passed the object it was called on.
+//! \param [in|out] n - The dictionary of methods to add the method to
+//! \param [in] name - The name of the method
+//! \param [in] minArgs - The minimum number of arguments the method accepts
+//! \param [in] maxArgs - The maximum number of arguments the method accepts
+//! \param [in] numOnly - If true, all arguments must be numbers
+//! \param [in] notNan - If true, all arguments must be finite
+//! \param [in] realOnly - If true, all arguments must be real
+//! \param [in] dimlessOnly - If true, all arguments must be dimensionless
+//! \param [in] fn - Pointer to the C function which implements the method
+//! \param [in] shortdesc - A short description of the method's syntax, e.g. "find(x)"
+//! \param [in] latex - A template for rendering calls to the method in LaTeX
+//! \param [in] desc - A description of the method, displayed by the help command
+
 void ppl_addSystemMethod(dict *n, char *name, const int minArgs, const int maxArgs, const int numOnly, const int notNan,
                          const int realOnly, const int dimlessOnly, void *fn, char *shortdesc, char *latex,
                          char *desc) {
@@ -135,6 +174,15 @@ void ppl_addSystemMethod(dict *n, char *name, const int minArgs, const int maxAr
                                    latex, desc);
     f->needSelfThis = 1;
 }
+
+//! pplfunc_abs - Implement the function abs(z) in the default namespace, which returns the absolute magnitude of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_abs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "abs(z)";
@@ -148,6 +196,15 @@ void pplfunc_abs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     ppl_unitsDimCpy(&OUTPUT, in);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_acos - Implement the function acos(z) in the default namespace, which returns the arccosine of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acos(z)";
@@ -165,6 +222,16 @@ void pplfunc_acos(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_acosh - Implement the function acosh(z) in the default namespace, which returns the hyperbolic arccosine of
+//! z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_acosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acosh(z)";
     gsl_complex z;
@@ -179,6 +246,15 @@ void pplfunc_acosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_acot - Implement the function acot(z) in the default namespace, which returns the arccotangent of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_acot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acot(z)";
     gsl_complex z;
@@ -189,6 +265,16 @@ void pplfunc_acot(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_acoth - Implement the function acoth(z) in the default namespace, which returns the hyperbolic arccotangent
+//! of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_acoth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acoth(z)";
     gsl_complex z;
@@ -197,6 +283,15 @@ void pplfunc_acoth(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_acsc - Implement the function acsc(z) in the default namespace, which returns the arccosecant of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acsc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acsc(z)";
@@ -214,6 +309,16 @@ void pplfunc_acsc(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_acsch - Implement the function acsch(z) in the default namespace, which returns the hyperbolic arccosecant
+//! of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_acsch(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acsch(z)";
     gsl_complex z;
@@ -222,6 +327,16 @@ void pplfunc_acsch(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_airy_ai - Implement the function airy_ai(z) in the default namespace, which returns the Airy function Ai
+//! evaluated at z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_airy_ai(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_ai(z)";
@@ -236,6 +351,16 @@ void pplfunc_airy_ai(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_airy_ai_diff - Implement the function airy_ai_diff(z) in the default namespace, which returns the first
+//! derivative of the Airy function Ai evaluated at z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_ai_diff(z)";
     gsl_complex zi, z;
@@ -248,6 +373,16 @@ void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_airy_bi - Implement the function airy_bi(z) in the default namespace, which returns the Airy function Bi
+//! evaluated at z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_airy_bi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_bi(z)";
@@ -262,6 +397,16 @@ void pplfunc_airy_bi(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_airy_bi_diff - Implement the function airy_bi_diff(z) in the default namespace, which returns the first
+//! derivative of the Airy function Bi evaluated at z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_bi_diff(z)";
     gsl_complex zi, z;
@@ -275,6 +420,16 @@ void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_arg - Implement the function arg(z) in the default namespace, which returns the argument of the complex
+//! number z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_arg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "arg(z)";
     gsl_complex z;
@@ -283,6 +438,15 @@ void pplfunc_arg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CLEANUP_APPLYUNIT(UNIT_ANGLE);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_asec - Implement the function asec(z) in the default namespace, which returns the arcsecant of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_asec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asec(z)";
@@ -300,6 +464,16 @@ void pplfunc_asec(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_asech - Implement the function asech(z) in the default namespace, which returns the hyperbolic arcsecant of
+//! z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_asech(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asech(z)";
     gsl_complex z;
@@ -308,6 +482,15 @@ void pplfunc_asech(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_asin - Implement the function asin(z) in the default namespace, which returns the arcsine of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_asin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asin(z)";
@@ -325,6 +508,15 @@ void pplfunc_asin(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_asinh - Implement the function asinh(z) in the default namespace, which returns the hyperbolic arcsine of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_asinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asinh(z)";
     gsl_complex z;
@@ -333,6 +525,15 @@ void pplfunc_asinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_atan - Implement the function atan(z) in the default namespace, which returns the arctangent of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_atan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atan(z)";
@@ -343,6 +544,16 @@ void pplfunc_atan(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CLEANUP_APPLYUNIT(UNIT_ANGLE);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_atanh - Implement the function atanh(z) in the default namespace, which returns the hyperbolic arctangent of
+//! z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_atanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atanh(z)";
@@ -359,6 +570,17 @@ void pplfunc_atanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_atan2 - Implement the function atan2(x,y) in the default namespace, which returns the arctangent of x/y.
+//! Unlike atan(y/x), atan2(x,y) takes account of the signs of both x and y to remove the degeneracy between (1,1) and
+//! (-1,-1)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_atan2(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atan2(x,y)";
     CHECK_2INPUT_DIMMATCH;
@@ -367,12 +589,32 @@ void pplfunc_atan2(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_besseli - Implement the function besseli(l,x) in the default namespace, which evaluates the lth regular
+//! modified spherical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_besseli(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besseli(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_il_scaled((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_besselI - Implement the function besselI(l,x) in the default namespace, which evaluates the lth regular
+//! modified cylindrical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselI(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselI(l,x)";
@@ -381,12 +623,32 @@ void pplfunc_besselI(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_besselj - Implement the function besselj(l,x) in the default namespace, which evaluates the lth regular
+//! spherical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_besselj(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselj(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_jl((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_besselJ - Implement the function besselJ(l,x) in the default namespace, which evaluates the lth regular
+//! cylindrical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselJ(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselJ(l,x)";
@@ -395,12 +657,32 @@ void pplfunc_besselJ(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_besselk - Implement the function besselk(l,x) in the default namespace, which evaluates the lth irregular
+//! modified spherical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_besselk(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselk(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_kl_scaled((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_besselK - Implement the function besselK(l,x) in the default namespace, which evaluates the lth irregular
+//! modified cylindrical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselK(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselK(l,x)";
@@ -409,12 +691,32 @@ void pplfunc_besselK(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_bessely - Implement the function bessely(l,x) in the default namespace, which evaluates the lth irregular
+//! spherical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_bessely(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "bessely(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_yl((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_besselY - Implement the function besselY(l,x) in the default namespace, which evaluates the lth irregular
+//! cylindrical Bessel function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselY(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselY(l,x)";
@@ -423,11 +725,30 @@ void pplfunc_besselY(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_beta - Implement the function beta(a,b) in the default namespace, which evaluates the beta function B(a,b)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_beta(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "beta(a,b)";
     OUTPUT.real = gsl_sf_beta(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_call - Implement the function call(f,a) in the default namespace, which calls the function f with the
+//! arguments contained in the list a
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "call(f,a)";
@@ -511,11 +832,30 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     return;
 }
 
+//! pplfunc_ceil - Implement the function ceil(x) in the default namespace, which returns the smallest integer value
+//! greater than or equal to x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_ceil(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ceil(x)";
     OUTPUT.real = ceil(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_chr - Implement the function chr(x) in the default namespace, which returns the character with ASCII code x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_chr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chr(x)";
@@ -532,9 +872,29 @@ void pplfunc_chr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
+//! pplfunc_classOf - Implement the function classOf(x) in the default namespace, which returns the class prototype of
+//! the object x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_classOf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjCpy(&OUTPUT, in[0].objPrototype, 0, 0, 1);
 }
+
+//! pplfunc_cmp - Implement the function cmp(a,b) in the default namespace, which returns 1 if a>b, -1 if a<b and zero
+//! if a=b
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_cmp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     void *a = &in[0];
@@ -542,9 +902,29 @@ void pplfunc_cmp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     OUTPUT.real = pplObjCmpQuiet(&a, &b);
 }
 
+//! pplfunc_cmyk - Implement the function cmyk(c,m,y,k) in the default namespace, which returns a color with specified
+//! CMYK components in the range 0-1
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_cmyk(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_CMYK, in[0].real, in[1].real, in[2].real, in[3].real);
 }
+
+//! pplfunc_conjugate - Implement the function conjugate(z) in the default namespace, which returns the complex
+//! conjugate of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_conjugate(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "conjugate(z)";
@@ -553,9 +933,29 @@ void pplfunc_conjugate(ppl_context *c, pplObj *in, const int nArgs, int *status,
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_copy - Implement the function copy(x) in the default namespace, which returns a copy of the data structure
+//! x. Nested data structures are not copied; see deepcopy(x) for this
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_copy(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjDeepCpy(&OUTPUT, &in[0], 0, 0, 1);
 }
+
+//! pplfunc_cos - Implement the function cos(x) in the default namespace, which returns the cosine of x. If x is
+//! dimensionless, it is assumed to be measured in radians
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_cos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cos(x)";
@@ -574,6 +974,16 @@ void pplfunc_cos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_cosh - Implement the function cosh(x) in the default namespace, which returns the hyperbolic cosine of x. x
+//! may either be a dimensionless number or may have units of angle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_cosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cosh(x)";
     int i;
@@ -591,6 +1001,16 @@ void pplfunc_cosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_cot - Implement the function cot(x) in the default namespace, which returns the cotangent of x. If x is
+//! dimensionless, it is assumed to be measured in radians
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_cot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cot(x)";
     int i;
@@ -602,6 +1022,16 @@ void pplfunc_cot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_coth - Implement the function coth(x) in the default namespace, which returns the hyperbolic cotangent of x.
+//! x may either be a dimensionless number or may have units of angle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_coth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "coth(x)";
     int i;
@@ -612,6 +1042,16 @@ void pplfunc_coth(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_cross - Implement the function cross(a,b) in the default namespace, which returns the vector cross product
+//! of the three-component vectors a and b
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cross(a,b)";
@@ -667,6 +1107,16 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     ppl_uaMul(c, &in[0], &in[1], &OUTPUT, status, errType, errText);
 }
 
+//! pplfunc_csc - Implement the function csc(x) in the default namespace, which returns the cosecant of x. If x is
+//! dimensionless, it is assumed to be measured in radians
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_csc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "csc(x)";
     int i;
@@ -677,6 +1127,16 @@ void pplfunc_csc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_csch - Implement the function csch(x) in the default namespace, which returns the hyperbolic cosecant of x.
+//! x may either be a dimensionless number or may have units of angle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_csch(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "csch(x)";
@@ -689,9 +1149,29 @@ void pplfunc_csch(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_deepcopy - Implement the function deepcopy(x) in the default namespace, which returns a deep copy of the
+//! data structure x, copying also any nested data structures
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_deepcopy(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjDeepCpy(&OUTPUT, &in[0], 1, 0, 1);
 }
+
+//! pplfunc_degrees - Implement the function degrees(x) in the default namespace, which converts angles measured in
+//! radians into degrees
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_degrees(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "degrees(x)";
@@ -701,11 +1181,31 @@ void pplfunc_degrees(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_ellK - Implement the function ellipticintK(k) in the default namespace, which evaluates the complete
+//! elliptic integral K(k)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_ellK(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintK(k)";
     OUTPUT.real = gsl_sf_ellint_Kcomp(in[0].real, GSL_PREC_DOUBLE);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_ellE - Implement the function ellipticintE(k) in the default namespace, which evaluates the complete
+//! elliptic integral E(k)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ellE(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintE(k)";
@@ -713,11 +1213,30 @@ void pplfunc_ellE(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_ellP - Implement the function ellipticintP(k,n) in the default namespace, which evaluates the complete
+//! elliptic integral P(k,n)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_ellP(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintP(k,n)";
     OUTPUT.real = gsl_sf_ellint_Pcomp(in[0].real, in[1].real, GSL_PREC_DOUBLE);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_erf - Implement the function erf(x) in the default namespace, which evaluates the error function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_erf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "erf(x)";
@@ -725,11 +1244,31 @@ void pplfunc_erf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_erfc - Implement the function erfc(x) in the default namespace, which evaluates the complimentary error
+//! function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_erfc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "erfc(x)";
     OUTPUT.real = gsl_sf_erfc(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_eval - Implement the function eval(s) in the default namespace, which evaluates the string expression s and
+//! returns the result
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const int stkLevelOld = c->stackPtr;
@@ -782,6 +1321,16 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     return;
 }
 
+//! pplfunc_exp - Implement the function exp(x) in the default namespace, which returns e to the power of x. x may
+//! either be a dimensionless number or may have units of angle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_exp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "exp(z)";
     int i;
@@ -799,6 +1348,15 @@ void pplfunc_exp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_expm1 - Implement the function expm1(x) in the default namespace, which accurately evaluates exp(x)-1
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_expm1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "expm1(x)";
     int i;
@@ -807,12 +1365,32 @@ void pplfunc_expm1(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_expint - Implement the function expint(n,x) in the default namespace, which evaluates the integral of
+//! exp(-xt)/t**n between one and infinity
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_expint(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "expint(n,x)";
     CHECK_NEEDSINT(in[0], "n", "function's first argument must be");
     OUTPUT.real = gsl_sf_expint_En((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_factors - Implement the function factors(x) in the default namespace, which returns a list of the factors of
+//! the integer x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
@@ -838,6 +1416,16 @@ void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     return;
 }
 
+//! pplfunc_finite - Implement the function finite(x) in the default namespace, which returns true if x is a finite
+//! number, and false otherwise
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_finite(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjBool(&OUTPUT, 0, 0);
     if ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && (in[0].flagComplex)) return;
@@ -845,17 +1433,46 @@ void pplfunc_finite(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     OUTPUT.real = 1;
 }
 
+//! pplfunc_floor - Implement the function floor(x) in the default namespace, which returns the largest integer value
+//! smaller than or equal to x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_floor(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "floor(x)";
     OUTPUT.real = floor(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_gamma - Implement the function gamma(x) in the default namespace, which evaluates the gamma function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_gamma(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gamma(x)";
     OUTPUT.real = gsl_sf_gamma(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_gcd - Implement the function gcd(x,...) in the default namespace, which returns the greatest common divisor
+//! (a.k.a. highest common factor) of its arguments, which should be dimensionless non-zero integers
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gcd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gcd(x,...)";
@@ -870,14 +1487,44 @@ void pplfunc_gcd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_globals - Implement the function globals() in the default namespace, which returns a dictionary of all
+//! currently-defined global variables
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_globals(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjDict(&OUTPUT, 0, 1, c->namespaces[1]);
     __sync_add_and_fetch(&c->namespaces[1]->refCount, 1);
 }
 
+//! pplfunc_gray - Implement the function gray(x) in the default namespace, which returns a shade of gray with
+//! brightness x in the range 0-1
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_gray(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, in[0].real, in[0].real, in[0].real, 0);
 }
+
+//! pplfunc_heaviside - Implement the function heaviside(x) in the default namespace, which returns the Heaviside
+//! function, defined to be one for x>=0 and zero otherwise
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_heaviside(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "heaviside(x)";
@@ -885,9 +1532,29 @@ void pplfunc_heaviside(ppl_context *c, pplObj *in, const int nArgs, int *status,
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_hsb - Implement the function hsb(h,s,b) in the default namespace, which returns a color with specified hue,
+//! saturation and brightness in the range 0-1
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_hsb(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_HSB, in[0].real, in[1].real, in[2].real, 0);
 }
+
+//! pplfunc_hyperg_0F1 - Implement the function hyperg_0F1(c,x) in the default namespace, which evaluates the
+//! hypergeometric function 0F1(c,x)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_0F1(c,x)";
@@ -895,11 +1562,31 @@ void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, const int nArgs, int *status
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_hyperg_1F1 - Implement the function hyperg_1F1(a,b,x) in the default namespace, which evaluates the
+//! confluent hypergeometric function 1F1(a,b,x)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_hyperg_1F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_1F1(a,b,x)";
     OUTPUT.real = gsl_sf_hyperg_1F1(in[0].real, in[1].real, in[2].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_hyperg_2F0 - Implement the function hyperg_2F0(a,b,x) in the default namespace, which evaluates the
+//! hypergeometric function 2F0(a,b,x)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_2F0(a,b,x)";
@@ -907,17 +1594,47 @@ void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, const int nArgs, int *status
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_hyperg_2F1 - Implement the function hyperg_2F1(a,b,c,x) in the default namespace, which evaluates the Gauss
+//! hypergeometric function 2F1(a,b,c,x)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_hyperg_2F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_2F1(a,b,c,x)";
     OUTPUT.real = gsl_sf_hyperg_2F1(in[0].real, in[1].real, in[2].real, in[3].real);
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_hyperg_U - Implement the function hyperg_U(a,b,x) in the default namespace, which evaluates the confluent
+//! hypergeometric function U(m,n,x)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_hyperg_U(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_U(a,b,x)";
     OUTPUT.real = gsl_sf_hyperg_U(in[0].real, in[1].real, in[2].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_hypot - Implement the function hypot(x,...) in the default namespace, which returns the quadrature sum of
+//! its arguments, i.e. the square root of the sum of their squares
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hypot(...)";
@@ -953,6 +1670,16 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     ppl_unitsDimCpy(&OUTPUT, in);
 }
 
+//! pplfunc_imag - Implement the function Im(z) in the default namespace, which returns the magnitude of the imaginary
+//! part of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Im(z)";
     if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
@@ -972,6 +1699,16 @@ void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     ppl_unitsDimCpy(&OUTPUT, in);
 }
 
+//! pplfunc_jacobi_cn - Implement the function jacobi_cn(u,m) in the default namespace, which returns the Jacobi
+//! elliptic function cn(u,m)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_cn(u,m)";
     {
@@ -984,6 +1721,16 @@ void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status,
     }
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_jacobi_dn - Implement the function jacobi_dn(u,m) in the default namespace, which returns the Jacobi
+//! elliptic function dn(u,m)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_dn(u,m)";
@@ -998,6 +1745,16 @@ void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status,
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_jacobi_sn - Implement the function jacobi_sn(u,m) in the default namespace, which returns the Jacobi
+//! elliptic function sn(u,m)
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_sn(u,m)";
     {
@@ -1011,17 +1768,47 @@ void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status,
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_lambert_W0 - Implement the function lambert_W0(x) in the default namespace, which returns the principal
+//! branch of the Lambert W function
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_lambert_W0(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lambert_W0(x)";
     OUTPUT.real = gsl_sf_lambert_W0(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_lambert_W1 - Implement the function lambert_W1(x) in the default namespace, which returns the secondary
+//! branch of the Lambert W function
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_lambert_W1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lambert_W1(x)";
     OUTPUT.real = gsl_sf_lambert_Wm1(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_lcm - Implement the function lcm(x,...) in the default namespace, which returns the lowest common multiple
+//! of its arguments, which should be dimensionless positive integers
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lcm(x,...)";
@@ -1067,12 +1854,32 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_ldexp - Implement the function ldexp(x,y) in the default namespace, which returns x times 2 to the power of
+//! an integer y
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_ldexp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ldexp(x,y)";
     CHECK_NEEDSINT(in[1], "y", "function's second argument must be");
     OUTPUT.real = ldexp(in[0].real, (int) in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_legendreP - Implement the function legendreP(l,x) in the default namespace, which evaluates the lth Legendre
+//! polynomial at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_legendreP(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "legendreP(l,x)";
@@ -1081,12 +1888,32 @@ void pplfunc_legendreP(ppl_context *c, pplObj *in, const int nArgs, int *status,
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_legendreQ - Implement the function legendreQ(l,x) in the default namespace, which evaluates the lth Legendre
+//! function at x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_legendreQ(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "legendreQ(l,x)";
     CHECK_NEEDINT(in[0], "l", "function's first argument must be");
     OUTPUT.real = gsl_sf_legendre_Ql((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_len - Implement the function len(x) in the default namespace, which returns the length of the object x. The
+//! may be the length of a string, or the number of entries in a compound data type
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_len(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int t = in->objType;
@@ -1105,10 +1932,29 @@ void pplfunc_len(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     return;
 }
 
+//! pplfunc_locals - Implement the function locals() in the default namespace, which returns a dictionary of all
+//! currently-defined local variables
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_locals(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjDict(&OUTPUT, 0, 1, c->namespaces[c->ns_ptr]);
     __sync_add_and_fetch(&c->namespaces[c->ns_ptr]->refCount, 1);
 }
+
+//! pplfunc_log - Implement the function log(x) in the default namespace, which returns the natural logarithm of x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_log(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "log(z)";
@@ -1119,6 +1965,16 @@ void pplfunc_log(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_log10 - Implement the function log10(x) in the default namespace, which returns the logarithm of x to base
+//! 10
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_log10(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "log10(z)";
     gsl_complex z;
@@ -1127,6 +1983,15 @@ void pplfunc_log10(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     CLEANUP_GSLCOMPLEX;
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_logn - Implement the function logn(x,n) in the default namespace, which returns the logarithm of x to base n
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "logn(z,n)";
@@ -1142,6 +2007,16 @@ void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     ppl_uaDiv(c, &OUTPUT, &base, &OUTPUT, status, errType, errText);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_lrange - Implement the function lrange([f],l,[s]) in the default namespace, which returns a vector of
+//! numbers between f and l with uniform multiplicative spacing s
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lrange([f],l,[s])";
@@ -1184,6 +2059,16 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     for (i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start * pow(step, i));
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
+
+//! pplfunc_max - Implement the function max(x,...) in the default namespace, which returns the greatest of its
+//! arguments
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_max(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if (nArgs == 0) {
@@ -1239,6 +2124,15 @@ void pplfunc_max(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     }
 }
 
+//! pplfunc_min - Implement the function min(x,...) in the default namespace, which returns the least of its arguments
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_min(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if (nArgs == 0) {
         pplObjNull(&OUTPUT, 0);
@@ -1293,6 +2187,15 @@ void pplfunc_min(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     }
 }
 
+//! pplfunc_mod - Implement the function mod(x,y) in the default namespace, which returns the remainder of x/y
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "mod(x,y)";
     if (in[0].real * ppl_machineEpsilon * 10 > in[1].real) {
@@ -1311,6 +2214,16 @@ void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
+
+//! pplfunc_open - Implement the function open(x[,y]) in the default namespace, which opens the file x with access mode
+//! y, and returns a file object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     FILE *f;
@@ -1339,6 +2252,16 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     pplObjFile(&OUTPUT, 0, 1, f, 0);
 }
 
+//! pplfunc_ord - Implement the function ord(s) in the default namespace, which returns the ASCII code of the first
+//! character of the string s
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ord(s)";
     int t = in[0].objType;
@@ -1351,6 +2274,16 @@ void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     }
     OUTPUT.real = (double) ((char *) in[0].auxil)[0];
 }
+
+//! pplfunc_ordinal - Implement the function ordinal(n) in the default namespace, which returns the ordinal string, e.g.
+//! '1st', '2nd', '3rd' for the positive integer n
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ordinal(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ordinal(n)";
@@ -1376,9 +2309,28 @@ void pplfunc_ordinal(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
+//! pplfunc_pow - Implement the function pow(x,y) in the default namespace, which returns x to the power of y
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_pow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     ppl_uaPow(c, &in[0], &in[1], &OUTPUT, status, errType, errText);
 }
+
+//! pplfunc_prime - Implement the function prime(x) in the default namespace, which returns true if floor(x) is a prime
+//! number; false otherwise
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_prime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "prime(x)";
@@ -1404,6 +2356,16 @@ void pplfunc_prime(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     }
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_primefactors - Implement the function primeFactors(x) in the default namespace, which returns a list of the
+//! prime factors of the integer x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
@@ -1458,6 +2420,16 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
     return;
 }
 
+//! pplfunc_radians - Implement the function radians(x) in the default namespace, which converts angles measured in
+//! degrees into radians
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_radians(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "radians(x)";
     int i;
@@ -1469,6 +2441,16 @@ void pplfunc_radians(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     }
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_raise - Implement the function raise(e,s) in the default namespace, which raises the exception e, with error
+//! string s
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "raise(e,s)";
@@ -1500,6 +2482,16 @@ void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     errText[FNAME_LENGTH - 1] = '\0';
     return;
 }
+
+//! pplfunc_range - Implement the function range([f],l,[s]) in the default namespace, which returns a vector of
+//! uniformly-spaced numbers between f and l, with stepsize s
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "range([f],l,[s])";
@@ -1543,6 +2535,16 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
+//! pplfunc_real - Implement the function Re(z) in the default namespace, which returns the magnitude of the real part
+//! of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_real(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Re(z)";
     OUTPUT.real = in[0].real;
@@ -1550,9 +2552,29 @@ void pplfunc_real(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
+//! pplfunc_rgb - Implement the function rgb(r,g,b) in the default namespace, which returns a color with specified RGB
+//! components in the range 0-1
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_rgb(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, in[0].real, in[1].real, in[2].real, 0);
 }
+
+//! pplfunc_romanNum - Implement the function romanNumeral(n) in the default namespace, which returns the Roman numeral
+//! representing the number n
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "romanNumeral(n)";
@@ -1591,6 +2613,15 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     out[p] = '\0';
     pplObjStr(&OUTPUT, 0, 1, out);
 }
+
+//! pplfunc_root - Implement the function root(z,n) in the default namespace, which returns the nth root of z
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj x1, x2;
@@ -1639,11 +2670,31 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_round - Implement the function round(x) in the default namespace, which returns the nearest integer value to
+//! x. If x is exactly half way between integers, it is rounded away from zero
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_round(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "round(x)";
     OUTPUT.real = round(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_sec - Implement the function sec(x) in the default namespace, which returns the secant of x. If x is
+//! dimensionless, it is assumed to be measured in radians
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sec(z)";
@@ -1656,6 +2707,16 @@ void pplfunc_sec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_sech - Implement the function sech(x) in the default namespace, which returns the hyperbolic secant of x. x
+//! may either be a dimensionless number or may have units of angle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_sech(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sech(z)";
     int i;
@@ -1667,9 +2728,29 @@ void pplfunc_sech(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_sgn - Implement the function sgn(x) in the default namespace, which returns 1 if x is greater than zero, -1
+//! if x is less than zero, and 0 if x equals zero
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_sgn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     OUTPUT.real = ppl_sgn(in[0].real);
 }
+
+//! pplfunc_sin - Implement the function sin(x) in the default namespace, which returns the sine of x. If x is
+//! dimensionless, it is assumed to be measured in radians
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sin(z)";
@@ -1687,6 +2768,16 @@ void pplfunc_sin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     ENDIF
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_sinc - Implement the function sinc(x) in the default namespace, which returns the function sin(pi*x)/(pi*x).
+//! If x is dimensionless, it is assumed to be measured in radians. The output is dimensionless
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sinc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sinc(z)";
@@ -1710,6 +2801,16 @@ void pplfunc_sinc(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_sinh - Implement the function sinh(x) in the default namespace, which returns the hyperbolic sine of x. x
+//! may either be a dimensionless number or may have units of angle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sinh(z)";
     int i;
@@ -1726,6 +2827,15 @@ void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     ENDIF
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_sqrt - Implement the function sqrt(x) in the default namespace, which returns the square root of x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sqrt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sqrt(z)";
@@ -1745,6 +2855,15 @@ void pplfunc_sqrt(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     OUTPUT.tempType = in[0].tempType;
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] = in[0].exponent[i] / 2;
 }
+
+//! pplfunc_sum - Implement the function sum(...) in the default namespace, which returns the sum of its arguments
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if (nArgs == 0) {
@@ -1823,6 +2942,16 @@ void pplfunc_sum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     }
 }
 
+//! pplfunc_tan - Implement the function tan(x) in the default namespace, which returns the tangent of x. If x is
+//! dimensionless, it is assumed to be measured in radians
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_tan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tan(z)";
     int i;
@@ -1840,6 +2969,16 @@ void pplfunc_tan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_tanh - Implement the function tanh(x) in the default namespace, which returns the hyperbolic tangent of x. x
+//! may either be a dimensionless number or may have units of angle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_tanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tanh(z)";
     int i;
@@ -1856,6 +2995,16 @@ void pplfunc_tanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     ENDIF
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_texify - Implement the function texify(str) in the default namespace, which converts an algebraic
+//! expression into a LaTeX string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "texify(e)";
@@ -1894,6 +3043,16 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     return;
 }
 
+//! pplfunc_texifyText - Implement the function texifyText(str) in the default namespace, which converts a text
+//! string into a LaTeX string, escaping any characters which LaTeX treats as special
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "texifyText(s)";
     char *instr = (char *) in[0].auxil;
@@ -1923,16 +3082,45 @@ void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int 
     return;
 }
 
+//! pplfunc_tophat - Implement the function tophat(x,sigma) in the default namespace, which returns one if |x| <=
+//! |sigma|, and zero otherwise
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_tophat(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tophat(x,sigma)";
     CHECK_2INPUT_DIMMATCH;
     if (fabs(in[0].real) <= fabs(in[1].real)) OUTPUT.real = 1.0;
 }
 
+//! pplfunc_typeOf - Implement the function typeOf(x) in the default namespace, which returns the type of the object x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_typeOf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObjCpy(&OUTPUT, &pplObjPrototypes[in[0].objType], 0, 0, 1);
     OUTPUT.self_lval = NULL;
 }
+
+//! pplfunc_zernike - Implement the function zernike(n,m,r,phi) in the default namespace, which evaluates the (n,m)th
+//! Zernike polynomial at radius r and position angle phi
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
@@ -1975,6 +3163,16 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
+//! pplfunc_zernikeR - Implement the function zernikeR(n,m,r) in the default namespace, which evaluates the (n,m)th
+//! radial Zernike polynomial at radius r
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "zernikeR(n,m,r)";
@@ -2012,6 +3210,16 @@ void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     }
     CHECK_OUTPUT_OKAY;
 }
+
+//! pplfunc_zeta - Implement the function zeta(x) in the default namespace, which evaluates the Riemann zeta function at
+//! x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_zeta(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "zeta(z)";

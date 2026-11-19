@@ -76,6 +76,13 @@
         } \
     }
 
+//! ppl_directive_break - Implement the break command, which exits from the innermost loop, or from a named loop
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
     pplObj *stk = in->stk;
@@ -105,6 +112,14 @@ void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutpu
     c->shellBroken = 1;
     return;
 }
+
+//! ppl_directive_continue - Implement the continue command, which skips to the next iteration of the innermost
+//! loop, or of a named loop
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_continue(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                             const int iterDepth) {
@@ -136,6 +151,13 @@ void ppl_directive_continue(ppl_context *c, const parserLine *pl, const parserOu
     return;
 }
 
+//! ppl_directive_return - Implement the return command, which returns a value from a subroutine
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_return(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                           const int iterDepth) {
     pplObj *stk = in->stk;
@@ -155,6 +177,13 @@ void ppl_directive_return(ppl_context *c, const parserLine *pl, const parserOutp
     else pplObjNum(&c->shellReturnVal, 0, 0, 0);
     return;
 }
+
+//! ppl_directive_do - Implement the do ... while loop
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                       const int iterDepth) {
@@ -208,6 +237,14 @@ cleanup:
     c->shellBreakable = shellBreakableOld;
     return;
 }
+
+//! ppl_directive_for - Implement the for loop, in both its BASIC-like (for i=0 to 10) and C-like
+//! (for (i=0;i<10;i++)) forms
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                        const int iterDepth) {
@@ -349,6 +386,14 @@ cleanup:
     c->shellBreakable = shellBreakableOld;
     return;
 }
+
+//! ppl_directive_foreach - Implement the foreach loop, which iterates over the items in a list, vector or
+//! dictionary, or over files matching a wildcard
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                            const int iterDepth) {
@@ -499,6 +544,13 @@ cleanup:
     c->shellBreakable = shellBreakableOld;
     return;
 }
+
+//! ppl_directive_fordata - Implement the "foreach datum" loop, which iterates over the rows of a data file
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                            const int iterDepth) {
@@ -680,6 +732,13 @@ cleanup:
     return;
 }
 
+//! ppl_directive_if - Implement the if ... else if ... else conditional
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                       const int iterDepth) {
     pplObj *stk = in->stk;
@@ -758,6 +817,13 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
     }
     return;
 }
+
+//! ppl_directive_subrt - Implement the subroutine command, which defines a new subroutine
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
@@ -852,6 +918,13 @@ fail:
     return;
 }
 
+//! ppl_directive_while - Implement the while loop
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_directive_while(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
     int criterion = 1;
@@ -905,6 +978,14 @@ cleanup:
     c->shellBreakable = shellBreakableOld;
     return;
 }
+
+//! ppl_directive_with - Implement the with command, which executes a block of commands with the members of a
+//! dictionary or module available as local variables
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                         const int iterDepth) {
