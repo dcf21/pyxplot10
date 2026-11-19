@@ -197,7 +197,7 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
                             "Colour specified as expression via %%C token, but no pointer given for output of this expression.");
                 return 1;
             }
-            if (*EXPoutcol == NULL) pplExpr_free(*EXPoutcol);
+            if (*EXPoutcol != NULL) pplExpr_free(*EXPoutcol); // Release any expression previously held
             *EXPoutcol = (pplExpr *) col->auxil;
             (*EXPoutcol)->refCount++;
             if (USEcol != NULL) *USEcol = 0;
