@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # colorlistGenerate.py
 #
 # The code in this file is part of Pyxplot
@@ -19,132 +21,213 @@
 
 # ----------------------------------------------------------------------------
 
-color_list={
-"greenYellow": [0.15, 0, 0.69, 0],
-"yellow": [0, 0, 1, 0],
-"goldenRod": [0, 0.10, 0.84, 0],
-"dandelion": [0, 0.29, 0.84, 0],
-"apricot": [0, 0.32, 0.52, 0],
-"peach": [0, 0.50, 0.70, 0],
-"melon": [0, 0.46, 0.50, 0],
-"yellowOrange": [0, 0.42, 1, 0],
-"orange": [0, 0.61, 0.87, 0],
-"burntOrange": [0, 0.51, 1, 0],
-"bitterSweet": [0, 0.75, 1, 0.24],
-"redOrange": [0, 0.77, 0.87, 0],
-"mahogany": [0, 0.85, 0.87, 0.35],
-"maroon": [0, 0.87, 0.68, 0.32],
-"brickRed": [0, 0.89, 0.94, 0.28],
-"red": [0, 1, 1, 0],
-"orangeRed": [0, 1, 0.50, 0],
-"rubineRed": [0, 1, 0.13, 0],
-"wildStrawberry": [0, 0.96, 0.39, 0],
-"salmon": [0, 0.53, 0.38, 0],
-"carnationPink": [0, 0.63, 0, 0],
-"magenta": [0, 1, 0, 0],
-"violetRed": [0, 0.81, 0, 0],
-"rhodamine": [0, 0.82, 0, 0],
-"mulberry": [0.34, 0.90, 0, 0.02],
-"redViolet": [0.07, 0.90, 0, 0.34],
-"fuchsia": [0.47, 0.91, 0, 0.08],
-"lavender": [0, 0.48, 0, 0],
-"thistle": [0.12, 0.59, 0, 0],
-"orchid": [0.32, 0.64, 0, 0],
-"darkOrchid": [0.40, 0.80, 0.20, 0],
-"purple": [0.45, 0.86, 0, 0],
-"plum": [0.50, 1, 0, 0],
-"violet": [0.79, 0.88, 0, 0],
-"royalPurple": [0.75, 0.90, 0, 0],
-"blueViolet": [0.86, 0.91, 0, 0.04],
-"periwinkle": [0.57, 0.55, 0, 0],
-"cadetBlue": [0.62, 0.57, 0.23, 0],
-"cornflowerBlue": [0.65, 0.13, 0, 0],
-"midnightBlue": [0.98, 0.13, 0, 0.43],
-"navyBlue": [0.94, 0.54, 0, 0],
-"royalBlue": [1, 0.50, 0, 0],
-"blue": [1, 1, 0, 0],
-"cerulean": [0.94, 0.11, 0, 0],
-"cyan": [1, 0, 0, 0],
-"processBlue": [0.96, 0, 0, 0],
-"skyBlue": [0.62, 0, 0.12, 0],
-"turquoise": [0.85, 0, 0.20, 0],
-"tealBlue": [0.86, 0, 0.34, 0.02],
-"aquamarine": [0.82, 0, 0.30, 0],
-"blueGreen": [0.85, 0, 0.33, 0],
-"emerald": [1, 0, 0.50, 0],
-"jungleGreen": [0.99, 0, 0.52, 0],
-"seaGreen": [0.69, 0, 0.50, 0],
-"green": [1, 0, 1, 0],
-"forestGreen": [0.91, 0, 0.88, 0.12],
-"pineGreen": [0.92, 0, 0.59, 0.25],
-"limeGreen": [0.50, 0, 1, 0],
-"yellowGreen": [0.44, 0, 0.74, 0],
-"springGreen": [0.26, 0, 0.76, 0],
-"oliveGreen": [0.64, 0, 0.95, 0.40],
-"rawSienna": [0, 0.72, 1, 0.45],
-"sepia": [0, 0.83, 1, 0.70],
-"brown": [0, 0.81, 1, 0.60],
-"tan": [0.14, 0.42, 0.56, 0],
-"gray": [0, 0, 0, 0.50],
-"grey": [0, 0, 0, 0.50],
-"black": [0, 0, 0, 1],
-"white": [0, 0, 0, 0],
-"invisible": [-1, -1, -1, -1],
-"null": [-1, -1, -1, -1],
-"transparent": [-1, -1, -1, -1],
+"""
+Generate the C source files src/settings/epsColors.h and src/settings/epsColors.c, which list the named colors which
+Pyxplot recognises, together with their CMYK components.
+"""
+
+import logging
+import os
+
+from typing import Dict, Final, List
+
+# The named colors which Pyxplot recognises, and their [C, M, Y, K] components. Invisible colors have components of -1.
+NAMED_COLORS: Final[Dict[str, List[float]]] = {
+    "greenYellow": [0.15, 0, 0.69, 0],
+    "yellow": [0, 0, 1, 0],
+    "goldenRod": [0, 0.10, 0.84, 0],
+    "dandelion": [0, 0.29, 0.84, 0],
+    "apricot": [0, 0.32, 0.52, 0],
+    "peach": [0, 0.50, 0.70, 0],
+    "melon": [0, 0.46, 0.50, 0],
+    "yellowOrange": [0, 0.42, 1, 0],
+    "orange": [0, 0.61, 0.87, 0],
+    "burntOrange": [0, 0.51, 1, 0],
+    "bitterSweet": [0, 0.75, 1, 0.24],
+    "redOrange": [0, 0.77, 0.87, 0],
+    "mahogany": [0, 0.85, 0.87, 0.35],
+    "maroon": [0, 0.87, 0.68, 0.32],
+    "brickRed": [0, 0.89, 0.94, 0.28],
+    "red": [0, 1, 1, 0],
+    "orangeRed": [0, 1, 0.50, 0],
+    "rubineRed": [0, 1, 0.13, 0],
+    "wildStrawberry": [0, 0.96, 0.39, 0],
+    "salmon": [0, 0.53, 0.38, 0],
+    "carnationPink": [0, 0.63, 0, 0],
+    "magenta": [0, 1, 0, 0],
+    "violetRed": [0, 0.81, 0, 0],
+    "rhodamine": [0, 0.82, 0, 0],
+    "mulberry": [0.34, 0.90, 0, 0.02],
+    "redViolet": [0.07, 0.90, 0, 0.34],
+    "fuchsia": [0.47, 0.91, 0, 0.08],
+    "lavender": [0, 0.48, 0, 0],
+    "thistle": [0.12, 0.59, 0, 0],
+    "orchid": [0.32, 0.64, 0, 0],
+    "darkOrchid": [0.40, 0.80, 0.20, 0],
+    "purple": [0.45, 0.86, 0, 0],
+    "plum": [0.50, 1, 0, 0],
+    "violet": [0.79, 0.88, 0, 0],
+    "royalPurple": [0.75, 0.90, 0, 0],
+    "blueViolet": [0.86, 0.91, 0, 0.04],
+    "periwinkle": [0.57, 0.55, 0, 0],
+    "cadetBlue": [0.62, 0.57, 0.23, 0],
+    "cornflowerBlue": [0.65, 0.13, 0, 0],
+    "midnightBlue": [0.98, 0.13, 0, 0.43],
+    "navyBlue": [0.94, 0.54, 0, 0],
+    "royalBlue": [1, 0.50, 0, 0],
+    "blue": [1, 1, 0, 0],
+    "cerulean": [0.94, 0.11, 0, 0],
+    "cyan": [1, 0, 0, 0],
+    "processBlue": [0.96, 0, 0, 0],
+    "skyBlue": [0.62, 0, 0.12, 0],
+    "turquoise": [0.85, 0, 0.20, 0],
+    "tealBlue": [0.86, 0, 0.34, 0.02],
+    "aquamarine": [0.82, 0, 0.30, 0],
+    "blueGreen": [0.85, 0, 0.33, 0],
+    "emerald": [1, 0, 0.50, 0],
+    "jungleGreen": [0.99, 0, 0.52, 0],
+    "seaGreen": [0.69, 0, 0.50, 0],
+    "green": [1, 0, 1, 0],
+    "forestGreen": [0.91, 0, 0.88, 0.12],
+    "pineGreen": [0.92, 0, 0.59, 0.25],
+    "limeGreen": [0.50, 0, 1, 0],
+    "yellowGreen": [0.44, 0, 0.74, 0],
+    "springGreen": [0.26, 0, 0.76, 0],
+    "oliveGreen": [0.64, 0, 0.95, 0.40],
+    "rawSienna": [0, 0.72, 1, 0.45],
+    "sepia": [0, 0.83, 1, 0.70],
+    "brown": [0, 0.81, 1, 0.60],
+    "tan": [0.14, 0.42, 0.56, 0],
+    "gray": [0, 0, 0, 0.50],
+    "grey": [0, 0, 0, 0.50],
+    "black": [0, 0, 0, 1],
+    "white": [0, 0, 0, 0],
+    "invisible": [-1, -1, -1, -1],
+    "null": [-1, -1, -1, -1],
+    "transparent": [-1, -1, -1, -1],
 }
 
-for greylevel in range(0,101):
- color_list["grey%02d"%greylevel] = [0, 0, 0, float(100-greylevel)/100]
- color_list["gray%02d"%greylevel] = [0, 0, 0, float(100-greylevel)/100]
+# Each color is assigned a numeric code, counting upwards from this value
+FIRST_COLOR_CODE: Final[int] = 20000
 
-color_names = list(color_list.keys())
-color_names.sort()
 
-# Write ppl_colors.h
-output = open("src/settings/epsColors.h","w")
-output.write("""// This file auto-generated by colorsGenerate.py
+def make_color_list() -> Dict[str, List[float]]:
+    """
+    Make the full list of named colors, including the shades of grey grey00 (black) to grey100 (white), and the same
+    with the spelling gray.
+
+    :return:
+        Dictionary of [C, M, Y, K] components, indexed by color name
+    """
+
+    colors: Final[Dict[str, List[float]]] = dict(NAMED_COLORS)
+    for grey_level in range(0, 101):
+        black: float = float(100 - grey_level) / 100
+        colors["grey{:02d}".format(grey_level)] = [0, 0, 0, black]
+        colors["gray{:02d}".format(grey_level)] = [0, 0, 0, black]
+    return colors
+
+
+def write_header(filename: str, color_names: List[str]) -> None:
+    """
+    Write the C header file, which defines a numeric code COLOR_<NAME> for each color, and declares the tables of
+    color data.
+
+    :param filename:
+        The filename of the header file to write
+    :param color_names:
+        The names of the colors, in the order in which they are to be numbered
+    :return:
+        None
+    """
+
+    with open(filename, "w") as output:
+        output.write("""// This file auto-generated by colorsGenerate.py
 
 #ifndef _EPSCOLORS_H
 #define _EPSCOLORS_H 1
 
 """)
+        for index, name in enumerate(color_names):
+            output.write("#define COLOR_{} {:d}\n".format(name.upper(), index + FIRST_COLOR_CODE))
+        output.write("\n#ifndef _EPSCOLORS_C\n")
+        output.write("extern char  *SW_COLOR_STR[];\n")
+        output.write("extern int    SW_COLOR_DCL[];\n")
+        output.write("extern int    SW_COLOR_INT[];\n\n")
+        output.write("extern double SW_COLOR_CMYK_C[];\n")
+        output.write("extern double SW_COLOR_CMYK_M[];\n")
+        output.write("extern double SW_COLOR_CMYK_Y[];\n")
+        output.write("extern double SW_COLOR_CMYK_K[];\n")
+        output.write("#endif\n\n#endif\n")
 
-for i in range(len(color_names)): output.write("#define COLOR_%s %d\n"%(color_names[i].upper() , i+20000))
-output.write("\n#ifndef _EPSCOLORS_C\n")
-output.write("extern char  *SW_COLOR_STR[];\n")
-output.write("extern int    SW_COLOR_DCL[];\n")
-output.write("extern int    SW_COLOR_INT[];\n\n")
-output.write("extern double SW_COLOR_CMYK_C[];\n")
-output.write("extern double SW_COLOR_CMYK_M[];\n")
-output.write("extern double SW_COLOR_CMYK_Y[];\n")
-output.write("extern double SW_COLOR_CMYK_K[];\n")
-output.write("#endif\n\n#endif\n")
-output.close()
 
-# Write ppl_colors.c
-output = open("src/settings/epsColors.c","w")
-output.write("""// This file auto-generated by colorsGenerate.py
+def write_source(filename: str, color_names: List[str], colors: Dict[str, List[float]]) -> None:
+    """
+    Write the C source file, which contains tables of the names, name lengths, numeric codes and CMYK components of
+    the colors.
+
+    :param filename:
+        The filename of the source file to write
+    :param color_names:
+        The names of the colors, in the order in which they are numbered
+    :param colors:
+        Dictionary of [C, M, Y, K] components, indexed by color name
+    :return:
+        None
+    """
+
+    with open(filename, "w") as output:
+        output.write("""// This file auto-generated by colorsGenerate.py
 
 #define _EPSCOLORS_C 1
 
 #include "epsColors.h"
 
 char  *SW_COLOR_STR[] = {""")
-for i in range(len(color_names)): output.write(""" "%s" , """%color_names[i])
-output.write("};\nint    SW_COLOR_DCL[] = {")
-for i in range(len(color_names)): output.write(""" %d , """%len(color_names[i]))
-output.write("};\nint    SW_COLOR_INT[] = {")
-for i in range(len(color_names)): output.write(""" COLOR_%s , """%(color_names[i].upper()))
-output.write("-1};\ndouble SW_COLOR_CMYK_C[] = {")
-for i in range(len(color_names)): output.write(""" %f , """%(color_list[color_names[i]][0]))
-output.write("};\ndouble SW_COLOR_CMYK_M[] = {")
-for i in range(len(color_names)): output.write(""" %f , """%(color_list[color_names[i]][1]))
-output.write("};\ndouble SW_COLOR_CMYK_Y[] = {")
-for i in range(len(color_names)): output.write(""" %f , """%(color_list[color_names[i]][2]))
-output.write("};\ndouble SW_COLOR_CMYK_K[] = {")
-for i in range(len(color_names)): output.write(""" %f , """%(color_list[color_names[i]][3]))
-output.write("};\n")
+        for name in color_names:
+            output.write(""" "{}" , """.format(name))
+        output.write("};\nint    SW_COLOR_DCL[] = {")
+        for name in color_names:
+            output.write(""" {:d} , """.format(len(name)))
+        output.write("};\nint    SW_COLOR_INT[] = {")
+        for name in color_names:
+            output.write(""" COLOR_{} , """.format(name.upper()))
+        output.write("-1};")
 
-output.close()
+        # One table for each of the C, M, Y and K components
+        component: int
+        letter: str
+        for component, letter in enumerate("CMYK"):
+            output.write("\ndouble SW_COLOR_CMYK_{}[] = {{".format(letter))
+            for name in color_names:
+                output.write(""" {:f} , """.format(colors[name][component]))
+            output.write("};")
+        output.write("\n")
 
+
+def generate_color_list() -> None:
+    """
+    Generate the C source files which list the named colors which Pyxplot recognises.
+
+    :return:
+        None
+    """
+
+    colors: Final[Dict[str, List[float]]] = make_color_list()
+    color_names: Final[List[str]] = sorted(colors.keys())
+
+    write_header(filename="src/settings/epsColors.h", color_names=color_names)
+    write_source(filename="src/settings/epsColors.c", color_names=color_names, colors=colors)
+
+
+# Do it right away if we're run as a script
+if __name__ == "__main__":
+    # Ensure we're running in the root of the Pyxplot source tree
+    our_path: Final[str] = os.path.split(os.path.abspath(__file__))[0]
+    os.chdir(os.path.join(our_path, ".."))
+
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s:%(filename)s:%(message)s",
+                        datefmt="%d/%m/%Y %H:%M:%S")
+
+    generate_color_list()

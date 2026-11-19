@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # manpage_pyxplot_watch.py
 #
 # The code in this file is part of Pyxplot
@@ -19,15 +21,18 @@
 
 # ----------------------------------------------------------------------------
 
-# Generate manpage for Pyxplot watcher
+"""
+Generate the manpage for pyxplot_watch, writing it to stdout.
+"""
 
+import argparse
+import os
 import sys
 
-docpath     = sys.argv[1]
-author      = open("AUTHORS","r").read()
-description = ""
+from typing import Final
 
-sys.stdout.write(r"""
+# The template for the manpage, into which the documentation path and authors are substituted
+MANPAGE_TEMPLATE: Final[str] = r"""
 .\" pyxplot_watch.1
 .\"
 .\" The manpage in this file is part of Pyxplot
@@ -63,14 +68,14 @@ pyxplot_watch is a part of the Pyxplot plotting package; it is a simple tool
 for watching Pyxplot command script files, and executing them whenever they are
 modified. It is should be followed on the commandline by a list of command
 scripts which are to be watched.  Full documentation can be found in:
-%s
+{doc_path}
 .SH COMMAND LINE OPTIONS
   \-v, \-\-verbose: Verbose mode; output full activity log to terminal
   \-q, \-\-quiet  : Quiet mode; only output Pyxplot error messages to terminal
   \-h, \-\-help   : Display this help
   \-V, \-\-version: Display version number
 .SH AUTHORS
-%s.
+{authors}.
 .SH BUGS AND USER FORUMS
 To report bugs in Pyxplot, or to meet other Pyxplot users in our forums, please
 visit us on sourceforge: <http://sourceforge.net/projects/pyxplot/>.
@@ -81,5 +86,33 @@ our project page on Sourceforge, and thank the many testers who have already
 made significant contributions to the project by helping us to track down bugs.
 .SH "SEE ALSO"
 .BR pyxplot (1), gnuplot (1)
-"""%(docpath,author))
+"""
 
+
+def make_manpage(doc_path: str) -> str:
+    """
+    Make the manpage for pyxplot_watch.
+
+    :param doc_path:
+        The path of Pyxplot's full documentation, which the manpage refers readers to
+    :return:
+        The text of the manpage
+    """
+
+    with open("AUTHORS", "r") as f:
+        authors: Final[str] = f.read()
+    return MANPAGE_TEMPLATE.format(doc_path=doc_path, authors=authors)
+
+
+# Do it right away if we're run as a script
+if __name__ == "__main__":
+    # Read input parameters
+    parser: Final[argparse.ArgumentParser] = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('doc_path', help="The path of Pyxplot's full documentation")
+    args: Final[argparse.Namespace] = parser.parse_args()
+
+    # Ensure we're running in the root of the Pyxplot source tree
+    our_path: Final[str] = os.path.split(os.path.abspath(__file__))[0]
+    os.chdir(os.path.join(our_path, ".."))
+
+    sys.stdout.write(make_manpage(doc_path=args.doc_path))
