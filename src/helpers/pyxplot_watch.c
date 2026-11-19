@@ -77,6 +77,7 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
 //! \return The exit status of the process
 
 int main(const int argc, char **argv) {
+    char msg[PPL_MSG_LENGTH];
     struct timespec waitperiod, waitedperiod; // A time.h timespec specifier; used for sleeping
     char init_string[LSTR_LENGTH], help_string[LSTR_LENGTH], version_string[FNAME_LENGTH],
             version_string_underline[FNAME_LENGTH];
@@ -181,10 +182,11 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
             ppl_memAlloc_MemoryStop();
             return 0;
         } else {
-            sprintf(context->tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Received switch '%s' which was not recognised. Type 'pyxplot_watch -help' for a list of available command-line options.",
                     argv[i]);
-            ppl_error(context, ERR_PREFORMED, -1, -1, NULL);
+            ppl_error(context, ERR_PREFORMED, -1, -1, msg);
             if (DEBUG) ppl_log(context, "Received unexpected command-line switch.");
             ppl_memAlloc_FreeAll(0);
             ppl_memAlloc_MemoryStop();

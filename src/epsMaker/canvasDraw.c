@@ -171,6 +171,7 @@ static void (*AfterHandlers[])(EPSComm *) = {NULL, NULL, NULL, canvas_CallLaTeX,
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     static int lock = 0;
     int i, j, termtype, status = 0, CSPCommand = 0;
     static long TempFile_counter = 0, TeXFile_counter = 0;
@@ -221,14 +222,14 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
 
     // Perform expansion of shell filename shortcuts such as ~
     if ((wordexp(comm.FinalFilename, &WordExp, 0) != 0) || (WordExp.we_wordc <= 0)) {
-        sprintf(c->errcontext.tempErrStr, "Could not find directory containing filename '%s'.", comm.FinalFilename);
-        ppl_error(&c->errcontext, ERR_FILE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not find directory containing filename '%s'.", comm.FinalFilename);
+        ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
         lock = 0;
         return;
     }
     if (WordExp.we_wordc > 1) {
-        sprintf(c->errcontext.tempErrStr, "Filename '%s' is ambiguous.", comm.FinalFilename);
-        ppl_error(&c->errcontext, ERR_FILE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Filename '%s' is ambiguous.", comm.FinalFilename);
+        ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
         lock = 0;
         return;
     }
@@ -383,11 +384,12 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         } else {
             if (!c->willBeInteractive) {
                 if (termtype != SW_TERMTYPE_X11P) {
-                    sprintf(c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "An attempt is being made to use the %s terminal in a non-interactive Pyxplot session. This won't work, as the window will close as soon as Pyxplot exits. Reverting to the X11_persist terminal instead.",
                             *(char **) ppl_fetchSettingName(&c->errcontext, termtype, SW_TERMTYPE_INT,
                                                             (void *) SW_TERMTYPE_STR, sizeof(char *)));
-                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 }
                 CSPCommand = 2;
             } else {
@@ -486,6 +488,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void canvas_CallLaTeX(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     int linecount = 1, i, j, pid, LatexStatus, LatexStdIn, LatexOut;
     char filename[FNAME_LENGTH], *str_buffer;
     FILE *output;
@@ -571,16 +574,16 @@ void canvas_CallLaTeX(EPSComm *x) {
                 waitperiod.tv_sec = 0;
             } // If we've had an error message, only wait 0.5 sec
             if (DEBUG) {
-                sprintf(x->c->errcontext.tempErrStr, "pselect waiting for %ld seconds and %ld nanoseconds",
-                        waitperiod.tv_sec, waitperiod.tv_nsec);
-                ppl_log(&x->c->errcontext, x->c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "pselect waiting for %ld seconds and %ld nanoseconds",
+                                  waitperiod.tv_sec, waitperiod.tv_nsec);
+                ppl_log(&x->c->errcontext, msg);
             }
             FD_ZERO(&readable);
             FD_SET(LatexOut, &readable);
             if (pselect(LatexOut + 1, &readable, NULL, NULL, &waitperiod, NULL) == -1) {
                 if (DEBUG) {
-                    sprintf(x->c->errcontext.tempErrStr, "pselect returned -1. errno=%d", errno);
-                    ppl_log(&x->c->errcontext, x->c->errcontext.tempErrStr);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "pselect returned -1. errno=%d", errno);
+                    ppl_log(&x->c->errcontext, msg);
                 }
                 if ((errno == EINTR) && (TrialNumber < 3)) {
                     TrialNumber++;
@@ -590,9 +593,9 @@ void canvas_CallLaTeX(EPSComm *x) {
                 break;
             }
             if (DEBUG) {
-                sprintf(x->c->errcontext.tempErrStr, "pipe is %s",
-                        (FD_ISSET(LatexOut, &readable)) ? "readable" : "unreadable");
-                ppl_log(&x->c->errcontext, x->c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "pipe is %s",
+                                  (FD_ISSET(LatexOut, &readable)) ? "readable" : "unreadable");
+                ppl_log(&x->c->errcontext, msg);
             }
             break;
         }
@@ -615,8 +618,8 @@ void canvas_CallLaTeX(EPSComm *x) {
                                 sprintf(x->c->errcontext.tempErrStr, "Received LaTeX error on line %d of file <%s>",
                                         ErrLineNo, ErrFilename);
                                 ppl_log(&x->c->errcontext, x->c->errcontext.tempErrStr);
-                                sprintf(x->c->errcontext.tempErrStr, "Error message: <%s>", ErrMsg);
-                                ppl_log(&x->c->errcontext, x->c->errcontext.tempErrStr);
+                                ppl_snprintfTrunc(msg, sizeof(msg), "Error message: <%s>", ErrMsg);
+                                ppl_log(&x->c->errcontext, msg);
                             }
                         }
                         ErrReadState = ErrReadPos = 0;
@@ -709,21 +712,21 @@ void canvas_CallLaTeX(EPSComm *x) {
                     strcpy(x->c->errcontext.tempErrStr + i, "\n");
                     ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, x->c->errcontext.tempErrStr);
                 } // Then output the LaTeX string which produced the error
-                sprintf(x->c->errcontext.tempErrStr, "\nOffending input to LaTeX was:\n\n%s\n", SuspectTextItem->text);
-                ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, x->c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "\nOffending input to LaTeX was:\n\n%s\n", SuspectTextItem->text);
+                ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
             }
         } else if ((ErrFilename[0] == '\0') &&
                    (ErrMsg[0] == '\0')) // Case 2: Error encountered, but we didn't catch error message
         {
-            sprintf(x->c->errcontext.tempErrStr, "Unidentified LaTeX error encountered.");
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Unidentified LaTeX error encountered.");
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
         } else // Case 3: Error in another file which the user seems to have imported
         {
             sprintf(x->c->errcontext.tempErrStr, "LaTeX error encountered in imported file <%s> on line %d.",
                     ErrFilename, ErrLineNo);
             ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, x->c->errcontext.tempErrStr);
-            sprintf(x->c->errcontext.tempErrStr, "Error was: %s", ErrMsg);
-            ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error was: %s", ErrMsg);
+            ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
         }
         if (chdir(x->c->errcontext.session_default.cwd) < 0) {
             ppl_fatal(&x->c->errcontext, __FILE__, __LINE__, "chdir into cwd failed.");
@@ -763,6 +766,7 @@ void canvas_MakeEPSBuffer(EPSComm *x) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void canvas_EPSWrite(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     int i;
     double PAGEwidth, PAGEheight, margin_left, margin_top, margin_bottom;
     FILE *epsout, *PFAfile;
@@ -798,8 +802,8 @@ void canvas_EPSWrite(EPSComm *x) {
 
     // Open output postscript file for writing
     if ((epsout = fopen(x->EPSFilename, "w")) == NULL) {
-        sprintf(x->c->errcontext.tempErrStr, "Could not open file '%s' for writing.", x->EPSFilename);
-        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s' for writing.", x->EPSFilename);
+        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
         *(x->status) = 1;
         return;
     }
@@ -867,16 +871,16 @@ void canvas_EPSWrite(EPSComm *x) {
             fprintf(epsout, "%%%%BeginFont: %s\n", ((dviFontDetails *) ListIter->data)->psName);
             PFAfile = fopen(PFAfilename, "r");
             if (PFAfile == NULL) {
-                sprintf(x->c->errcontext.tempErrStr, "Could not open pfa file '%s'", PFAfilename);
-                ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Could not open pfa file '%s'", PFAfilename);
+                ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
                 *(x->status) = 1;
                 fclose(epsout);
                 return;
             }
             while (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, PFAfile) != NULL)
                 if (fputs(x->c->errcontext.tempErrStr, epsout) == EOF) {
-                    sprintf(x->c->errcontext.tempErrStr, "Error while writing to file '%s'.", x->EPSFilename);
-                    ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Error while writing to file '%s'.", x->EPSFilename);
+                    ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
                     *(x->status) = 1;
                     fclose(PFAfile);
                     fclose(epsout);
@@ -951,8 +955,8 @@ void canvas_EPSWrite(EPSComm *x) {
     rewind(x->epsbuffer);
     while (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, x->epsbuffer) != NULL)
         if (fputs(x->c->errcontext.tempErrStr, epsout) == EOF) {
-            sprintf(x->c->errcontext.tempErrStr, "Error while writing to file '%s'.", x->EPSFilename);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error while writing to file '%s'.", x->EPSFilename);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;
             fclose(epsout);
             return;

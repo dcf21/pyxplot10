@@ -54,6 +54,7 @@ int cancellationFlag = 0;
 //! \param [in|out] context - The Pyxplot context whose settings are to be initialised
 
 void pplset_makedefault(ppl_context *context) {
+    char msg[PPL_MSG_LENGTH];
     FILE *LocalePipe;
     int Nchars, i, gotPaperSize;
     double PaperWidth, PaperHeight;
@@ -400,16 +401,16 @@ void pplset_makedefault(ppl_context *context) {
             ppl_PaperSizeByName(PaperSizePtr, &PaperHeight, &PaperWidth);
             if (PaperHeight > 0) {
                 if (DEBUG) {
-                    sprintf(context->errcontext.tempErrStr, "Read papersize %s, with dimensions %f x %f", PaperSizePtr,
-                            PaperWidth, PaperHeight);
-                    ppl_log(&context->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Read papersize %s, with dimensions %f x %f", PaperSizePtr,
+                                      PaperWidth, PaperHeight);
+                    ppl_log(&context->errcontext, msg);
                 }
                 s->term_default.PaperHeight.real = PaperHeight / 1000;
                 s->term_default.PaperWidth.real = PaperWidth / 1000;
                 ppl_GetPaperName(s->term_default.PaperName, &PaperHeight, &PaperWidth);
                 if (DEBUG) {
-                    sprintf(context->errcontext.tempErrStr, "Papersize name: %s", s->term_default.PaperName);
-                    ppl_log(&context->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Papersize name: %s", s->term_default.PaperName);
+                    ppl_log(&context->errcontext, msg);
                 }
                 //gotPaperSize = 1;
             } else {
@@ -428,16 +429,16 @@ void pplset_makedefault(ppl_context *context) {
             ppl_PaperSizeByName(ConfigFname, &PaperHeight, &PaperWidth);
             if (PaperHeight > 0) {
                 if (DEBUG) {
-                    sprintf(context->errcontext.tempErrStr, "Read papersize %s, with dimensions %f x %f", ConfigFname,
-                            PaperWidth, PaperHeight);
-                    ppl_log(&context->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Read papersize %s, with dimensions %f x %f", ConfigFname,
+                                      PaperWidth, PaperHeight);
+                    ppl_log(&context->errcontext, msg);
                 }
                 s->term_default.PaperHeight.real = PaperHeight / 1000;
                 s->term_default.PaperWidth.real = PaperWidth / 1000;
                 ppl_GetPaperName(s->term_default.PaperName, &PaperHeight, &PaperWidth);
                 if (DEBUG) {
-                    sprintf(context->errcontext.tempErrStr, "Papersize name: %s", s->term_default.PaperName);
-                    ppl_log(&context->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Papersize name: %s", s->term_default.PaperName);
+                    ppl_log(&context->errcontext, msg);
                 }
                 //gotPaperSize = 1;
             } else {
@@ -462,8 +463,8 @@ void pplset_makedefault(ppl_context *context) {
             PaperWidth = ppl_getFloat(ConfigFname, &Nchars);
             if (Nchars != strlen(ConfigFname)) goto LC_PAPERSIZE_DONE;
             if (DEBUG) {
-                sprintf(context->errcontext.tempErrStr, "Read papersize %f x %f", PaperWidth, PaperHeight);
-                ppl_log(&context->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Read papersize %f x %f", PaperWidth, PaperHeight);
+                ppl_log(&context->errcontext, msg);
             }
             s->term_default.PaperHeight.real = PaperHeight / 1000;
             s->term_default.PaperWidth.real = PaperWidth / 1000;
@@ -474,8 +475,8 @@ void pplset_makedefault(ppl_context *context) {
             pclose(LocalePipe);
             ppl_GetPaperName(s->term_default.PaperName, &PaperHeight, &PaperWidth);
             if (DEBUG) {
-                sprintf(context->errcontext.tempErrStr, "Papersize name: %s", s->term_default.PaperName);
-                ppl_log(&context->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Papersize name: %s", s->term_default.PaperName);
+                ppl_log(&context->errcontext, msg);
             }
             //gotPaperSize = 1;
         }

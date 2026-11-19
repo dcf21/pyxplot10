@@ -166,6 +166,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
 
 void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, const parserLine *pl,
                      const int *ptab, const int quiet) {
+    char msg[PPL_MSG_LENGTH];
     int pos;
     ppllabel_object **first;
 
@@ -189,8 +190,8 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
                 free(obj->text);
                 free(obj);
             } else if (!quiet) {
-                sprintf(context->errcontext.tempErrStr, "Label number %d is not defined", i);
-                ppl_warning(&context->errcontext, ERR_GENERIC, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Label number %d is not defined", i);
+                ppl_warning(&context->errcontext, ERR_GENERIC, msg);
             }
         }
     }

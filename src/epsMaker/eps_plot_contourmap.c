@@ -508,6 +508,7 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
 int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDim, const int xn, const int yn,
                         const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                         const double origin_y, const double width, const double height, const double zdepth) {
+    char msg[PPL_MSG_LENGTH];
     double scale_x, scale_y, scale_z;
     dataBlock *blk;
     const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
@@ -609,22 +610,23 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     // Output result to debugging output
     if (DEBUG) {
         int SF = x->c->set->term_current.SignificantFigures;
-        sprintf(x->c->errcontext.tempErrStr, "Range for variable c1 is [%s:%s]",
-                ppl_numericDisplay(CMin, x->c->numdispBuff[0], SF, 0),
-                ppl_numericDisplay(CMax, x->c->numdispBuff[1], SF, 0));
-        ppl_log(&x->c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Range for variable c1 is [%s:%s]",
+                          ppl_numericDisplay(CMin, x->c->numdispBuff[0], SF, 0),
+                          ppl_numericDisplay(CMax, x->c->numdispBuff[1], SF, 0));
+        ppl_log(&x->c->errcontext, msg);
     }
 
     // Check that variable c1 has appropriate units
     if (((!CMinAuto) || (!CMaxAuto)) &&
         (!ppl_unitsDimEqual(&data->firstEntries[2],
                             (sg->Cminauto[0] == SW_BOOL_TRUE) ? (&sg->Cmax[0]) : (&sg->Cmin[0])))) {
-        sprintf(x->c->errcontext.tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Column 3 of data supplied to the colormap plot style has conflicting units with those set in the 'set crange' command. The former has units of <%s> whilst the latter has units of <%s>.",
                 ppl_printUnit(x->c, &data->firstEntries[2], NULL, NULL, 0, 1, 0),
                 ppl_printUnit(x->c, (sg->Cminauto[0] == SW_BOOL_TRUE) ? (&sg->Cmax[0]) : (&sg->Cmin[0]), NULL, NULL, 1,
                               1, 0));
-        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
         return 1;
     }
 
@@ -653,8 +655,8 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
 
         // Write debugging output
         if (DEBUG) {
-            sprintf(x->c->errcontext.tempErrStr, "Beginning to trace path of contour at c1=%g.", v.real);
-            ppl_log(&x->c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Beginning to trace path of contour at c1=%g.", v.real);
+            ppl_log(&x->c->errcontext, msg);
         }
 
         // Reset contour map usage flags
@@ -866,31 +868,33 @@ GOT_CONTOURS:
                     outval = ppl_expEval(x->c, expr[i], &lOP, 1, x->iterDepth + 1);
 
                     if (errpos >= 0) {
-                        sprintf(x->c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "Could not evaluate the style expression <%s>. The error, encountered at character position %d, was: '%s'",
                                 expr[i]->ascii, errpos, errtext);
-                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
                     if (!outval->dimensionless) {
-                        sprintf(x->c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "The style expression <%s> yielded a result which was not a dimensionless number.",
                                 expr[i]->ascii);
-                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
                     if (outval->flagComplex) {
-                        sprintf(x->c->errcontext.tempErrStr,
-                                "The style expression <%s> yielded a result which was a complex number.",
-                                expr[i]->ascii);
-                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "The style expression <%s> yielded a result which was a complex number.",
+                                          expr[i]->ascii);
+                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
                     if (!gsl_finite(outval->real)) {
-                        sprintf(x->c->errcontext.tempErrStr,
-                                "The style expression <%s> yielded a result which was not a finite number.",
-                                expr[i]->ascii);
-                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "The style expression <%s> yielded a result which was not a finite number.",
+                                          expr[i]->ascii);
+                        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
                     dbl = outval->real;

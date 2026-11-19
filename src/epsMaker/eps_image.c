@@ -30,6 +30,7 @@
 #include <wordexp.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 #include "settings/settingTypes.h"
 
@@ -51,6 +52,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_image_RenderEPS(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     bitmap_data data;
     FILE *infile;
     int ImageType, i, j;
@@ -82,13 +84,13 @@ void eps_image_RenderEPS(EPSComm *x) {
             fName[k++] = '\0';
         }
         if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             return;
         }
         if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             wordfree(&wordExp);
             return;
         }
@@ -101,8 +103,8 @@ void eps_image_RenderEPS(EPSComm *x) {
     // Open input data file
     infile = fopen(filename, "r");
     if (infile == NULL) {
-        sprintf(x->c->errcontext.tempErrStr, "Could not open input file '%s'", filename);
-        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not open input file '%s'", filename);
+        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
         *(x->status) = 1;
         return;
     }
@@ -111,8 +113,8 @@ void eps_image_RenderEPS(EPSComm *x) {
     for (i = 0; i < 3; i++) {
         j = fgetc(infile);
         if (j == EOF) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not read any image data from the input file '%s'", filename);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not read any image data from the input file '%s'", filename);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;
             fclose(infile);
             return;
@@ -124,10 +126,11 @@ void eps_image_RenderEPS(EPSComm *x) {
     else if ((buff[0] == 'B') && (buff[1] == 'M')) ImageType = SW_BITMAP_BMP;
     else if ((buff[0] == 137) && (buff[1] == 'P') && (buff[2] == 'N')) ImageType = SW_BITMAP_PNG;
     else {
-        sprintf(x->c->errcontext.tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Could not determine the file type of input file '%s'. The image command only supports bmp, gif, jpeg and png images. The supplied image does not appear to be in any of these formats.",
                 filename);
-        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
         *(x->status) = 1;
         fclose(infile);
         return;
@@ -237,17 +240,17 @@ void eps_image_RenderEPS(EPSComm *x) {
 
             if (j != 0) {
                 if (DEBUG) {
-                    sprintf(x->c->errcontext.tempErrStr, "zlib returned error code %d\n", j);
-                    ppl_log(&x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "zlib returned error code %d\n", j);
+                    ppl_log(&x->c->errcontext, msg);
                 }
                 data.TargetCompression = BMP_ENCODING_NULL; // Give up trying to compress data
                 break;
             }
             if (DEBUG) {
-                sprintf(x->c->errcontext.tempErrStr,
-                        "zlib has completed compression. Before flate: %ld bytes. After flate: %ld bytes",
-                        data.data_len, (long) zlen);
-                ppl_log(&x->c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "zlib has completed compression. Before flate: %ld bytes. After flate: %ld bytes",
+                                  data.data_len, (long) zlen);
+                ppl_log(&x->c->errcontext, msg);
             }
             if (zlen >= data.data_len) {
                 if (DEBUG) {

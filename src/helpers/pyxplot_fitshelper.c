@@ -122,8 +122,9 @@ For the latest information on Pyxplot development, see the project website:\n\
     fprintf(stderr, "\nThe cfitsio library was not installed on this computer when Pyxplot was\n\
 installed, and consequently Pyxplot was compiled with no support for fits\n\
 files. The fits helper application which you are using is a dummy which does\n\
-nothing. To plot this datafile, you need to install libcfitsio and then\n\
-recompile Pyxplot.\n\n");
+nothing. To plot the datafile <%s>, you need to install libcfitsio and then\n\
+recompile Pyxplot.\n\n",
+            filename);
     exit(1);
 #else
     if (fits_open_file(&fptr, filename, READONLY, &status) != 0) {

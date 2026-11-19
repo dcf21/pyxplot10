@@ -999,6 +999,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                      pplset_axis *a2, pplset_axis *a3, int xn, int yn, const int zn, pplset_graph *sg,
                      canvas_plotdesc *pd, const double origin_x, const double origin_y, const double width,
                      const double height, const double zdepth) {
+    char msg[PPL_MSG_LENGTH];
     int i, j, Ncolumns, Ncol_obj, pt = 0, xrn, yrn, zrn;
     double xpos, ypos, depth, xap, yap, zap, scale_x, scale_y, scale_z;
     char epsbuff[FNAME_LENGTH], *last_colstr = NULL;
@@ -1390,11 +1391,12 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     last_colstr = NULL;
 
                     if (a[yn]->DataUnitSet && (!ppl_unitsDimEqual(&sg->BoxFrom, &a[yn]->DataUnit))) {
-                        sprintf(x->c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "Data with units of <%s> plotted with impulses when BoxFrom is set to a value with units of <%s>.",
                                 ppl_printUnit(x->c, &a[yn]->DataUnit, NULL, NULL, 0, 1, 0),
                                 ppl_printUnit(x->c, &sg->BoxFrom, NULL, NULL, 1, 1, 0));
-                        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
                     } else {
                         while (blk != NULL) {
                             for (j = 0; j < blk->blockPosition; j++) {
@@ -1667,18 +1669,20 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     }
 
                     if (a[yn]->DataUnitSet && (!ppl_unitsDimEqual(&sg->BoxFrom, &a[yn]->DataUnit))) {
-                        sprintf(x->c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "Data with units of <%s> plotted as boxes/steps when BoxFrom is set to a value with units of <%s>.",
                                 ppl_printUnit(x->c, &a[yn]->DataUnit, NULL, NULL, 0, 1, 0),
                                 ppl_printUnit(x->c, &sg->BoxFrom, NULL, NULL, 1, 1, 0));
-                        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
                     } else if (a[xn]->DataUnitSet && (sg->BoxWidth.real > 0.0) &&
                                (!ppl_unitsDimEqual(&sg->BoxWidth, &a[xn]->DataUnit))) {
-                        sprintf(x->c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "Data with ordinate units of <%s> plotted as boxes/steps when BoxWidth is set to a value with units of <%s>.",
                                 ppl_printUnit(x->c, &a[xn]->DataUnit, NULL, NULL, 0, 1, 0),
                                 ppl_printUnit(x->c, &sg->BoxWidth, NULL, NULL, 1, 1, 0));
-                        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
                     } else {
                         const unsigned char logaxis = (a[xn]->LogFinal == SW_BOOL_TRUE);
                         while (blk != NULL) {

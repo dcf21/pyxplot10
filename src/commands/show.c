@@ -27,6 +27,7 @@
 #include <ctype.h>
 
 #include "commands/show.h"
+#include "coreUtils/errorReport.h"
 
 #include "coreUtils/dict.h"
 #include "coreUtils/memAlloc.h"
@@ -1798,6 +1799,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     int pos;
     char itemSet[32];
@@ -1821,14 +1823,14 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         canvas_item *ptr = canvas_items->first;
         int editNo = (int) round(stk[PARSE_show_editno].real);
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
-            sprintf(c->errcontext.tempErrStr, "No multiplot item with index %d.", editNo);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
         while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
         if (ptr == NULL) {
-            sprintf(c->errcontext.tempErrStr, "No multiplot item with index %d.", editNo);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
 

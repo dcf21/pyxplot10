@@ -92,6 +92,7 @@
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     int contextNew;
     pplObj *stk = in->stk;
     char *d = (char *) stk[PARSE_arc_directive].auxil;
@@ -207,15 +208,15 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
                 if (DEBUG) ppl_log(&c->errcontext, "Pling command received non-zero return value.");
             }
             if (ec) {
-                sprintf(c->errcontext.tempErrStr, "Shell returned exit code %d.", ec);
-                ppl_warning(&c->errcontext, ERR_GENERIC, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Shell returned exit code %d.", ec);
+                ppl_warning(&c->errcontext, ERR_GENERIC, msg);
             }
         } else if (WIFSIGNALED(status)) {
-            sprintf(c->errcontext.tempErrStr, "Shell terminated by signal %d.", WTERMSIG(status));
-            ppl_warning(&c->errcontext, ERR_GENERIC, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Shell terminated by signal %d.", WTERMSIG(status));
+            ppl_warning(&c->errcontext, ERR_GENERIC, msg);
         } else {
-            sprintf(c->errcontext.tempErrStr, "Shell terminated because fail happened.");
-            ppl_warning(&c->errcontext, ERR_GENERIC, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Shell terminated because fail happened.");
+            ppl_warning(&c->errcontext, ERR_GENERIC, msg);
         }
     } else if (strcmp(d, "plot") == 0) ppl_directive_plot(c, pl, in, interactive, iterDepth, 0);
     else if (strcmp(d, "point") == 0) ppl_directive_point(c, pl, in, interactive, iterDepth);

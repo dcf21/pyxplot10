@@ -42,6 +42,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_eps_RenderEPS(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     FILE *inf;
     char filename[FNAME_LENGTH];
     double bb_left = 0.0, bb_right = 0.0, bb_top = 0.0, bb_bottom = 0.0;
@@ -65,13 +66,13 @@ void eps_eps_RenderEPS(EPSComm *x) {
             fName[k++] = '\0';
         }
         if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             return;
         }
         if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             wordfree(&wordExp);
             return;
         }
@@ -87,18 +88,19 @@ void eps_eps_RenderEPS(EPSComm *x) {
     {
         inf = fopen(filename, "r");
         if (inf == NULL) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not open EPS file '%s'.", filename);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open EPS file '%s'.", filename);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;
             return;
         }
         eps_eps_ExtractBBox(x, inf, &bb_left, &bb_bottom, &bb_right, &bb_top, &GotBBox);
         fclose(inf);
         if (!GotBBox) {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Could not extract bounding box from EPS file '%s'. Will therefore process file in calcbbox mode, and attempt to determine its bounding box using ghostview.",
                     filename);
-            ppl_warning(&x->c->errcontext, ERR_GENERIC, x->c->errcontext.tempErrStr);
+            ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
         }
     }
     if ((x->current->calcbbox) || (!GotBBox)) // Calculate bounding box for EPS file using ghostview
@@ -109,9 +111,9 @@ void eps_eps_RenderEPS(EPSComm *x) {
              FNAME_LENGTH) ||
             (snprintf(command, LSTR_LENGTH, "%s -dQUIET -dSAFER -dBATCH -dNOPAUSE -sDEVICE=bbox %s > %s 2> %s",
                       GHOSTSCRIPT_COMMAND, filename, tmpdata, tmpdata) >= LSTR_LENGTH)) {
-            ppl_snprintfTrunc(x->c->errcontext.tempErrStr, LSTR_LENGTH,
-                              "Filename of EPS file '%s' is too long to calculate its bounding box.", filename);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Filename of EPS file '%s' is too long to calculate its bounding box.",
+                              filename);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;
             return;
         }
@@ -119,16 +121,16 @@ void eps_eps_RenderEPS(EPSComm *x) {
             if (DEBUG) { ppl_log(&x->c->errcontext, "Ghostscript returned non-zero return value."); }
         inf = fopen(tmpdata, "r");
         if (inf == NULL) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not open temporary file '%s'.", tmpdata);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open temporary file '%s'.", tmpdata);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;
             return;
         }
         eps_eps_ExtractBBox(x, inf, &bb_left, &bb_bottom, &bb_right, &bb_top, &GotBBox);
         fclose(inf);
         if (!GotBBox) {
-            sprintf(x->c->errcontext.tempErrStr, "Could not calculate bounding box for EPS file '%s'.", filename);
-            ppl_warning(&x->c->errcontext, ERR_GENERIC, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not calculate bounding box for EPS file '%s'.", filename);
+            ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
         }
     }
 
@@ -182,15 +184,15 @@ void eps_eps_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "%% ---- Beginning of included EPS graphic ----\n%%%%BeginDocument: epsfile.eps\n");
     inf = fopen(filename, "r");
     if (inf == NULL) {
-        sprintf(x->c->errcontext.tempErrStr, "Could not open EPS file '%s'.", filename);
-        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not open EPS file '%s'.", filename);
+        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
         *(x->status) = 1;
         return;
     }
     while (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, inf) != NULL)
         if (fputs(x->c->errcontext.tempErrStr, x->epsbuffer) == EOF) {
-            sprintf(x->c->errcontext.tempErrStr, "Error while reading EPS file '%s'.", filename);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error while reading EPS file '%s'.", filename);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;
             fclose(inf);
             return;

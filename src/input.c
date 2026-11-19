@@ -197,6 +197,7 @@ void ppl_interactiveSession(ppl_context *context) {
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     int linenumber = 1;
     int status;
     char full_filename[FNAME_LENGTH];
@@ -212,15 +213,15 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     char *oldInputLineAddBuffer = context->inputLineAddBuffer;
 
     if (DEBUG) {
-        sprintf(context->errcontext.tempErrStr, "Processing input from the script file '%s'.", input);
-        ppl_log(&context->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Processing input from the script file '%s'.", input);
+        ppl_log(&context->errcontext, msg);
     }
     ppl_unixExpandUserHomeDir(&context->errcontext, input, context->errcontext.session_default.cwd, full_filename);
     sprintf(filename_description, "file '%s'", input);
     if ((infile = fopen(full_filename, "r")) == NULL) {
-        sprintf(context->errcontext.tempErrStr, "Could not find command file '%s'. Skipping on to next command file.",
-                full_filename);
-        ppl_error(&context->errcontext, ERR_FILE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not find command file '%s'. Skipping on to next command file.",
+                          full_filename);
+        ppl_error(&context->errcontext, ERR_FILE, -1, -1, msg);
         goto restore;
     }
 

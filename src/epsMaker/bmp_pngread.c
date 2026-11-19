@@ -31,6 +31,7 @@
 #include <png.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 
 #include "epsMaker/bmp_image.h"
@@ -43,6 +44,7 @@
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
+    char msg[PPL_MSG_LENGTH];
     int depth, ncols, ntrans, png_colour_type, i, j;
     unsigned width, height, row_bytes;
     static unsigned char index[3];
@@ -86,12 +88,12 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     png_colour_type = png_get_color_type(png_ptr, info_ptr);
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Size %dx%d", width, height);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Size %dx%d", width, height);
+        ppl_log(ec, msg);
     }
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Depth %d", depth);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Depth %d", depth);
+        ppl_log(ec, msg);
     }
 
     if (depth == 16) {
@@ -138,8 +140,8 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             *(image->palette + 3 * i + 2) = palette[i].blue;
         }
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "PNG image file contains a palette of %d colours", ncols);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "PNG image file contains a palette of %d colours", ncols);
+            ppl_log(ec, msg);
         }
     } else {
         image->type = BMP_COLOUR_BMP;
@@ -179,8 +181,8 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         if (DEBUG) ppl_log(ec, "PNG has transparency");
         png_get_tRNS(png_ptr, info_ptr, &trans_colours, &ntrans, &trans_val);
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "PNG has %d transparent entries in palette", ntrans);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "PNG has %d transparent entries in palette", ntrans);
+            ppl_log(ec, msg);
         }
         if (png_colour_type == PNG_COLOR_TYPE_PALETTE) {
             // We can cope with just one, fully transparent, entry in palette

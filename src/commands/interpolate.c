@@ -31,6 +31,8 @@
 #include <gsl/gsl_math.h>
 
 #include "commands/interpolate.h"
+#include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "commands/interpolate_2d_engine.h"
 #include "coreUtils/memAlloc.h"
 #include "epsMaker/bmp_bmpread.h"
@@ -97,6 +99,7 @@ static int interpolateSorter(const void *x, const void *y) {
 
 void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                                const int iterDepth, const int mode) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     dataTable *data;
     dataBlock *blk;
@@ -514,9 +517,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                 COUNTEDERR1;
                 v = firstEntries[0];
                 v.real = xdata[j];
-                sprintf(c->errcontext.tempErrStr, "Repeat values for interpolation have been supplied at x=%s.",
-                        ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
-                ppl_warning(&c->errcontext, ERR_GENERIC, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Repeat values for interpolation have been supplied at x=%s.",
+                                  ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
+                ppl_warning(&c->errcontext, ERR_GENERIC, msg);
                 COUNTEDERR2;
                 continue;
             }
@@ -526,10 +529,11 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                     COUNTEDERR1;
                     v = firstEntries[0];
                     v.real = xdata[j];
-                    sprintf(c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "Negative or zero values are not allowed in power-law interpolation; negative values supplied at x=%s will be ignored.",
                             ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
-                    ppl_warning(&c->errcontext, ERR_NUMERICAL, NULL);
+                    ppl_warning(&c->errcontext, ERR_NUMERICAL, msg);
                     COUNTEDERR2;
                     continue;
                 }

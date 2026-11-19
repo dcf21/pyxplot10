@@ -1479,6 +1479,7 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
 //! \param [in] expIn - The compiled expression to print
 
 void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
+    char msg[PPL_MSG_LENGTH];
     int j = 0;
     char op[32], optype[32], arg[1024];
     pplExprBytecode *in = expIn->bytecode;
@@ -1665,8 +1666,8 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
                 o = 0;
                 break;
         }
-        sprintf(context->errcontext.tempErrStr, "%4d %4d %10s %10s %s", pos, charpos, op, optype, arg);
-        ppl_report(&context->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%4d %4d %10s %10s %s", pos, charpos, op, optype, arg);
+        ppl_report(&context->errcontext, msg);
         if (o == 0) break;
         j = pos + len;
     }

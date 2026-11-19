@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/memAlloc.h"
 #include "stringTools/strConstants.h"
 #include "epsMaker/dvi_read.h"
@@ -49,6 +50,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename);
 //! \return Zero on success, or a DVIE_* error code
 
 int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
+    char msg[PPL_MSG_LENGTH];
     char *TFMpath;
     char *s;
     char errStr[SSTR_LENGTH];
@@ -72,8 +74,8 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
         return 1;
     }
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Font file %s: TFM path: %s", font->name, TFMpath);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Font file %s: TFM path: %s", font->name, TFMpath);
+        ppl_log(ec, msg);
     }
     TFMfp = fopen(TFMpath, "r");
     if (TFMfp == NULL) {
@@ -102,8 +104,8 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
     if (strncmp(font->tfm->family, "WASY", 4) == 0) font->fontType = FONT_SYMBOL;
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "TFM: font type %d", font->fontType);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "TFM: font type %d", font->fontType);
+        ppl_log(ec, msg);
     }
 
     // Deal with built-in fonts
@@ -338,6 +340,7 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
 //! \return The font metrics, allocated in the current ppl_memAlloc context, or NULL on failure
 
 dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
+    char msg[PPL_MSG_LENGTH];
     dviTFM *tfm;
     unsigned long int buff[12];
     int i, j;
@@ -396,15 +399,15 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     if (*err) return NULL;
     lh--;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "TFM: lh now %d", lh);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "TFM: lh now %d", lh);
+        ppl_log(ec, msg);
     }
     if (lh >= 10) {
         int len;
         if ((*err = ReadUChar(ec, fp, &len)) != 0) return NULL;
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "TFM: Coding length: %d", len);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "TFM: Coding length: %d", len);
+            ppl_log(ec, msg);
         }
         if (len > 39) {
             ppl_error(ec, ERR_INTERNAL, -1, -1, "Malformed DVI header. coding len>40");
@@ -426,8 +429,8 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
             len = 19;
         }
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "TFM: Family length: %d", len);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "TFM: Family length: %d", len);
+            ppl_log(ec, msg);
         }
         for (i = 0; i < 19; i++) {
             int t;
@@ -438,8 +441,8 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
         lh -= 5;
     }
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "TFM: coding:%s: family:%s: lh now %d", tfm->coding, tfm->family, lh);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "TFM: coding:%s: family:%s: lh now %d", tfm->coding, tfm->family, lh);
+        ppl_log(ec, msg);
     }
     if (lh > 0) {
         int temp;
@@ -450,8 +453,8 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
         if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
         lh--;
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "TFM: face:%d", tfm->face);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "TFM: face:%d", tfm->face);
+            ppl_log(ec, msg);
         }
     }
     while (lh > 0) {
@@ -585,6 +588,7 @@ double ReadFixWord(pplerr_context *ec, FILE *fp, int *err) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
+    char msg[PPL_MSG_LENGTH];
     dviTFM *tfm; // Details of this font
     int hi, di; // Indices
     int chnum; // Character number in this font
@@ -642,9 +646,9 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     font->maxHeight *= font->useSize;
     font->maxDepth *= font->useSize;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "TFM: Maximum height %f depth %f from characters %d %d %s %s", font->maxHeight,
-                font->maxDepth, hmax, dmax, (char *) (&hmax), (char *) (&dmax));
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "TFM: Maximum height %f depth %f from characters %d %d %s %s",
+                          font->maxHeight, font->maxDepth, hmax, dmax, (char *) (&hmax), (char *) (&dmax));
+        ppl_log(ec, msg);
     }
     return 0;
 }

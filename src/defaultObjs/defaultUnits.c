@@ -31,6 +31,7 @@
 #include <gsl/gsl_sf.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/list.h"
 
 #include "userspace/context.h"
@@ -43,6 +44,7 @@
 //! \param [in|out] context - The Pyxplot context, in which the unit database is stored
 
 void ppl_makeDefaultUnits(ppl_context *context) {
+    char msg[PPL_MSG_LENGTH];
     int i = 0, j = 0;
     int unit_pos = 0;
     unit *unit_database;
@@ -2426,8 +2428,8 @@ void ppl_makeDefaultUnits(ppl_context *context) {
 
     context->unit_pos = unit_pos;
     if (DEBUG) {
-        sprintf(context->errcontext.tempErrStr, "%d system default units loaded.", unit_pos);
-        ppl_log(&context->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%d system default units loaded.", unit_pos);
+        ppl_log(&context->errcontext, msg);
     }
 
     return;

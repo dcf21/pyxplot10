@@ -87,6 +87,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_pie_ReadAccessibleData(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
     int j, status = 0, errCount = DATAFILE_NERRS, NExpect = 1, Ncolumns;
     canvas_plotdesc *pd = x->current->plotitems;
@@ -166,9 +167,9 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     if (pd->filename != NULL) // Read data from file
     {
         if (DEBUG) {
-            sprintf(c->errcontext.tempErrStr, "Reading data from file '%s' for piechart item %d", pd->filename,
-                    x->current->id);
-            ppl_log(&c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from file '%s' for piechart item %d", pd->filename,
+                              x->current->id);
+            ppl_log(&c->errcontext, msg);
         }
         if (pd->PersistentDataTable == NULL)
             ppldata_fromFile(c, x->current->plotdata, pd->filename, 0, NULL, NULL, pd->index, UsingList, autoUsingList,
@@ -177,8 +178,8 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         else x->current->plotdata[0] = pd->PersistentDataTable;
     } else if (pd->vectors != NULL) {
         if (DEBUG) {
-            sprintf(c->errcontext.tempErrStr, "Reading data from vectors for piechart item %d", x->current->id);
-            ppl_log(&c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from vectors for piechart item %d", x->current->id);
+            ppl_log(&c->errcontext, msg);
         }
         ppldata_fromVectors(c, x->current->plotdata, pd->vectors, pd->NFunctions, UsingList, autoUsingList, NExpect,
                             nObjs, LabelExpr, pd->SelectCriterion, NULL, pd->continuity, &status,
@@ -189,8 +190,8 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         pplObj *uX = &x->current->settings.Tmin;
 
         if (DEBUG) {
-            sprintf(c->errcontext.tempErrStr, "Reading data from functions for piechart item %d", x->current->id);
-            ppl_log(&c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from functions for piechart item %d", x->current->id);
+            ppl_log(&c->errcontext, msg);
         }
         ppldata_fromFuncs_checkSpecialRaster(c, pd->functions, pd->NFunctions, "t", &x->current->settings.Tmin.real,
                                              &x->current->settings.Tmax.real, uX, &rX, &rXl);
@@ -213,15 +214,15 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         blk = blk->next;
     }
     if ((!gsl_finite(acc)) || (acc <= 0.0)) {
-        sprintf(c->errcontext.tempErrStr, "Sum of sizes of all pie wedges is not a finite number.");
-        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Sum of sizes of all pie wedges is not a finite number.");
+        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
         x->current->plotdata[0] = NULL;
         acc = 1;
         *(x->status) = 1;
     }
     if (DEBUG) {
-        sprintf(c->errcontext.tempErrStr, "Sum of sizes of all pie wedges = %e", acc);
-        ppl_log(&c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Sum of sizes of all pie wedges = %e", acc);
+        ppl_log(&c->errcontext, msg);
     }
     pd->PieChart_total = acc;
     return;
@@ -232,6 +233,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_pie_YieldUpText(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
     int j, Ncolumns, errCount = DATAFILE_NERRS;
     pplExpr *formatExpr;
@@ -295,18 +297,17 @@ void eps_pie_YieldUpText(EPSComm *x) {
                 else if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
                 else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
                 else errt = "Fail occurred.";
-                ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH, "Error in format expression <%s>: %s",
-                                  formatExpr->ascii, errt);
-                ppl_warning(&c->errcontext, ERR_TYPE, c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Error in format expression <%s>: %s", formatExpr->ascii, errt);
+                ppl_warning(&c->errcontext, ERR_TYPE, msg);
                 COUNTERR_END;
                 ppl_tbClear(c);
                 tmp = "?";
             } else if (o->objType != PPLOBJ_STR) {
                 COUNTERR_BEGIN;
-                sprintf(c->errcontext.tempErrStr,
-                        "Format expression <%s> did not evaluate to a string, but to an object of type <%s>.",
-                        formatExpr->ascii, pplObjTypeNames[o->objType]);
-                ppl_warning(&c->errcontext, ERR_TYPE, c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "Format expression <%s> did not evaluate to a string, but to an object of type <%s>.",
+                                  formatExpr->ascii, pplObjTypeNames[o->objType]);
+                ppl_warning(&c->errcontext, ERR_TYPE, msg);
                 COUNTERR_END;
                 tmp = NULL;
             } else {

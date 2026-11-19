@@ -43,6 +43,9 @@
 
 #include "stringTools/strConstants.h"
 
+// Size of the local buffers in which error, warning and log messages are composed
+#define PPL_MSG_LENGTH (FNAME_LENGTH + FNAME_LENGTH)
+
 typedef struct pplset_session {
     int splash, color, color_rep, color_wrn, color_err;
     char cwd[FNAME_LENGTH];

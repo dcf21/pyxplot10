@@ -188,6 +188,7 @@ static void factorise(const int in, int *out, const int MaxFactors, const int Fa
 
 void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
                             const pplset_axis *linkedto) {
+    char msg[PPL_MSG_LENGTH];
     int i, j, k, N, OutContext, ContextRough = -1, NFactorsTen, LogBase, number_ticks, major, OverlayMatch;
     unsigned char IsLog = (axis->LogFinal == SW_BOOL_TRUE);
     int FactorsTen[MAX_FACTORS];
@@ -321,10 +322,10 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                         if (!OverlayMatch) break;
                     }
                     if (DEBUG && !OverlayMatch) {
-                        sprintf(x->c->errcontext.tempErrStr, "FAIL: Did not overlay major tick at %g (axis pos %.3f)",
-                                eps_plot_axis_InvGetPosition(axis->TickListPositions[j], axis),
-                                axis->TickListPositions[j]);
-                        ppl_log(&x->c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "FAIL: Did not overlay major tick at %g (axis pos %.3f)",
+                                          eps_plot_axis_InvGetPosition(axis->TickListPositions[j], axis),
+                                          axis->TickListPositions[j]);
+                        ppl_log(&x->c->errcontext, msg);
                     }
                     if (!OverlayMatch) continue;
                     if (DEBUG) ppl_log(&x->c->errcontext, "PASS");
@@ -334,10 +335,11 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                 if ((IsLog) && (TickSchemes[i].Nmantissas >= LogBase - 1) && (!major)) {
                     if (TL_trial_len > 3 * number_ticks) {
                         if (DEBUG) {
-                            sprintf(x->c->errcontext.tempErrStr,
+                            ppl_snprintfTrunc(
+                                    msg, sizeof(msg),
                                     "Minor tick scheme with %d mantissas rejected because it has too many ticks (%d when we wanted ** %d)",
                                     TickSchemes[i].Nmantissas, TL_trial_len, number_ticks);
-                            ppl_log(&x->c->errcontext, NULL);
+                            ppl_log(&x->c->errcontext, msg);
                         }
                         break;
                     }
@@ -347,10 +349,11 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                     for (j = 0; j < TL_trial_len; j++) TL_best[j] = TL_trial[j];
                 } else if ((IsLog) && (TickSchemes[i].Nmantissas > 1) && (TL_trial_len > number_ticks)) {
                     if (DEBUG) {
-                        sprintf(x->c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "Tick scheme with %d mantissas rejected because it has too many ticks (%d when we wanted %d)",
                                 TickSchemes[i].Nmantissas, TL_trial_len, number_ticks);
-                        ppl_log(&x->c->errcontext, NULL);
+                        ppl_log(&x->c->errcontext, msg);
                     }
                     continue;
                 } else if (TL_trial_len > number_ticks) break;

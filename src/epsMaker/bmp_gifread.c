@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 
 #include "epsMaker/bmp_image.h"
@@ -42,6 +43,7 @@
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
+    char msg[PPL_MSG_LENGTH];
     unsigned char buff[8], flags, len, *rawz;
     int gcm, ncols, interlaced;
     long lxoff, lyoff, lw, lh, lzwcs;
@@ -73,8 +75,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     height = ((unsigned) buff[3] << 8) + buff[2];
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Size %ldx%ld", width, height);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Size %ldx%ld", width, height);
+        ppl_log(ec, msg);
     }
 
     if (fread(&flags, 1, 1, in) != 1) {
@@ -83,24 +85,24 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Global colour map=%d", (flags & 0x80) >> 7);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Global colour map=%d", (flags & 0x80) >> 7);
+        ppl_log(ec, msg);
     }
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Colour resolution=%d", (flags & 0x70) >> 4);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Colour resolution=%d", (flags & 0x70) >> 4);
+        ppl_log(ec, msg);
     }
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Colour depth     =%d", (flags & 0x7));
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Colour depth     =%d", (flags & 0x7));
+        ppl_log(ec, msg);
     }
 
     gcm = ((flags & 0x80) >> 7);
     ncols = 2 << (flags & 0x7);
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Global number of colours=%d", ncols);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Global number of colours=%d", ncols);
+        ppl_log(ec, msg);
     }
 
     if (fread(buff, 2, 1, in) != 1) {
@@ -132,8 +134,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             return;
         }
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "Extension block %d", (int) flags);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Extension block %d", (int) flags);
+            ppl_log(ec, msg);
         }
         if ((int) flags == 249) {
             if (fread(&flags, 1, 1, in) != 1) {
@@ -157,8 +159,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
                 }
                 *image->trans = flags;
                 if (DEBUG) {
-                    sprintf(ec->tempErrStr, "Transparent colour index at %d", (int) flags);
-                    ppl_log(ec, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Transparent colour index at %d", (int) flags);
+                    ppl_log(ec, msg);
                 }
             } else {
                 fseek(in, 3, SEEK_CUR);
@@ -187,8 +189,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     if ((flags == 0x2c) && DEBUG) {
-        sprintf(ec->tempErrStr, "Local descriptor");
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Local descriptor");
+        ppl_log(ec, msg);
     }
 
     if (fread(buff, 4, 1, in) != 1) {
@@ -199,8 +201,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     lyoff = ((unsigned) buff[3] << 8) + buff[2];
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Local offset %ldx%ld", lxoff, lyoff);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Local offset %ldx%ld", lxoff, lyoff);
+        ppl_log(ec, msg);
     }
 
     if (fread(buff, 4, 1, in) != 1) {
@@ -211,8 +213,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     lh = ((unsigned) buff[3] << 8) + buff[2];
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Local size %ldx%ld", lw, lh);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Local size %ldx%ld", lw, lh);
+        ppl_log(ec, msg);
     }
 
     if (fread(&flags, 1, 1, in) != 1) {
@@ -222,13 +224,13 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 
     if (flags & 0x80) {
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "Local colour map");
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Local colour map");
+            ppl_log(ec, msg);
         }
         ncols = 2 << (flags & 0x7);
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "Local number of colours=%d", ncols);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Local number of colours=%d", ncols);
+            ppl_log(ec, msg);
         }
         if (gcm) free(image->palette);
         image->palette = ppl_memAlloc(ncols * 3);
@@ -246,8 +248,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     interlaced = flags & 0x40;
 
     if (interlaced && DEBUG) {
-        sprintf(ec->tempErrStr, "Interlaced");
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Interlaced");
+        ppl_log(ec, msg);
     }
 
     if (lxoff || lyoff || (lw != width) || (lh != height)) {
@@ -263,8 +265,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
     lzwcs = flags + 1;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Initial code size=%ld", lzwcs);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Initial code size=%ld", lzwcs);
+        ppl_log(ec, msg);
     }
 
     rawz = (unsigned char *) malloc((width * height * 3) / 2);
@@ -293,8 +295,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         }
     }
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Total GIF data length=%ld", datalen);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Total GIF data length=%ld", datalen);
+        ppl_log(ec, msg);
     }
 
     BMP_ALLOC(image->data, width * height);
@@ -312,10 +314,11 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         return;
     } // Subroutine failed
     if (datalen != width * height) {
-        sprintf(ec->tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Decoding error whilst processing GIF image file. Expecting %ld bytes of decoded data, but received %ld.",
                 width * height, datalen);
-        ppl_error(ec, ERR_FILE, -1, -1, NULL);
+        ppl_error(ec, ERR_FILE, -1, -1, msg);
         return;
     }
 
@@ -396,6 +399,7 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
 
 unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned char *out, const unsigned long len,
                              int cs) {
+    char msg[PPL_MSG_LENGTH];
     unsigned char store[256], *start, *end;
     unsigned int off, tpos, eoi, clr;
     struct str {
@@ -408,9 +412,10 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
     end = out + len;
 
     if (cs > MAXCS) {
-        sprintf(ec->tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Whilst decoding GIF image file, encountered de_lzw error: initial token size of %d too large", cs);
-        ppl_error(ec, ERR_FILE, -1, -1, NULL);
+        ppl_error(ec, ERR_FILE, -1, -1, msg);
         return 0;
     }
 
@@ -429,10 +434,11 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
 
     i = ppl_bmp_de_lzw_bits(ec, buff, 0, ccs);
     if (i != clr) {
-        sprintf(ec->tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Whilst decoding GIF image file, encountered de_lzw error: ClearCode not first code, but instead got %x",
                 i);
-        ppl_error(ec, ERR_FILE, -1, -1, NULL);
+        ppl_error(ec, ERR_FILE, -1, -1, msg);
         return 0;
     }
 
@@ -449,14 +455,15 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
         if (i == eoi) return (out - start);
 
         if (i >= tpos) {
-            sprintf(ec->tempErrStr,
-                    "Whilst decoding GIF image file, encountered de_lzw error: token erroneously large");
-            ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Whilst decoding GIF image file, encountered de_lzw error: token erroneously large");
+            ppl_error(ec, ERR_FILE, -1, -1, msg);
             return 0;
         }
         if (out > end) {
-            sprintf(ec->tempErrStr, "Whilst decoding GIF image file, encountered de_lzw error: output buffer full");
-            ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Whilst decoding GIF image file, encountered de_lzw error: output buffer full");
+            ppl_error(ec, ERR_FILE, -1, -1, msg);
             return 0;
         }
 
@@ -471,8 +478,8 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
         if ((tpos == (1 << ccs) + 1) && (ccs < MAXCS)) ccs++;
     }
     // Should never get here
-    sprintf(ec->tempErrStr, "Whilst decoding GIF image file, encountered unidentified de_lzw error");
-    ppl_error(ec, ERR_FILE, -1, -1, NULL);
+    ppl_snprintfTrunc(msg, sizeof(msg), "Whilst decoding GIF image file, encountered unidentified de_lzw error");
+    ppl_error(ec, ERR_FILE, -1, -1, msg);
     return 0;
 }
 

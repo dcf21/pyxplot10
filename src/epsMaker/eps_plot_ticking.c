@@ -63,6 +63,7 @@
 //! \param [in] linkedto - The axis this axis is linked to, whose ticks should be copied, or NULL
 
 void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pplset_axis *linkedto) {
+    char msg[PPL_MSG_LENGTH];
     int i, j, MajMin, N, xrn;
     const double logmin = 1e-10;
     double UnitMultiplier = 1.0;
@@ -92,26 +93,27 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         // Check that log axes do not venture too close to zero
         if ((axis->LogFinal == SW_BOOL_TRUE) && (axis->MaxFinal <= 1e-200)) {
             axis->MaxFinal = logmin;
-            sprintf(x->c->errcontext.tempErrStr, "Range for logarithmic axis %c%d set below zero; defaulting to 1e-10.",
-                    "xyzc"[axis->xyz], axis->axis_n);
-            ppl_warning(&x->c->errcontext, ERR_NUMERICAL, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Range for logarithmic axis %c%d set below zero; defaulting to 1e-10.",
+                              "xyzc"[axis->xyz], axis->axis_n);
+            ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
         }
         if (!MinSet) axis->MinFinal = (axis->LogFinal == SW_BOOL_TRUE) ? (axis->MaxFinal / 100) : (axis->MaxFinal - 20);
         if ((axis->LogFinal == SW_BOOL_TRUE) && (axis->MinFinal <= 1e-200)) {
             axis->MinFinal = logmin;
-            sprintf(x->c->errcontext.tempErrStr, "Range for logarithmic axis %c%d set below zero; defaulting to 1e-10.",
-                    "xyzc"[axis->xyz], axis->axis_n);
-            ppl_warning(&x->c->errcontext, ERR_NUMERICAL, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Range for logarithmic axis %c%d set below zero; defaulting to 1e-10.",
+                              "xyzc"[axis->xyz], axis->axis_n);
+            ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
         }
 
         // If there's no spread of data on the axis, make a spread up
         if ((fabs(axis->MinFinal - axis->MaxFinal) <= fabs(1e-14 * axis->MinFinal)) ||
             (fabs(axis->MinFinal - axis->MaxFinal) <= fabs(1e-14 * axis->MaxFinal))) {
             if (axis->HardMinSet && axis->HardMaxSet) {
-                sprintf(x->c->errcontext.tempErrStr,
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
                         "Specified minimum and maximum range limits for axis %c%d are equal; reverting to alternative limits.",
                         "xyzc"[axis->xyz], axis->axis_n);
-                ppl_warning(&x->c->errcontext, ERR_NUMERICAL, NULL);
+                ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
             }
             if (axis->LogFinal != SW_BOOL_TRUE) {
                 const double step = ppl_max(1.0, 1e-3 * fabs(axis->MinFinal));
@@ -213,11 +215,12 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
              (((axis->log == SW_BOOL_TRUE) ? (axis->tics.tickMinSet) : (axis->tics.tickStepSet)) != 0) ||
              (axis->ticsM.tickList != NULL) ||
              (((axis->log == SW_BOOL_TRUE) ? (axis->ticsM.tickMinSet) : (axis->ticsM.tickStepSet)) != 0))) {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Cannot put any ticks on axis %c%d because their positions are specified in units of <%s> whilst the axis has units of <%s>.",
                     "xyzc"[axis->xyz], axis->axis_n, ppl_printUnit(x->c, &axis->unit, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(x->c, &axis->DataUnit, NULL, NULL, 1, 1, 0));
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
             axis->TickListPositions = NULL;
             axis->TickListStrings = NULL;
             axis->TickListPositions = NULL;
@@ -490,6 +493,7 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
 
 void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const double x, const pplObj *xunit,
                          const int xyz, int OutContext) {
+    char msg[PPL_MSG_LENGTH];
     int lOP, rc;
     const int stkLevelOld = X->c->stackPtr;
     pplObj *outval;
@@ -515,14 +519,14 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     // Generate tick string
     outval = ppl_expEval(X->c, FormatExp, &lOP, 0, X->iterDepth + 1);
     if (X->c->errStat.status) {
-        sprintf(X->c->errcontext.tempErrStr, "Error encountered whilst using format string: %s", FormatExp->ascii);
-        ppl_error(&X->c->errcontext, ERR_PREFORMED, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst using format string: %s", FormatExp->ascii);
+        ppl_error(&X->c->errcontext, ERR_PREFORMED, -1, -1, msg);
         ppl_tbWrite(X->c);
         ppl_tbClear(X->c);
         tmp_string = "{\\bf ?}";
     } else if (outval->objType != PPLOBJ_STR) {
-        sprintf(X->c->errcontext.tempErrStr, "Error encountered whilst using format string: %s", FormatExp->ascii);
-        ppl_error(&X->c->errcontext, ERR_PREFORMED, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst using format string: %s", FormatExp->ascii);
+        ppl_error(&X->c->errcontext, ERR_PREFORMED, -1, -1, msg);
         ppl_error(&X->c->errcontext, ERR_PREFORMED, -1, -1, "Tick label was not a string.");
         tmp_string = "{\\bf ?}";
     } else {

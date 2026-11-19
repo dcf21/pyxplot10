@@ -76,6 +76,7 @@ sigjmp_buf *ppl_sigjmpFromSigInt = NULL;
 //! \return The exit status of the process
 
 int main(const int argc, char **argv) {
+    char msg[PPL_MSG_LENGTH];
     int i, fail = 0;
     int tempdirnumber = 1;
     char tempdirpath[FNAME_LENGTH];
@@ -95,8 +96,8 @@ int main(const int argc, char **argv) {
     setenv("TZ", "UTC", 1);
     if (DEBUG) ppl_log(&context->errcontext, "Initialising Pyxplot.");
     if (DEBUG) {
-        sprintf(context->errcontext.tempErrStr, "Detected timezone <%s>.", context->set->term_default.timezone);
-        ppl_log(&context->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Detected timezone <%s>.", context->set->term_default.timezone);
+        ppl_log(&context->errcontext, msg);
     }
     ppl_memAlloc_MemoryInit(&context->errcontext, &ppl_error, &ppl_log);
     if (!ppl_inputInit(context)) ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Out of memory.");
@@ -168,10 +169,11 @@ int main(const int argc, char **argv) {
             ppl_memAlloc_MemoryStop();
             return 0;
         } else {
-            sprintf(context->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Received switch '%s' which was not recognised. Type 'pyxplot -help' for a list of available command-line options.",
                     argv[i]);
-            ppl_error(&context->errcontext, ERR_PREFORMED, -1, -1, NULL);
+            ppl_error(&context->errcontext, ERR_PREFORMED, -1, -1, msg);
             if (DEBUG) ppl_log(&context->errcontext, "Received unexpected command-line switch.");
             ppl_memAlloc_FreeAll(0);
             ppl_memAlloc_MemoryStop();

@@ -554,6 +554,7 @@ cleanup:
 
 void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                            const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     parserLine *plc = (parserLine *) stk[PARSE_foreachdatum_code].auxil;
     int Nvars = 0, i, status = 0, errCount = 5;
@@ -662,19 +663,21 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
                 if ((minSet[k] || maxSet[k]) && inRange) {
                     if (!numeric) {
                         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                            sprintf(c->errcontext.tempErrStr,
+                            ppl_snprintfTrunc(
+                                    msg, sizeof(msg),
                                     "Minimum and maximum limits are specified for variable %d (%s), but it computes to a non-numeric quantity of type <%s>.",
                                     k + 1, varname[k], pplObjTypeNames[obj->objType]);
-                            ppl_warning(&c->errcontext, ERR_TYPE, NULL);
+                            ppl_warning(&c->errcontext, ERR_TYPE, msg);
                         }
                         inRange = 0;
                     } else if (!ppl_unitsDimEqual(&unit[k], obj)) {
                         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                            sprintf(c->errcontext.tempErrStr,
+                            ppl_snprintfTrunc(
+                                    msg, sizeof(msg),
                                     "The minimum and maximum limits specified in the 'foreach datum ...' command for variable %d (%s) have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                                     k + 1, varname[k], ppl_printUnit(c, &unit[k], NULL, NULL, 0, 0, 0),
                                     ppl_printUnit(c, obj, NULL, NULL, 1, 0, 0));
-                            ppl_warning(&c->errcontext, ERR_UNIT, NULL);
+                            ppl_warning(&c->errcontext, ERR_UNIT, msg);
                         }
                         inRange = 0;
                     }

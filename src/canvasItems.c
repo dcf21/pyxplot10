@@ -30,6 +30,7 @@
 #include <gsl/gsl_math.h>
 
 #include "canvasItems.h"
+#include "coreUtils/errorReport.h"
 #include "datafile.h"
 
 #include "coreUtils/dict.h"
@@ -983,6 +984,7 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
 
 int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                        const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
     int moveno, gotRotation;
@@ -1011,8 +1013,8 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     rotatable = ((ptr->type != CANVAS_ARROW) && (ptr->type != CANVAS_CIRC) && (ptr->type != CANVAS_PIE) &&
                  (ptr->type != CANVAS_PLOT) && (ptr->type != CANVAS_POINT));
     if (gotRotation && !rotatable) {
-        sprintf(c->errcontext.tempErrStr, "It is not possible to rotate multiplot item %d.", moveno);
-        ppl_warning(&c->errcontext, ERR_GENERIC, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "It is not possible to rotate multiplot item %d.", moveno);
+        ppl_warning(&c->errcontext, ERR_GENERIC, msg);
     }
 
     if (ptr->type == CANVAS_POLYGON) {
@@ -1824,6 +1826,7 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
 
 int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                           const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, Npts, i;
@@ -1832,10 +1835,10 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
 
     // Count how many points have been supplied
     if (stk[PARSE_polygon_pointlist].objType != PPLOBJ_LIST) {
-        sprintf(c->errcontext.tempErrStr,
-                "List of points in polygon should have been a list; supplied object was of type <%s>.",
-                pplObjTypeNames[stk[PARSE_polygon_pointlist].objType]);
-        ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "List of points in polygon should have been a list; supplied object was of type <%s>.",
+                          pplObjTypeNames[stk[PARSE_polygon_pointlist].objType]);
+        ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
         return 1;
     }
     ptListObj = (list *) stk[PARSE_polygon_pointlist].auxil;
@@ -2212,6 +2215,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
 //! \return Zero on success, or one if there are fewer than <wildcardMatchNumber>+1 matches or an error occurred
 
 static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNumber, canvas_plotdesc *out) {
+    char msg[PPL_MSG_LENGTH];
     int i, C;
     char escaped[FNAME_LENGTH];
     wordexp_t wordExp;
@@ -2242,15 +2246,15 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
         escaped[k++] = '\0';
     }
     if ((wordexp(escaped, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
-        sprintf(c->errcontext.tempErrStr, "Could not open file '%s'.", escaped);
-        ppl_error(&c->errcontext, ERR_FILE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", escaped);
+        ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
         return 1;
     }
     for (i = 0; i < wordExp.we_wordc; i++) {
         if ((glob(wordExp.we_wordv[i], 0, NULL, &globData) != 0) || ((i == 0) && (globData.gl_pathc == 0))) {
             if (wildcardMatchNumber == 0) {
-                sprintf(c->errcontext.tempErrStr, "Could not open file '%s'.", escaped);
-                ppl_error(&c->errcontext, ERR_FILE, -1, -1, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", escaped);
+                ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
             }
             return 1;
         }
@@ -2271,8 +2275,8 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
     }
     wordfree(&wordExp);
     if (wildcardMatchNumber == 0) {
-        sprintf(c->errcontext.tempErrStr, "Could not open file '%s'.", escaped);
-        ppl_error(&c->errcontext, ERR_FILE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", escaped);
+        ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
     }
     return 1;
 }
@@ -2295,6 +2299,7 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
 static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, canvas_item *ci, const int *ptab,
                            int stkbase, const int wildcardMatchNumber, const int iterDepth, parserLine **dataSpool,
                            const int NExpectIn) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_plotdesc **plotItemPtr = &ci->plotitems;
     canvas_plotdesc *new = NULL;
@@ -2380,10 +2385,11 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         return 1;
                     }
                     if (obj->objType != PPLOBJ_VEC) {
-                        sprintf(c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "Vector data supplied to other columns, but columns %d evaluated to an object of type <%s>.",
                                 i + 1, pplObjTypeNames[obj->objType]);
-                        ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+                        ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
                         STACK_CLEANP;
                         free(new);
@@ -2391,10 +2397,11 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                     }
                     l2 = ((pplVector *) first->auxil)->v->size;
                     if (l != l2) {
-                        sprintf(c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "Data supplied as a list of vectors, but they have varying lengths, including %d (vector %d) and %d (vector %d).",
                                 l, 1, l2, i + 1);
-                        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
                         STACK_CLEANP;
                         free(new);
@@ -2447,8 +2454,8 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             const int status = ppl_getPlotFname(c, filename, wildcardMatchNumber, new);
             if (status) return 1;
         } else {
-            sprintf(c->errcontext.tempErrStr, "Could not find any expressions to evaluate.");
-            ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not find any expressions to evaluate.");
+            ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, msg);
             free(new);
             return 1;
         }
@@ -2466,19 +2473,20 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         new->Tmin = stk[stkbase + ptab[PARSE_INDEX_tmin]];
         new->Tmax = stk[stkbase + ptab[PARSE_INDEX_tmax]];
         if (!gsl_finite(new->Tmin.real)) {
-            sprintf(c->errcontext.tempErrStr, "Lower limit specified for parameter t is not finite.");
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Lower limit specified for parameter t is not finite.");
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             new->TRangeSet = 0;
         } else if (!gsl_finite(new->Tmax.real)) {
-            sprintf(c->errcontext.tempErrStr, "Upper limit specified for parameter t is not finite.");
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Upper limit specified for parameter t is not finite.");
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             new->TRangeSet = 0;
         } else if (!ppl_unitsDimEqual(&new->Tmin, &new->Tmax)) {
-            sprintf(c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Upper and lower limits specified for parameter t have conflicting physical units of <%s> and <%s>.",
                     ppl_printUnit(c, &new->Tmin, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &new->Tmax, NULL, NULL, 1, 1, 0));
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             new->TRangeSet = 0;
         }
     }
@@ -2487,19 +2495,20 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         new->Vmin = stk[stkbase + ptab[PARSE_INDEX_vmin]];
         new->Vmax = stk[stkbase + ptab[PARSE_INDEX_vmax]];
         if (!gsl_finite(new->Vmin.real)) {
-            sprintf(c->errcontext.tempErrStr, "Lower limit specified for parameter v is not finite.");
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Lower limit specified for parameter v is not finite.");
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             new->VRangeSet = 0;
         } else if (!gsl_finite(new->Vmax.real)) {
-            sprintf(c->errcontext.tempErrStr, "Upper limit specified for parameter v is not finite.");
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Upper limit specified for parameter v is not finite.");
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             new->VRangeSet = 0;
         } else if (!ppl_unitsDimEqual(&new->Vmin, &new->Vmax)) {
-            sprintf(c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Upper and lower limits specified for parameter v have conflicting physical units of <%s> and <%s>.",
                     ppl_printUnit(c, &new->Vmin, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &new->Vmax, NULL, NULL, 1, 1, 0));
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             new->VRangeSet = 0;
         }
     }
@@ -2550,9 +2559,9 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 pos = (int) round(stk[pos].real);
                 if (pos <= 0) break;
                 if (Nusing >= USING_ITEMS_MAX) {
-                    sprintf(c->errcontext.tempErrStr, "Too many using items; maximum of %d are allowed.",
-                            USING_ITEMS_MAX);
-                    ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Too many using items; maximum of %d are allowed.",
+                                      USING_ITEMS_MAX);
+                    ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, msg);
                     free(new);
                     return 1;
                 }
@@ -2724,10 +2733,11 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             return 1;
         } // Add extra using items for, e.g. "linewidth $3".
         if (NExpect != NUsing) {
-            sprintf(c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "The supplied using ... clause contains the wrong number of items. We need %d columns of data, but %d have been supplied.",
                     NExpect, NUsing);
-            ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, NULL);
+            ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, msg);
             free(errbuff);
             free(UsingList);
             return 1;
@@ -2825,6 +2835,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
 
 int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth,
                        const int replot) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_item *ptr = NULL;
     parserLine *spool = NULL, **dataSpool = &spool;
@@ -2840,8 +2851,8 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
             while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
         }
         if (ptr == NULL) {
-            sprintf(c->errcontext.tempErrStr, "No plot found to replot.");
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "No plot found to replot.");
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return 1;
         }
         id = editNo;

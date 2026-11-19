@@ -253,6 +253,7 @@ void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
 
 FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchNumber, char *filenameOut,
                               char *errtext) {
+    char msg[PPL_MSG_LENGTH];
     FILE *infile;
     dictIterator *dictIter;
     char *filter, *filterArgs, **argList;
@@ -334,8 +335,8 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
         if (ppl_strWildcardTest(filename, dictIter->key)) {
             filter = (char *) ((pplObj *) dictIter->data)->auxil;
             if (DEBUG) {
-                sprintf(c->errcontext.tempErrStr, "Using input filter '%s'.", filter);
-                ppl_log(&c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Using input filter '%s'.", filter);
+                ppl_log(&c->errcontext, msg);
             }
             filterArgs = (char *) malloc(strlen(filter) + 1);
             argList = (char **) malloc((strlen(filter) / 2 + 3) * sizeof(char *));
@@ -958,6 +959,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                       int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, const int usingRowCol,
                       const long *everyList, const int continuity, const int persistent, int *status, char *errtext,
                       int *errCount, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     int readFromCommandLine = 0, discontinuity = 0, hadwhitespace, hadcomma, oneColumnInput = 1;
     int contextOutput, contextRough, contextRaw;
     char lineNumberStr[32];
@@ -990,8 +992,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
 
     // Init
     if (DEBUG) {
-        sprintf(c->errcontext.tempErrStr, "Opening datafile '%s'.", filename);
-        ppl_log(&c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Opening datafile '%s'.", filename);
+        ppl_log(&c->errcontext, msg);
     }
     if (Ncols < 0) {
         // If number of columns unspecified, assume two
@@ -1088,9 +1090,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 block_count = 0; // Zero block counter
                 block_stepcnt = 0;
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Index %ld begins on line %ld of datafile.", index_number,
-                            file_linenumber);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Index %ld begins on line %ld of datafile.", index_number,
+                                      file_linenumber);
+                    ppl_log(&c->errcontext, msg);
                 }
                 if ((indexNo >= 0) && (index_number > indexNo))
                     break; // We'll never find any more data once we've gone past the specified index
@@ -1106,9 +1108,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             {
                 i += 8;
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Reading column headings as specified on line %ld of datafile",
-                            file_linenumber);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Reading column headings as specified on line %ld of datafile",
+                                      file_linenumber);
+                    ppl_log(&c->errcontext, msg);
                 }
                 while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
@@ -1148,8 +1150,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     sprintf(c->errcontext.tempErrStr, "Total of %ld column headings read.", itemsOnLine);
                     ppl_log(&c->errcontext, NULL);
                     for (k = 0; k < itemsOnLine; k++) {
-                        sprintf(c->errcontext.tempErrStr, "Column heading %d: %s", k, columnHeadings[k]);
-                        ppl_log(&c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Column heading %d: %s", k, columnHeadings[k]);
+                        ppl_log(&c->errcontext, msg);
                     }
                 }
             } else if ((strncmp(linebuffer + i, "Rows:", 5) == 0) &&
@@ -1157,9 +1159,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             {
                 i += 5;
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Reading row headings as specified on line %ld of datafile",
-                            file_linenumber);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Reading row headings as specified on line %ld of datafile",
+                                      file_linenumber);
+                    ppl_log(&c->errcontext, msg);
                 }
                 while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
@@ -1199,8 +1201,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     sprintf(c->errcontext.tempErrStr, "Total of %ld row headings read.", itemsOnLine);
                     ppl_log(&c->errcontext, NULL);
                     for (k = 0; k < itemsOnLine; k++) {
-                        sprintf(c->errcontext.tempErrStr, "Row heading %d: %s", k, rowHeadings[k]);
-                        ppl_log(&c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Row heading %d: %s", k, rowHeadings[k]);
+                        ppl_log(&c->errcontext, msg);
                     }
                 }
             } else if (strncmp(linebuffer + i, "ColumnUnits:", 12) ==
@@ -1208,9 +1210,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             {
                 i += 12;
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Reading column units as specified on line %ld of datafile",
-                            file_linenumber);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Reading column units as specified on line %ld of datafile",
+                                      file_linenumber);
+                    ppl_log(&c->errcontext, msg);
                 }
                 while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
@@ -1249,9 +1251,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         if (m >= 0) {
                             pplObjNum(columnUnits + itemsOnLine, 0, 1, 0);
                             COUNTERR_BEGIN;
-                            sprintf(c->errcontext.tempErrStr, "%s:%ld:%d: %s", filename, file_linenumber, i + k,
-                                    errtext);
-                            ppl_warning(&c->errcontext, ERR_STACKED, NULL);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld:%d: %s", filename, file_linenumber, i + k,
+                                              errtext);
+                            ppl_warning(&c->errcontext, ERR_STACKED, msg);
                             COUNTERR_END;
                         }
                         itemsOnLine++;
@@ -1262,18 +1264,18 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     sprintf(c->errcontext.tempErrStr, "Total of %ld column units read.", itemsOnLine);
                     ppl_log(&c->errcontext, NULL);
                     for (k = 0; k < itemsOnLine; k++) {
-                        sprintf(c->errcontext.tempErrStr, "Column unit %d: %s", k,
-                                ppl_unitsNumericDisplay(c, columnUnits + k, 0, 0, 0));
-                        ppl_log(&c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Column unit %d: %s", k,
+                                          ppl_unitsNumericDisplay(c, columnUnits + k, 0, 0, 0));
+                        ppl_log(&c->errcontext, msg);
                     }
                 }
             } else if (strncmp(linebuffer + i, "RowUnits:", 9) == 0) // '# RowUnits:' means we have a list of row units
             {
                 i += 9;
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Reading row units as specified on line %ld of datafile",
-                            file_linenumber);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Reading row units as specified on line %ld of datafile",
+                                      file_linenumber);
+                    ppl_log(&c->errcontext, msg);
                 }
                 while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
@@ -1312,9 +1314,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         if (m >= 0) {
                             pplObjNum(rowUnits + itemsOnLine, 0, 1, 0);
                             COUNTERR_BEGIN;
-                            sprintf(c->errcontext.tempErrStr, "%s:%ld:%d: %s", filename, file_linenumber, i + k,
-                                    errtext);
-                            ppl_warning(&c->errcontext, ERR_STACKED, NULL);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld:%d: %s", filename, file_linenumber, i + k,
+                                              errtext);
+                            ppl_warning(&c->errcontext, ERR_STACKED, msg);
                             COUNTERR_END;
                         }
                         itemsOnLine++;
@@ -1325,9 +1327,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     sprintf(c->errcontext.tempErrStr, "Total of %ld row units read.", itemsOnLine);
                     ppl_log(&c->errcontext, NULL);
                     for (k = 0; k < itemsOnLine; k++) {
-                        sprintf(c->errcontext.tempErrStr, "Row unit %d: %s", k,
-                                ppl_unitsNumericDisplay(c, rowUnits + k, 0, 0, 0));
-                        ppl_log(&c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Row unit %d: %s", k,
+                                          ppl_unitsNumericDisplay(c, rowUnits + k, 0, 0, 0));
+                        ppl_log(&c->errcontext, msg);
                     }
                 }
             }
@@ -1472,6 +1474,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                        pplObj *unitY, pplExpr **usingExprs, int autoUsingExprs, int Ncols, int NusingObjs,
                        pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, const int continuity, int *status,
                        char *errtext, int *errCount, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     int discontinuity2 = 0, *discontinuity = &discontinuity2;
     const int sampleGrid = (rasterY != NULL);
     int a, j, k, contextOutput;
@@ -1482,8 +1485,8 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
 
     // Init
     if (DEBUG) {
-        sprintf(c->errcontext.tempErrStr, "Evaluated supplied set of functions.");
-        ppl_log(&c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Evaluated supplied set of functions.");
+        ppl_log(&c->errcontext, msg);
     }
     if (fnlist_len > USING_ITEMS_MAX) {
         sprintf(errtext, "Too many functions supplied. A maximum of %d are allowed.", USING_ITEMS_MAX);
@@ -1588,10 +1591,10 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                         else errt = "Fail occurred.";
                         COUNTERR_BEGIN;
                         ppl_snprintfTrunc(
-                                c->errcontext.tempErrStr, LSTR_LENGTH,
+                                msg, sizeof(msg),
                                 "%s: Could not evaluate expression <%s>. The error, encountered at character position %d, was: '%s'",
                                 buffer, fnlist[j]->ascii, errp, errt);
-                        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         COUNTERR_END;
                         STACK_CLEAN;
                         ppl_tbClear(c);
@@ -1670,6 +1673,7 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
                          int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr,
                          pplExpr *sortBy, const int continuity, int *status, char *errtext, int *errCount,
                          const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     int contextOutput, discontinuity = 0, i, j;
     const int vlen = ((pplVector *) objList[0].auxil)->v->size;
     pplObj colData[USING_ITEMS_MAX + 2];
@@ -1677,8 +1681,8 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
 
     // Init
     if (DEBUG) {
-        sprintf(c->errcontext.tempErrStr, "Evaluated supplied set of functions.");
-        ppl_log(&c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Evaluated supplied set of functions.");
+        ppl_log(&c->errcontext, msg);
     }
     if (objListLen > USING_ITEMS_MAX) {
         sprintf(errtext, "Too many functions supplied. A maximum of %d are allowed.", USING_ITEMS_MAX);
@@ -1765,6 +1769,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                      const int stkbase, int Ncols, const int NusingObjs, const double *min, const int *minSet,
                      const double *max, const int *maxSet, pplObj *unitRange, const int persistent, int *status,
                      char *errtext, int *errCount, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     pplObj *stko = stk + stkbase;
     pplExpr *usingExprs[USING_ITEMS_MAX], *selectExpr = NULL, *labelExpr = NULL, *sortBy = NULL;
@@ -2110,9 +2115,9 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
 
     // Print every list to log file
     if (DEBUG) {
-        sprintf(c->errcontext.tempErrStr, "Every %ld:%ld:%ld:%ld:%ld:%ld", everyList[0], everyList[1], everyList[2],
-                everyList[3], everyList[4], everyList[5]);
-        ppl_log(&c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Every %ld:%ld:%ld:%ld:%ld:%ld", everyList[0], everyList[1], everyList[2],
+                          everyList[3], everyList[4], everyList[5]);
+        ppl_log(&c->errcontext, msg);
     }
 
     // Read using rows or columns

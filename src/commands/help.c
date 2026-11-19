@@ -257,6 +257,7 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
+    char msg[PPL_MSG_LENGTH];
     pplerr_context *e = &c->errcontext;
     list *topicWords = NULL; // A list of the help topic words supplied by the user
     char *topicString = NULL; // The string of help topic words supplied by the user
@@ -281,8 +282,9 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
     doc = xmlReadFile(filename, NULL, 0);
 
     if (doc == NULL) {
-        sprintf(e->tempErrStr, "Help command cannot find help data in expected location of '%s'.", filename);
-        ppl_error(e, ERR_INTERNAL, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Help command cannot find help data in expected location of '%s'.",
+                          filename);
+        ppl_error(e, ERR_INTERNAL, -1, -1, msg);
         return;
     }
 

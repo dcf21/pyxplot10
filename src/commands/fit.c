@@ -457,6 +457,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     int status = 0, Nargs, Nvars, NExpect, Nusing;
     char *fnName, *scratchPad;
@@ -732,11 +733,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     ppl_report(&c->errcontext, "\n# Best fit parameters were:\n# -------------------------\n");
     for (j = 0; j < dataComm.NFitVars; j++) {
         if (c->set->term_current.NumDisplay != SW_DISPLAY_L)
-            sprintf(c->errcontext.tempErrStr, "%s = %s", fitVars[j], ppl_unitsNumericDisplay(c, varObj[j], 0, 0, 0));
+            ppl_snprintfTrunc(msg, sizeof(msg), "%s = %s", fitVars[j], ppl_unitsNumericDisplay(c, varObj[j], 0, 0, 0));
         else
-            sprintf(c->errcontext.tempErrStr, "$%s = %s", fitVars[j],
-                    ppl_unitsNumericDisplay(c, varObj[j], 0, 0, 0) + 1);
-        ppl_report(&c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "$%s = %s", fitVars[j],
+                              ppl_unitsNumericDisplay(c, varObj[j], 0, 0, 0) + 1);
+        ppl_report(&c->errcontext, msg);
     }
 
     // If 'withouterrors' is specified, stop now
@@ -757,9 +758,10 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Estimate the size of the errorbars on the supplied data if no errorbars were supplied (this doesn't affect best fit position, but does affect error estimates)
     if (!dataComm.flagYErrorBars) {
-        sprintf(c->errcontext.tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "\n# Estimating the size of the error bars on supplied data.\n# This may take a while.\n# The fit command can be made to run very substantially faster if the 'withouterrors' option is set.");
-        ppl_report(&c->errcontext, NULL);
+        ppl_report(&c->errcontext, msg);
         status = FitMinimiseIterate(&dataComm, &FitsigmaData, 1);
         if (status) {
             sprintf(c->errStat.errBuff, "%s", dataComm.errtext);
@@ -770,19 +772,20 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         firstVals[Nargs].real = dataComm.sigmaData;
         firstVals[Nargs].imag = 0.0;
         firstVals[Nargs].flagComplex = 0;
-        sprintf(c->errcontext.tempErrStr,
-                "\n# Estimate of error bars on supplied data, based on their fit to model function = %s",
-                ppl_unitsNumericDisplay(c, firstVals + Nargs, 0, 0, 0));
-        ppl_report(&c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "\n# Estimate of error bars on supplied data, based on their fit to model function = %s",
+                          ppl_unitsNumericDisplay(c, firstVals + Nargs, 0, 0, 0));
+        ppl_report(&c->errcontext, msg);
     }
 
     // Calculate and print the Hessian matrix
     hessian = GetHessian(&dataComm);
     matrixPrint(c, hessian, dataComm.NParams, scratchPad);
-    sprintf(c->errcontext.tempErrStr,
+    ppl_snprintfTrunc(
+            msg, sizeof(msg),
             "\n# Hessian matrix of log-probability distribution:\n# -----------------------------------------------\n\nhessian = %s",
             scratchPad);
-    ppl_report(&c->errcontext, NULL);
+    ppl_report(&c->errcontext, msg);
 
     // Set variables in user's variable space to best-fit values
     for (i = 0; i < dataComm.NFitVars; i++)
@@ -810,9 +813,10 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Calculate the standard deviation of each parameter
     for (i = 0; i < dataComm.NParams; i++) {
         if ((gsl_matrix_get(hessian_inv, i, i) <= 0.0) || (!gsl_finite(gsl_matrix_get(hessian_inv, i, i)))) {
-            sprintf(c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "One of the calculated variances for the fitted parameters is negative. This strongly suggests that the fitting process has failed.");
-            ppl_warning(&c->errcontext, ERR_NUMERICAL, NULL);
+            ppl_warning(&c->errcontext, ERR_NUMERICAL, msg);
             stdDev[i] = 1e-100;
         } else {
             stdDev[i] = sqrt(gsl_matrix_get(hessian_inv, i, i));
@@ -824,10 +828,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         for (j = 0; j < dataComm.NParams; j++)
             gsl_matrix_set(hessian_inv, i, j, gsl_matrix_get(hessian_inv, i, j) / stdDev[i] / stdDev[j]);
     matrixPrint(c, hessian_inv, dataComm.NParams, scratchPad);
-    sprintf(c->errcontext.tempErrStr,
+    ppl_snprintfTrunc(
+            msg, sizeof(msg),
             "\n# Correlation matrix of probability distribution:\n# ----------------------------------------------\n\ncorrelation = %s",
             scratchPad);
-    ppl_report(&c->errcontext, NULL);
+    ppl_report(&c->errcontext, msg);
 
     // Print a list of standard deviations
     ppl_report(&c->errcontext,
@@ -860,16 +865,16 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 dummyTemp.imag = 0.0;
                 dummyTemp.flagComplex = 0;
                 sprintf(scratchPad, "sigma_%s_real", fitVars[i]);
-                sprintf(c->errcontext.tempErrStr, "%27s = %s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
-                ppl_report(&c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%27s = %s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
+                ppl_report(&c->errcontext, msg);
                 dummyTemp.real = stdDev[2 * i + 1];
                 dummyTemp.imag = 0.0;
                 dummyTemp.flagComplex = 0;
                 sprintf(scratchPad, "sigma_%s_imag", fitVars[i]);
-                sprintf(c->errcontext.tempErrStr, "%27s = %s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
-                ppl_report(&c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%27s = %s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
+                ppl_report(&c->errcontext, msg);
             } else {
                 dummyTemp.real = stdDev[2 * i];
                 dummyTemp.imag = 0.0;
@@ -881,15 +886,15 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     scratchPad[j++] = fitVars[i][k];
                 }
                 scratchPad[j++] = '\0';
-                sprintf(c->errcontext.tempErrStr, "%38s,real} = %s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
-                ppl_report(&c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%38s,real} = %s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
+                ppl_report(&c->errcontext, msg);
                 dummyTemp.real = stdDev[2 * i + 1];
                 dummyTemp.imag = 0.0;
                 dummyTemp.flagComplex = 0;
-                sprintf(c->errcontext.tempErrStr, "%38s,imag} = %s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
-                ppl_report(&c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%38s,imag} = %s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
+                ppl_report(&c->errcontext, msg);
             }
         }
     }

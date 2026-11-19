@@ -28,6 +28,7 @@
 #include <pwd.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "pplConstants.h"
 
 //! UnixGetPwEntry - Look up the current user's entry in the password database
@@ -53,6 +54,7 @@ struct passwd *UnixGetPwEntry(const pplerr_context *context) {
 //! \return The path of the current user's home directory, stored in a buffer which must not be freed
 
 char *ppl_unixGetHomeDir(pplerr_context *context) {
+    char msg[PPL_MSG_LENGTH];
     struct passwd *ptr;
     static char *failover = NULL;
     ptr = UnixGetPwEntry(context);
@@ -62,9 +64,10 @@ char *ppl_unixGetHomeDir(pplerr_context *context) {
         if (failover == NULL)
             ppl_fatal(context, __FILE__, __LINE__, "Could not find user's entry in output of getpwent()");
         sprintf(failover, "/home/%s", getlogin());
-        sprintf(context->tempErrStr,
-                "Could not find user's entry in output of getpwent(). Guessing that home directory is <%s>.", failover);
-        ppl_warning(context, ERR_GENERIC, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Could not find user's entry in output of getpwent(). Guessing that home directory is <%s>.",
+                          failover);
+        ppl_warning(context, ERR_GENERIC, msg);
         return failover;
     }
     return ptr->pw_dir;

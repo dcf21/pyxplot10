@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "epsMaker/kpse_wrap.h"
 #include "stringTools/strConstants.h"
 #include "userspace/context.h"
@@ -53,10 +54,11 @@ unsigned char ppl_kpse_PathRecursive[3][MAX_PATHS];
 //! looking up fonts
 //! \param [in] c - The Pyxplot context
 
-void ppl_kpse_wrap_init(const ppl_context *c) {
+void ppl_kpse_wrap_init(ppl_context *c) {
 #ifdef HAVE_KPATHSEA
     kpse_set_program_name("dvips", "dvips");
 #else
+    char msg[PPL_MSG_LENGTH];
     const char *FileTypes[3] = {"tfm", "pfa", "pfb"};
     int i, j, k, l, s, TrialNumber, fstdout;
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
@@ -136,9 +138,9 @@ void ppl_kpse_wrap_init(const ppl_context *c) {
         // If debugging, log a list of the paths that we've extracted
         if (DEBUG) {
             for (i = 0; ppl_kpse_PathList[j][i] != NULL; i++) {
-                sprintf(ec->tempErrStr, "Using path for %s files: <%s> [%srecursive]", FileTypes[j],
-                        ppl_kpse_PathList[j][i], ppl_kpse_PathRecursive[j][i] ? "" : "non-");
-                ppl_log(ec, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Using path for %s files: <%s> [%srecursive]", FileTypes[j],
+                                  ppl_kpse_PathList[j][i], ppl_kpse_PathRecursive[j][i] ? "" : "non-");
+                ppl_log(ec, msg);
             }
         }
     }
@@ -156,6 +158,7 @@ void ppl_kpse_wrap_init(const ppl_context *c) {
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
 char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned char recurse) {
+    char msg[PPL_MSG_LENGTH];
     int pos;
     DIR *dp;
     struct dirent *dirp;
@@ -169,8 +172,8 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
     buffer[FNAME_LENGTH - 1] = '\0';
     if (access(buffer, R_OK) == 0) {
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "KPSE found file <%s>", buffer);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "KPSE found file <%s>", buffer);
+            ppl_log(ec, msg);
         }
         found = 1;
         return buffer;
@@ -202,11 +205,12 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
 char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigned char *RecurseList) {
+    char msg[PPL_MSG_LENGTH];
     int i;
     char *output;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Searching for file <%s>", s);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Searching for file <%s>", s);
+        ppl_log(ec, msg);
     }
     for (i = 0; paths[i] != NULL; i++) {
         output = ppl_kpse_wrap_test_path(ec, s, paths[i], RecurseList[i]);
@@ -221,7 +225,7 @@ char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigne
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_pfa(const pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
 #else
@@ -234,7 +238,7 @@ char *ppl_kpse_wrap_find_pfa(const pplerr_context *ec, char *s) {
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_pfb(const pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
 #else
@@ -247,7 +251,7 @@ char *ppl_kpse_wrap_find_pfb(const pplerr_context *ec, char *s) {
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_tfm(const pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_tfm(s);
 #else

@@ -197,6 +197,7 @@ int SW_PIEKEYPOS_ACL[] = {1, 1, 1, 1, -1};
 
 void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, void *name_list,
                            const int name_list_size) {
+    char msg[PPL_MSG_LENGTH];
     int first;
     static int latch = 0;
     static char *dummyout = "";
@@ -206,17 +207,17 @@ void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, 
         if (*id_list == -1) {
             if (latch == 1) return dummyout; // Prevent recursive calling
             latch = 1;
-            sprintf(context->tempErrStr, "Setting with illegal value %d; should have had a value of type %d.", id,
-                    first);
-            ppl_fatal(context, __FILE__, __LINE__, context->tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Setting with illegal value %d; should have had a value of type %d.",
+                              id, first);
+            ppl_fatal(context, __FILE__, __LINE__, msg);
         }
         id_list++;
         name_list += name_list_size;
     }
     if (latch == 1) return dummyout;
     latch = 1;
-    sprintf(context->tempErrStr, "Setting has illegal value %d.", id);
-    ppl_fatal(context, __FILE__, __LINE__, context->tempErrStr);
+    ppl_snprintfTrunc(msg, sizeof(msg), "Setting has illegal value %d.", id);
+    ppl_fatal(context, __FILE__, __LINE__, msg);
     return NULL;
 }
 

@@ -133,6 +133,7 @@ void ppl_parserAtomAdd(parserLine *in, const int stackOutPos, const int linePos,
 static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, const int srcLineN, const long srcId,
                          char *srcFname, char *line, int *linepos, parserNode *node, int *tabCompNo,
                          const int tabCompStart, char *tabCompTxt, const int level, int blockDepth, int *match) {
+    char msg[PPL_MSG_LENGTH];
     int status = 0; // 0=fail; 1=pass; 2=tab completion returned; 3=want another line.
 
     // If node is NULL, this means we're putting back together a hierarchy of SEQs that we earlier descended out of to look for more input statements
@@ -1060,8 +1061,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
             goto cleanup;
         }
         default: {
-            sprintf(c->errcontext.tempErrStr, "Hit an unexpected node type %d.", node->type);
-            ppl_fatal(&c->errcontext, __FILE__, __LINE__, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Hit an unexpected node type %d.", node->type);
+            ppl_fatal(&c->errcontext, __FILE__, __LINE__, msg);
         }
     }
 
@@ -1307,6 +1308,7 @@ void ppl_parserLineFree(parserLine *in) {
 
 int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const long srcId, char *srcFname, char *line,
                       const int expandMacros, const int blockDepth) {
+    char msg[PPL_MSG_LENGTH];
     listIterator *cmdIter = NULL;
     int i, cln, containsMacros = 0;
     int obLen = LSTR_LENGTH, obPos;
@@ -1388,8 +1390,8 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                     strncpy(key, line + is, i - is);
                     key[i - is] = '\0';
                     if (DEBUG) {
-                        sprintf(c->errcontext.tempErrStr, "Shell substitution with command '%s'.", key);
-                        ppl_log(&c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Shell substitution with command '%s'.", key);
+                        ppl_log(&c->errcontext, msg);
                     }
                     if ((substPipe = popen(key, "r")) == NULL) {
                         sprintf(c->errStat.errBuff, "Could not spawl shell substitution command '%s'.", key);

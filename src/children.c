@@ -317,6 +317,7 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
 //! \param [in] in - The command. Its first character identifies the command, and the rest gives its arguments.
 
 void pplcsp_processCommand(ppl_context *context, char *in) {
+    char msg[PPL_MSG_LENGTH];
     char cmd[FNAME_LENGTH];
 
     if (in[0] == '\0') return;
@@ -344,9 +345,10 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
 
         if (GhostView_pid > 1) {
             if (DEBUG) {
-                sprintf(context->errcontext.tempErrStr,
-                        "Received gv_singlewindow request. Putting into existing window with pid %d.", GhostView_pid);
-                ppl_log(&context->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "Received gv_singlewindow request. Putting into existing window with pid %d.",
+                                  GhostView_pid);
+                ppl_log(&context->errcontext, msg);
             }
             if (snprintf(cmd, FNAME_LENGTH, "cp -f %s %s", filename, context->pplcsp_ghostView_fname) >= FNAME_LENGTH) {
                 if (DEBUG) ppl_log(&context->errcontext, "Filename of postscript document is too long to copy.");
@@ -379,6 +381,7 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
 //! \return The process ID of the viewer, or zero on failure
 
 int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
+    char msg[PPL_MSG_LENGTH];
 #define MAX_CMDARGS 64
 
     int pid, i, state = 0, NArgs = 0;
@@ -437,8 +440,8 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
         sprintf(context->errcontext.error_source, "GV%7d", getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
-            sprintf(context->errcontext.tempErrStr, "New postscript viewer process alive; going to view %s.", fname);
-            ppl_log(&context->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "New postscript viewer process alive; going to view %s.", fname);
+            ppl_log(&context->errcontext, msg);
         }
         if (PipeCSP2MAIN[1] != STDERR_FILENO) // Redirect stderr to pipe, so that GhostView doesn't spam terminal
         {
@@ -482,17 +485,18 @@ void pplcsp_killAllGvs(ppl_context *context) {
 //! \param [in] context - The Pyxplot context
 
 void pplcsp_killLatestSinglewindow(ppl_context *context) {
+    char msg[PPL_MSG_LENGTH];
     if (GhostView_pid > 1) {
         if (DEBUG) {
-            sprintf(context->errcontext.tempErrStr, "Killing latest ghostview singlewindow process with pid %d.",
-                    GhostView_pid);
-            ppl_log(&context->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Killing latest ghostview singlewindow process with pid %d.",
+                              GhostView_pid);
+            ppl_log(&context->errcontext, msg);
         }
         kill(GhostView_pid, SIGTERM);
     } else {
         if (DEBUG) {
-            sprintf(context->errcontext.tempErrStr, "No ghostview singlewindow process to kill.");
-            ppl_log(&context->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "No ghostview singlewindow process to kill.");
+            ppl_log(&context->errcontext, msg);
         }
     }
     GhostView_pid = 0;
@@ -551,6 +555,7 @@ void pplcsp_killAllHelpers(const ppl_context *context) {
 //! \param [out] fstdout - Set to the file descriptor of a pipe from sed's standard output
 
 void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) {
+    char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];
     int i, pid;
     sigset_t sigs;
@@ -588,8 +593,8 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
         sprintf(context->errcontext.error_source, "SED%6d", getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
-            sprintf(context->errcontext.tempErrStr, "New sed process alive; going to run command \"%s\".", cmd);
-            ppl_log(&context->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "New sed process alive; going to run command \"%s\".", cmd);
+            ppl_log(&context->errcontext, msg);
         }
         if (fd0[0] != STDIN_FILENO) // Redirect stdin to pipe
         {
@@ -627,6 +632,7 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
 //! \param [out] fstdout - Set to the file descriptor of a pipe from LaTeX's standard output
 
 void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fstdin, int *fstdout) {
+    char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];
     int i, pid;
     sigset_t sigs;
@@ -665,8 +671,8 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
         sprintf(context->errcontext.error_source, "TEX%6d", getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
-            sprintf(context->errcontext.tempErrStr, "New latex process alive; going to latex file \"%s\".", filename);
-            ppl_log(&context->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "New latex process alive; going to latex file \"%s\".", filename);
+            ppl_log(&context->errcontext, msg);
         }
         if (fd0[0] != STDIN_FILENO) // Redirect stdin to pipe
         {
@@ -701,6 +707,7 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
 //! \param [out] fstdout - Set to the file descriptor of a pipe from the filter's standard output
 
 void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
+    char msg[PPL_MSG_LENGTH];
     int fd0[2];
     int i, pid;
     sigset_t sigs;
@@ -734,9 +741,8 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
         sprintf(context->errcontext.error_source, "IF %6d", getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
-            sprintf(context->errcontext.tempErrStr, "New input filter process alive; going to run command \"%s\".",
-                    cmd[0]);
-            ppl_log(&context->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "New input filter process alive; going to run command \"%s\".", cmd[0]);
+            ppl_log(&context->errcontext, msg);
         }
         if (fd0[1] != STDOUT_FILENO) // Redirect stdout to pipe
         {
@@ -754,8 +760,8 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
             if (DEBUG)
                 ppl_log(&context->errcontext,
                         "Attempt to execute input filter returned error code."); // Execute input filter
-        sprintf(context->errcontext.tempErrStr, "Execution of input filter '%s' failed.", cmd[0]);
-        ppl_error(&context->errcontext, ERR_GENERIC, -1, -1, NULL); // execvp call should not return
+        ppl_snprintfTrunc(msg, sizeof(msg), "Execution of input filter '%s' failed.", cmd[0]);
+        ppl_error(&context->errcontext, ERR_GENERIC, -1, -1, msg); // execvp call should not return
         exit(1);
     }
     return;
@@ -768,6 +774,7 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
 //! \param [out] fstdout - Set to the file descriptor of a pipe from kpsewhich's standard output
 
 void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout) {
+    char msg[PPL_MSG_LENGTH];
     char CmdLineOpt[128];
     int fd0[2];
     int i, pid;
@@ -802,9 +809,9 @@ void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout)
         sprintf(context->errcontext.error_source, "KPS%6d", getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
-            sprintf(context->errcontext.tempErrStr,
-                    "New kpsewhich process alive; going to get paths for filetype \"%s\".", ftype);
-            ppl_log(&context->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "New kpsewhich process alive; going to get paths for filetype \"%s\".",
+                              ftype);
+            ppl_log(&context->errcontext, msg);
         }
         if (fd0[1] != STDOUT_FILENO) // Redirect stdout to pipe
         {

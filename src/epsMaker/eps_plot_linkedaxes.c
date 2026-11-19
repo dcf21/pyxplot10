@@ -68,14 +68,15 @@
 //! \param [in] source - The axis whose usage is to be propagated
 
 void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
+    char msg[PPL_MSG_LENGTH];
     int IterDepth;
     pplset_axis *target;
     canvas_item *item;
 
     if (DEBUG) {
-        sprintf(x->c->errcontext.tempErrStr, "Back-propagating axis usage for axis %c%d on plot %d",
-                "xyzc"[source->xyz], source->axis_n, source->canvas_id);
-        ppl_log(&x->c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Back-propagating axis usage for axis %c%d on plot %d", "xyzc"[source->xyz],
+                          source->axis_n, source->canvas_id);
+        ppl_log(&x->c->errcontext, msg);
     }
     item = x->current;
 
@@ -107,12 +108,13 @@ void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
         } else {
             if ((target->DataUnitSet && source->DataUnitSet) &&
                 (!ppl_unitsDimEqual(&target->DataUnit, &source->DataUnit))) {
-                sprintf(x->c->errcontext.tempErrStr,
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
                         "Axis %c%d of plot %d is linked to axis %c%d of plot %d, but axes have data plotted against them with conflicting physical units. The former has units of <%s> whilst the latter has units of <%s>.",
                         "xyzc"[source->xyz], source->axis_n, source->canvas_id, "xyzc"[target->xyz], target->axis_n,
                         target->canvas_id, ppl_printUnit(x->c, &target->DataUnit, NULL, NULL, 0, 1, 0),
                         ppl_printUnit(x->c, &source->DataUnit, NULL, NULL, 1, 1, 0));
-                ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+                ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
                 break;
             } else {
                 if ((source->MinUsedSet) && ((!target->MinUsedSet) || (target->MinUsed > source->MinUsed))) {
@@ -180,6 +182,7 @@ void eps_plot_DecideAxisRanges(EPSComm *x) {
 //! \param [in] mode - Zero to report warnings about broken links; one to fail silently
 
 void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode) {
+    char msg[PPL_MSG_LENGTH];
     int IterDepth, OriginalMode = mode;
     pplset_axis *source, *target, *target2;
     canvas_item *item;
@@ -201,31 +204,34 @@ void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode
             while ((item != NULL) && (item->id) < target->LinkedAxisCanvasID) item = item->next;
             if ((item == NULL) || (item->id != target->LinkedAxisCanvasID)) {
                 if ((IterDepth == 1) && (mode == 0)) {
-                    sprintf(x->c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "Axis %c%d of plot %d is linked to axis %c%d of plot %d, but no such plot exists.",
                             "xyzc"[target->xyz], target->axis_n, target->canvas_id, "xyzc"[target->LinkedAxisToXYZ],
                             target->LinkedAxisToNum, target->LinkedAxisCanvasID);
-                    ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+                    ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
                 }
                 break;
             }
             if (item->type != CANVAS_PLOT) {
                 if ((IterDepth == 1) && (mode == 0)) {
-                    sprintf(x->c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "Axis %c%d of plot %d is linked to axis %c%d of plot %d, but this canvas item is not a plot.",
                             "xyzc"[target->xyz], target->axis_n, target->canvas_id, "xyzc"[target->LinkedAxisToXYZ],
                             target->LinkedAxisToNum, target->LinkedAxisCanvasID);
-                    ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+                    ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
                 }
                 break;
             }
             if ((item->XAxes == NULL) || (item->YAxes == NULL) || (item->ZAxes == NULL)) {
                 if ((IterDepth == 1) && (mode == 0)) {
-                    sprintf(x->c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "Axis %c%d of plot %d is linked to axis %c%d of plot %d, but this item has NULL axes.",
                             "xyzc"[target->xyz], target->axis_n, target->canvas_id, "xyzc"[target->LinkedAxisToXYZ],
                             target->LinkedAxisToNum, target->LinkedAxisCanvasID);
-                    ppl_warning(&x->c->errcontext, ERR_INTERNAL, NULL);
+                    ppl_warning(&x->c->errcontext, ERR_INTERNAL, msg);
                 }
                 break;
             }
@@ -326,6 +332,7 @@ void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode
 //! \return Zero on success, or one on failure
 
 int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) {
+    char msg[PPL_MSG_LENGTH];
     const int stkLevelOld = X->c->stackPtr;
     int l, xrn = 0, lOP;
     int oldsgn = -10, newsgn;
@@ -371,32 +378,33 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
         // Generate a sample from the axis linkage function
         outVal = ppl_expEval(X->c, olu, &lOP, 0, X->iterDepth + 1);
         if (X->c->errStat.status) {
-            sprintf(X->c->errcontext.tempErrStr, "Error encountered whilst evaluating axis linkage expression: %s",
-                    olu->ascii);
-            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst evaluating axis linkage expression: %s",
+                              olu->ascii);
+            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, msg);
             ppl_tbWrite(X->c);
             ppl_tbClear(X->c);
             goto FAIL;
         }
         if ((outVal->objType != PPLOBJ_NUM) && (outVal->objType != PPLOBJ_DATE) && (outVal->objType != PPLOBJ_BOOL)) {
-            sprintf(X->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Error encountered whilst evaluating axis linkage expression: %s\nObject was not a number but an object of type <%s>",
                     olu->ascii, pplObjTypeNames[outVal->objType]);
-            ppl_error(&X->c->errcontext, ERR_TYPE, -1, -1, NULL);
+            ppl_error(&X->c->errcontext, ERR_TYPE, -1, -1, msg);
             goto FAIL;
         }
         if (outVal->flagComplex) {
-            sprintf(X->c->errcontext.tempErrStr, "Error encountered whilst evaluating axis linkage expression: %s",
-                    olu->ascii);
-            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst evaluating axis linkage expression: %s",
+                              olu->ascii);
+            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, msg);
             ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1,
                       "Received a complex number; axes must have strictly real values at all points.");
             goto FAIL;
         }
         if (!gsl_finite(outVal->real)) {
-            sprintf(X->c->errcontext.tempErrStr, "Error encountered whilst evaluating axis linkage expression: %s",
-                    olu->ascii);
-            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst evaluating axis linkage expression: %s",
+                              olu->ascii);
+            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, msg);
             ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, "Expression returned non-finite result.");
             goto FAIL;
         }
@@ -408,11 +416,12 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
             sprintf(X->c->errcontext.tempErrStr, "Error encountered whilst evaluating axis linkage expression: %s",
                     olu->ascii);
             ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, NULL);
-            sprintf(X->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Axis linkage function produces axis values with dimensions of <%s> whilst data plotted on this axis has dimensions of <%s>.",
                     ppl_printUnit(X->c, outVal, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(X->c, &out->DataUnit, NULL, NULL, 1, 1, 0));
-            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, msg);
             goto FAIL;
         }
         out->AxisLinearInterpolation[l] = outVal->real;
@@ -470,6 +479,7 @@ typedef struct LAUComm {
 //! \return The absolute difference between the linkage expression and the target value
 
 double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
+    char msg[PPL_MSG_LENGTH];
     int i, lOP;
     double output;
     pplObj *outVal;
@@ -492,19 +502,20 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
 
     // If a numerical error happened; ignore it for now, but return NAN
     if (data->x->c->errStat.status) {
-        sprintf(data->x->c->errcontext.tempErrStr, "An algebraic error was encountered at %s=%s:", data->VarName,
-                ppl_unitsNumericDisplay(data->x->c, data->VarValue, 0, 0, 0));
-        ppl_error(&data->x->c->errcontext, ERR_PREFORMED, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "An algebraic error was encountered at %s=%s:", data->VarName,
+                          ppl_unitsNumericDisplay(data->x->c, data->VarValue, 0, 0, 0));
+        ppl_error(&data->x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
         ppl_tbWrite(data->x->c);
         ppl_tbClear(data->x->c);
         output = GSL_NAN;
         goto end;
     }
     if ((outVal->objType != PPLOBJ_NUM) && (outVal->objType != PPLOBJ_DATE) && (outVal->objType != PPLOBJ_BOOL)) {
-        sprintf(data->x->c->errcontext.tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Error encountered whilst evaluating axis linkage expression: %s\nObject was not a number but an object of type <%s>",
                 data->expr->ascii, pplObjTypeNames[outVal->objType]);
-        ppl_error(&data->x->c->errcontext, ERR_TYPE, -1, -1, NULL);
+        ppl_error(&data->x->c->errcontext, ERR_TYPE, -1, -1, msg);
         output = GSL_NAN;
         goto end;
     }
@@ -615,6 +626,7 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
 //! \param [in] source - The linked axis
 
 void eps_plot_LinkUsingBackPropagate(EPSComm *x, const double val, pplset_axis *target, pplset_axis *source) {
+    char msg[PPL_MSG_LENGTH];
     LAUComm commlink;
     char *VarName;
     pplObj DummyTemp, *VarVal;
@@ -650,11 +662,12 @@ void eps_plot_LinkUsingBackPropagate(EPSComm *x, const double val, pplset_axis *
 
     // If there was a problem, throw a warning and proceed no further
     if (commlink.fail) {
-        sprintf(x->c->errcontext.tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Could not propagate axis range information from axis %c%d of plot %d to axis %c%d of plot %d using expression <%s>. Recommend setting an explicit range for axis %c%d of plot %d.",
                 "xyzc"[source->xyz], source->axis_n, source->canvas_id, "xyzc"[target->xyz], target->axis_n,
                 target->canvas_id, commlink.expr->ascii, "xyzc"[target->xyz], target->axis_n, target->canvas_id);
-        ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+        ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
     } else {
         int i;
         VarVal->dimensionless =
@@ -669,33 +682,37 @@ void eps_plot_LinkUsingBackPropagate(EPSComm *x, const double val, pplset_axis *
 
         // Check that dimension of propagated value fits with existing unit of axis
         if ((target->HardUnitSet) && (!ppl_unitsDimEqual(&target->HardUnit, VarVal))) {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Could not propagate axis range information from axis %c%d of plot %d to axis %c%d of plot %d using expression <%s>. Propagated axis range has units of <%s>, but axis %c%d of plot %d has a range set with units of <%s>.",
                     "xyzc"[source->xyz], source->axis_n, source->canvas_id, "xyzc"[target->xyz], target->axis_n,
                     target->canvas_id, commlink.expr->ascii, ppl_printUnit(x->c, VarVal, NULL, NULL, 0, 1, 0),
                     "xyzc"[target->xyz], target->axis_n, target->canvas_id,
                     ppl_printUnit(x->c, &target->HardUnit, NULL, NULL, 1, 1, 0));
-            ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+            ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
         } else if ((target->DataUnitSet) && (!ppl_unitsDimEqual(&target->DataUnit, VarVal))) {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Could not propagate axis range information from axis %c%d of plot %d to axis %c%d of plot %d using expression <%s>. Propagated axis range has units of <%s>, but axis %c%d of plot %d has data plotted against it with units of <%s>.",
                     "xyzc"[source->xyz], source->axis_n, source->canvas_id, "xyzc"[target->xyz], target->axis_n,
                     target->canvas_id, commlink.expr->ascii, ppl_printUnit(x->c, VarVal, NULL, NULL, 0, 1, 0),
                     "xyzc"[target->xyz], target->axis_n, target->canvas_id,
                     ppl_printUnit(x->c, &target->DataUnit, NULL, NULL, 1, 1, 0));
-            ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+            ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
         } else if (VarVal->flagComplex) {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Could not propagate axis range information from axis %c%d of plot %d to axis %c%d of plot %d using expression <%s>. Axis usage was a complex number.",
                     "xyzc"[source->xyz], source->axis_n, source->canvas_id, "xyzc"[target->xyz], target->axis_n,
                     target->canvas_id, commlink.expr->ascii);
-            ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+            ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
         } else if (!gsl_finite(VarVal->real)) {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Could not propagate axis range information from axis %c%d of plot %d to axis %c%d of plot %d using expression <%s>. Axis usage was a non-finite number.",
                     "xyzc"[source->xyz], source->axis_n, source->canvas_id, "xyzc"[target->xyz], target->axis_n,
                     target->canvas_id, commlink.expr->ascii);
-            ppl_warning(&x->c->errcontext, ERR_GENERIC, NULL);
+            ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
         } else {
             if ((!target->MinUsedSet) || (target->MinUsed > VarVal->real)) {
                 target->MinUsed = VarVal->real;

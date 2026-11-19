@@ -35,6 +35,7 @@
 #include <gsl/gsl_const_mksa.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 
 #include "epsMaker/bmp_image.h"
@@ -49,6 +50,7 @@
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
+    char msg[PPL_MSG_LENGTH];
     int comps = 0, i, j;
 
     unsigned int width = 0, height = 0, save, sos;
@@ -86,8 +88,8 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
             return;
         }
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "Entry type %x length 0x%x", (int) type, len + 2);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Entry type %x length 0x%x", (int) type, len + 2);
+            ppl_log(ec, msg);
         }
         if ((type == 0xe0) && !strcmp((char *) buff, "JFIF")) {
             if (((buff[7] == 1) || (buff[7] == 2))) {
@@ -105,19 +107,19 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
                 sprintf(ec->tempErrStr, "JFIF thumbnail size %dx%d", (int) buff[12], (int) buff[13]);
                 ppl_log(ec, NULL);
                 if (image->XDPI) {
-                    sprintf(ec->tempErrStr, "DPI: %.1fx%.1f", image->XDPI, image->YDPI);
-                    ppl_log(ec, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "DPI: %.1fx%.1f", image->XDPI, image->YDPI);
+                    ppl_log(ec, msg);
                 }
-                sprintf(ec->tempErrStr, "JFIF APP0 entry length 0x%x", len + 2);
-                ppl_log(ec, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "JFIF APP0 entry length 0x%x", len + 2);
+                ppl_log(ec, msg);
             }
         }
 
         if (DEBUG && ((type == 0xe1) && (!strcmp((char *) buff, "Exif")))) {
             sprintf(ec->tempErrStr, "Exif JPEG file");
             ppl_log(ec, NULL);
-            sprintf(ec->tempErrStr, "Exif APP1 entry length 0x%x", len + 2);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Exif APP1 entry length 0x%x", len + 2);
+            ppl_log(ec, msg);
         }
 
         if (((type & 0xf0) == 0xc0) && (type != 0xc4) && (type != 0xcc)) {
@@ -135,16 +137,16 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
 
         if (DEBUG && (type == 0xfe)) {
             buff[len] = 0;
-            sprintf(ec->tempErrStr, "JPEG Comment: %s", buff);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "JPEG Comment: %s", buff);
+            ppl_log(ec, msg);
         }
         if (DEBUG && (type == 0xe0)) {
-            sprintf(ec->tempErrStr, "APP0 Marker: %s", buff);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "APP0 Marker: %s", buff);
+            ppl_log(ec, msg);
         }
         if (DEBUG && (type == 0xdd)) {
-            sprintf(ec->tempErrStr, "Restart markers present");
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Restart markers present");
+            ppl_log(ec, msg);
         }
 
         if ((type == 0xdb) || (type == 0xc4) || (type == 0xda) || (type == 0xdd)) save = 1;
@@ -160,14 +162,14 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
             }
             for (i = 0; i < len; i++) *(headp++) = buff[i];
         } else if (DEBUG) {
-            sprintf(ec->tempErrStr, "Discarding section of JPEG image file.");
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Discarding section of JPEG image file.");
+            ppl_log(ec, msg);
         }
     } while ((type != 0xda) && fread(buff, 1, 1, jpeg) && (buff[0] == 0xff));
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Image size %dx%d with %d components", width, height, comps);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Image size %dx%d with %d components", width, height, comps);
+        ppl_log(ec, msg);
     }
 
     switch (comp) {
@@ -184,19 +186,21 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
             free(header);
             return;
         default:
-            sprintf(ec->tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "JPEG image detected to have unsupported compression type SOF%d. Please convert to baseline JPEG and try again.",
                     ((int) comp) & 0xf);
-            ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            ppl_error(ec, ERR_FILE, -1, -1, msg);
             free(header);
             return;
     }
 
     if ((comps != 3) && (comps != 1)) {
-        sprintf(ec->tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "JPEG image contains %d colour components; Pyxplot only supports JPEG images with one (greyscale) or three (RGB) components",
                 comps);
-        ppl_error(ec, ERR_FILE, -1, -1, NULL);
+        ppl_error(ec, ERR_FILE, -1, -1, msg);
         free(header);
         return;
     }
@@ -216,8 +220,8 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     // Now read JPEG image data. Unfortunately, we don't know how much we'll get
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "%d bytes of header read", (int) (headp - header));
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%d bytes of header read", (int) (headp - header));
+        ppl_log(ec, msg);
     }
 
     for (i = 0; header + i < headp; i++) buff[i] = header[i];
@@ -256,16 +260,16 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     while (i < image->data_len) {
         if (buff[i] != 0xff) {
             if (DEBUG) {
-                sprintf(ec->tempErrStr, "Offset %d", i);
-                ppl_log(ec, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Offset %d", i);
+                ppl_log(ec, msg);
             }
             ppl_error(ec, ERR_FILE, -1, -1, "Unexpected data in JPEG - no marker where expected");
             return;
         }
         i++;
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "Check: entry type %x ...", buff[i]);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Check: entry type %x ...", buff[i]);
+            ppl_log(ec, msg);
         }
         if (buff[i] == 0xd9) break; // End of image
         if (buff[i] == 0xda) sos = 1;
@@ -277,8 +281,8 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         len = buff[i] * 256 + buff[i + 1] - 2;
         i += 2;
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "... length 0x%x", len + 2);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "... length 0x%x", len + 2);
+            ppl_log(ec, msg);
         }
         i += len;
         if (sos) // We now have an entropy-encoded section of unknown length
@@ -291,8 +295,8 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
                      ((buff[i] == 0xff) && ((buff[i + 1] != 0) && ((buff[i + 1] & 0xf8) != 0xd0)))))
                 i++;
             if (DEBUG) {
-                sprintf(ec->tempErrStr, "Check: entropy encoded section %d bytes", i - j);
-                ppl_log(ec, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Check: entropy encoded section %d bytes", i - j);
+                ppl_log(ec, msg);
             }
             sos = 0;
         }
@@ -304,8 +308,8 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     }
 
     if (DEBUG && (i + 1 < image->data_len)) {
-        sprintf(ec->tempErrStr, "%lu bytes of trailing garbage removed from JPEG", image->data_len - i - 1);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%lu bytes of trailing garbage removed from JPEG", image->data_len - i - 1);
+        ppl_log(ec, msg);
     }
 
     image->data = buff;

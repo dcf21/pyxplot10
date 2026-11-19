@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 
 #include "epsMaker/bmp_optimise.h"
@@ -44,6 +45,7 @@
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
+    char msg[PPL_MSG_LENGTH];
     unsigned long size, i;
     int ncols, j, colour;
     int palette[257];
@@ -71,8 +73,8 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     }
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Image contains only %d colours: reducing to paletted image", ncols);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Image contains only %d colours: reducing to paletted image", ncols);
+        ppl_log(ec, msg);
     }
 
     // Reduce to paletted image if possible
@@ -124,6 +126,7 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
+    char msg[PPL_MSG_LENGTH];
     int i;
     unsigned long size;
     unsigned char ncols;
@@ -138,8 +141,8 @@ void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
 
     if (ncols < (image->pal_len - 1)) {
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "Palette length reduced from %d to %d", image->pal_len, 1 + ncols);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Palette length reduced from %d to %d", image->pal_len, 1 + ncols);
+            ppl_log(ec, msg);
         }
         image->pal_len = 1 + ncols;
         if ((image->trans != NULL) && (image->trans[0] > ncols))
@@ -154,6 +157,7 @@ void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
+    char msg[PPL_MSG_LENGTH];
     int i, grey, depth = 8, magic, test;
     unsigned int ncols;
     unsigned long size;
@@ -175,8 +179,8 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
     if (!grey) return;
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Image is greyscale");
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Image is greyscale");
+        ppl_log(ec, msg);
     }
 
     if (ncols <= 16) // Investigate whether we can reduce colour depth below 8
@@ -205,13 +209,13 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
         {
             for (i = 0; i < ncols; i++) image->palette[3 * i] /= magic;
             if (DEBUG) {
-                sprintf(ec->tempErrStr, "Greyscale depth is %d bit", depth);
-                ppl_log(ec, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Greyscale depth is %d bit", depth);
+                ppl_log(ec, msg);
             }
         } else { // We have a <=4 bit image, but cannot use a 4-bit greyscale representation. Give up and use palette!
             if (DEBUG) {
-                sprintf(ec->tempErrStr, "ncols=%d, but not %d bit greyscale\n", ncols, depth);
-                ppl_log(ec, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "ncols=%d, but not %d bit greyscale\n", ncols, depth);
+                ppl_log(ec, msg);
             }
             return;
         }

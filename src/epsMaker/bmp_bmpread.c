@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 
 #include "epsMaker/bmp_image.h"
@@ -43,6 +44,7 @@
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
+    char msg[PPL_MSG_LENGTH];
     unsigned char buff[60], encode, *p, c;
     unsigned width, height, depth, dw, excess;
     unsigned long offset, off2, size;
@@ -129,8 +131,8 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Size %dx%d depth %d bits", width, height, depth);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Size %dx%d depth %d bits", width, height, depth);
+        ppl_log(ec, msg);
     }
 
     rle = 0;
@@ -144,8 +146,8 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     if ((depth != 1) && (depth != 4) && (depth != 8) && (depth != 16) && (depth != 24)) {
-        sprintf(ec->tempErrStr, "Bitmap colour depth of %d not supported\n", depth);
-        ppl_error(ec, ERR_FILE, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Bitmap colour depth of %d not supported\n", depth);
+        ppl_error(ec, ERR_FILE, -1, -1, msg);
         return;
     }
 
@@ -156,10 +158,11 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         if (!ncols) ncols = 1 << depth;
 
         if (ncols > (1 << depth)) {
-            sprintf(ec->tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Bitmap image has a palette length of %d, which is not possible with a colour depth of %d", ncols,
                     depth);
-            ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            ppl_error(ec, ERR_FILE, -1, -1, msg);
             return;
         }
 
@@ -205,8 +208,8 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         return;
     } else if (offset > off2) {
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "%ld bytes of extra data", offset - off2);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "%ld bytes of extra data", offset - off2);
+            ppl_log(ec, msg);
         }
         for (; off2 < offset; off2++) fgetc(in);
     }
@@ -372,6 +375,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
 //! \return Zero on success, or one if the data was corrupt or memory allocation failed
 
 int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, const unsigned long len) {
+    char msg[PPL_MSG_LENGTH];
     unsigned char *out, *c_in, *c_out, code, *end, odd, even;
     unsigned long i, j, delta, size, height, width;
     int eol, rle;
@@ -384,8 +388,8 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
         return 1;
     }
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Bitmap image has RLE%d compression\n", rle);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Bitmap image has RLE%d compression\n", rle);
+        ppl_log(ec, msg);
     }
 
     image->depth = 8;
@@ -457,23 +461,26 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
             }
         }
         if (eol) {
-            sprintf(ec->tempErrStr,
-                    "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n", i);
-            ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
+                              i);
+            ppl_error(ec, ERR_FILE, -1, -1, msg);
             return 1;
         }
 
         // Should now have an EOL or EOD code
         if (*(c_in++) != 0) {
-            sprintf(ec->tempErrStr,
-                    "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n", i);
-            ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
+                              i);
+            ppl_error(ec, ERR_FILE, -1, -1, msg);
             return 1;
         }
         if ((*c_in != 0) && ((*c_in != 1) && (i = height))) {
-            sprintf(ec->tempErrStr,
-                    "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n", i);
-            ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
+                              i);
+            ppl_error(ec, ERR_FILE, -1, -1, msg);
             return 1;
         }
         c_in++;

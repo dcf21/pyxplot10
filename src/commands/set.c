@@ -29,6 +29,7 @@
 #include <gsl/gsl_math.h>
 
 #include "commands/set.h"
+#include "coreUtils/errorReport.h"
 
 #include "coreUtils/dict.h"
 #include "coreUtils/memAlloc.h"
@@ -349,6 +350,7 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive) {
+    char msg[PPL_MSG_LENGTH];
     pplset_graph *sg;
     pplarrow_object **al;
     ppllabel_object **ll;
@@ -371,15 +373,15 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         canvas_item *ptr;
 
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
-            sprintf(c->errcontext.tempErrStr, "No multiplot item with index %d.", editNo);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
         ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
         if (ptr == NULL) {
-            sprintf(c->errcontext.tempErrStr, "No multiplot item with index %d.", editNo);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
 
@@ -812,14 +814,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (command[PARSE_set_contours_contours].objType == PPLOBJ_NUM) {
             double n = command[PARSE_set_contours_contours].real;
             if (n < 2) {
-                sprintf(c->errcontext.tempErrStr, "Contour plots must have at least two contours.");
-                ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Contour plots must have at least two contours.");
+                ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                 return;
             }
             if (n > MAX_CONTOURS) {
-                sprintf(c->errcontext.tempErrStr, "Contour maps cannot be constucted with more than %d contours.",
-                        MAX_CONTOURS);
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Contour maps cannot be constucted with more than %d contours.",
+                                  MAX_CONTOURS);
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 return;
             }
             sg->ContoursN = (int) round(n);
@@ -833,30 +835,32 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 if (pos <= 0) break;
                 o = &command[pos + PARSE_set_contours_contour_contour_list];
                 if (o->objType != PPLOBJ_NUM) {
-                    sprintf(c->errcontext.tempErrStr,
-                            "Contours can only be set at numeric values; supplied value is of type <%s>.",
-                            pplObjTypeNames[o->objType]);
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Contours can only be set at numeric values; supplied value is of type <%s>.",
+                                      pplObjTypeNames[o->objType]);
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                     return;
                 }
                 if (!gsl_finite(o->real)) {
-                    sprintf(c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "Contours can only be set at finite numeric values; supplied value is not finite.");
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                     return;
                 }
                 if (o->flagComplex) {
-                    sprintf(c->errcontext.tempErrStr,
-                            "Contours can only be set at real numeric values; supplied value is complex.");
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Contours can only be set at real numeric values; supplied value is complex.");
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                     return;
                 }
                 if (i == 0) first = o;
                 else if (!ppl_unitsDimEqual(first, o)) {
-                    sprintf(c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "Contour positions must all have the same physical units; supplied list has multiple units, including <%s> and <%s>.",
                             ppl_printUnit(c, first, NULL, NULL, 0, 1, 0), ppl_printUnit(c, o, NULL, NULL, 1, 1, 0));
-                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, NULL);
+                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
                     return;
                 }
                 i++;
@@ -1253,10 +1257,11 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (sl && (command[PARSE_set_logscale_base].objType == PPLOBJ_NUM)) {
             b = (int) round(command[PARSE_set_logscale_base].real);
             if ((b < 2) || (b > 1024)) {
-                sprintf(c->errcontext.tempErrStr,
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
                         "Attempt to use log axis with base %d. Pyxplot only supports bases in the range 2 - 1024. Defaulting to base 10.",
                         b);
-                ppl_warning(&c->errcontext, ERR_GENERIC, NULL);
+                ppl_warning(&c->errcontext, ERR_GENERIC, msg);
                 b = 10;
             }
         }
@@ -1688,25 +1693,27 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             list *l = (list *) lo->auxil;
             int ll, i;
             if (lo->objType != PPLOBJ_LIST) {
-                sprintf(c->errcontext.tempErrStr,
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
                         "The 'set palette' command can only generate palettes from objects of type list; supplied object has type <%s>.",
                         pplObjTypeNames[lo->objType]);
-                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return;
             }
             ll = ppl_listLen(l);
             if (ll < 1) {
-                sprintf(c->errcontext.tempErrStr, "The 'set palette' command was passed a palette of zero length.");
-                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "The 'set palette' command was passed a palette of zero length.");
+                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return;
             }
             for (i = 0; i < ll; i++) {
                 pplObj *o = ppl_listGetItem(l, i);
                 if ((o->objType != PPLOBJ_NUM) && (o->objType != PPLOBJ_COL)) {
-                    sprintf(c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "Object of type <%s> in list supplied to the 'set palette' command could not be converted to a color.",
                             pplObjTypeNames[o->objType]);
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                     return;
                 }
             }
@@ -1745,17 +1752,17 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 c->set->term_current.PaperWidth.real = d2 / 1000;
                 ppl_GetPaperName(c->set->term_current.PaperName, &d1, &d2);
             } else {
-                sprintf(c->errcontext.tempErrStr, "Unrecognised paper size '%s'.", paperName);
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Unrecognised paper size '%s'.", paperName);
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 return;
             }
         } else {
             double d1 = command[PARSE_set_papersize_size].real;
             double d2 = command[PARSE_set_papersize_size + 1].real;
             if ((!gsl_finite(d1)) || (!gsl_finite(d2))) {
-                sprintf(c->errcontext.tempErrStr,
-                        "The size coordinates supplied to the 'set papersize' command was not finite.");
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "The size coordinates supplied to the 'set papersize' command was not finite.");
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 return;
             }
             c->set->term_current.PaperWidth.real = d1;
@@ -1963,8 +1970,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int n;
         withWords *outstyle, ww_tmp, ww_tmp2;
         if ((nd < 0) || (nd >= MAX_PLOTSTYLES)) {
-            sprintf(c->errcontext.tempErrStr, "plot style numbers must be in the range 0-%d", MAX_PLOTSTYLES - 1);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "plot style numbers must be in the range 0-%d", MAX_PLOTSTYLES - 1);
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
         n = (int) floor(nd);
@@ -1996,9 +2003,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 if (pos <= 0) break;
                 nd = command[pos + id_style_ids].real;
                 if ((nd < 0) || (nd >= MAX_PLOTSTYLES)) {
-                    sprintf(c->errcontext.tempErrStr, "plot style numbers must be in the range 0-%d",
-                            MAX_PLOTSTYLES - 1);
-                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "plot style numbers must be in the range 0-%d",
+                                      MAX_PLOTSTYLES - 1);
+                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                     return;
                 }
                 n = (int) floor(nd);
@@ -2483,12 +2490,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     if (p == 0) continue;
                     if (i != 2) {
                         if ((c->unit_database[j].quantity != NULL) && (c->unit_database[j].quantity[0] != '\0')) {
-                            sprintf(c->errcontext.tempErrStr, "'%s' is not a unit of '%s', but of '%s'.", unit,
-                                    quantity, c->unit_database[j].quantity);
-                            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "'%s' is not a unit of '%s', but of '%s'.", unit,
+                                              quantity, c->unit_database[j].quantity);
+                            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                         } else {
-                            sprintf(c->errcontext.tempErrStr, "'%s' is not a unit of '%s'.", unit, quantity);
-                            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "'%s' is not a unit of '%s'.", unit, quantity);
+                            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                         }
                     }
                     c->unit_database[j].userSel = 1;
@@ -2496,12 +2503,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     pp = 1;
                 }
                 if (i == 0) {
-                    sprintf(c->errcontext.tempErrStr, "No such quantity as a '%s'.", quantity);
-                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "No such quantity as a '%s'.", quantity);
+                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 }
                 if (p == 0) {
-                    sprintf(c->errcontext.tempErrStr, "No such unit as a '%s'.", unit);
-                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "No such unit as a '%s'.", unit);
+                    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 }
             }
         }
@@ -2868,9 +2875,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         }
     } else {
-        sprintf(c->errcontext.tempErrStr, "Pyxplot's set command could not find handler for the set option <%s>.",
-                setoption);
-        ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Pyxplot's set command could not find handler for the set option <%s>.",
+                          setoption);
+        ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, msg);
     }
 
     return;

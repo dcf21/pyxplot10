@@ -87,6 +87,7 @@ static void ppl_parserStartNode(pplerr_context *c, parserNode **stk, int *i, con
 
 static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int type, const char *cmdText,
                                int *NcharsTaken) {
+    char msg[PPL_MSG_LENGTH];
     int j = 1; // Count characters taken; start at 1 for closing bracket
     int varNameStart = -1, varNameEnd = -1;
 
@@ -94,20 +95,22 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
         (*i)--; // Automatically close SEQs; they don't have closing grammar
 
     if ((*i) <= 0) {
-        sprintf(c->tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "Incorrect nesting of types in command specification -- attempt to close an unopened bracket.");
-        ppl_fatal(c, __FILE__, __LINE__, NULL);
+        ppl_fatal(c, __FILE__, __LINE__, msg);
     } else if (stk[(*i) - 1]->type != type) {
-        sprintf(c->tempErrStr, "Incorrect nesting of types in command specification -- expected %d, but got %d.", type,
-                stk[(*i) - 1]->type);
-        ppl_fatal(c, __FILE__, __LINE__, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Incorrect nesting of types in command specification -- expected %d, but got %d.", type,
+                          stk[(*i) - 1]->type);
+        ppl_fatal(c, __FILE__, __LINE__, msg);
     }
 
     if (cmdText[j] == '@') {
         int k, l;
         if (type != PN_TYPE_REP) {
-            sprintf(c->tempErrStr, "Unexpected storage information after non [ ] data structure.");
-            ppl_fatal(c, __FILE__, __LINE__, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Unexpected storage information after non [ ] data structure.");
+            ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         j++;
         if (cmdText[j] == '0') {
@@ -121,25 +124,25 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
             varNameEnd = j;
         }
         if (cmdText[j++] != '@') {
-            sprintf(c->tempErrStr, "Syntax error: expecting @ after ]@varname...");
-            ppl_fatal(c, __FILE__, __LINE__, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname...");
+            ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         if (cmdText[j++] != '@') {
-            sprintf(c->tempErrStr, "Syntax error: expecting @ after ]@varname@value...");
-            ppl_fatal(c, __FILE__, __LINE__, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value...");
+            ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         if (cmdText[j++] != '@') {
-            sprintf(c->tempErrStr, "Syntax error: expecting @ after ]@varname@value@ACL...");
-            ppl_fatal(c, __FILE__, __LINE__, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
+            ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         k = (int) ppl_getFloat(cmdText + j, NULL);
         while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->outStackPos = k;
         if (cmdText[j++] != '@') {
-            sprintf(c->tempErrStr, "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
-            ppl_fatal(c, __FILE__, __LINE__, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
+            ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         l = (int) ppl_getFloat(cmdText + j, NULL);
         while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
@@ -167,6 +170,7 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
 //! \return Zero
 
 int ppl_parserInit(ppl_context *c) {
+    char msg[PPL_MSG_LENGTH];
     pplerr_context *e = &c->errcontext;
     int i;
     int inPos = 0;
@@ -234,8 +238,9 @@ int ppl_parserInit(ppl_context *c) {
                 while ((stackPos >= 0) && (defnStack[stackPos - 1]->type == PN_TYPE_SEQ))
                     stackPos--; // Automatically close SEQs; they don't have closing grammar
                 if ((stackPos < 0) || (defnStack[stackPos - 1]->type != PN_TYPE_PER)) {
-                    sprintf(e->tempErrStr, "Tilda should be used only in permutation structures (char pos %d).", inPos);
-                    ppl_fatal(e, __FILE__, __LINE__, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Tilda should be used only in permutation structures (char pos %d).", inPos);
+                    ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
                 inPos++;
             } else if (ppl_cmdList[inPos] == '|') // | is used inside <> for either/or items
@@ -243,9 +248,10 @@ int ppl_parserInit(ppl_context *c) {
                 while ((stackPos >= 0) && (defnStack[stackPos - 1]->type == PN_TYPE_SEQ))
                     stackPos--; // Automatically close SEQs; they don't have closing grammar
                 if ((stackPos < 0) || (defnStack[stackPos - 1]->type != PN_TYPE_ORA)) {
-                    sprintf(e->tempErrStr, "Pipe alternatives should only be used inside ORA structures (char pos %d).",
-                            inPos);
-                    ppl_fatal(e, __FILE__, __LINE__, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Pipe alternatives should only be used inside ORA structures (char pos %d).",
+                                      inPos);
+                    ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
                 inPos++;
             }
@@ -298,8 +304,8 @@ int ppl_parserInit(ppl_context *c) {
                 if (strcmp(newNode->matchString, "DATABLOCK") == 0) newNode->type = PN_TYPE_DATABLK;
                 if (strcmp(newNode->matchString, "CODEBLOCK") == 0) newNode->type = PN_TYPE_CODEBLK;
                 if (ppl_cmdList[inPos++] != '@') {
-                    sprintf(e->tempErrStr, "Syntax error: expecting @ after @matchstr...");
-                    ppl_fatal(e, __FILE__, __LINE__, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after @matchstr...");
+                    ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
 
                 strStart = inPos;
@@ -312,8 +318,8 @@ int ppl_parserInit(ppl_context *c) {
                 strncpy(newNode->varName, ppl_cmdList + strStart, inPos - strStart);
                 newNode->varName[inPos - strStart] = '\0';
                 if (ppl_cmdList[inPos++] != '@') {
-                    sprintf(e->tempErrStr, "Syntax error: expecting @ after @matchstr@varname...");
-                    ppl_fatal(e, __FILE__, __LINE__, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after @matchstr@varname...");
+                    ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
 
                 strStart = inPos;
@@ -333,23 +339,24 @@ int ppl_parserInit(ppl_context *c) {
                     newNode->outString[inPos - strStart] = '\0';
                 }
                 if (ppl_cmdList[inPos++] != '@') {
-                    sprintf(e->tempErrStr, "Syntax error: expecting @ after @matchstr@varname@str...");
-                    ppl_fatal(e, __FILE__, __LINE__, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after @matchstr@varname@str...");
+                    ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
 
                 k = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->acLevel = k;
                 if (ppl_cmdList[inPos++] != '@') {
-                    sprintf(e->tempErrStr, "Syntax error: expecting @ after ]@varname@value@ACL...");
-                    ppl_fatal(e, __FILE__, __LINE__, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
+                    ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
                 l = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->outStackPos = l;
                 if (ppl_cmdList[inPos++] != '@') {
-                    sprintf(e->tempErrStr, "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
-                    ppl_fatal(e, __FILE__, __LINE__, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
+                    ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
                 m = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
@@ -376,8 +383,8 @@ int ppl_parserInit(ppl_context *c) {
                         newNode; // Add new node into hierarchy, either as first child of parent, or into linked list of siblings
                 inPos++;
             } else {
-                sprintf(e->tempErrStr, "Syntax error: unexpected character '%c'", ppl_cmdList[inPos]);
-                ppl_fatal(e, __FILE__, __LINE__, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: unexpected character '%c'", ppl_cmdList[inPos]);
+                ppl_fatal(e, __FILE__, __LINE__, msg);
             }
         }
         ppl_listAppend(pplParserCmdList[cmdLetter], defnStack[0]);

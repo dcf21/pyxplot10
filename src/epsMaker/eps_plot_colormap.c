@@ -235,6 +235,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
 int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim, const int xn, const int yn,
                       const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                       const double origin_y, const double width, const double height, const double zdepth) {
+    char msg[PPL_MSG_LENGTH];
     double scale_x, scale_y, scale_z;
     dataBlock *blk;
     int XSize = pd->GridXSize;
@@ -397,8 +398,8 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 
         // If no data present, stop now
         if ((!CMinSet[c]) || (!CMaxSet[c])) {
-            sprintf(x->c->errcontext.tempErrStr, "No data supplied to determine range for variable c%d", c + 1);
-            ppl_log(&x->c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "No data supplied to determine range for variable c%d", c + 1);
+            ppl_log(&x->c->errcontext, msg);
             for (i = 0; i < 4; i++) {
                 char v[3] = {'c', '1' + i, '\0'};
                 ppl_contextRestoreVarPointer(x->c, v, CDummy + i);
@@ -409,10 +410,10 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         // Output result to debugging output
         if (DEBUG) {
             int SF = x->c->set->term_current.SignificantFigures;
-            sprintf(x->c->errcontext.tempErrStr, "Range for variable c%d is [%s:%s]", c + 1,
-                    ppl_numericDisplay(CMin[c], x->c->numdispBuff[0], SF, 0),
-                    ppl_numericDisplay(CMax[c], x->c->numdispBuff[1], SF, 0));
-            ppl_log(&x->c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Range for variable c%d is [%s:%s]", c + 1,
+                              ppl_numericDisplay(CMin[c], x->c->numdispBuff[0], SF, 0),
+                              ppl_numericDisplay(CMax[c], x->c->numdispBuff[1], SF, 0));
+            ppl_log(&x->c->errcontext, msg);
         }
     }
     cmax = c - 1;
@@ -421,12 +422,13 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     for (c = 0; c <= cmax; c++)
         if (((!CMinAuto[c]) || (!CMaxAuto[c])) &&
             (!ppl_unitsDimEqual(CVar[c], (sg->Cminauto[c] == SW_BOOL_TRUE) ? (&sg->Cmax[c]) : (&sg->Cmin[c])))) {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Column %d of data supplied to the colormap plot style has conflicting units with those set in the 'set crange' command. The former has units of <%s> whilst the latter has units of <%s>.",
                     c + 3, ppl_printUnit(x->c, CVar[c], NULL, NULL, 0, 1, 0),
                     ppl_printUnit(x->c, (sg->Cminauto[c] == SW_BOOL_TRUE) ? (&sg->Cmax[c]) : (&sg->Cmin[c]), NULL, NULL,
                                   1, 1, 0));
-            ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             return 1;
         }
 

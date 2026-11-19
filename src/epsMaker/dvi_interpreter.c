@@ -27,6 +27,7 @@
 #include <math.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/list.h"
 #include "coreUtils/memAlloc.h"
 #include "stringTools/strConstants.h"
@@ -169,6 +170,7 @@ int dviInterpretOperator(pplerr_context *ec, dviInterpreterState *interp, DVIOpe
 //! \return Zero on success, or a DVIE_* error code
 
 int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, const char move) {
+    char msg[PPL_MSG_LENGTH];
     char s[64];
     int err;
     dviStackState *postPos, *dviPos; // Current positions in dvi and postscript code
@@ -192,8 +194,8 @@ int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, cons
     depth = size[2] / interp->scale;
     italic = size[3] / interp->scale;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "DVI: width of glyph %g height of glyph %g", width, height);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "DVI: width of glyph %g height of glyph %g", width, height);
+        ppl_log(ec, msg);
     }
     if ((err = dviUpdateBoundingBox(ec, interp, width + italic, height, depth)) != 0) return err;
 
@@ -400,6 +402,7 @@ int dviInOpBop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
 //! \return Zero on success, or a DVIE_* error code
 
 int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
+    char msg[PPL_MSG_LENGTH];
     double *bb;
 
     // Set appropriate postscript bounding box from dvi bb
@@ -429,8 +432,8 @@ int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
     interp->boundingBox = NULL;
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Postscript page: bounding box %f %f %f %f", bb[0], bb[1], bb[2], bb[3]);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Postscript page: bounding box %f %f %f %f", bb[0], bb[1], bb[2], bb[3]);
+        ppl_log(ec, msg);
     }
 
     // Now repeat for text size box
@@ -458,8 +461,8 @@ int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
     interp->textSizeBox = NULL;
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "Postscript page: text size box %f %f %f %f", bb[0], bb[1], bb[2], bb[3]);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Postscript page: text size box %f %f %f %f", bb[0], bb[1], bb[2], bb[3]);
+        ppl_log(ec, msg);
     }
 
     return 0;
@@ -647,6 +650,7 @@ int dviInOpFnt1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator 
 //! \return Zero on success, or a DVIE_* error code
 
 int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
+    char msg[PPL_MSG_LENGTH];
     int spesh;
     spesh = op->op - DVI_SPECIAL1234 + 1;
     interp->special = spesh;
@@ -658,8 +662,9 @@ int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOpera
     }
     *(interp->spString) = '\0';
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "DVI: dvi special: %d %lu %d", spesh, op->ul[0], (int) strlen(interp->spString));
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "DVI: dvi special: %d %lu %d", spesh, op->ul[0],
+                          (int) strlen(interp->spString));
+        ppl_log(ec, msg);
     }
     // NOP
     return 0;
@@ -716,6 +721,7 @@ int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperat
 //! \return Zero on success, or a DVIE_* error code
 
 int dviInOpPre(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
+    char msg[PPL_MSG_LENGTH];
     unsigned long i, num, den, mag;
     i = op->ul[0];
     num = op->ul[1];
@@ -728,8 +734,9 @@ int dviInOpPre(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
     // Convert mag, num and den into points (for ps)
     interp->scale = (double) mag / 1000.0 * (double) num / (double) den / 1.0e3 * 72.0 / 254;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "DVI: Scale %g V=%lu num=%lu den=%lu mag=%lu", interp->scale, i, num, den, mag);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "DVI: Scale %g V=%lu num=%lu den=%lu mag=%lu", interp->scale, i, num, den,
+                          mag);
+        ppl_log(ec, msg);
     }
     return 0;
 }
@@ -778,12 +785,13 @@ int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, 
 //! \return Zero on success, or a DVIE_* error code
 
 int dviSpecialImplement(pplerr_context *ec, dviInterpreterState *interp) {
+    char msg[PPL_MSG_LENGTH];
     int err = 0;
     char errString[SSTR_LENGTH];
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "DVI: dvi special. Final string=%s", interp->spString);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "DVI: dvi special. Final string=%s", interp->spString);
+        ppl_log(ec, msg);
     }
     // Test for a colour string
     if (strncmp(interp->spString, "color ", 6) == 0) {
@@ -792,8 +800,8 @@ int dviSpecialImplement(pplerr_context *ec, dviInterpreterState *interp) {
     // Test for a header string
     else if (strncmp(interp->spString, "header=", 7) == 0) {
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "DVI: dvi special to load header ignored");
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "DVI: dvi special to load header ignored");
+            ppl_log(ec, msg);
         }
     } else {
         // Unhandled special command (e.g. includegraphics)
@@ -816,6 +824,7 @@ int dviSpecialImplement(pplerr_context *ec, dviInterpreterState *interp) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, char *command) {
+    char msg[PPL_MSG_LENGTH];
     char psText[SSTR_LENGTH];
 
     // Skip over any leading spaces
@@ -825,8 +834,8 @@ int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, cha
     if (strncmp(command, "push ", 4) == 0) {
         // New colour to push onto stack
         if (DEBUG) {
-            sprintf(ec->tempErrStr, "DVI: %s says push", command);
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "DVI: %s says push", command);
+            ppl_log(ec, msg);
         }
         command += 5;
         while (command[0] == ' ') command++;
@@ -1198,6 +1207,7 @@ int dviPostscriptClosepathFill(pplerr_context *ec, dviInterpreterState *interp) 
 //! \return Zero on success, or a DVIE_* error code
 
 int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
+    char msg[PPL_MSG_LENGTH];
     // This subroutine does the bulk of the actual postscript work, typesetting runs of characters
     dviStackState *postPos, *dviPos; // Current positions in dvi and postscript code
     char *s;
@@ -1237,8 +1247,8 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
     depth /= interp->scale;
     italic /= interp->scale;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "DVI: width of glyph %g height of glyph %g", width, height);
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "DVI: width of glyph %g height of glyph %g", width, height);
+        ppl_log(ec, msg);
     }
 
     // Only need to consider extra italic width for the final glyph
@@ -1273,6 +1283,7 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
+    char msg[PPL_MSG_LENGTH];
     listIterator *listIter;
     int len, err = 0;
     char *s;
@@ -1308,9 +1319,9 @@ int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
     }
     size = font->useSize * interp->scale;
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "DVI: Font useSize %d size %g changed to %d", font->useSize, size,
-                (int) ceil(size - .5));
-        ppl_log(ec, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "DVI: Font useSize %d size %g changed to %d", font->useSize, size,
+                          (int) ceil(size - .5));
+        ppl_log(ec, msg);
     }
     snprintf(s, len, "/%s %d selectfont\n", font->psName, (int) ceil(size - .5));
     if ((err = dviPostscriptAppend(ec, interp, s)) != 0) return err;
@@ -1327,6 +1338,7 @@ int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned char s, double *size) {
+    char msg[PPL_MSG_LENGTH];
     dviTFM *tfm; // Details of this font
     int chnum; // Character number in this font
     TFMcharInfo *chin; // Character info for this character
@@ -1354,11 +1366,12 @@ int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned cha
     size[2] += 0.05 * scale;
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr,
+        ppl_snprintfTrunc(
+                msg, sizeof(msg),
                 "DVI: Character %d chnum %d has indices %d %d %d %d width %g height %g depth %g italic %g useSize %g desSize %g",
                 s, chnum, wi, di, hi, ii, size[0], size[1], size[2], size[3], font->useSize * interp->scale,
                 font->desSize * interp->scale);
-        ppl_log(ec, NULL);
+        ppl_log(ec, msg);
     }
     return 0;
 }

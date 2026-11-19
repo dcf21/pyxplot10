@@ -30,6 +30,7 @@
 #include <gsl/gsl_math.h>
 
 #include "commands/interpolate_2d_engine.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 #include "coreUtils/list.h"
 #include "coreUtils/memAlloc.h"
@@ -356,6 +357,7 @@ static void TriSwap(double *a, double *b) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_plot_ReadAccessibleData(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
     int i, j, k, Ndatasets, Ccounter = 0, LTcounter = 0, PTcounter = 0;
     canvas_plotdesc *pd;
@@ -450,21 +452,23 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
         // Check if we have partial range which conflicts with units of range of axis
         if ((pr->MinSet && (!pr->MaxSet)) && axis->HardMaxSet && (!pr->AutoMaxSet) &&
             (!ppl_unitsDimEqual(&axis->HardUnit, &pr->unit))) {
-            sprintf(c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "The minimum limit specified for axis %c%d in the plot command has conflicting units with the maximum limit of that axis: the former has units of <%s> whilst the latter has units of <%s>.",
                     "xyzc"[xyz], axis_n, ppl_printUnit(c, &pr->unit, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &axis->HardUnit, NULL, NULL, 1, 1, 0));
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             *(x->status) = 1;
             return;
         }
         if (((!pr->MinSet) && pr->MaxSet) && axis->HardMinSet && (!pr->AutoMinSet) &&
             (!ppl_unitsDimEqual(&axis->HardUnit, &pr->unit))) {
-            sprintf(c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "The maximum limit specified for axis %c%d in the plot command has conflicting units with the minimum limit of that axis: the former has units of <%s> whilst the latter has units of <%s>.",
                     "xyzc"[xyz], axis_n, ppl_printUnit(c, &pr->unit, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &axis->HardUnit, NULL, NULL, 1, 1, 0));
-            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             *(x->status) = 1;
             return;
         }
@@ -635,9 +639,10 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                 if (pd->filename != NULL) // Read data from file
                 {
                     if (DEBUG) {
-                        sprintf(c->errcontext.tempErrStr, "Reading data from file '%s' for dataset %d in plot item %d",
-                                pd->filename, i + 1, x->current->id);
-                        ppl_log(&c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "Reading data from file '%s' for dataset %d in plot item %d", pd->filename,
+                                          i + 1, x->current->id);
+                        ppl_log(&c->errcontext, msg);
                     }
                     if (pd->PersistentDataTable == NULL) {
                         char *fnameFinal, tmp[FNAME_LENGTH] = "";
@@ -651,9 +656,9 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                     } else x->current->plotdata[i] = pd->PersistentDataTable;
                 } else if (pd->vectors != NULL) {
                     if (DEBUG) {
-                        sprintf(c->errcontext.tempErrStr, "Reading data from vectors for dataset %d in plot item %d",
-                                i + 1, x->current->id);
-                        ppl_log(&c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from vectors for dataset %d in plot item %d",
+                                          i + 1, x->current->id);
+                        ppl_log(&c->errcontext, msg);
                     }
                     ppldata_fromVectors(c, x->current->plotdata + i, pd->vectors, pd->NFunctions, UsingList,
                                         autoUsingList, NExpect, nObjs, pd->label, pd->SelectCriterion, NULL,
@@ -730,10 +735,10 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                 }
 
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr,
-                            "Reading data from parametric functions for dataset %d in plot item %d", i + 1,
-                            x->current->id);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Reading data from parametric functions for dataset %d in plot item %d", i + 1,
+                                      x->current->id);
+                    ppl_log(&c->errcontext, msg);
                 }
                 ppldata_fromFuncs(c, x->current->plotdata + i, pd->functions, pd->NFunctions, special_raster, Nsamples,
                                   1, raster_unit, special_raster2, Nsamples2, raster2_unit, UsingList, autoUsingList,
@@ -796,6 +801,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_plot_SampleFunctions(EPSComm *x) {
+    char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
     int a, i, j, OrdinateRasterLen, Nsamples, OrdinateRasterLen2;
     canvas_plotdesc *pd;
@@ -849,10 +855,11 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             } // Add extra using items for, e.g. "linewidth $3".
 
             if (NExpect != NUsing) {
-                sprintf(c->errcontext.tempErrStr,
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
                         "The supplied using ... clause contains the wrong number of items. We need %d columns of data, but %d have been supplied.",
                         NExpect, NUsing);
-                ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, NULL);
+                ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, msg);
                 *(x->status) = 1;
                 return;
             }
@@ -956,9 +963,9 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             }
 
             if (DEBUG) {
-                sprintf(c->errcontext.tempErrStr, "Reading data from functions for dataset %d in plot item %d", i + 1,
-                        x->current->id);
-                ppl_log(&c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from functions for dataset %d in plot item %d", i + 1,
+                                  x->current->id);
+                ppl_log(&c->errcontext, msg);
             }
 
             // Get data from functions

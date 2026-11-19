@@ -27,6 +27,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/list.h"
 #include "coreUtils/errorReport.h"
 
@@ -240,6 +241,7 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
 
 static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPointList, const int nac, char *EndText,
                        const double linewidth) {
+    char msg[PPL_MSG_LENGTH];
     unsigned char face, sense, inside_ahead, FillSide, CurrentFace, first_point = 1, first_subpath = 1, fail = 0;
     int i, inew, j, k, l, dir_x, dir_y;
     listItem *li, *lil = NULL;
@@ -274,12 +276,12 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             ppl_log(&fr->x->c->errcontext, "New segment of filled region.");
             ppl_log(&fr->x->c->errcontext, "Summary of axis crossing points:");
             for (i = 0; i < nac; i++) {
-                sprintf(fr->x->c->errcontext.tempErrStr, "%d %s (%e,%e) face %d position %.4f sense %s %s", i,
-                        CrossPointList[i].used ? "[used]" : "      ", CrossPointList[i].x, CrossPointList[i].y,
-                        (int) CrossPointList[i].AxisFace, CrossPointList[i].AxisPos,
-                        (CrossPointList[i].sense == INCOMING) ? "incoming" : "outgoing",
-                        CrossPointList[i].singleton ? "[singleton]" : "");
-                ppl_log(&fr->x->c->errcontext, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%d %s (%e,%e) face %d position %.4f sense %s %s", i,
+                                  CrossPointList[i].used ? "[used]" : "      ", CrossPointList[i].x,
+                                  CrossPointList[i].y, (int) CrossPointList[i].AxisFace, CrossPointList[i].AxisPos,
+                                  (CrossPointList[i].sense == INCOMING) ? "incoming" : "outgoing",
+                                  CrossPointList[i].singleton ? "[singleton]" : "");
+                ppl_log(&fr->x->c->errcontext, msg);
             }
         }
 
@@ -303,9 +305,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
         // Decide whether we are proceeding clockwise or anticlockwise around the region we're going to fill
         FillSide = inside_ahead;
         if (DEBUG) {
-            sprintf(fr->x->c->errcontext.tempErrStr, "Starting from %d; filling on %s.", i,
-                    FillSide ? "right" : "left");
-            ppl_log(&fr->x->c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Starting from %d; filling on %s.", i, FillSide ? "right" : "left");
+            ppl_log(&fr->x->c->errcontext, msg);
         }
 
         while (1) {
@@ -323,8 +324,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                     break;
                 }
                 if (DEBUG) {
-                    sprintf(fr->x->c->errcontext.tempErrStr, "Twin of %d is %d.", i, inew);
-                    ppl_log(&fr->x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Twin of %d is %d.", i, inew);
+                    ppl_log(&fr->x->c->errcontext, msg);
                 }
                 i = inew;
                 CrossPointList[i].used = 1;
@@ -367,8 +368,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 }
                 PS_POINT(CrossPointList[i].x, CrossPointList[i].y); // Cut point where line leaves canvas
                 if (DEBUG) {
-                    sprintf(fr->x->c->errcontext.tempErrStr, "Departed canvas at crossing point %d.", i);
-                    ppl_log(&fr->x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Departed canvas at crossing point %d.", i);
+                    ppl_log(&fr->x->c->errcontext, msg);
                 }
                 CrossPointList[i].used = 1;
             }
@@ -392,11 +393,12 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             else j = (i + 1) % nac; // Move clockwise around path
             CurrentFace = CrossPointList[i].AxisFace;
             if (DEBUG) {
-                sprintf(fr->x->c->errcontext.tempErrStr,
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
                         "Move along edge of canvas from %d to %d; filling on %s; moving from axis face %d to %d.", i, j,
                         FillSide ? "right" : "left", (int) CrossPointList[i].AxisFace,
                         (int) CrossPointList[j].AxisFace);
-                ppl_log(&fr->x->c->errcontext, NULL);
+                ppl_log(&fr->x->c->errcontext, msg);
             }
             while (CurrentFace !=
                    CrossPointList[j].AxisFace) // If we've changed side of clip region, add corner to path
@@ -414,8 +416,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                     CurrentFace = ((CurrentFace + 2) % 4) + 1;
                 }
                 if (DEBUG) {
-                    sprintf(fr->x->c->errcontext.tempErrStr, "Corner (%e,%e)", xap, yap);
-                    ppl_log(&fr->x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Corner (%e,%e)", xap, yap);
+                    ppl_log(&fr->x->c->errcontext, msg);
                 }
                 if (!fr->ThreeDim) {
                     PS_POINT(fr->origin_x + fr->width * xap, fr->origin_y + fr->height * yap);

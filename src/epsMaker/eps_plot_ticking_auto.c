@@ -496,6 +496,7 @@ FAIL:
 
 void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, unsigned char *AutoTicks,
                            pplset_axis *linkedto) {
+    char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
     int i, j, k, start, NArgs, OutContext, ContextRough = -1, CommaPositions[MAX_ARGS + 2], NFactorsLogBase, LogBase;
     int FactorsLogBase[MAX_FACTORS];
@@ -528,8 +529,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
         format = ((pplExpr *) axis->format)->ascii;
     }
     if (DEBUG) {
-        sprintf(x->c->errcontext.tempErrStr, "format string is <<%s>>.", format);
-        ppl_log(&x->c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "format string is <<%s>>.", format);
+        ppl_log(&x->c->errcontext, msg);
     }
     if ((format == FormatTemp) && (axis->AxisLinearInterpolation == NULL) && (axis->LogFinal == SW_BOOL_TRUE) &&
         (log(axis->MaxFinal / axis->MinFinal) / log(axis->tics.logBase) > axis->PhysicalLengthMajor)) {
@@ -885,10 +886,10 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
     // Finished compiling list of potential ticks
     if (DEBUG) {
-        sprintf(x->c->errcontext.tempErrStr,
-                "Finished compiling list of %d potential ticks. Maximum list size was %d ticks.", NPotTicks,
-                NPotTicksMax);
-        ppl_log(&x->c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Finished compiling list of %d potential ticks. Maximum list size was %d ticks.", NPotTicks,
+                          NPotTicksMax);
+        ppl_log(&x->c->errcontext, msg);
     }
     if (DEBUG && (NPotTicks > NPotTicksMax)) {
         ppl_log(&x->c->errcontext, "Warning: Overflow of potential tick buffer.");
@@ -913,20 +914,21 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
         sprintf(x->c->errcontext.tempErrStr, "Potential ticks for %s axis (NArgs = %d)", VarName, NArgs);
         ppl_log(&x->c->errcontext, NULL);
         for (i = 0; i < NArgs; i++) {
-            sprintf(x->c->errcontext.tempErrStr,
-                    "Argument %d: id %d score %d StringArg %d ContinuousArg %d Vetoed %d NValueChanges %d", i,
-                    (int) args[i].id, (int) args[i].score, (int) args[i].StringArg, (int) args[i].ContinuousArg,
-                    (int) args[i].vetoed, args[i].NValueChanges);
-            ppl_log(&x->c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Argument %d: id %d score %d StringArg %d ContinuousArg %d Vetoed %d NValueChanges %d", i,
+                              (int) args[i].id, (int) args[i].score, (int) args[i].StringArg,
+                              (int) args[i].ContinuousArg, (int) args[i].vetoed, args[i].NValueChanges);
+            ppl_log(&x->c->errcontext, msg);
         }
         sprintf(x->c->errcontext.tempErrStr, "Number of potential ticks: %d", NPotTicks);
         ppl_log(&x->c->errcontext, NULL);
         for (i = 0; ((i < NPotTicks) && (i < 50)); i++) {
-            sprintf(x->c->errcontext.tempErrStr,
-                    "Tick %7d: Arg %3d DivOfThrow %4d OoM %10d DivOfOoM %3d IntervalNum %3d TargetVal %12.3e",
-                    PotTickList[i].OrderPosition, PotTickList[i].ArgNo, PotTickList[i].DivOfThrow, PotTickList[i].OoM,
-                    PotTickList[i].DivOfOoM, PotTickList[i].IntervalNum, PotTickList[i].TargetValue);
-            ppl_log(&x->c->errcontext, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Tick %7d: Arg %3d DivOfThrow %4d OoM %10d DivOfOoM %3d IntervalNum %3d TargetVal %12.3e",
+                              PotTickList[i].OrderPosition, PotTickList[i].ArgNo, PotTickList[i].DivOfThrow,
+                              PotTickList[i].OoM, PotTickList[i].DivOfOoM, PotTickList[i].IntervalNum,
+                              PotTickList[i].TargetValue);
+            ppl_log(&x->c->errcontext, msg);
         }
     }
 
@@ -956,9 +958,10 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                               1, axis->PhysicalLengthMajor, &acceptable, &NTicksMajor, &NTicksMinor);
                 if (acceptable) {
                     if (DEBUG) {
-                        sprintf(x->c->errcontext.tempErrStr,
-                                "Accepted major ticks to mark changes of argument %d (now %d ticks).", i, NTicksMajor);
-                        ppl_log(&x->c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "Accepted major ticks to mark changes of argument %d (now %d ticks).", i,
+                                          NTicksMajor);
+                        ppl_log(&x->c->errcontext, msg);
                     }
                     memcpy(TicksAccepted, TicksAcceptedNew, NPotTicks); // Update TicksAccepted
                     continue;
@@ -969,9 +972,10 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                               0, axis->PhysicalLengthMinor, &acceptable, &NTicksMajor, &NTicksMinor);
                 if (acceptable) {
                     if (DEBUG) {
-                        sprintf(x->c->errcontext.tempErrStr,
-                                "Accepted minor ticks to mark changes of argument %d (now %d ticks).", i, NTicksMajor);
-                        ppl_log(&x->c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "Accepted minor ticks to mark changes of argument %d (now %d ticks).", i,
+                                          NTicksMajor);
+                        ppl_log(&x->c->errcontext, msg);
                     }
                     memcpy(TicksAccepted, TicksAcceptedNew, NPotTicks); // Update TicksAccepted
                     continue;
@@ -994,11 +998,11 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                   TicksAcceptedNewTF, 1, axis->PhysicalLengthMajor, &acceptable, &ThrowFactors_Nticks,
                                   &ThrowFactors_Nticks_minor);
                     if (DEBUG) {
-                        sprintf(x->c->errcontext.tempErrStr,
-                                "Dividing throw of %3d into intervals of %.1f produces %d major ticks [%s].",
-                                args[i].Throw, args[i].FactorsThrow[k] / pow(LogBase, FACTOR_MULTIPLY - 1),
-                                ThrowFactors_Nticks, acceptable ? "pass" : "fail");
-                        ppl_log(&x->c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "Dividing throw of %3d into intervals of %.1f produces %d major ticks [%s].",
+                                          args[i].Throw, args[i].FactorsThrow[k] / pow(LogBase, FACTOR_MULTIPLY - 1),
+                                          ThrowFactors_Nticks, acceptable ? "pass" : "fail");
+                        ppl_log(&x->c->errcontext, msg);
                     }
                     if (acceptable) {
                         ThrowFactors_FactNum = k;
@@ -1017,31 +1021,32 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                       TicksAcceptedRough, 0, axis->PhysicalLengthMinor, &acceptable,
                                       &ThrowFactors_Nticks, &ThrowFactors_Nticks_minor);
                         if (DEBUG) {
-                            sprintf(x->c->errcontext.tempErrStr,
+                            ppl_snprintfTrunc(
+                                    msg, sizeof(msg),
                                     "Dividing throw of %3d into intervals of %.1f produces %d minor ticks [%s].",
                                     args[i].Throw, args[i].FactorsThrow[k] / pow(LogBase, FACTOR_MULTIPLY - 1),
                                     ThrowFactors_Nticks_minor, acceptable ? "pass" : "fail");
-                            ppl_log(&x->c->errcontext, NULL);
+                            ppl_log(&x->c->errcontext, msg);
                         }
                         if (acceptable) {
                             memcpy(TicksAcceptedNewTF, TicksAcceptedRough, NPotTicks);
                             break;
                         }
                     } else if (DEBUG) {
-                        sprintf(x->c->errcontext.tempErrStr,
-                                "Dividing throw of %3d into intervals of %.1f for minor ticks not allowed.",
-                                args[i].Throw, args[i].FactorsThrow[k] / pow(LogBase, FACTOR_MULTIPLY - 1));
-                        ppl_log(&x->c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "Dividing throw of %3d into intervals of %.1f for minor ticks not allowed.",
+                                          args[i].Throw, args[i].FactorsThrow[k] / pow(LogBase, FACTOR_MULTIPLY - 1));
+                        ppl_log(&x->c->errcontext, msg);
                     }
                 }
 
                 // Option 2: Divide log base
                 if (DEBUG) {
-                    sprintf(x->c->errcontext.tempErrStr,
-                            "Checking for ticks which divide OoMs %g to %g [i.e. %d to %d].",
-                            pow(LogBase, args[i].OoM_max), pow(LogBase, args[i].OoM_min), args[i].OoM_max,
-                            args[i].OoM_min);
-                    ppl_log(&x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Checking for ticks which divide OoMs %g to %g [i.e. %d to %d].",
+                                      pow(LogBase, args[i].OoM_max), pow(LogBase, args[i].OoM_min), args[i].OoM_max,
+                                      args[i].OoM_min);
+                    ppl_log(&x->c->errcontext, msg);
                 }
                 if (args[i].OoM_RangeSet) {
                     memcpy(TicksAcceptedNew, TicksAccepted, NPotTicks);
@@ -1067,12 +1072,13 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                                   TicksAcceptedRough, 1, axis->PhysicalLengthMajor, &acceptable,
                                                   &Nticks_2B, &Nticks_2B_minor);
                                 if (DEBUG) {
-                                    sprintf(x->c->errcontext.tempErrStr,
+                                    ppl_snprintfTrunc(
+                                            msg, sizeof(msg),
                                             "Dividing OoM %g into intervals of %g produces %d major ticks [%s%s].",
                                             pow(LogBase, k), FactorsLogBase[l] * pow(LogBase, k - FACTOR_MULTIPLY),
                                             Nticks_2B, acceptable ? "pass" : "fail",
                                             (Nticks_2B <= NMajorTicksIn) ? "; no new ticks" : "");
-                                    ppl_log(&x->c->errcontext, NULL);
+                                    ppl_log(&x->c->errcontext, msg);
                                 }
                                 if ((!acceptable) || (Nticks_2B <= NMajorTicksIn)) {
                                     Nticks_2B = -1;
@@ -1089,11 +1095,12 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                 if (Nticks_2B_minor > NMinorTicksIn) break;
                                 if ((l_final >= 0) && (FactorsLogBase[l_final] % FactorsLogBase[l3] != 0)) {
                                     if (DEBUG) {
-                                        sprintf(x->c->errcontext.tempErrStr,
+                                        ppl_snprintfTrunc(
+                                                msg, sizeof(msg),
                                                 "Dividing OoM %g into intervals of %g for minor ticks not allowed.",
                                                 pow(LogBase, k),
                                                 FactorsLogBase[l3] * pow(LogBase, k - FACTOR_MULTIPLY));
-                                        ppl_log(&x->c->errcontext, NULL);
+                                        ppl_log(&x->c->errcontext, msg);
                                     }
                                     continue; // Minor ticks must mark common factors of log base and major tick interval
                                 }
@@ -1108,12 +1115,13 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                                   TicksAcceptedRough2, 0, axis->PhysicalLengthMinor, &acceptable,
                                                   &Nticks_2B, &Nticks_2B_minor);
                                 if (DEBUG) {
-                                    sprintf(x->c->errcontext.tempErrStr,
+                                    ppl_snprintfTrunc(
+                                            msg, sizeof(msg),
                                             "Dividing OoM %g into intervals of %g produces %d minor ticks [%s%s].",
                                             pow(LogBase, k), FactorsLogBase[l3] * pow(LogBase, k - FACTOR_MULTIPLY),
                                             Nticks_2B_minor, acceptable ? "pass" : "fail",
                                             (Nticks_2B_minor <= NMinorTicksIn) ? "; no new ticks" : "");
-                                    ppl_log(&x->c->errcontext, NULL);
+                                    ppl_log(&x->c->errcontext, msg);
                                 }
                                 if (!acceptable) Nticks_2B_minor = NMinorTicksIn;
                             }
@@ -1151,10 +1159,10 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                           MAJORminor ? axis->PhysicalLengthMajor : axis->PhysicalLengthMinor,
                                           &acceptable, &Nticks_new, &Nticks_new_minor);
                             if (DEBUG) {
-                                sprintf(x->c->errcontext.tempErrStr, "OoM %g Priority %2d produces %d %s ticks [%s].",
-                                        pow(LogBase, k), l, Nticks_new, MAJORminor ? "major" : "minor",
-                                        acceptable ? "pass" : "fail");
-                                ppl_log(&x->c->errcontext, NULL);
+                                ppl_snprintfTrunc(msg, sizeof(msg), "OoM %g Priority %2d produces %d %s ticks [%s].",
+                                                  pow(LogBase, k), l, Nticks_new, MAJORminor ? "major" : "minor",
+                                                  acceptable ? "pass" : "fail");
+                                ppl_log(&x->c->errcontext, msg);
                             }
                             if (acceptable) {
                                 Nticks_new_accepted = Nticks_new;
@@ -1212,21 +1220,21 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
                 // Choose which option produced best result
                 if (DEBUG) {
-                    sprintf(x->c->errcontext.tempErrStr,
-                            "Dividing by factors of throw produced %d major ticks (%d minor ticks).",
-                            ThrowFactors_Nticks, ThrowFactors_Nticks_minor);
-                    ppl_log(&x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Dividing by factors of throw produced %d major ticks (%d minor ticks).",
+                                      ThrowFactors_Nticks, ThrowFactors_Nticks_minor);
+                    ppl_log(&x->c->errcontext, msg);
                 }
                 if (DEBUG) {
-                    sprintf(x->c->errcontext.tempErrStr,
-                            "Dividing by factors of log base produced %d major ticks (%d minor ticks).",
-                            Divide_LogBase_Nticks, Divide_LogBase_Nticks_minor);
-                    ppl_log(&x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                      "Dividing by factors of log base produced %d major ticks (%d minor ticks).",
+                                      Divide_LogBase_Nticks, Divide_LogBase_Nticks_minor);
+                    ppl_log(&x->c->errcontext, msg);
                 }
                 if (DEBUG) {
-                    sprintf(x->c->errcontext.tempErrStr, "Option 2B produced %d major ticks (%d minor ticks).",
-                            Nticks_2B_best, Nticks_2B_minor_best);
-                    ppl_log(&x->c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Option 2B produced %d major ticks (%d minor ticks).",
+                                      Nticks_2B_best, Nticks_2B_minor_best);
+                    ppl_log(&x->c->errcontext, msg);
                 }
 
                 // Compare option 2A and option 2B
