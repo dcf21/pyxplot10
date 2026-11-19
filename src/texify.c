@@ -297,7 +297,9 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             STACK_MUSTHAVE(c, 4);
             if (c->stackFull) {
                 free(stkpos);
+                stkpos = NULL;
                 free(tokenBuff);
+                tokenBuff = NULL;
                 strcpy(out, "stack overflow");
                 return;
             }
@@ -316,7 +318,9 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             STACK_MUSTHAVE(c, 4);
             if (c->stackFull) {
                 free(stkpos);
+                stkpos = NULL;
                 free(tokenBuff);
+                tokenBuff = NULL;
                 strcpy(out, "stack overflow");
                 return;
             }
@@ -818,6 +822,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     if (inlen < 0) { ENTER_PLAINTEXT; }
     out[k] = '\0';
     free(stkpos);
+    stkpos = NULL;
     free(tokenBuff);
+    tokenBuff = NULL;
     return;
 }

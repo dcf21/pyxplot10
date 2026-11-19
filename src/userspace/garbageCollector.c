@@ -44,12 +44,14 @@ void ppl_garbageNamespace(dict *n) {
         ptrnext = ptr->next;
         ppl_garbageObject((pplObj *) ptr->data);
         free(ptr->key);
+        ptr->key = NULL;
         // free(ptr->data); -- already done by garbage collector
         free(ptr);
         ptr = ptrnext;
     }
     ppl_dictFreeTree(n->hashTree);
     free(n);
+    n = NULL;
     return;
 }
 
@@ -68,6 +70,7 @@ void ppl_garbageList(list *l) {
         ptr = ptrnext;
     }
     free(l);
+    l = NULL;
     return;
 }
 
@@ -95,13 +98,19 @@ void ppl_garbageObject(pplObj *o) {
             if (o->auxilMalloced) {
                 void *old = o->auxil;
                 o->auxil = NULL;
-                if (old != NULL) free(old);
+                if (old != NULL) {
+                    free(old);
+                    old = NULL;
+                }
             }
             break;
         case PPLOBJ_EXP: {
             void *old = o->auxil;
             o->auxil = NULL;
-            if ((old != NULL) && o->auxilMalloced) pplExpr_free((pplExpr *) old);
+            if ((old != NULL) && o->auxilMalloced) {
+                pplExpr_free((pplExpr *) old);
+                old = NULL;
+            }
             break;
         }
         case PPLOBJ_BYT: {
@@ -122,6 +131,7 @@ void ppl_garbageObject(pplObj *o) {
                     else fclose(old);
                 }
                 free(f);
+                f = NULL;
             }
             break;
         }
@@ -150,13 +160,24 @@ void ppl_garbageObject(pplObj *o) {
             o->auxil = NULL;
             if ((vr != NULL) && (__sync_sub_and_fetch(&vr->refCount, 1) <= 0)) {
                 gsl_vector_free(vr->v);
-                if (o->auxilMalloced) free(vr);
+                vr->v = NULL;
+                if (o->auxilMalloced) {
+                    free(vr);
+                    vr = NULL;
+                }
             }
             if ((vrm != NULL) && (__sync_sub_and_fetch(&vrm->refCount, 1) <= 0)) {
                 gsl_matrix_free(vrm->m);
-                if (o->auxilMalloced) free(vrm);
+                vrm->m = NULL;
+                if (o->auxilMalloced) {
+                    free(vrm);
+                    vrm = NULL;
+                }
             }
-            if ((v != NULL) && (__sync_sub_and_fetch(&v->refCount, 1) <= 0) && (o->auxilMalloced)) free(v);
+            if ((v != NULL) && (__sync_sub_and_fetch(&v->refCount, 1) <= 0) && (o->auxilMalloced)) {
+                free(v);
+                v = NULL;
+            }
             break;
         }
         case PPLOBJ_MAT: {
@@ -165,9 +186,16 @@ void ppl_garbageObject(pplObj *o) {
             o->auxil = NULL;
             if ((mr != NULL) && (__sync_sub_and_fetch(&mr->refCount, 1) <= 0)) {
                 gsl_matrix_free(mr->m);
-                if (o->auxilMalloced) free(mr);
+                mr->m = NULL;
+                if (o->auxilMalloced) {
+                    free(mr);
+                    mr = NULL;
+                }
             }
-            if ((m != NULL) && (__sync_sub_and_fetch(&m->refCount, 1) <= 0) && (o->auxilMalloced)) free(m);
+            if ((m != NULL) && (__sync_sub_and_fetch(&m->refCount, 1) <= 0) && (o->auxilMalloced)) {
+                free(m);
+                m = NULL;
+            }
             break;
         }
         case PPLOBJ_USER: {
@@ -181,6 +209,9 @@ void ppl_garbageObject(pplObj *o) {
         }
     }
 
-    if (o->amMalloced) free(o);
+    if (o->amMalloced) {
+        free(o);
+        o = NULL;
+    }
     return;
 }

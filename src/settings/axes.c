@@ -75,7 +75,10 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
         in->ticsM.tickList = NULL;
     }
     if (in->ticsM.tickStrs != NULL) {
-        for (i = 0; in->ticsM.tickStrs[i] != NULL; i++) free(in->ticsM.tickStrs[i]);
+        for (i = 0; in->ticsM.tickStrs[i] != NULL; i++) {
+            free(in->ticsM.tickStrs[i]);
+            in->ticsM.tickStrs[i] = NULL;
+        }
         free(in->ticsM.tickStrs);
         in->ticsM.tickStrs = NULL;
     }
@@ -84,7 +87,10 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
         in->tics.tickList = NULL;
     }
     if (in->tics.tickStrs != NULL) {
-        for (i = 0; in->tics.tickStrs[i] != NULL; i++) free(in->tics.tickStrs[i]);
+        for (i = 0; in->tics.tickStrs[i] != NULL; i++) {
+            free(in->tics.tickStrs[i]);
+            in->tics.tickStrs[i] = NULL;
+        }
         free(in->tics.tickStrs);
         in->tics.tickStrs = NULL;
     }

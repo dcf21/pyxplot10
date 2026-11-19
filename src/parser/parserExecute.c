@@ -90,8 +90,11 @@ void ppl_parserOutFree(parserOutput *in) {
     if (in == NULL) return;
     for (i = 0; i < in->stackLen; i++) ppl_garbageObject(&in->stk[i]);
     free(in->stk);
+    in->stk = NULL;
     free(in->stkCharPos);
+    in->stkCharPos = NULL;
     free(in);
+    in = NULL;
     return;
 }
 
@@ -174,6 +177,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
         stk = (pplObj *) malloc(in->stackLen * sizeof(pplObj));
         if (stk == NULL) {
             free(out);
+            out = NULL;
             strcpy(eB, "Out of memory.");
             TBADD(ERR_MEMORY, 0);
             return;
@@ -185,7 +189,9 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
         stkCharPos = (int *) malloc(in->stackLen * sizeof(int));
         if (stkCharPos == NULL) {
             free(out);
+            out = NULL;
             free(stk);
+            stk = NULL;
             strcpy(eB, "Out of memory.");
             TBADD(ERR_MEMORY, 0);
             return;

@@ -292,13 +292,18 @@ pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned 
     if (auxilMalloced) pvr = pv->raw = (pplVectorRaw *) malloc(sizeof(pplVectorRaw));
     else pvr = pv->raw = (pplVectorRaw *) ppl_memAlloc(sizeof(pplVectorRaw));
     if (pvr == NULL) {
-        if (auxilMalloced) free(pv);
+        if (auxilMalloced) {
+            free(pv);
+            pv = NULL;
+        }
         return NULL;
     }
     if ((pvr->v = gsl_vector_calloc(size)) == NULL) {
         if (auxilMalloced) {
             free(pv);
+            pv = NULL;
             free(pvr);
+            pvr = NULL;
         }
         return NULL;
     }
@@ -341,13 +346,18 @@ pplObj *pplObjMatrix(pplObj *in, const unsigned char amMalloced, const unsigned 
     if (auxilMalloced) pmr = pm->raw = (pplMatrixRaw *) malloc(sizeof(pplMatrixRaw));
     else pmr = pm->raw = (pplMatrixRaw *) ppl_memAlloc(sizeof(pplMatrixRaw));
     if (pmr == NULL) {
-        if (auxilMalloced) free(pm);
+        if (auxilMalloced) {
+            free(pm);
+            pm = NULL;
+        }
         return NULL;
     }
     if ((pmr->m = gsl_matrix_calloc(size1, size2)) == NULL) {
         if (auxilMalloced) {
             free(pm);
+            pm = NULL;
             free(pmr);
+            pmr = NULL;
         }
         return NULL;
     }

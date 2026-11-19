@@ -67,6 +67,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     if ((buff == NULL) || (header == NULL)) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         free(header);
+        header = NULL;
         return;
     }
 
@@ -77,6 +78,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         if (fread(buff, 3, 1, jpeg) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This JPEG image file appears to be corrupted (A)");
             free(header);
+            header = NULL;
             return;
         }
         type = buff[0];
@@ -85,6 +87,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         if (fread(buff, len, 1, jpeg) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This JPEG image file appears to be corrupted (B)");
             free(header);
+            header = NULL;
             return;
         }
         if (DEBUG) {
@@ -126,6 +129,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
             if (comp) {
                 ppl_error(ec, ERR_FILE, -1, -1, "Cannot decode JPEG image file: it contains multiple images?");
                 free(header);
+                header = NULL;
                 return;
             }
             comp = type;
@@ -158,6 +162,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
             if (headp + len > headendp) {
                 ppl_error(ec, ERR_FILE, -1, -1, "JPEG header storage exhausted");
                 free(header);
+                header = NULL;
                 return;
             }
             for (i = 0; i < len; i++) *(headp++) = buff[i];
@@ -184,6 +189,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
                     ec, ERR_FILE, -1, -1,
                     "JPEG image detected to have progressive encoding, which Pyxplot does not support. Please convert to baseline JPEG and try again.");
             free(header);
+            header = NULL;
             return;
         default:
             ppl_snprintfTrunc(
@@ -192,6 +198,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
                     ((int) comp) & 0xf);
             ppl_error(ec, ERR_FILE, -1, -1, msg);
             free(header);
+            header = NULL;
             return;
     }
 
@@ -202,6 +209,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
                 comps);
         ppl_error(ec, ERR_FILE, -1, -1, msg);
         free(header);
+        header = NULL;
         return;
     }
 
@@ -227,6 +235,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     for (i = 0; header + i < headp; i++) buff[i] = header[i];
     len = chunk - (headp - header);
     free(header);
+    header = NULL;
     j = fread(buff + i, 1, len, jpeg);
 
     if (j < len) {

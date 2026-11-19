@@ -117,6 +117,7 @@ double Lcdm_DA(const double z, const double H, const double OmegaM, const double
     fn.params = &p;
     gsl_integration_qags(&fn, 1e-8, z, 0, 1e-7, 1000, ws, &result, &error);
     gsl_integration_workspace_free(ws);
+    ws = NULL;
 
     if ((result <= 0) || (error > result * 0.01)) return GSL_NAN; // Something went wrong
     return (GSL_CONST_MKSA_SPEED_OF_LIGHT / H) * result / (1 + z);
@@ -144,6 +145,7 @@ double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const 
     fn.params = &p;
     gsl_integration_qags(&fn, 1e-8, z, 0, 1e-7, 1000, ws, &result, &error);
     gsl_integration_workspace_free(ws);
+    ws = NULL;
 
     if ((result <= 0) || (error > result * 0.01)) return GSL_NAN; // Something went wrong
     return (1 / H) * result;
@@ -199,6 +201,7 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
         status = gsl_min_test_interval(a, b, 0.001, 0.0);
     } while ((status == GSL_CONTINUE) && (iter < max_iter));
     gsl_min_fminimizer_free(s);
+    s = NULL;
     return pow(10.0, m);
 }
 

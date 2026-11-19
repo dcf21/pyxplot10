@@ -1289,6 +1289,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                    c->errcontext.error_input_filename, exp, &explen, 1, 1, 1, &e, &errPos, errType, errText);
     if (errPos >= 0) {
         pplExpr_free(e);
+        e = NULL;
         *status = 1;
         return;
     }
@@ -1297,10 +1298,12 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
         *status = 1;
         *errType = ERR_SYNTAX;
         pplExpr_free(e);
+        e = NULL;
         return;
     }
     output = ppl_expEval(c, e, &lastOpAssign, 1, 1);
     pplExpr_free(e);
+    e = NULL;
     if (c->errStat.status) {
         *status = 1;
         *errType = ERR_GENERIC;
@@ -1665,6 +1668,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     qsort((void *) buffer, nArgs, sizeof(double), ppl_dblSort);
     for (i = 0; i < nArgs; i++) acc += gsl_pow_2(buffer[i]);
     free(buffer);
+    buffer = NULL;
     OUTPUT.real = sqrt(acc);
     CHECK_OUTPUT_OKAY;
     ppl_unitsDimCpy(&OUTPUT, in);

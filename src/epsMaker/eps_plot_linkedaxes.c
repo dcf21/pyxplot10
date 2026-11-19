@@ -603,6 +603,7 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
             commlink->VarValue->exponent[commlink->mode - 1] =
                     ppl_optimise_LogToReal(gsl_vector_get(s->x, 0), iter2, &commlink->norm);
         gsl_multimin_fminimizer_free(s);
+        s = NULL;
         if (iter2 == 999) {
             iter2 = 2;
             break;
@@ -614,7 +615,9 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
     if (iter2 >= 20) status = 1;
     if (status) { commlink->fail = 1; }
     gsl_vector_free(x);
+    x = NULL;
     gsl_vector_free(ss);
+    ss = NULL;
     return;
 }
 

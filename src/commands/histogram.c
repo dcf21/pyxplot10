@@ -261,6 +261,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         sprintf(c->errStat.errBuff, "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         free(output);
+        output = NULL;
         return;
     }
     strcpy(output->filename, filenameOut);
@@ -279,7 +280,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             sprintf(c->errStat.errBuff, "Out of memory.");
             TBADD2(ERR_MEMORY, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         j = 0;
@@ -353,7 +356,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_printUnit(c, &firstEntry, NULL, NULL, 1, 1, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if ((logAxis) && (BinWidth->dimensionless == 0)) {
@@ -362,7 +367,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_printUnit(c, BinWidth, NULL, NULL, 0, 1, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if ((BinOriginSet) && (!ppl_unitsDimEqual(&firstEntry, BinOrigin))) {
@@ -372,7 +379,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_printUnit(c, &firstEntry, NULL, NULL, 1, 1, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if ((logAxis) && (BinWidth->real <= 1.0)) {
@@ -381,7 +390,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_unitsNumericDisplay(c, BinWidth, 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if (BinWidth->real <= 0.0) {
@@ -390,7 +401,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_unitsNumericDisplay(c, BinWidth, 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if ((logAxis) && (BinOriginSet) && (BinOrigin->real <= 0.0)) {
@@ -399,7 +412,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_unitsNumericDisplay(c, BinOrigin, 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if ((logAxis) && (minSet[0]) && (min[0] <= 0.0)) {
@@ -409,7 +424,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_unitsNumericDisplay(c, &unit[0], 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if ((logAxis) && (maxSet[0]) && (max[0] <= 0.0)) {
@@ -419,7 +436,9 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_unitsNumericDisplay(c, &unit[0], 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if ((minSet[0] || maxSet[0]) && (!ppl_unitsDimEqual(&firstEntry, &unit[0]))) {
@@ -429,21 +448,27 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                     ppl_printUnit(c, &firstEntry, NULL, NULL, 1, 1, 0));
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if (!gsl_finite(BinWidth->real)) {
             sprintf(c->errStat.errBuff, "The bin width specified to the histogram command is not a finite number.");
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
         if (BinOriginSet && !gsl_finite(BinOrigin->real)) {
             sprintf(c->errStat.errBuff, "The bin origin specified to the histogram command is not a finite number.");
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
+            output->filename = NULL;
             free(output);
+            output = NULL;
             return;
         }
 
@@ -499,6 +524,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         sprintf(c->errStat.errBuff, "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         free(output->bins);
+        output->bins = NULL;
         return;
     }
     for (i = 0; i < output->Nbins; i++) output->binvals[i] = 0.0;

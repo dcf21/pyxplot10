@@ -125,6 +125,7 @@ int eps_plot_AddUsingItemsForWithWords(ppl_context *c, const withWords *ww, int 
         }
         (*usingList)[0] = pplExpr_tmpcpy(exptmp);
         pplExpr_free(exptmp);
+        exptmp = NULL;
         if ((*usingList)[0] == NULL) {
             sprintf(errtext, "Out of memory (c).");
             if (DEBUG) ppl_log(&c->errcontext, errtext);

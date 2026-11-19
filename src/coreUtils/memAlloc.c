@@ -133,8 +133,11 @@ void fastmalloc_close() {
     }
     fastmalloc_freeall(0);
     free(_fastmalloc_firstblocklist);
+    _fastmalloc_firstblocklist = NULL;
     free(_fastmalloc_currentblocklist);
+    _fastmalloc_currentblocklist = NULL;
     free(_fastmalloc_currentblock_alloc_ptr);
+    _fastmalloc_currentblock_alloc_ptr = NULL;
     _fastmalloc_initialised = 0;
     return;
 }

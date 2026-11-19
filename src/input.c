@@ -130,6 +130,7 @@ void ppl_interactiveSession(ppl_context *context) {
                 len = strlen(line_ptr) + 1;
                 if ((context->inputLineBufferLen > LSTR_LENGTH) && (len < LSTR_LENGTH)) {
                     free(context->inputLineBuffer);
+                    context->inputLineBuffer = NULL;
                     ppl_inputInit(context);
                 }
                 if (len > context->inputLineBufferLen) {
@@ -139,6 +140,7 @@ void ppl_interactiveSession(ppl_context *context) {
                 if (context->inputLineBuffer == NULL) break;
                 strcpy(context->inputLineBuffer, line_ptr);
                 free(line_ptr);
+                line_ptr = NULL;
             }
 #else
             {
@@ -241,6 +243,7 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
         if ((feof(infile)) || (ferror(infile))) break;
         if (context->inputLineBufferLen > LSTR_LENGTH) {
             free(context->inputLineBuffer);
+            context->inputLineBuffer = NULL;
             ppl_inputInit(context);
         }
         if (context->inputLineBuffer == NULL) {
@@ -287,7 +290,10 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     pplcsp_checkForGvOutput(context);
 
 restore:
-    if (context->inputLineBuffer != NULL) free(context->inputLineBuffer);
+    if (context->inputLineBuffer != NULL) {
+        free(context->inputLineBuffer);
+        context->inputLineBuffer = NULL;
+    }
     context->inputLineBuffer = oldInputLineBuffer;
     context->inputLineBufferLen = oldInputLineBufferLen;
     context->inputLineAddBuffer = oldInputLineAddBuffer;
@@ -386,7 +392,10 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
     LOOP_END
 
     if (!status) status = ppl_ProcessStatement(context, ps, inputLineBuffer, interactive, iterDepth);
-    if (context->inputLineAddBuffer != NULL) free(context->inputLineAddBuffer);
+    if (context->inputLineAddBuffer != NULL) {
+        free(context->inputLineAddBuffer);
+        context->inputLineAddBuffer = NULL;
+    }
     context->inputLineAddBuffer = NULL;
     return (status != 0);
 }

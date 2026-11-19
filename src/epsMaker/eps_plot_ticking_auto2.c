@@ -419,8 +419,11 @@ FAIL:
 CLEANUP:
     // Delete temporary lists of ticks and tick schemes
     free(TL_best);
+    TL_best = NULL;
     free(TL_trial);
+    TL_trial = NULL;
     free(TickSchemes);
+    TickSchemes = NULL;
 
     // Delete rough workspace
     if (ContextRough > 0) ppl_memAlloc_AscendOutOfContext(ContextRough);

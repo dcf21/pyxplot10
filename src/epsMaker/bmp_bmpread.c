@@ -267,14 +267,17 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         if (fread(p, size, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
             free(p);
+            p = NULL;
             return;
         }
         if (ppl_bmp_demsrle(ec, image, p, size) != 0) {
             image->data = NULL;
             free(p);
+            p = NULL;
             return;
         }
         free(p);
+        p = NULL;
     }
     return;
 }
@@ -339,6 +342,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
         if (fread(rowptr, 2 * width, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
             free(rowptr);
+            rowptr = NULL;
             return;
         }
         ptr = image->data + (height - i) * 3 * width;
@@ -359,11 +363,13 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
             if (fread(rowptr, 2, 1, in) != 1) {
                 ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
                 free(rowptr);
+                rowptr = NULL;
                 return;
             }
         } // rows are dword aligned
     }
     free(rowptr);
+    rowptr = NULL;
     return;
 }
 

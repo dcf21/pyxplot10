@@ -238,5 +238,6 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 
     // Never get here...
     free(context);
+    context = NULL;
     return 0;
 }

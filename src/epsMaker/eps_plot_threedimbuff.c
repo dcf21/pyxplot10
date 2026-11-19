@@ -149,6 +149,7 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
             }
         }
         free(DepthArray);
+        DepthArray = NULL;
     }
     ThreeDimBuffer_linepenup(x);
     ThreeDimBuffer_Reset(x);

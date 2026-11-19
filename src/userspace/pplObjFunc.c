@@ -58,7 +58,10 @@ void pplObjFuncDestroy(pplFunc *f) {
         case PPL_FUNC_USERDEF: {
             pplExpr *e = (pplExpr *) f->functionPtr;
             f->functionPtr = NULL;
-            if (e != NULL) pplExpr_free(e);
+            if (e != NULL) {
+                pplExpr_free(e);
+                e = NULL;
+            }
             break;
         }
         case PPL_FUNC_SPLINE: {
@@ -67,12 +70,22 @@ void pplObjFuncDestroy(pplFunc *f) {
             if (d != NULL) {
                 if (d->splineType[1] != 't') // Not stepwise interpolation
                 {
-                    if (d->splineObj != NULL) gsl_spline_free(d->splineObj);
-                    if (d->accelerator != NULL) gsl_interp_accel_free(d->accelerator);
+                    if (d->splineObj != NULL) {
+                        gsl_spline_free(d->splineObj);
+                        d->splineObj = NULL;
+                    }
+                    if (d->accelerator != NULL) {
+                        gsl_interp_accel_free(d->accelerator);
+                        d->accelerator = NULL;
+                    }
                 } else {
-                    if (d->splineObj != NULL) free(d->splineObj);
+                    if (d->splineObj != NULL) {
+                        free(d->splineObj);
+                        d->splineObj = NULL;
+                    }
                 }
                 free(d);
+                d = NULL;
             }
             break;
         }
@@ -81,8 +94,12 @@ void pplObjFuncDestroy(pplFunc *f) {
             splineDescriptor *d = (splineDescriptor *) f->functionPtr;
             f->functionPtr = NULL;
             if (d != NULL) {
-                if (d->splineObj != NULL) free(d->splineObj);
+                if (d->splineObj != NULL) {
+                    free(d->splineObj);
+                    d->splineObj = NULL;
+                }
                 free(d);
+                d = NULL;
             }
             break;
         }
@@ -90,9 +107,16 @@ void pplObjFuncDestroy(pplFunc *f) {
             histogramDescriptor *h = (histogramDescriptor *) f->functionPtr;
             f->functionPtr = NULL;
             if (h != NULL) {
-                if (h->bins != NULL) free(h->bins);
-                if (h->binvals != NULL) free(h->binvals);
+                if (h->bins != NULL) {
+                    free(h->bins);
+                    h->bins = NULL;
+                }
+                if (h->binvals != NULL) {
+                    free(h->binvals);
+                    h->binvals = NULL;
+                }
                 free(h);
+                h = NULL;
             }
             break;
         }
@@ -100,8 +124,12 @@ void pplObjFuncDestroy(pplFunc *f) {
             FFTDescriptor *d = (FFTDescriptor *) f->functionPtr;
             f->functionPtr = NULL;
             if (d != NULL) {
-                if (d->datagrid != NULL) fftw_free(d->datagrid);
+                if (d->datagrid != NULL) {
+                    fftw_free(d->datagrid);
+                    d->datagrid = NULL;
+                }
                 free(d);
+                d = NULL;
             }
             break;
         }
@@ -113,12 +141,28 @@ void pplObjFuncDestroy(pplFunc *f) {
         }
     }
 
-    if (f->argList != NULL) free(f->argList);
-    if (f->min != NULL) free(f->min);
-    if (f->max != NULL) free(f->max);
-    if (f->minActive != NULL) free(f->minActive);
-    if (f->maxActive != NULL) free(f->maxActive);
+    if (f->argList != NULL) {
+        free(f->argList);
+        f->argList = NULL;
+    }
+    if (f->min != NULL) {
+        free(f->min);
+        f->min = NULL;
+    }
+    if (f->max != NULL) {
+        free(f->max);
+        f->max = NULL;
+    }
+    if (f->minActive != NULL) {
+        free(f->minActive);
+        f->minActive = NULL;
+    }
+    if (f->maxActive != NULL) {
+        free(f->maxActive);
+        f->maxActive = NULL;
+    }
     free(f);
+    f = NULL;
     return;
 }
 

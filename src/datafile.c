@@ -344,7 +344,9 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                 sprintf(errtext, "Out of memory (01).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 free(filterArgs);
+                filterArgs = NULL;
                 free(argList);
+                argList = NULL;
                 return NULL;
             };
             strcpy(filterArgs, filter);
@@ -367,11 +369,15 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                 sprintf(errtext, "Could not open connection to input filter '%s'.", argList[0]);
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 free(filterArgs);
+                filterArgs = NULL;
                 free(argList);
+                argList = NULL;
                 return NULL;
             };
             free(filterArgs);
+            filterArgs = NULL;
             free(argList);
+            argList = NULL;
             return infile;
         }
         ppl_dictIterate(&dictIter, &dkey);
@@ -874,6 +880,7 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
         output->first->blockPosition = Nr;
     }
     free(sorter);
+    sorter = NULL;
     return output;
 }
 
@@ -912,6 +919,7 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
         }
         usingExprs[i] = pplExpr_tmpcpy(exptmp);
         pplExpr_free(exptmp);
+        exptmp = NULL;
         if (usingExprs[i] == NULL) {
             sprintf(errtext, "Out of memory (04).");
             if (DEBUG) ppl_log(&c->errcontext, errtext);
@@ -2175,6 +2183,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             }
             usingExprs[0] = pplExpr_tmpcpy(exptmp);
             pplExpr_free(exptmp);
+            exptmp = NULL;
             if (usingExprs[0] == NULL) {
                 *status = 1;
                 sprintf(errtext, "Out of memory (12).");

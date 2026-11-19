@@ -188,7 +188,9 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
                 *inlist = (*inlist)->next;
                 ppl_withWordsDestroy(context, &obj->style);
                 free(obj->text);
+                obj->text = NULL;
                 free(obj);
+                obj = NULL;
             } else if (!quiet) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Label number %d is not defined", i);
                 ppl_warning(&context->errcontext, ERR_GENERIC, msg);
@@ -245,6 +247,7 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
                 if (new->text == NULL) {
                     ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
                     free(new);
+                    new = NULL;
                     return;
                 }
                 strcpy(new->text, obj->text);
@@ -316,7 +319,9 @@ void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
         *inlist = (*inlist)->next;
         ppl_withWordsDestroy(context, &obj->style);
         free(obj->text);
+        obj->text = NULL;
         free(obj);
+        obj = NULL;
     }
     *first = NULL;
     return;

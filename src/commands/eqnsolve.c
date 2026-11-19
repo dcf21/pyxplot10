@@ -364,6 +364,7 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
         }
 
         gsl_multimin_fminimizer_free(s);
+        s = NULL;
     } while ((iter2 < 4) ||
              ((commlink->GoneNaN == 0) && (!status) && (size < sizelast2) &&
               (iter2 < 20))); // Iterate 2 times, and then see whether size carries on getting smaller
@@ -375,7 +376,9 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
         return;
     }
     gsl_vector_free(x);
+    x = NULL;
     gsl_vector_free(ss);
+    ss = NULL;
     return;
 }
 

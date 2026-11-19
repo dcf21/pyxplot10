@@ -64,6 +64,7 @@ void ppl_dictFreeTree(dictHash *i) {
     ppl_dictFreeTree(i->next);
     ppl_dictFreeTree(i->prev);
     free(i);
+    i = NULL;
     return;
 }
 
@@ -79,12 +80,15 @@ int ppl_dictFree(dict *in) {
     while (ptr != NULL) {
         ptrnext = ptr->next;
         free(ptr->key);
+        ptr->key = NULL;
         free(ptr->data);
+        ptr->data = NULL;
         free(ptr);
         ptr = ptrnext;
     }
     ppl_dictFreeTree(in->hashTree);
     free(in);
+    in = NULL;
     return 0;
 }
 
@@ -187,12 +191,18 @@ static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, i
                 dictItem *out = (*ptr)->item;
                 if (old->prev == NULL) {
                     *ptr = old->next;
-                    if (in->useMalloc) free(old);
+                    if (in->useMalloc) {
+                        free(old);
+                        old = NULL;
+                    }
                     return out;
                 }
                 if (old->next == NULL) {
                     *ptr = old->prev;
-                    if (in->useMalloc) free(old);
+                    if (in->useMalloc) {
+                        free(old);
+                        old = NULL;
+                    }
                     return out;
                 }
                 if (hash & 1) {
@@ -205,7 +215,10 @@ static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, i
                     *near = (*near)->prev;
                 }
                 *ptr = nearEntry;
-                if (in->useMalloc) free(old);
+                if (in->useMalloc) {
+                    free(old);
+                    old = NULL;
+                }
                 return out;
             } else {
                 *clash = 1;
@@ -245,7 +258,10 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
     }
     if (cmp == 0) // Overwrite an existing entry in dictionary
     {
-        if (in->useMalloc) free(ptr->data);
+        if (in->useMalloc) {
+            free(ptr->data);
+            ptr->data = NULL;
+        }
         ptr->data = item;
     } else {
         ptrnew = (dictItem *) alloc(sizeof(dictItem));
@@ -254,7 +270,10 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
         ptrnew->next = ptr;
         ptrnew->key = (char *) alloc((strlen(key) + 1));
         if (ptrnew->key == NULL) {
-            if (in->useMalloc) free(ptrnew);
+            if (in->useMalloc) {
+                free(ptrnew);
+                ptrnew = NULL;
+            }
             return 1;
         }
         strcpy(ptrnew->key, key);
@@ -296,13 +315,19 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
     }
     if (cmp == 0) // Overwrite an existing entry in dictionary
     {
-        if (in->useMalloc) free(ptr->data);
+        if (in->useMalloc) {
+            free(ptr->data);
+            ptr->data = NULL;
+        }
         ptr->data = cpy;
         ptrnew = ptr;
     } else {
         ptrnew = (dictItem *) alloc(sizeof(dictItem));
         if (ptrnew == NULL) {
-            if (in->useMalloc) free(cpy);
+            if (in->useMalloc) {
+                free(cpy);
+                cpy = NULL;
+            }
             return 1;
         }
         ptrnew->prev = prev;
@@ -311,7 +336,9 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         if (ptrnew->key == NULL) {
             if (in->useMalloc) {
                 free(cpy);
+                cpy = NULL;
                 free(ptrnew);
+                ptrnew = NULL;
             }
             return 1;
         }
@@ -532,14 +559,19 @@ void _ppl_dictRemoveEngine(dict *in, dictItem *ptr) {
 
     if (in->useMalloc) {
         free(ptr->data);
+        ptr->data = NULL;
         free(ptr->key);
+        ptr->key = NULL;
     }
 
     if (ptr->next != NULL) ptr->next->prev = ptr->prev; // We are not the last item in the list
     if (ptr->prev != NULL) ptr->prev->next = ptr->next; // We are the last item in the list, but not the first item
     if (in->last == ptr) in->last = ptr->prev;
     if (in->first == ptr) in->first = ptr->next;
-    if (in->useMalloc) free(ptr);
+    if (in->useMalloc) {
+        free(ptr);
+        ptr = NULL;
+    }
     in->length--;
 
     return;

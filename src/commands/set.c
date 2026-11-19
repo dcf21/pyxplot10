@@ -110,7 +110,10 @@ static void tics_rm(pplset_tics *a) {
     }
     if (a->tickStrs != NULL) {
         int i;
-        for (i = 0; a->tickStrs[i] != NULL; i++) { free(a->tickStrs[i]); }
+        for (i = 0; a->tickStrs[i] != NULL; i++) {
+            free(a->tickStrs[i]);
+            a->tickStrs[i] = NULL;
+        }
         free(a->tickStrs);
         a->tickStrs = NULL;
     }
@@ -530,7 +533,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 a->LinkedAxisCanvasID = (int) round(command[PARSE_set_axis_linktoid].real);
             }
             if (command[PARSE_set_axis_usingexp].objType == PPLOBJ_EXP) {
-                if (a->linkusing != NULL) pplExpr_free((pplExpr *) a->linkusing);
+                if (a->linkusing != NULL) {
+                    pplExpr_free((pplExpr *) a->linkusing);
+                    a->linkusing = NULL;
+                }
                 a->linkusing = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_axis_usingexp].auxil);
             }
         }
@@ -681,12 +687,18 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "c1format") == 0)) /* set c1format */
     {
         if (command[PARSE_set_c1format_format_string].objType == PPLOBJ_EXP) {
-            if (sg->c1format != NULL) pplExpr_free((pplExpr *) sg->c1format);
+            if (sg->c1format != NULL) {
+                pplExpr_free((pplExpr *) sg->c1format);
+                sg->c1format = NULL;
+            }
             sg->c1format = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_c1format_format_string].auxil);
             sg->c1formatset = 1;
         }
         if (command[PARSE_set_c1format_auto_format].objType == PPLOBJ_STR) {
-            if (sg->c1format != NULL) pplExpr_free((pplExpr *) sg->c1format);
+            if (sg->c1format != NULL) {
+                pplExpr_free((pplExpr *) sg->c1format);
+                sg->c1format = NULL;
+            }
             sg->c1format = NULL;
             sg->c1formatset = 0;
         }
@@ -708,7 +720,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_unset && (strcmp(setoption, "c1format") == 0)) /* unset c1format */
     {
-        if (sg->c1format != NULL) pplExpr_free((pplExpr *) sg->c1format);
+        if (sg->c1format != NULL) {
+            pplExpr_free((pplExpr *) sg->c1format);
+            sg->c1format = NULL;
+        }
         sg->c1format = (void *) pplExpr_cpy((pplExpr *) c->set->graph_default.c1format);
         sg->c1formatset = c->set->graph_default.c1formatset;
         sg->c1TickLabelRotate = c->set->graph_default.c1TickLabelRotate;
@@ -800,22 +815,37 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "colmap") == 0)) /* set colmap */
     {
         if (command[PARSE_set_colmap_color].objType == PPLOBJ_EXP) {
-            if (sg->ColMapExpr != NULL) pplExpr_free((pplExpr *) sg->ColMapExpr);
+            if (sg->ColMapExpr != NULL) {
+                pplExpr_free((pplExpr *) sg->ColMapExpr);
+                sg->ColMapExpr = NULL;
+            }
             sg->ColMapExpr = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_colmap_color].auxil);
         }
         if (command[PARSE_set_colmap_mask].objType == PPLOBJ_EXP) {
-            if (sg->MaskExpr != NULL) pplExpr_free((pplExpr *) sg->MaskExpr);
+            if (sg->MaskExpr != NULL) {
+                pplExpr_free((pplExpr *) sg->MaskExpr);
+                sg->MaskExpr = NULL;
+            }
             sg->MaskExpr = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_colmap_mask].auxil);
         }
         if (command[PARSE_set_colmap_nomask].objType == PPLOBJ_STR) {
-            if (sg->MaskExpr != NULL) pplExpr_free((pplExpr *) sg->MaskExpr);
+            if (sg->MaskExpr != NULL) {
+                pplExpr_free((pplExpr *) sg->MaskExpr);
+                sg->MaskExpr = NULL;
+            }
             sg->MaskExpr = NULL;
         }
     } else if (strcmp_unset && (strcmp(setoption, "colmap") == 0)) /* unset colmap */
     {
-        if (sg->ColMapExpr != NULL) pplExpr_free((pplExpr *) sg->ColMapExpr);
+        if (sg->ColMapExpr != NULL) {
+            pplExpr_free((pplExpr *) sg->ColMapExpr);
+            sg->ColMapExpr = NULL;
+        }
         sg->ColMapExpr = (void *) pplExpr_cpy((pplExpr *) c->set->graph_default.ColMapExpr);
-        if (sg->MaskExpr != NULL) pplExpr_free((pplExpr *) sg->MaskExpr);
+        if (sg->MaskExpr != NULL) {
+            pplExpr_free((pplExpr *) sg->MaskExpr);
+            sg->MaskExpr = NULL;
+        }
         sg->MaskExpr = (void *) pplExpr_cpy((pplExpr *) c->set->graph_default.MaskExpr);
     } else if (strcmp_set && (strcmp(setoption, "contours") == 0)) /* set contours */
     {
@@ -1601,7 +1631,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             else if (j == 2) a = &za[i];
             else a = &xa[i];
             a->enabled = 1;
-            if (a->label != NULL) free(a->label);
+            if (a->label != NULL) {
+                free(a->label);
+                a->label = NULL;
+            }
             a->label = NULL;
         }
     } else if (strcmp_set && (strcmp(setoption, "numerics") == 0)) /* set numerics */
@@ -2382,6 +2415,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     if (errpos >= 0) {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, buf);
                         free(pu);
+                        pu = NULL;
                         continue;
                     }
 
@@ -2407,8 +2441,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     // Add new preferred unit
                     if (i == 0) ppl_listAppendCpy(c->unit_PreferredUnits, (void *) pu, sizeof(PreferredUnit));
                     free(pu);
+                    pu = NULL;
                 }
             free(buf);
+            buf = NULL;
         }
 
         // set unit of length meter
@@ -2722,7 +2758,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (strcmp_set) {
                 a->enabled = 1;
                 if (command[PARSE_set_xformat_format_string].objType == PPLOBJ_EXP) {
-                    if (a->format != NULL) pplExpr_free((pplExpr *) a->format);
+                    if (a->format != NULL) {
+                        pplExpr_free((pplExpr *) a->format);
+                        a->format = NULL;
+                    }
                     a->format = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_xformat_format_string].auxil);
                 }
                 if (command[PARSE_set_xformat_auto_format].objType == PPLOBJ_STR) {
@@ -2773,7 +2812,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     char *in = (char *) command[PARSE_set_xlabel_label_text].auxil;
                     char *l = (char *) malloc(strlen(in) + 1);
                     if (l != NULL) strcpy(l, in);
-                    if (a->label != NULL) free(a->label);
+                    if (a->label != NULL) {
+                        free(a->label);
+                        a->label = NULL;
+                    }
                     a->label = l;
                 }
                 if (command[PARSE_set_xlabel_rotation].objType == PPLOBJ_NUM) {
@@ -2789,7 +2831,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 char *in = c->set->axis_default.label;
                 char *l = (in == NULL) ? NULL : (char *) malloc(strlen(in) + 1);
                 if (l != NULL) strcpy(l, in);
-                if (a->label != NULL) free(a->label);
+                if (a->label != NULL) {
+                    free(a->label);
+                    a->label = NULL;
+                }
                 a->label = l;
                 a->LabelRotate = c->set->axis_default.LabelRotate;
             }

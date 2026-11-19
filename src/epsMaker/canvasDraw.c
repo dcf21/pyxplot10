@@ -542,6 +542,7 @@ void canvas_CallLaTeX(EPSComm *x) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Could not create temporary LaTeX document");
         *(x->status) = 1;
         free(str_buffer);
+        str_buffer = NULL;
         return;
     }
     FPRINTF_LINECOUNT(TextHeader1);
@@ -671,6 +672,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     close(LatexStdIn); // This has the effect of killing latex
     close(LatexOut);
     free(str_buffer);
+    str_buffer = NULL;
     sigprocmask(SIG_UNBLOCK, &sigs, NULL);
 
     // Return error message if latex has failed

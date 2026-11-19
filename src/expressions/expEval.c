@@ -89,6 +89,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
             char *outnew = (char *) realloc((void *) out, outlen += 65536);
             if (outnew == NULL) {
                 free(out);
+                out = NULL;
                 strcpy(context->errStat.errBuff, "Out of memory.");
                 TBADD(ERR_MEMORY);
                 return;
@@ -130,6 +131,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
         } // Have not got correct syntax for a format specifier
         if (requiredArgs > -argP) {
             free(out);
+            out = NULL;
             strcpy(context->errStat.errBuff, "Too few arguments supplied to string substitution operator");
             TBADD(ERR_RANGE);
             return;
@@ -159,6 +161,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                 char *tmpbuff = (char *) malloc(tmpbufflen);
                 if (tmpbuff == NULL) {
                     free(out);
+                    out = NULL;
                     strcpy(context->errStat.errBuff, "Out of memory.");
                     TBADD(ERR_MEMORY);
                     return;
@@ -171,6 +174,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                 if (requiredArgs == 3) snprintf(out + outP, outlen - outP, formatToken, arg1i, arg2i, tmpbuff);
                 out[outlen - 1] = '\0';
                 free(tmpbuff);
+                tmpbuff = NULL;
             } else {
                 pplObj *o = obj + argP;
                 CAST_TO_NUM(obj + argP); // Make object into a number
@@ -193,6 +197,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
     // Throw an error if too many arguments were supplied
     if (argP < 0) {
         free(out);
+        out = NULL;
         sprintf(context->errStat.errBuff,
                 "Too many arguments supplied to string substitution operator; %d supplied when %d were needed.", Nsubs,
                 Nsubs + argP);
@@ -206,7 +211,10 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
     return;
 
 cast_fail:
-    if (out != NULL) free(out);
+    if (out != NULL) {
+        free(out);
+        out = NULL;
+    }
     return;
 }
 
@@ -407,6 +415,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         sprintf(context->errStat.errBuff, "No such method '%s'.", key);
                         TBADD(ERR_NAMESPACE);
                         free(in_cpy);
+                        in_cpy = NULL;
                         goto cleanup_on_error;
                     }
                     pplObjCpy(stk - 1, obj, 1, 0, 1);
@@ -1027,7 +1036,10 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     char *name = (char *) context->stack[context->stackPtr - 1].auxil;
                     const int malloced = context->stack[context->stackPtr - 1].auxilMalloced;
                     ppl_dollarOp_fetchColByName(context, inExpr, charpos, name);
-                    if (malloced) free(name);
+                    if (malloced) {
+                        free(name);
+                        name = NULL;
+                    }
                 } else {
                     sprintf(context->errStat.errBuff,
                             "The $ column reference operator can only act on column numbers and (string) names. Object supplied was of type <%s>,",

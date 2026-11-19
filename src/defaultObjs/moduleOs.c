@@ -773,6 +773,7 @@ void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status
                 char *newout = (char *) realloc((void *) out, outlen += outstep);
                 if (newout == NULL) {
                     free(out);
+                    out = NULL;
                     *status = 1;
                     *errType = ERR_MEMORY;
                     sprintf(errText, "Out of memory.");
@@ -804,6 +805,7 @@ void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status
                 char *newout = (char *) realloc((void *) out, outlen += outstep);
                 if (newout == NULL) {
                     free(out);
+                    out = NULL;
                     *status = 1;
                     *errType = ERR_MEMORY;
                     sprintf(errText, "Out of memory.");

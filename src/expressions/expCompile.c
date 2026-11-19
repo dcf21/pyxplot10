@@ -1680,10 +1680,20 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
 void pplExpr_free(pplExpr *inExpr) {
     if (inExpr == NULL) return;
     if (__sync_sub_and_fetch(&inExpr->refCount, 1) > 0) return;
-    if (inExpr->ascii != NULL) free(inExpr->ascii);
-    if (inExpr->srcFname != NULL) free(inExpr->srcFname);
-    if (inExpr->bytecode != NULL) free(inExpr->bytecode);
+    if (inExpr->ascii != NULL) {
+        free(inExpr->ascii);
+        inExpr->ascii = NULL;
+    }
+    if (inExpr->srcFname != NULL) {
+        free(inExpr->srcFname);
+        inExpr->srcFname = NULL;
+    }
+    if (inExpr->bytecode != NULL) {
+        free(inExpr->bytecode);
+        inExpr->bytecode = NULL;
+    }
     free(inExpr);
+    inExpr = NULL;
     return;
 }
 

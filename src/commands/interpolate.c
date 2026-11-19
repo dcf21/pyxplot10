@@ -296,7 +296,10 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             sprintf(c->errStat.errBuff, "%s interpolation is only possible on data sets with at least %d member%s.",
                     splineTypeName, NxRequired, (NxRequired > 1) ? "s" : "");
             TBADD2(ERR_NUMERICAL, 0);
-            if (NcolRequired >= 3) free(xdata);
+            if (NcolRequired >= 3) {
+                free(xdata);
+                xdata = NULL;
+            }
             return;
         }
 
@@ -503,6 +506,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                 sortArrayI[tmp3] = sortArrayI[j];
             }
             free(sortArray);
+            sortArray = NULL;
         }
 
         // Filter out repeat values of x
@@ -553,7 +557,10 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                     "%s interpolation is only possible on data sets with members at at least %d distinct values of x.",
                     splineTypeName, NxRequired);
             TBADD2(ERR_NUMERICAL, 0);
-            if (NcolRequired >= 3) free(xdata);
+            if (NcolRequired >= 3) {
+                free(xdata);
+                xdata = NULL;
+            }
             return;
         }
 

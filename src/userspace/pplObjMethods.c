@@ -1614,6 +1614,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
             sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
                     c->errStat.errMsgExpr);
             free(ovec);
+            ovec = NULL;
             return;
         }
 
@@ -1627,6 +1628,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
         *errType = ERR_MEMORY;
         sprintf(errText, "Out of memory.");
         free(ovec);
+        ovec = NULL;
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -2739,6 +2741,7 @@ static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int 
         ppl_listIterate(&li);
     }
     free(items);
+    items = NULL;
 }
 
 static pplObj *pplmethod_listSortOnCustom_fn = NULL;
@@ -2897,6 +2900,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
         ppl_listIterate(&li);
     }
     free(items);
+    items = NULL;
 }
 
 //! pplmethod_listSortOnElement - Implement the sortOnElement(n) method of lists, which sorts a list of lists on the nth
@@ -2975,6 +2979,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
         ppl_listIterate(&li);
     }
     free(items);
+    items = NULL;
 }
 
 //! pplmethod_listVector - Implement the vector() method of lists, which turns a list into a vector, providing all the
@@ -3314,7 +3319,9 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     }
     d = gsl_linalg_LU_det(tmp, s);
     gsl_permutation_free(p);
+    p = NULL;
     gsl_matrix_free(tmp);
+    tmp = NULL;
     pplObjNum(&OUTPUT, 0, d, 0);
     ppl_unitsDimCpy(&OUTPUT, st);
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] *= n;
@@ -3410,7 +3417,9 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
         return;
     }
     gsl_matrix_free(tmp);
+    tmp = NULL;
     gsl_eigen_symm_free(w);
+    w = NULL;
     ppl_unitsDimCpy(&OUTPUT, st);
 }
 
@@ -3485,7 +3494,9 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
         return;
     }
     gsl_matrix_free(tmp1);
+    tmp1 = NULL;
     gsl_eigen_symmv_free(w);
+    w = NULL;
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3505,6 +3516,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
         ppl_listAppendCpy(lo, (void *) &v, sizeof(pplObj));
     }
     gsl_matrix_free(tmp2);
+    tmp2 = NULL;
 }
 
 //! pplmethod_matrixInv - Implement the inv() method of matrices, which returns the inverse of a square matrix
@@ -3564,7 +3576,9 @@ static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     gsl_permutation_free(p);
+    p = NULL;
     gsl_matrix_free(tmp);
+    tmp = NULL;
     ppl_unitsDimInverse(&OUTPUT, st);
 }
 
@@ -3815,7 +3829,10 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
     while (!feof(f->file)) {
         int n;
         if (new == NULL) {
-            if (out != NULL) free(out);
+            if (out != NULL) {
+                free(out);
+                out = NULL;
+            }
             *status = 1;
             *errType = ERR_MEMORY;
             sprintf(errText, "Out of memory.");
@@ -3871,7 +3888,10 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
             size += chunk;
             new = (char *) realloc(out, size);
             if (new == NULL) {
-                if (out != NULL) free(out);
+                if (out != NULL) {
+                    free(out);
+                    out = NULL;
+                }
                 *status = 1;
                 *errType = ERR_MEMORY;
                 sprintf(errText, "Out of memory.");

@@ -339,7 +339,9 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
     // Calculate the determinant of the Hessian matrix
     term3 = gsl_linalg_LU_lndet(hessian) * 0.5; // -log(1/sqrt(det))
     gsl_matrix_free(hessian);
+    hessian = NULL;
     gsl_permutation_free(perm);
+    perm = NULL;
 
     return term1 + term2 +
             term3; // We return the negative of the log-likelihood, which GSL then minimises by varying the assume errorbar size
@@ -405,8 +407,11 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
         (*slave)(x, (void *) commlink);
         if (commlink->errtext[0] != '\0') {
             gsl_vector_free(x);
+            x = NULL;
             gsl_vector_free(ss);
+            ss = NULL;
             gsl_multimin_fminimizer_free(s);
+            s = NULL;
             return 1;
         }
 
@@ -428,6 +433,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
                   (iter < 50))); // Iterate 10 times, and then see whether size carries on getting smaller
 
         gsl_multimin_fminimizer_free(s);
+        s = NULL;
     } while ((iter2 < 3) ||
              ((commlink->goneNaN == 0) && (!status) && (size < sizelast2) &&
               (iter2 < 20))); // Iterate 2 times, and then see whether size carries on getting smaller
@@ -437,14 +443,18 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
     if (status) {
         sprintf(commlink->errtext, "Failed to converge. GSL returned error: %s", gsl_strerror(status));
         gsl_vector_free(x);
+        x = NULL;
         gsl_vector_free(ss);
+        ss = NULL;
         return 1;
     }
     sizelast =
             (*slave)(x, (void *) commlink); // Calling minimiser slave now sets all fitting variables to desired values
 
     gsl_vector_free(x);
+    x = NULL;
     gsl_vector_free(ss);
+    ss = NULL;
     return 0;
 }
 
@@ -767,6 +777,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sprintf(c->errStat.errBuff, "%s", dataComm.errtext);
             TBADD2(ERR_NUMERICAL, 0);
             gsl_vector_free(bestFitParamVals);
+            bestFitParamVals = NULL;
             goto cleanup;
         }
         firstVals[Nargs].real = dataComm.sigmaData;
@@ -983,10 +994,15 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // We're finished... can now free dataTable
     gsl_vector_free(bestFitParamVals);
+    bestFitParamVals = NULL;
     gsl_matrix_free(hessian_inv);
+    hessian_inv = NULL;
     gsl_matrix_free(hessian_lu);
+    hessian_lu = NULL;
     gsl_matrix_free(hessian);
+    hessian = NULL;
     gsl_permutation_free(perm);
+    perm = NULL;
     ppl_memAlloc_AscendOutOfContext(contextLocalVec);
 
 cleanup:

@@ -581,8 +581,12 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         // Allocate workspace in which to do FFT
         datagrid = (fftw_complex *) fftw_malloc(Nsamples * sizeof(fftw_complex));
         if ((datagrid == NULL) || (scratchpad == NULL)) {
-            if (datagrid != NULL) fftw_free(datagrid);
+            if (datagrid != NULL) {
+                fftw_free(datagrid);
+                datagrid = NULL;
+            }
             free(scratchpad);
+            scratchpad = NULL;
             sprintf(c->errStat.errBuff, "Out of memory.");
             TBADD2(ERR_MEMORY, 0);
             return;
@@ -626,27 +630,37 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                            &errType, c->errStat.errBuff);
             if (c->errStat.status || (errPos >= 0)) {
                 fftw_free(datagrid);
+                datagrid = NULL;
                 free(scratchpad);
+                scratchpad = NULL;
                 return;
             }
             if (explen2 < explen1) {
                 fftw_free(datagrid);
+                datagrid = NULL;
                 free(scratchpad);
+                scratchpad = NULL;
                 strcpy(c->errStat.errBuff, "Unexpected trailing matter at the end of expression.");
                 pplExpr_free(e);
+                e = NULL;
                 TBADD2(ERR_SYNTAX, 0);
                 return;
             }
             out = ppl_expEval(c, e, &lastOpAssign, 1, 1);
             pplExpr_free(e);
+            e = NULL;
             if (c->errStat.status) {
                 fftw_free(datagrid);
+                datagrid = NULL;
                 free(scratchpad);
+                scratchpad = NULL;
                 return;
             }
             if (out->objType != PPLOBJ_NUM) {
                 fftw_free(datagrid);
+                datagrid = NULL;
                 free(scratchpad);
+                scratchpad = NULL;
                 sprintf(c->errStat.errBuff,
                         "The supplied function to fit produces a value which is not a number but has type <%s>.",
                         pplObjTypeNames[out->objType]);
@@ -670,7 +684,9 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 TBADD2(ERR_NUMERICAL, 0);
                 STACK_CLEAN;
                 fftw_free(datagrid);
+                datagrid = NULL;
                 free(scratchpad);
+                scratchpad = NULL;
                 return;
             }
 
@@ -686,7 +702,9 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 TBADD2(ERR_NUMERICAL, 0);
                 STACK_CLEAN;
                 fftw_free(datagrid);
+                datagrid = NULL;
                 free(scratchpad);
+                scratchpad = NULL;
                 return;
             }
             (*WindowType)(out, Ndims, Npos, Nsteps); // Apply window function to data
@@ -700,6 +718,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             STACK_CLEAN;
         }
         free(scratchpad);
+        scratchpad = NULL;
     }
 
     // We're finished... can now free DataTable
@@ -723,6 +742,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sprintf(c->errStat.errBuff, "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         fftw_free(datagrid);
+        datagrid = NULL;
         return;
     }
     output->Ndims = Ndims;
@@ -781,7 +801,9 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (status) {
             TBADD2(ERR_INTERNAL, 0);
             fftw_free(datagrid);
+            datagrid = NULL;
             free(output);
+            output = NULL;
             return;
         }
         output->outputUnit.real = output->outputUnit.imag = 0.0;

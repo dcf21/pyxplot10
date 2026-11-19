@@ -166,6 +166,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
                        &errPos, &errType, c->errStat.errBuff);
         if (errPos >= 0) {
             pplExpr_free(expr2);
+            expr2 = NULL;
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, errType, errPos + exprPos, inExpr->ascii,
                       "int_d?() function");
             return;
@@ -175,6 +176,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, ERR_SYNTAX, explen + exprPos,
                       inExpr->ascii, "int_d?() function");
             pplExpr_free(expr2);
+            expr2 = NULL;
             return;
         }
     }
@@ -211,7 +213,9 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
     }
 
     gsl_integration_workspace_free(ws);
+    ws = NULL;
     pplExpr_free(expr2);
+    expr2 = NULL;
 
     ppl_contextRestoreVarPointer(c, dummy, &dummyTemp); // Restore old value of the dummy variable we've been using
 
@@ -297,6 +301,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
                        &errPos, &errType, c->errStat.errBuff);
         if (errPos >= 0) {
             pplExpr_free(expr2);
+            expr2 = NULL;
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, errType, errPos + exprPos, inExpr->ascii,
                       "diff_d?() function");
             return;
@@ -306,6 +311,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, ERR_SYNTAX, explen, inExpr->ascii,
                       "diff_d?() function");
             pplExpr_free(expr2);
+            expr2 = NULL;
             return;
         }
     }
@@ -335,6 +341,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
 
     gsl_deriv_central(&fn, point->real, step->real, &resultReal, &resultReal_error);
     pplExpr_free(expr2);
+    expr2 = NULL;
 
     if ((!c->errStat.status) && (c->set->term_current.ComplexNumbers == SW_ONOFF_ON)) {
         commlink.testingReal = 0;

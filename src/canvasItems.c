@@ -79,24 +79,36 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     canvas_plotrange *pr, *pr2;
     canvas_plotdesc *pd, *pd2;
 
-    if (ptr->polygonPoints != NULL) free(ptr->polygonPoints);
-    if (ptr->text != NULL) free(ptr->text);
+    if (ptr->polygonPoints != NULL) {
+        free(ptr->polygonPoints);
+        ptr->polygonPoints = NULL;
+    }
+    if (ptr->text != NULL) {
+        free(ptr->text);
+        ptr->text = NULL;
+    }
     ppl_withWordsDestroy(c, &(ptr->settings.dataStyle));
     ppl_withWordsDestroy(c, &(ptr->settings.funcStyle));
     pplExpr_free(ptr->settings.ColMapExpr);
+    ptr->settings.ColMapExpr = NULL;
     pplExpr_free(ptr->settings.MaskExpr);
+    ptr->settings.MaskExpr = NULL;
     pplExpr_free(ptr->settings.c1format);
+    ptr->settings.c1format = NULL;
     if (ptr->XAxes != NULL) {
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
         free(ptr->XAxes);
+        ptr->XAxes = NULL;
     }
     if (ptr->YAxes != NULL) {
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
         free(ptr->YAxes);
+        ptr->YAxes = NULL;
     }
     if (ptr->ZAxes != NULL) {
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
         free(ptr->ZAxes);
+        ptr->ZAxes = NULL;
     }
     pplarrow_list_destroy(c, &(ptr->arrow_list));
     ppllabel_list_destroy(c, &(ptr->label_list));
@@ -115,18 +127,45 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     while (pd != NULL) {
         pd2 = pd->next;
         if (pd->functions != NULL)
-            for (i = 0; i < pd->NFunctions; i++) pplExpr_free(pd->functions[i]);
+            for (i = 0; i < pd->NFunctions; i++) {
+                pplExpr_free(pd->functions[i]);
+                pd->functions[i] = NULL;
+            }
         if (pd->UsingList != NULL)
-            for (i = 0; i < pd->NUsing; i++) pplExpr_free(pd->UsingList[i]);
+            for (i = 0; i < pd->NUsing; i++) {
+                pplExpr_free(pd->UsingList[i]);
+                pd->UsingList[i] = NULL;
+            }
         if (pd->vectors != NULL)
             for (i = 0; i < pd->NFunctions; i++) ppl_garbageObject(&pd->vectors[i]);
-        if (pd->filename != NULL) free(pd->filename);
-        if (pd->functions != NULL) free(pd->functions);
-        if (pd->vectors != NULL) free(pd->vectors);
-        if (pd->label != NULL) pplExpr_free(pd->label);
-        if (pd->SelectCriterion != NULL) pplExpr_free(pd->SelectCriterion);
-        if (pd->title != NULL) free(pd->title);
-        if (pd->UsingList != NULL) free(pd->UsingList);
+        if (pd->filename != NULL) {
+            free(pd->filename);
+            pd->filename = NULL;
+        }
+        if (pd->functions != NULL) {
+            free(pd->functions);
+            pd->functions = NULL;
+        }
+        if (pd->vectors != NULL) {
+            free(pd->vectors);
+            pd->vectors = NULL;
+        }
+        if (pd->label != NULL) {
+            pplExpr_free(pd->label);
+            pd->label = NULL;
+        }
+        if (pd->SelectCriterion != NULL) {
+            pplExpr_free(pd->SelectCriterion);
+            pd->SelectCriterion = NULL;
+        }
+        if (pd->title != NULL) {
+            free(pd->title);
+            pd->title = NULL;
+        }
+        if (pd->UsingList != NULL) {
+            free(pd->UsingList);
+            pd->UsingList = NULL;
+        }
         ppl_withWordsDestroy(c, &pd->ww);
         ppl_withWordsDestroy(c, &pd->ww_final);
         free(pd);
@@ -140,6 +179,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     else canvas_items->last = ptr->prev;
 
     free(ptr);
+    ptr = NULL;
     return;
 }
 
@@ -242,6 +282,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
                 ptr->ZAxes = NULL;
             }
             free(ptr);
+            ptr = NULL;
             return 1;
         } else {
             for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->XAxes[i]), &(c->set->XAxes[i]));
@@ -282,6 +323,7 @@ int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput
         ptr = next;
     }
     free(canvas_items);
+    canvas_items = NULL;
     c->canvas_items = NULL;
     c->replotFocus = -1;
     return 0;
@@ -920,6 +962,7 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
         }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
     }
     return 0;
 }
@@ -972,6 +1015,7 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
         }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
     }
     return 0;
 }
@@ -1060,6 +1104,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
         }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
     }
     return 0;
 }
@@ -1126,6 +1171,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
         }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
     }
     return 0;
 }
@@ -1183,6 +1229,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1269,6 +1316,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1336,6 +1384,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1645,6 +1694,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1697,6 +1747,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
     if (canvas_itemlist_add(c, stk, CANVAS_EPS, &ptr, &id, 0)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (G).");
         free(text);
+        text = NULL;
         return 1;
     }
 
@@ -1744,6 +1795,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1809,6 +1861,7 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1935,6 +1988,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
         fail:
             ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
             free(ptList);
+            ptList = NULL;
             return 1;
         }
         ptList[2 * i] = x;
@@ -1963,6 +2017,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2010,6 +2065,7 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     if (canvas_itemlist_add(c, stk, CANVAS_TEXT, &ptr, &id, 0)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (M).");
         free(text);
+        text = NULL;
         return 1;
     }
 
@@ -2059,6 +2115,7 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2119,6 +2176,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     if (canvas_itemlist_add(c, stk, CANVAS_IMAGE, &ptr, &id, 0)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (O).");
         free(text);
+        text = NULL;
         return 1;
     }
 
@@ -2182,6 +2240,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2202,6 +2261,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
             strcpy(msg, "Stack forward reference detected."); \
             ppl_error(&c->errcontext, ERR_STACKED, -1, -1, msg); \
             free(new); \
+            new = NULL; \
             return 1; \
         } \
     }
@@ -2341,12 +2401,14 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             if (Nexprs < 1) {
                 ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, "Fewer than one expression was supplied to evaluate.");
                 free(new);
+                new = NULL;
                 return 1;
             }
             exprList = (pplExpr **) ppl_memAlloc(Nexprs * sizeof(pplExpr *));
             if (exprList == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (S).");
                 free(new);
+                new = NULL;
                 return 1;
             }
             for (i = 0, pos = pos1; stk[pos].objType == PPLOBJ_NUM; i++) {
@@ -2373,6 +2435,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 if (vecs == NULL) {
                     ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (T).");
                     free(new);
+                    new = NULL;
                     return 1;
                 }
                 for (i = 0; i < Nexprs; i++) {
@@ -2386,6 +2449,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
                         STACK_CLEANP;
                         free(new);
+                        new = NULL;
                         return 1;
                     }
                     if (obj->objType != PPLOBJ_VEC) {
@@ -2397,6 +2461,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
                         STACK_CLEANP;
                         free(new);
+                        new = NULL;
                         return 1;
                     }
                     l2 = ((pplVector *) first->auxil)->v->size;
@@ -2409,6 +2474,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
                         STACK_CLEANP;
                         free(new);
+                        new = NULL;
                         return 1;
                     }
                     pplObjCpy(vecs + i, obj, 0, 0, 1);
@@ -2424,6 +2490,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (U).");
                         for (i = 0; i < Nexprs; i++) ppl_garbageObject(vecs + i);
                         free(new);
+                        new = NULL;
                         return 1;
                     }
                     memcpy(new->vectors, vecs, Nexprs * sizeof(pplObj));
@@ -2431,6 +2498,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 } else {
                     for (i = 0; i < Nexprs; i++) ppl_garbageObject(vecs + i);
                     free(new);
+                    new = NULL;
                     return 1;
                 }
             } else {
@@ -2444,11 +2512,13 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                     if (new->functions == NULL) {
                         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (V).");
                         free(new);
+                        new = NULL;
                         return 1;
                     }
                     for (i = 0; i < Nexprs; i++) new->functions[i] = pplExpr_cpy(exprList[i]);
                 } else {
                     free(new);
+                    new = NULL;
                     return 1;
                 }
             }
@@ -2461,6 +2531,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not find any expressions to evaluate.");
             ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, msg);
             free(new);
+            new = NULL;
             return 1;
         }
     }
@@ -2567,6 +2638,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                                       USING_ITEMS_MAX);
                     ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, msg);
                     free(new);
+                    new = NULL;
                     return 1;
                 }
                 if (stk[pos + o].objType == PPLOBJ_EXP) hadNonNullUsingItem = 1;
@@ -2584,6 +2656,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 if (new->UsingList == NULL) {
                     ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (W).");
                     free(new);
+                    new = NULL;
                     return 1;
                 }
                 pos = ptab[PARSE_INDEX_using_list] + stkbase;
@@ -2714,6 +2787,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         if ((errbuff == NULL) || (UsingList == NULL)) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (X).");
             free(new);
+            new = NULL;
             return 1;
         }
 
@@ -2731,9 +2805,12 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         if (eps_plot_AddUsingItemsForWithWords(c, &new->ww, &NExpect, &autoUsingList, &UsingList, &NUsing, &nObjs,
                                                errbuff)) {
             free(new);
+            new = NULL;
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, errbuff);
             free(errbuff);
+            errbuff = NULL;
             free(UsingList);
+            UsingList = NULL;
             return 1;
         } // Add extra using items for, e.g. "linewidth $3".
         if (NExpect != NUsing) {
@@ -2743,14 +2820,18 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                     NExpect, NUsing);
             ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, msg);
             free(errbuff);
+            errbuff = NULL;
             free(UsingList);
+            UsingList = NULL;
             return 1;
         }
         ppldata_fromFile(c, &new->PersistentDataTable, new->filename, 0, NULL, dataSpool, new->index, UsingList,
                          autoUsingList, NExpect, nObjs, new->label, new->SelectCriterion, NULL, new->UsingRowCols,
                          new->EveryList, new->continuity, 1, &status, errbuff, &errCount, iterDepth);
         free(errbuff);
+        errbuff = NULL;
         free(UsingList);
+        UsingList = NULL;
     }
 
 
@@ -2817,6 +2898,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2873,22 +2955,28 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     ppl_withWordsDestroy(c, &ptr->settings.dataStyle); // First free the old set of settings which we'd stored
     ppl_withWordsDestroy(c, &ptr->settings.funcStyle);
     pplExpr_free(ptr->settings.ColMapExpr);
+    ptr->settings.ColMapExpr = NULL;
     pplExpr_free(ptr->settings.MaskExpr);
+    ptr->settings.MaskExpr = NULL;
     pplExpr_free(ptr->settings.c1format);
+    ptr->settings.c1format = NULL;
     if (ptr->XAxes != NULL) {
         int i;
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
         free(ptr->XAxes);
+        ptr->XAxes = NULL;
     }
     if (ptr->YAxes != NULL) {
         int i;
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
         free(ptr->YAxes);
+        ptr->YAxes = NULL;
     }
     if (ptr->ZAxes != NULL) {
         int i;
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
         free(ptr->ZAxes);
+        ptr->ZAxes = NULL;
     }
     pplarrow_list_destroy(c, &ptr->arrow_list);
     ppllabel_list_destroy(c, &ptr->label_list);
@@ -3131,6 +3219,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
+        unsuccessful_ops = NULL;
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,

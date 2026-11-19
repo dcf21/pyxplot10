@@ -113,6 +113,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
                 pplObjPrint(c, val, NULL, out, LSTR_LENGTH, 0, 0);
                 ppl_report(&c->errcontext, out);
                 free(out);
+                out = NULL;
             }
         }
 
@@ -240,6 +241,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
             } else {
                 ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
                 free(unsuccessful_ops);
+                unsuccessful_ops = NULL;
             }
         }
     } else if (strcmp(d, "replot") == 0) ppl_directive_plot(c, pl, in, interactive, iterDepth, 1);

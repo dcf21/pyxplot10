@@ -212,6 +212,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
 
     // Delete temporary array
     free(indata);
+    indata = NULL;
     ppl_memAlloc_AscendOutOfContext(tempContext);
     return;
 }

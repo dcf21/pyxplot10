@@ -319,13 +319,32 @@ supersede:
 
 fail:
     if (f != NULL) {
-        if (f->argList != NULL) free(f->argList);
-        if (f->min != NULL) free(f->min);
-        if (f->max != NULL) free(f->max);
-        if (f->minActive != NULL) free(f->minActive);
-        if (f->maxActive != NULL) free(f->maxActive);
-        if (f->functionPtr != NULL) pplExpr_free((pplExpr *) f->functionPtr);
+        if (f->argList != NULL) {
+            free(f->argList);
+            f->argList = NULL;
+        }
+        if (f->min != NULL) {
+            free(f->min);
+            f->min = NULL;
+        }
+        if (f->max != NULL) {
+            free(f->max);
+            f->max = NULL;
+        }
+        if (f->minActive != NULL) {
+            free(f->minActive);
+            f->minActive = NULL;
+        }
+        if (f->maxActive != NULL) {
+            free(f->maxActive);
+            f->maxActive = NULL;
+        }
+        if (f->functionPtr != NULL) {
+            pplExpr_free((pplExpr *) f->functionPtr);
+            f->functionPtr = NULL;
+        }
         free(f);
+        f = NULL;
     }
     return;
 }

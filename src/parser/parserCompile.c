@@ -94,6 +94,7 @@ void ppl_parserAtomAdd(parserLine *in, const int stackOutPos, const int linePos,
         output->literal = (pplObj *) malloc(sizeof(pplObj));
         if (output->literal == NULL) {
             free(output);
+            output = NULL;
             return;
         }
         memcpy(output->literal, literal, sizeof(pplObj));
@@ -712,6 +713,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                            equalsAllowed, commaAllowed, &expr, &errPos, &errType, c->errStat.errBuff);
                             if (errPos >= 0) {
                                 pplExpr_free(expr);
+                                expr = NULL;
                                 ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, errType, errPos + *linepos, line, "");
                                 c->algebraErrPos = errPos + *linepos;
                                 status = 0;
@@ -725,9 +727,11 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                     gotComma = 1;
                                 } // vector with another comma-separated component
                             }
-                            if ((s == NULL) || (!writeOut)) pplExpr_free(expr);
-                            else if ((node->matchString[1] != 'e') && (node->matchString[1] != 'E') &&
-                                     (node->matchString[1] != 'F') && (node->matchString[1] != 'g')) {
+                            if ((s == NULL) || (!writeOut)) {
+                                pplExpr_free(expr);
+                                expr = NULL;
+                            } else if ((node->matchString[1] != 'e') && (node->matchString[1] != 'E') &&
+                                       (node->matchString[1] != 'F') && (node->matchString[1] != 'g')) {
                                 char *t = node->matchString + 1;
                                 if (gotComma || (vectorCount > 0))
                                     t = "D"; // not a vector, rather comma separated distances
@@ -1119,7 +1123,10 @@ void ppl_parserAtomFree(parserAtom **in) {
     while (i != NULL) {
         parserAtom *next = i->next;
         if (i->literal != NULL) ppl_garbageObject(i->literal);
-        if (i->expr != NULL) pplExpr_free(i->expr);
+        if (i->expr != NULL) {
+            pplExpr_free(i->expr);
+            i->expr = NULL;
+        }
         free(i);
         i = next;
     }
@@ -1210,13 +1217,16 @@ void ppl_parserLineInit(parserLine **in, const int srcLineN, const long srcId, c
     output->linetxt = (char *) malloc(strlen(line) + 1);
     if (output->linetxt == NULL) {
         free(output);
+        output = NULL;
         return;
     }
     strcpy(output->linetxt, line);
     output->srcFname = (char *) malloc(strlen(srcFname) + 1);
     if (output->srcFname == NULL) {
         free(output->linetxt);
+        output->linetxt = NULL;
         free(output);
+        output = NULL;
         return;
     }
     strcpy(output->srcFname, srcFname);
@@ -1246,8 +1256,14 @@ void ppl_parserLineFree(parserLine *in) {
     while (item != NULL) {
         parserLine *next = item->next;
         ppl_parserAtomFree(&item->firstAtom);
-        if (item->linetxt != NULL) free(item->linetxt);
-        if (item->srcFname != NULL) free(item->srcFname);
+        if (item->linetxt != NULL) {
+            free(item->linetxt);
+            item->linetxt = NULL;
+        }
+        if (item->srcFname != NULL) {
+            free(item->srcFname);
+            item->srcFname = NULL;
+        }
         free(item);
         item = next;
     }
@@ -1434,7 +1450,10 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                     }
 
                 shellSubstErr:
-                    if (key != NULL) free(key);
+                    if (key != NULL) {
+                        free(key);
+                        key = NULL;
+                    }
                     if (fail) break;
                 }
 
@@ -1476,6 +1495,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                     }
                     if (got == 0) { sprintf(c->errStat.errBuff, "Undefined macro, \"%s\".", key); }
                     free(key);
+                    key = NULL;
                     if (got <= 0) {
                         fail = 1;
                         break;
@@ -1487,7 +1507,10 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 
                 // Clean up after macro substitution
                 if ((!fail) && (outbuff != NULL)) {
-                    if (line != lineOriginal) free(line);
+                    if (line != lineOriginal) {
+                        free(line);
+                        line = NULL;
+                    }
                     line = outbuff;
                 } else if (outbuff != NULL) {
                     free(outbuff);
@@ -1509,7 +1532,10 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
         s->expectingList[0] = '\0';
         parse_descend(c, s, 1, srcLineN, srcId, srcFname, line, &linepos, NULL, NULL, -1, NULL, 0, blockDepth, &match);
         if (c->errStat.status) {
-            if (outbuff != NULL) free(outbuff);
+            if (outbuff != NULL) {
+                free(outbuff);
+                outbuff = NULL;
+            }
             ppl_parserStatReInit(s);
             return 1;
         }
@@ -1561,20 +1587,29 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 
         // If we did match as far as '=', but got an error traceback, free the stack and return to the user
         if (c->errStat.status) {
-            if (outbuff != NULL) free(outbuff);
+            if (outbuff != NULL) {
+                free(outbuff);
+                outbuff = NULL;
+            }
             ppl_parserStatReInit(s);
             return 1;
         }
 
         // Success!
-        if (outbuff != NULL) free(outbuff);
+        if (outbuff != NULL) {
+            free(outbuff);
+            outbuff = NULL;
+        }
         return 0;
     }
 
     // We have not found a match to this command
     sprintf(c->errStat.errBuff, "Unrecognised command.");
     PARSE_TBADD(ERR_SYNTAX, 0, line);
-    if (outbuff != NULL) free(outbuff);
+    if (outbuff != NULL) {
+        free(outbuff);
+        outbuff = NULL;
+    }
     ppl_parserStatReInit(s);
     return 1;
 }
@@ -1697,10 +1732,12 @@ char **ppl_rl_completion(const char *text, const int start, const int end) {
         if (firstItem[0] == '\n') // We are trying to match a %s:filename field, so turn on filename completion
         {
             free(firstItem);
+            firstItem = NULL;
             rl_attempted_completion_over = 1; // NULL means that readline's default filename completer is activated
             return NULL;
         } else {
             free(firstItem);
+            firstItem = NULL;
         }
     }
 

@@ -1281,7 +1281,10 @@ CLEANUP:
     // Delete compiled expressions
     if (formatExp != NULL)
         for (i = 0; i < NArgs; i++)
-            if (formatExp[i] != NULL) pplExpr_free(formatExp[i]);
+            if (formatExp[i] != NULL) {
+                pplExpr_free(formatExp[i]);
+                formatExp[i] = NULL;
+            }
 
     // Restore original value of x (or y/z)
     if (VarVal != NULL) ppl_contextRestoreVarPointer(x->c, VarName, &DummyTemp);

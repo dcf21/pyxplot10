@@ -57,5 +57,6 @@ list *ppl_strSplit(char *in) {
         }
     }
     free(text_buffer);
+    text_buffer = NULL;
     return out;
 }

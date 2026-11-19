@@ -164,6 +164,7 @@ void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutpu
                 *inlist = (*inlist)->next;
                 ppl_withWordsDestroy(context, &obj->style);
                 free(obj);
+                obj = NULL;
             } else if (!quiet) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Arrow number %d is not defined", i);
                 ppl_warning(&context->errcontext, ERR_GENERIC, msg);
@@ -277,6 +278,7 @@ void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist) {
         *inlist = (*inlist)->next;
         ppl_withWordsDestroy(context, &obj->style);
         free(obj);
+        obj = NULL;
     }
     *first = NULL;
     return;

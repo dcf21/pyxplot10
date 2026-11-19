@@ -55,6 +55,7 @@ ppl_context *ppl_contextInit() {
     out->set = (ppl_settings *) malloc(sizeof(ppl_settings));
     if (out->set == NULL) {
         free(out);
+        out = NULL;
         return NULL;
     }
 
@@ -81,6 +82,7 @@ ppl_context *ppl_contextInit() {
     out->stackFull = 0;
     if (out->stack == NULL) {
         free(out);
+        out = NULL;
         return NULL;
     }
 
@@ -119,5 +121,6 @@ void ppl_contextFree(ppl_context *in) {
     int i;
     for (i = in->ns_ptr; i > in->ns_branch; i--) ppl_garbageNamespace(in->namespaces[i]);
     free(in);
+    in = NULL;
     return;
 }

@@ -61,10 +61,12 @@ int ppl_listFree(list *in) {
     while (ptr != NULL) {
         ptrnext = ptr->next;
         free(ptr->data);
+        ptr->data = NULL;
         free(ptr);
         ptr = ptrnext;
     }
     free(in);
+    in = NULL;
     return 0;
 }
 
@@ -134,7 +136,10 @@ int ppl_listAppendCpy(list *in, const void *item, const int size) {
     ptrnew->next = NULL;
     ptrnew->data = alloc(size);
     if (ptrnew->data == NULL) {
-        if (in->useMalloc) free(ptrnew);
+        if (in->useMalloc) {
+            free(ptrnew);
+            ptrnew = NULL;
+        }
         return 1;
     }
     memcpy(ptrnew->data, item, size);
@@ -161,7 +166,10 @@ int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
     if (ptrnew == NULL) return 1;
     ptrnew->data = alloc(size);
     if (ptrnew->data == NULL) {
-        if (in->useMalloc) free(ptrnew);
+        if (in->useMalloc) {
+            free(ptrnew);
+            ptrnew = NULL;
+        }
         return 1;
     }
     memcpy(ptrnew->data, item, size);
@@ -188,7 +196,10 @@ static void ppl_listRemoveEngine(list *in, listItem *ptr) {
         ptr->next = ptrnext->next;
         if (in->last == ptrnext) in->last = ptr;
         else ptr->next->prev = ptr;
-        if (in->useMalloc) free(ptrnext);
+        if (in->useMalloc) {
+            free(ptrnext);
+            ptrnext = NULL;
+        }
     } else if (ptr->prev != NULL) // We are the last item in the list, but not the first item
     {
         ptrnext = ptr->prev;
@@ -196,12 +207,18 @@ static void ppl_listRemoveEngine(list *in, listItem *ptr) {
         ptr->prev = ptrnext->prev;
         if (in->first == ptrnext) in->first = ptr;
         else ptrnext->prev->next = ptr;
-        if (in->useMalloc) free(ptrnext);
+        if (in->useMalloc) {
+            free(ptrnext);
+            ptrnext = NULL;
+        }
     } else // We are the only item in the list
     {
         in->first = NULL;
         in->last = NULL;
-        if (in->useMalloc) free(ptr);
+        if (in->useMalloc) {
+            free(ptr);
+            ptr = NULL;
+        }
     }
     in->length--;
     return;

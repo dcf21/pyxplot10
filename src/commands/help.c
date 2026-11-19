@@ -310,9 +310,16 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
     }
 
 cleanup:
-    for (i = 0; i < MAX_HELP_DEPTH; i++) free(helpPosition[i]);
-    for (i = 0; i < MAX_HELP_HITS; i++) free(helpTexts[i]);
-    xmlFreeDoc(doc); // Tidy up
+    for (i = 0; i < MAX_HELP_DEPTH; i++) {
+        free(helpPosition[i]);
+        helpPosition[i] = NULL;
+    }
+    for (i = 0; i < MAX_HELP_HITS; i++) {
+        free(helpTexts[i]);
+        helpTexts[i] = NULL;
+    }
+    xmlFreeDoc(doc);
+    doc = NULL; // Tidy up
     xmlCleanupParser();
     return;
 }

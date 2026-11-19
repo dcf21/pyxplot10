@@ -673,6 +673,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
                           "Failure of the pselect() function whilst waiting for sed to return data.");
                 sigprocmask(SIG_UNBLOCK, &sigs, NULL);
                 free(re);
+                re = NULL;
                 return;
             }
             break;
@@ -681,6 +682,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "Got bored waiting for sed to return data.");
             sigprocmask(SIG_UNBLOCK, &sigs, NULL);
             free(re);
+            re = NULL;
             return;
         }
 
@@ -689,6 +691,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "Could not read from pipe to sed.");
             sigprocmask(SIG_UNBLOCK, &sigs, NULL);
             free(re);
+            re = NULL;
             return;
         }
         re[i] = '\0';
@@ -700,11 +703,16 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         if (outstr == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             free(re);
+            re = NULL;
             return;
         }
         strcpy(outstr, re);
         free(re);
-        if (obj->auxilMalloced) free(obj->auxil);
+        re = NULL;
+        if (obj->auxilMalloced) {
+            free(obj->auxil);
+            obj->auxil = NULL;
+        }
         obj->auxil = outstr;
         obj->auxilLen = i + 1;
         obj->auxilMalloced = 1;

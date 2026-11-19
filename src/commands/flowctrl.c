@@ -915,8 +915,12 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
 
 fail:
     if (f != NULL) {
-        if (f->argList != NULL) free(f->argList);
+        if (f->argList != NULL) {
+            free(f->argList);
+            f->argList = NULL;
+        }
         free(f);
+        f = NULL;
     }
     return;
 }
@@ -1021,7 +1025,10 @@ void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput
     ppl_parserExecute(c, pl2, NULL, interactive, iterDepth + 1);
 
     // Leave namespace
-    if ((--d->refCount) < 1) ppl_dictFree(d);
+    if ((--d->refCount) < 1) {
+        ppl_dictFree(d);
+        d = NULL;
+    }
     c->ns_ptr--;
 
     if (c->errStat.status) {

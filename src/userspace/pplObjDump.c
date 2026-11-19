@@ -53,6 +53,7 @@ static void pplObjDump_escaped(FILE *output, const char *str, const char *suffix
     ppl_strEscapify(str, buffer);
     fprintf(output, "%s%s", buffer, suffix);
     free(buffer);
+    buffer = NULL;
 }
 
 //! pplObjDump - Write an object to a file, in a format which Pyxplot can read back in to recreate the object

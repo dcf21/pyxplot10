@@ -150,6 +150,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         }
         LabelExpr = pplExpr_tmpcpy(exptmp);
         pplExpr_free(exptmp);
+        exptmp = NULL;
         if (LabelExpr == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (D)");
             *(x->status) = 1;
@@ -262,6 +263,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
         }
         formatExpr = pplExpr_tmpcpy(exptmp);
         pplExpr_free(exptmp);
+        exptmp = NULL;
         if (formatExpr == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (F)");
             *(x->status) = 1;
@@ -664,7 +666,9 @@ void eps_pie_RenderEPS(EPSComm *x) {
 
     END_LABEL_PRINTING:
         free(TextWidth);
+        TextWidth = NULL;
         free(TextHeight);
+        TextHeight = NULL;
 
         // Title of piechart
         x->LaTeXpageno = x->current->TitleTextID;
