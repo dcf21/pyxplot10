@@ -40,6 +40,9 @@
 #include "epsMaker/eps_settings.h"
 #include "epsMaker/eps_style.h"
 
+//! eps_point_YieldUpText - Collect the text label of a point canvas item, so that it can be typeset
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_point_YieldUpText(EPSComm *x) {
     CanvasTextItem *i;
 
@@ -60,6 +63,9 @@ void eps_point_YieldUpText(EPSComm *x) {
     }
     return;
 }
+
+//! eps_point_RenderEPS - Render a point canvas item to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_point_RenderEPS(EPSComm *x) {
     int pt, lt;

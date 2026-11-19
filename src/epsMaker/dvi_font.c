@@ -43,6 +43,11 @@ char builtinFontNames[N_BUILTIN_FONTS][L_BUILTIN_FPSNAME] = {"Times-Bold", "Time
 
 int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename);
 
+//! dviGetTFM - Locate and read the TeX font metric (TFM) file for a font
+//! \param [in] ec - The error-reporting context
+//! \param [in] font - The font, whose metrics are loaded into it
+//! \return Zero on success, or a DVIE_* error code
+
 int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
     char *TFMpath;
     char *s;
@@ -162,7 +167,13 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
 }
 
 
-// Locate and obtain pfa file
+//! dviGetPfa - Locate the type 1 font file for a font, in PFA or PFB format, and convert it to PFA format if necessary,
+//! for embedding in postscript output
+//! \param [in] ec - The error-reporting context
+//! \param [in] font - The font, whose postscript name is set
+//! \param [out] filename - Character buffer into which to write the path of the PFA file
+//! \return Zero on success, or a DVIE_* error code
+
 int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
     FILE *fpin, *fpout;
     char errStr[SSTR_LENGTH];
@@ -233,9 +244,11 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
     return 0;
 }
 
-// Extract the font name from a PFA file
-// XXX This is an entirely empirical algorithm and may not be general!
-// If the font name is longer than SSTR_LENGTH this will fail (safely)...
+//! psNameFromPFA - Extract the postscript name of a font from a PFA file, by finding its /FontName definition
+//! \param [in] ec - The error-reporting context
+//! \param [in] PFApath - The path of the PFA file
+//! \return The postscript font name, allocated in the current ppl_memAlloc context, or NULL if it could not be found
+
 char *psNameFromPFA(pplerr_context *ec, const char *PFApath) {
     FILE *fp;
     char *s;
@@ -270,7 +283,12 @@ char *psNameFromPFA(pplerr_context *ec, const char *PFApath) {
     return s;
 }
 
-// Convert pfb file to pfa file
+//! pfb2pfa - Convert a type 1 font from binary PFB format into ASCII PFA format
+//! \param [in] ec - The error-reporting context
+//! \param [in] in - The PFB file to read
+//! \param [in] out - The PFA file to write
+//! \return Zero on success, or a DVIE_* error code
+
 int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
     int i, j; // Loop variables
     int len; // Record length
@@ -308,7 +326,12 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
     return 0;
 }
 
-// TFM-related routines
+//! dviReadTFM - Read a TeX font metric (TFM) file
+//! \param [in] ec - The error-reporting context
+//! \param [in] fp - The file handle of the TFM file
+//! \param [out] err - Set to zero on success, or a DVIE_* error code
+//! \return The font metrics, allocated in the current ppl_memAlloc context, or NULL on failure
+
 dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     dviTFM *tfm;
     unsigned long int buff[12];
@@ -535,7 +558,12 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     return tfm;
 }
 
-// Read a TFM "fix_word", a signed four-byte int with the dp after 12 bits
+//! ReadFixWord - Read a TFM "fix_word", a signed four-byte fixed-point number with the binary point after 12 bits
+//! \param [in] ec - The error-reporting context
+//! \param [in] fp - The file handle of the TFM file
+//! \param [out] err - Set to a non-zero value if the read failed
+//! \return The value of the fix_word
+
 double ReadFixWord(pplerr_context *ec, FILE *fp, int *err) {
     double fw;
     long signed int li;
@@ -545,7 +573,12 @@ double ReadFixWord(pplerr_context *ec, FILE *fp, int *err) {
     return fw;
 }
 
-// Find the maximum (unscaled) height and depth of (standard) glyphs within a font
+//! dviFindMaxSize - Find the maximum height and depth of the capital letters A-Z in a font, used to give text items a
+//! consistent height
+//! \param [in] ec - The error-reporting context
+//! \param [in] font - The font
+//! \return Zero on success, or a DVIE_* error code
+
 int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     dviTFM *tfm; // Details of this font
     int hi, di; // Indices

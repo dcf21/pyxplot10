@@ -32,6 +32,9 @@
 #include "epsMaker/eps_box.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_box_RenderEPS - Render a box canvas item to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_box_RenderEPS(EPSComm *x) {
     int lt;
     unsigned char filled = 0, stroked = 0;

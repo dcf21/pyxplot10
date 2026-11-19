@@ -47,6 +47,15 @@
 #include "epsMaker/eps_plot_ticking_auto2.h"
 #include "epsMaker/eps_plot_ticking_auto3.h"
 
+//! eps_plot_ticking_auto3 - Place ticks automatically on an axis whose ticks are copied from another axis linked
+//! through a "using" expression, labelling each tick with the value the linkage expression gives it
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] axis - The axis
+//! \param [in] UnitMultiplier - The factor by which values on the axis are multiplied to express them in the units
+//! shown on the axis
+//! \param [in] AutoTicks - Array of two flags indicating whether major and minor ticks are to be placed automatically
+//! \param [in] linkedto - The axis this axis is linked to
+
 void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
                             const pplset_axis *linkedto) {
     int i, Nticks_maj, Nticks_min, OutContext;

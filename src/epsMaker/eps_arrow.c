@@ -36,6 +36,9 @@
 #include "epsMaker/eps_plot_threedimbuff.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_arrow_RenderEPS - Render an arrow or line canvas item to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_arrow_RenderEPS(EPSComm *x) {
     double x1, x2, y1, y2;
     withWords ww;
@@ -64,7 +67,18 @@ void eps_arrow_RenderEPS(EPSComm *x) {
     return;
 }
 
-// Primitive routine for drawing arrow, suitable for use elsewhere in the EPS library
+//! eps_primitive_arrow - Draw an arrow in postscript, with the given arrow head style. Used by arrow canvas items, and
+//! by arrows on graphs.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] ArrowType - The arrow head style, one of the SW_ARROWTYPE_* constants
+//! \param [in] x1 - The x coordinate of the start of the arrow, in postscript points
+//! \param [in] y1 - The y coordinate of the start of the arrow, in postscript points
+//! \param [in] z1 - The depth of the start of the arrow, for arrows within 3D plots, or NULL
+//! \param [in] x2 - The x coordinate of the end of the arrow, in postscript points
+//! \param [in] y2 - The y coordinate of the end of the arrow, in postscript points
+//! \param [in] z2 - The depth of the end of the arrow, for arrows within 3D plots, or NULL
+//! \param [in] with_data - The style of the arrow (color, line width, line type)
+
 void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, const double *z1, double x2, double y2,
                          const double *z2, withWords *with_data) {
     int lt;

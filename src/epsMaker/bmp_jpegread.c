@@ -42,6 +42,12 @@
 
 #define HEADLEN 8 * 1024
 
+//! ppl_bmp_jpegread - Read a JPEG image file. The compressed data is kept as it is, to be embedded directly in
+//! postscript with a DCT filter; only the header is decoded, to determine the image's dimensions and color space.
+//! \param [in] ec - The error-reporting context
+//! \param [in] jpeg - The file handle of the JPEG image
+//! \param [in] image - The image structure into which the image is read
+
 void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     int comps = 0, i, j;
 

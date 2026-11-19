@@ -75,6 +75,12 @@ typedef struct ContourDesc {
     double vreal;
 } ContourDesc;
 
+//! ContourCmp - Comparison function for qsort(), used to sort contours into decreasing order of the area they enclose,
+//! so that larger filled contours are drawn first
+//! \param [in] xv - Pointer to the first contour descriptor
+//! \param [in] yv - Pointer to the second contour descriptor
+//! \return -1, 0 or 1 depending on the order of the contours
+
 static int ContourCmp(const void *xv, const void *yv) {
     const ContourDesc *x = (const ContourDesc *) xv;
     const ContourDesc *y = (const ContourDesc *) yv;
@@ -84,7 +90,13 @@ static int ContourCmp(const void *xv, const void *yv) {
     else return 0.0;
 }
 
-// Yield up text items which label contours on a contourmap
+//! eps_plot_contourmap_YieldText - Collect the text items which label the contours of a contourmap, so that they can be
+//! typeset
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] data - The data being plotted as a contourmap
+//! \param [in] sg - The graph settings
+//! \param [in] pd - The descriptor of the plot item
+
 void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const pplset_graph *sg, canvas_plotdesc *pd) {
     dataBlock *blk;
     const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
@@ -220,6 +232,13 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
 // -----+-----+-----+-----+
 
 
+//! IsBetween - Test whether a value lies between two others, and if so, at what fraction of the way between them
+//! \param [in] x - The value to test
+//! \param [in] a - The first limit
+//! \param [in] b - The second limit
+//! \param [out] f - Set to the fraction of the way from <a> to <b> at which <x> lies
+//! \return One if <x> lies between <a> and <b>, zero otherwise
+
 static int IsBetween(const double x, const double a, const double b, double *f) {
     *f = 0.5;
     if (a == b) { return x == a; }
@@ -234,7 +253,23 @@ static int IsBetween(const double x, const double a, const double b, double *f) 
     return 0;
 }
 
-// See whether cell X contains any unused starting points for contours
+//! GetStartPoint - Search a grid cell for a point at which a contour at a given level crosses one of its faces, and
+//! which has not already been used as the starting point of a contour
+//! \param [in] c1 - The contour level
+//! \param [in] data - The gridded data
+//! \param [in] flags - Array of flags marking which cell faces have already been crossed by contours
+//! \param [in] XSize - The number of grid points in the x direction
+//! \param [in] YSize - The number of grid points in the y direction
+//! \param [in] x0 - The x index of the cell
+//! \param [in] y0 - The y index of the cell
+//! \param [in] EntryFace - The face through which a contour entered the cell, or -1 to search all faces
+//! \param [out] ExitFace - Set to the face at which the contour was found
+//! \param [out] xcell - Set to the x index of the cell into which the contour crosses
+//! \param [out] ycell - Set to the y index of the cell into which the contour crosses
+//! \param [out] Xout - Set to the x coordinate of the crossing point, in grid units
+//! \param [out] Yout - Set to the y coordinate of the crossing point, in grid units
+//! \return One if a starting point was found, zero otherwise
+
 static int GetStartPoint(const double c1, const dataTable *data, unsigned char **flags, int XSize, const int YSize,
                          int x0, int y0, const int EntryFace, int *ExitFace, int *xcell, int *ycell, double *Xout,
                          double *Yout) {
@@ -292,7 +327,22 @@ static int GetStartPoint(const double c1, const dataTable *data, unsigned char *
     return 0;
 }
 
-// Given a contour already tracking through cell X from a given face, where to go next?
+//! GetNextPoint - Given a contour which has entered a grid cell through one face, find the face through which it leaves
+//! \param [in] c1 - The contour level
+//! \param [in] data - The gridded data
+//! \param [in] pass - The number of the attempt; on the second pass, ambiguous saddle points are resolved the other way
+//! \param [in] XSize - The number of grid points in the x direction
+//! \param [in] YSize - The number of grid points in the y direction
+//! \param [in] x0 - The x index of the cell
+//! \param [in] y0 - The y index of the cell
+//! \param [in] EntryFace - The face through which the contour entered the cell
+//! \param [out] ExitFace - Set to the face through which the contour leaves
+//! \param [out] xcell - Set to the x index of the cell into which the contour crosses
+//! \param [out] ycell - Set to the y index of the cell into which the contour crosses
+//! \param [out] Xout - Set to the x coordinate of the exit point, in grid units
+//! \param [out] Yout - Set to the y coordinate of the exit point, in grid units
+//! \return One if an exit point was found, zero otherwise
+
 static int GetNextPoint(const double c1, const dataTable *data, const int pass, const int XSize, const int YSize,
                         const int x0, const int y0, const int EntryFace, int *ExitFace, int *xcell, int *ycell,
                         double *Xout, double *Yout) {
@@ -357,6 +407,25 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
     return 0;
 }
 
+//! FollowContour - Trace a contour across the grid from its starting point, until it closes or leaves the edge of the
+//! grid, recording the path in a contour descriptor
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] data - The gridded data
+//! \param [out] cd - The contour descriptor in which to record the path
+//! \param [in] v - The contour level
+//! \param [in|out] flags - Array of flags marking which cell faces have already been crossed by contours
+//! \param [in] XSize - The number of grid points in the x direction
+//! \param [in] YSize - The number of grid points in the y direction
+//! \param [in] xcell - The x index of the starting cell
+//! \param [in] ycell - The y index of the starting cell
+//! \param [in] face - The face of the starting cell through which the contour enters
+//! \param [in] xpos - The x coordinate of the starting point, in grid units
+//! \param [in] ypos - The y coordinate of the starting point, in grid units
+//! \param [in] Lx - The width of the graph, used to compute the area enclosed by the contour
+//! \param [in] ThetaX - The direction of the x axis on the page
+//! \param [in] Ly - The height of the graph, used to compute the area enclosed by the contour
+//! \param [in] ThetaY - The direction of the y axis on the page
+
 static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, const pplObj *v, unsigned char *flags,
                           const int XSize, const int YSize, int xcell, int ycell, int face, double xpos, double ypos,
                           const double Lx, const double ThetaX, const double Ly, const double ThetaY) {
@@ -418,7 +487,24 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
     return;
 }
 
-// Render a contourmap to postscript
+//! eps_plot_contourmap - Render a dataset as a contourmap, by resampling it onto a regular grid and tracing contours at
+//! the requested levels
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] data - The data to plot
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] xn - The axis direction (0=x, 1=y, 2=z) onto which the first data column is plotted
+//! \param [in] yn - The axis direction (0=x, 1=y, 2=z) onto which the second data column is plotted
+//! \param [in] zn - The axis direction (0=x, 1=y, 2=z) onto which the third data column is plotted
+//! \param [in] sg - The graph settings
+//! \param [in] pd - The descriptor of the plot item being drawn
+//! \param [in] pdn - The number of the plot item being drawn within the graph
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \return Zero on success, or one on failure
+
 int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDim, const int xn, const int yn,
                         const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                         const double origin_y, const double width, const double height, const double zdepth) {

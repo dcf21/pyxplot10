@@ -38,6 +38,14 @@
 
 #define LINELEN 56
 
+//! ppl_bmp_A85 - Write binary data to a file using ASCII85 encoding, as used in postscript, encoding LINELEN bytes of
+//! input on each line of output
+//! \param [in] ec - The error-reporting context
+//! \param [in] fout - The file handle to write to
+//! \param [in] in - The binary data to encode
+//! \param [in] len - The number of bytes of data to encode
+//! \return The number of characters written
+
 unsigned int ppl_bmp_A85(const pplerr_context *ec, FILE *fout, const unsigned char *in, int len) {
     int i, j;
     unsigned int tmp, t, line, length = 0;

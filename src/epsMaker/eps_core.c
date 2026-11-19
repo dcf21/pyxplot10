@@ -37,7 +37,10 @@
 #include "epsMaker/eps_style.h"
 #include "userspace/context.h"
 
-// Clear EPS state information to ensure that we restate the linewidth, color, etc we are using for the next item
+//! eps_core_clear - Clear the record of the current postscript color, line width and line type, so that they are
+//! restated when the next item is drawn
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_core_clear(EPSComm *x) {
     x->LastLinewidth = -1;
     strcpy(x->LastPSColor, "");
@@ -47,7 +50,10 @@ void eps_core_clear(EPSComm *x) {
     return;
 }
 
-// Write CurrentColor to postscript
+//! eps_core_WritePSColor - Write a postscript command to set the current color, if it differs from the color last
+//! written
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_core_WritePSColor(EPSComm *x) {
     if ((strcmp(x->CurrentColor, x->LastPSColor) != 0) && (x->CurrentColor[0] != '\0')) {
         strcpy(x->LastPSColor, x->CurrentColor);
@@ -56,7 +62,11 @@ void eps_core_WritePSColor(EPSComm *x) {
     return;
 }
 
-// Set the color of the EPS we are painting
+//! eps_core_SetColor - Set the color with which subsequent items are drawn, from a set of plot style modifiers
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] ww - The plot style modifiers specifying the color
+//! \param [in] WritePS - If true, also write the postscript command to set the color
+
 void eps_core_SetColor(EPSComm *x, withWords *ww, const unsigned char WritePS) {
     // Color may be specified as a named color, or as RGB components, or may not be specified at all, in which case we use black
     if (ww->USEcolor1234) {
@@ -93,6 +103,10 @@ void eps_core_SetColor(EPSComm *x, withWords *ww, const unsigned char WritePS) {
     return;
 }
 
+//! eps_core_SetFillColor - Set the fill color with which subsequent items are drawn, from a set of plot style modifiers
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] ww - The plot style modifiers specifying the fill color
+
 void eps_core_SetFillColor(EPSComm *x, withWords *ww) {
     // Color may be specified as a named color, or as RGB components, or may not be specified at all, in which case we use black
     if (ww->USEfillcolor1234) {
@@ -125,6 +139,10 @@ void eps_core_SetFillColor(EPSComm *x, withWords *ww) {
 
 static char TempColor[256];
 
+//! eps_core_SwitchTo_FillColor - Switch to drawing in the current fill color, rather than the line color
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] WritePS - If true, also write the postscript command to set the color
+
 void eps_core_SwitchTo_FillColor(EPSComm *x, const unsigned char WritePS) {
     strcpy(TempColor,
            x->CurrentColor); // Buffer the color we're stroking with so we can restore it in eps_core_SwitchFrom_FillColor
@@ -136,6 +154,11 @@ void eps_core_SwitchTo_FillColor(EPSComm *x, const unsigned char WritePS) {
     return;
 }
 
+//! eps_core_SwitchFrom_FillColor - Switch back to drawing in the current line color, after
+//! eps_core_SwitchTo_FillColor()
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] WritePS - If true, also write the postscript command to set the color
+
 void eps_core_SwitchFrom_FillColor(EPSComm *x, const unsigned char WritePS) {
     if ((strcmp(TempColor, x->LastPSColor) != 0) && WritePS && (TempColor[0] != '\0')) {
         strcpy(x->LastPSColor, TempColor);
@@ -145,7 +168,13 @@ void eps_core_SwitchFrom_FillColor(EPSComm *x, const unsigned char WritePS) {
     return;
 }
 
-// Set the linewidth of the EPS we are painting
+//! eps_core_SetLinewidth - Set the line width and line type (dash pattern) with which subsequent lines are drawn,
+//! writing postscript if they have changed
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] lw - The line width, as a multiple of the default line width
+//! \param [in] lt - The line type
+//! \param [in] offset - The offset into the dash pattern at which to start
+
 void eps_core_SetLinewidth(EPSComm *x, double lw, int lt, double offset) {
     if ((lw == x->LastLinewidth) && (lt == x->LastLinetype) && (offset == 0.0)) return;
     if (lw != x->LastLinewidth) fprintf(x->epsbuffer, "%f setlinewidth\n", lw);
@@ -155,7 +184,12 @@ void eps_core_SetLinewidth(EPSComm *x, double lw, int lt, double offset) {
     return;
 }
 
-// Update the EPS bounding box
+//! eps_core_BoundingBox - Expand the bounding box of the postscript output to include a point
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] xpos - The x coordinate of the point, in postscript points
+//! \param [in] ypos - The y coordinate of the point, in postscript points
+//! \param [in] lw - The width of the line drawn through the point, by which the bounding box is expanded
+
 void eps_core_BoundingBox(EPSComm *x, const double xpos, const double ypos, const double lw) {
     if ((!x->bb_set) || (x->bb_left > (xpos - lw / 2))) x->bb_left = (xpos - lw / 2);
     if ((!x->bb_set) || (x->bb_right < (xpos + lw / 2))) x->bb_right = (xpos + lw / 2);
@@ -165,7 +199,14 @@ void eps_core_BoundingBox(EPSComm *x, const double xpos, const double ypos, cons
     return;
 }
 
-// Update plot item bounding box
+//! eps_core_PlotBoundingBox - Expand the bounding box of the current graph to include a point, and optionally also the
+//! bounding box of the postscript output
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] xpos - The x coordinate of the point, in postscript points
+//! \param [in] ypos - The y coordinate of the point, in postscript points
+//! \param [in] lw - The width of the line drawn through the point, by which the bounding box is expanded
+//! \param [in] UpdatePsBB - If true, also expand the bounding box of the postscript output
+
 void eps_core_PlotBoundingBox(EPSComm *x, const double xpos, const double ypos, const double lw,
                               const unsigned char UpdatePsBB) {
     if (x->current->PlotLeftMargin > (xpos - lw / 2)) x->current->PlotLeftMargin = (xpos - lw / 2);

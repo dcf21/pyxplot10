@@ -40,6 +40,12 @@ const char *dviops[58] = {"set1",    "set2",    "set3",    "set4",    "setrule",
                           "fnt1",    "fnt2",    "fnt3",    "fnt4",    "special1", "special2", "special3", "special4",
                           "fntdef1", "fntdef2", "fntdef3", "fntdef4", "pre",      "post",     "postpost"};
 
+//! ReadDviFile - Read a DVI file produced by LaTeX, and interpret it to produce postscript for each page
+//! \param [in] ec - The error-reporting context
+//! \param [in] filename - The path of the DVI file
+//! \param [out] status - Set to zero on success, or a DVIE_* error code
+//! \return The DVI interpreter, containing the postscript for each page, or NULL on failure
+
 dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *status) {
     FILE *fp;
     DVIOperator op;
@@ -103,9 +109,13 @@ dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *
     return interpreter;
 }
 
-// Read in a DVI Operator and any additional data that it comes with
-// A useful reference for the meaning and size of the additional data is
-// http://www-users.math.umd.edu/~asnowden/comp-cont/dvi.html
+//! GetDVIOperator - Read a DVI operator from a file, together with any additional data which it takes. A reference for
+//! the meaning and size of the data is http://www-users.math.umd.edu/~asnowden/comp-cont/dvi.h
+//! \param [in] ec - The error-reporting context
+//! \param [out] op - The operator
+//! \param [in] fp - The file handle of the DVI file
+//! \return Zero on success, or a DVIE_* error code
+
 int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
     int i, v, err;
 
@@ -274,7 +284,12 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
     return 1;
 }
 
-// Read an unsigned char from a dvi file
+//! ReadUChar - Read an unsigned char from a DVI file
+//! \param [in] ec - The error-reporting context
+//! \param [in] fp - The file handle of the DVI file
+//! \param [out] uc - Set to the value read
+//! \return Zero on success, or a DVIE_* error code
+
 int ReadUChar(pplerr_context *ec, FILE *fp, int *uc) {
     int i;
     i = getc(fp);
@@ -286,7 +301,13 @@ int ReadUChar(pplerr_context *ec, FILE *fp, int *uc) {
     return 0;
 }
 
-// Read a long int from a dvi file (using the DVI long int format)
+//! ReadLongInt - Read an unsigned big-endian integer of 1-4 bytes from a DVI file
+//! \param [in] ec - The error-reporting context
+//! \param [in] fp - The file handle of the DVI file
+//! \param [out] uli - Set to the value read
+//! \param [in] n - The number of bytes to read
+//! \return Zero on success, or a DVIE_* error code
+
 int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, const int n) {
     int err, v, i;
     unsigned long int fv;
@@ -300,7 +321,13 @@ int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, const int 
     return 0;
 }
 
-// Read a signed int from a dvi file
+//! ReadSignedInt - Read a signed big-endian integer of 1-4 bytes from a DVI file
+//! \param [in] ec - The error-reporting context
+//! \param [in] fp - The file handle of the DVI file
+//! \param [out] sli - Set to the value read
+//! \param [in] n - The number of bytes to read
+//! \return Zero on success, or a DVIE_* error code
+
 int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int n) {
     int err, v, i;
     signed long int fv;
@@ -314,7 +341,11 @@ int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int 
     return 0;
 }
 
-// Provide a log message about a dvi operator for debugging purposes
+//! DisplayDVIOperator - Write a log message describing a DVI operator, for debugging
+//! \param [in] ec - The error-reporting context
+//! \param [in] op - The operator
+//! \return Zero
+
 int DisplayDVIOperator(pplerr_context *ec, DVIOperator *op) {
     char *s, s2[128];
     s = NULL;

@@ -62,6 +62,11 @@
 // complete information about the usage of the set of linked axes, since usage
 // does not propagate UP the hierarchy.
 
+//! eps_plot_LinkedAxisBackPropagate - Propagate the range of data plotted against an axis back to the axis it is linked
+//! to, so that the linked axis's range takes it into account
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] source - The axis whose usage is to be propagated
+
 void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
     int IterDepth;
     pplset_axis *target;
@@ -134,6 +139,10 @@ void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
 // bottom of the linkage hierarchy. The function
 // eps_plot_LinkedAxisForwardPropagate deals with this.
 
+//! eps_plot_DecideAxisRanges - Decide the final ranges of all of the axes of a graph, taking account of the data
+//! plotted against them, the ranges set by the user, and any axes they are linked to
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_plot_DecideAxisRanges(EPSComm *x) {
     int i, j;
     pplset_axis *axes = NULL;
@@ -163,6 +172,12 @@ void eps_plot_DecideAxisRanges(EPSComm *x) {
 // bottom of the linkage hierarchy. Propagate this information up through all
 // intermediate levels of the hierarchy before calling
 // eps_plot_DecideAxisRange().
+
+//! eps_plot_LinkedAxisForwardPropagate - Copy the final range and ticks of the axis which an axis is linked to,
+//! following chains of linked axes
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] axis - The axis whose range is to be set
+//! \param [in] mode - Zero to report warnings about broken links; one to fail silently
 
 void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode) {
     int IterDepth, OriginalMode = mode;
@@ -303,6 +318,13 @@ void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode
     return;
 }
 
+//! eps_plot_LinkedAxisLinkUsing - Set the range of an axis which is linked to another axis through a "using"
+//! expression, by sampling the expression over the range of the other axis
+//! \param [in] X - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] out - The axis whose range is to be set
+//! \param [in] in - The axis it is linked to
+//! \return Zero on success, or one on failure
+
 int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) {
     const int stkLevelOld = X->c->stackPtr;
     int l, xrn = 0, lOP;
@@ -441,6 +463,12 @@ typedef struct LAUComm {
 
 #define WORSTSCORE_INIT -(DBL_MAX / 1e10)
 
+//! eps_plot_LAUSlave - Cost function passed to the GSL minimiser by eps_plot_LAUFitter(), which evaluates the linkage
+//! expression at a trial point and returns its distance from the target value
+//! \param [in] x - The trial value
+//! \param [in] params - Pointer to the LAUComm structure describing the problem
+//! \return The absolute difference between the linkage expression and the target value
+
 double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
     int i, lOP;
     double output;
@@ -498,6 +526,10 @@ end:
     }
     return output;
 }
+
+//! eps_plot_LAUFitter - Find the value on an axis which the linkage expression maps onto a target value on a linked
+//! axis, by numerical minimisation
+//! \param [in] commlink - The LAUComm structure describing the problem; the result is stored in it
 
 void eps_plot_LAUFitter(LAUComm *commlink) {
     size_t iter = 0, iter2 = 0;
@@ -574,6 +606,13 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
     gsl_vector_free(ss);
     return;
 }
+
+//! eps_plot_LinkUsingBackPropagate - Propagate a value plotted against an axis which is linked through a "using"
+//! expression back to the axis it is linked to, by inverting the linkage expression
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] val - The value plotted
+//! \param [in] target - The axis which <source> is linked to
+//! \param [in] source - The linked axis
 
 void eps_plot_LinkUsingBackPropagate(EPSComm *x, const double val, pplset_axis *target, pplset_axis *source) {
     LAUComm commlink;

@@ -35,6 +35,9 @@
 #include "epsMaker/eps_text.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_text_YieldUpText - Collect the text of a text canvas item, so that it can be typeset
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_text_YieldUpText(EPSComm *x) {
     CanvasTextItem *i;
 
@@ -53,6 +56,9 @@ void eps_text_YieldUpText(EPSComm *x) {
     x->NTextItems++;
     return;
 }
+
+//! eps_text_RenderEPS - Render a text canvas item to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_text_RenderEPS(EPSComm *x) {
     withWords def, merged;

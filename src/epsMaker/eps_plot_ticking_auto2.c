@@ -57,7 +57,14 @@ typedef struct TickScheme {
     double offset;
 } TickScheme;
 
-// Print a ticking scheme for debugging purposes
+//! TickScheme2_sprintf - Write a list of tick positions, for debugging
+//! \param [out] out - Character buffer into which to write the list
+//! \param [in] OutLen - The size of the buffer <out>
+//! \param [in] UnitMultiplier - The factor by which values on the axis are multiplied to express them in the units
+//! shown on the axis
+//! \param [in] TL - The list of tick positions
+//! \param [in] TL_len - The number of tick positions in <TL>
+
 static void TickScheme2_sprintf(char *out, const int OutLen, const double UnitMultiplier, const double *TL,
                                 const double TL_len) {
     int i = 0, j = 0, k = 0;
@@ -74,6 +81,12 @@ static void TickScheme2_sprintf(char *out, const int OutLen, const double UnitMu
     out[j++] = '\0';
     return;
 }
+
+//! GenerateLogTickSchemes - Generate the possible schemes for placing ticks on a logarithmic axis, e.g. every decade,
+//! or at 1, 2 and 5 times each power of ten
+//! \param [out] TickSchemes - Array into which to write the tick schemes
+//! \param [in|out] NTickSchemes - The number of tick schemes, which is increased by the number generated
+//! \param [in] LogBase - The base of the logarithmic axis
 
 static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, const int LogBase) {
     unsigned char stopping;
@@ -103,6 +116,16 @@ static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, c
     return;
 }
 
+//! GenerateTickSchemes - Generate the possible schemes for placing ticks on an axis, dividing each order of magnitude
+//! by each of the factors of ten
+//! \param [out] TickSchemes - Array into which to write the tick schemes
+//! \param [out] NTickSchemes - Set to the number of tick schemes generated
+//! \param [in] OoM - The order of magnitude of the range of the axis
+//! \param [in] IsLog - Flag indicating whether the axis is logarithmic
+//! \param [in] LogBase - The base of the logarithmic axis
+//! \param [in] FactorsTen - Array of the factors of ten
+//! \param [in] NFactors - The number of entries in <FactorsTen>
+
 static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, const double OoM, const unsigned char IsLog,
                                 const int LogBase, const int *FactorsTen, const int NFactors) {
     int i, LevelDescend = 1;
@@ -127,7 +150,13 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, cons
     return;
 }
 
-// Return up to a maximum of MaxFactors factors of in. Factors are returned to array out.
+//! factorise - Find the factors of an integer
+//! \param [in] in - The integer to factorise
+//! \param [out] out - Array into which to write the factors
+//! \param [in] MaxFactors - The maximum number of factors to return
+//! \param [in] FactorMax - The maximum size of factor to return
+//! \param [out] NFactors - Set to the number of factors found
+
 static void factorise(const int in, int *out, const int MaxFactors, const int FactorMax, int *NFactors) {
     int i, j = 0, k, N = sqrt(in);
     for (i = 2; i <= N; i++)
@@ -148,7 +177,15 @@ static void factorise(const int in, int *out, const int MaxFactors, const int Fa
     return;
 }
 
-// Main entry point for automatic ticking of axes
+//! eps_plot_ticking_auto2 - Place ticks automatically on an axis without a format expression, trying each possible tick
+//! scheme and choosing the one which gives the closest to the ideal number of ticks
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] axis - The axis
+//! \param [in] UnitMultiplier - The factor by which values on the axis are multiplied to express them in the units
+//! shown on the axis
+//! \param [in] AutoTicks - Array of two flags indicating whether major and minor ticks are to be placed automatically
+//! \param [in] linkedto - The axis this axis is linked to, or NULL
+
 void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
                             const pplset_axis *linkedto) {
     int i, j, k, N, OutContext, ContextRough = -1, NFactorsTen, LogBase, number_ticks, major, OverlayMatch;

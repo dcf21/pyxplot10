@@ -103,7 +103,12 @@ typedef struct PotentialTick {
     int OrderPosition; // Position of this tick in TickOrder
 } PotentialTick;
 
-// Compare two ArgumentInfo structures; used by qsort
+//! compare_arg - Comparison function for qsort(), used to sort the arguments of an axis's format expression into order
+//! of how quickly they vary along the axis
+//! \param [in] x - Pointer to the first ArgumentInfo structure
+//! \param [in] y - Pointer to the second ArgumentInfo structure
+//! \return -1, 0 or 1 depending on the order of the arguments
+
 int compare_arg(const void *x, const void *y) {
     const ArgumentInfo *xai, *yai;
     xai = (const ArgumentInfo *) x;
@@ -122,7 +127,12 @@ int compare_arg(const void *x, const void *y) {
     return 0;
 }
 
-// Compare two ArgLeagueTableEntry structures; used by qsort
+//! compare_ArgLeagueEntry - Comparison function for qsort(), used to sort the entries of the league table of arguments
+//! into order of priority
+//! \param [in] x - Pointer to the first ArgLeagueTableEntry structure
+//! \param [in] y - Pointer to the second ArgLeagueTableEntry structure
+//! \return -1, 0 or 1 depending on the order of the entries
+
 int compare_ArgLeagueEntry(const void *x, const void *y) {
     const ArgLeagueTableEntry *xalte, *yalte;
     xalte = (const ArgLeagueTableEntry *) x;
@@ -132,7 +142,11 @@ int compare_ArgLeagueEntry(const void *x, const void *y) {
     return 0;
 }
 
-// Compare two PotentialTick structures; used by qsort
+//! compare_PotentialTicks - Comparison function for qsort(), used to sort potential ticks into order of priority
+//! \param [in] x - Pointer to the first PotentialTick structure
+//! \param [in] y - Pointer to the second PotentialTick structure
+//! \return -1, 0 or 1 depending on the order of the ticks
+
 int compare_PotentialTicks(const void *x, const void *y) {
     const PotentialTick *xpt, *ypt;
     xpt = (const PotentialTick *) x;
@@ -148,7 +162,13 @@ int compare_PotentialTicks(const void *x, const void *y) {
     return 0;
 }
 
-// Return up to a maximum of MaxFactors factors of in. Factors are returned to array out.
+//! factorise - Find the factors of an integer
+//! \param [in] in - The integer to factorise
+//! \param [out] out - Array into which to write the factors
+//! \param [in] MaxFactors - The maximum number of factors to return
+//! \param [in] FactorMax - The maximum size of factor to return
+//! \param [out] NFactors - Set to the number of factors found
+
 static void factorise(const int in, int *out, const int MaxFactors, const int FactorMax, int *NFactors) {
     int i, j = 0, k, N = sqrt(in);
     for (i = 2; i <= N; i++)
@@ -169,7 +189,13 @@ static void factorise(const int in, int *out, const int MaxFactors, const int Fa
     return;
 }
 
-// Count ticks
+//! CountTicks - Count the number of major and minor ticks in a tick scheme
+//! \param [in] TicksAcceptedIn - Array of flags, one per potential tick: zero if the tick is not used, 1 for a major
+//! tick, or 2 for a minor tick
+//! \param [in] NPotTicks - The number of potential ticks
+//! \param [out] NTicksOutMajor - Set to the number of major ticks
+//! \param [out] NTicksOutMinor - Set to the number of minor ticks
+
 static void CountTicks(const unsigned char *TicksAcceptedIn, const int NPotTicks, int *NTicksOutMajor,
                        int *NTicksOutMinor) {
     int i, NMajor = 0, NMinor = 0;
@@ -182,7 +208,14 @@ static void CountTicks(const unsigned char *TicksAcceptedIn, const int NPotTicks
     return;
 }
 
-// Print a ticking scheme for debugging purposes
+//! TickScheme_sprintf - Write a description of a tick scheme, for debugging
+//! \param [out] out - Character buffer into which to write the description
+//! \param [in] PotTickList - The list of potential ticks
+//! \param [in] NPotTicks - The number of potential ticks
+//! \param [in] TickOrder - The potential ticks, sorted into order of priority
+//! \param [in] TicksAccepted - Array of flags indicating which ticks are used, and whether they are major or minor
+//! \param [in] DisplayType - Unused
+
 static void TickScheme_sprintf(char *out, const PotentialTick *PotTickList, const int NPotTicks,
                                const ArgLeagueTableEntry *TickOrder, const unsigned char *TicksAccepted,
                                const unsigned char DisplayType) {
@@ -201,7 +234,25 @@ static void TickScheme_sprintf(char *out, const PotentialTick *PotTickList, cons
     return;
 }
 
-// Add a tick scheme to a list of accepted ticks
+//! AddTickScheme - Add a set of ticks, dividing an argument of the axis's format expression in a particular way, to a
+//! tick scheme, and check whether the result is acceptable
+//! \param [in] PotTickList - The list of potential ticks
+//! \param [in] NPotTicks - The number of potential ticks
+//! \param [in] TickOrder - The potential ticks, sorted into order of priority
+//! \param [in] NIntervals - The number of intervals into which the axis is divided
+//! \param [in] ArgNo - The number of the argument of the format expression being divided
+//! \param [in] DivOfThrow - The factor by which the range of the argument is divided
+//! \param [in] OoM - The order of magnitude of the step between ticks
+//! \param [in] DivOfOoM - The factor by which the order of magnitude is divided
+//! \param [in] TicksAcceptedIn - The tick scheme to add to
+//! \param [out] TicksAcceptedOut - The new tick scheme
+//! \param [in] MAJORminor - 1 to add major ticks, or 2 to add minor ticks
+//! \param [in] AxisLength - The length of the axis, in postscript points, used to check that ticks are not too closely
+//! spaced
+//! \param [out] FLAGacceptable - Set to one if the new tick scheme is acceptable
+//! \param [out] NTicksOutMajor - Set to the number of major ticks in the new scheme
+//! \param [out] NTicksOutMinor - Set to the number of minor ticks in the new scheme
+
 static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks, const ArgLeagueTableEntry *TickOrder,
                           const int NIntervals, const int ArgNo, const int DivOfThrow, const int OoM,
                           const int DivOfOoM, const unsigned char *TicksAcceptedIn, unsigned char *TicksAcceptedOut,
@@ -280,7 +331,25 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
     return;
 }
 
-// Take a list of accepted ticks and convert these into a final TickList to associate with axis
+//! AutoTickListFinalise - Convert a tick scheme into the final list of tick positions and labels for an axis
+//! \param [in] X - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] axis - The axis
+//! \param [in] UnitMultiplier - The factor by which values on the axis are multiplied to express them in the units
+//! shown on the axis
+//! \param [in] AutoTicks - Array of two flags indicating whether major and minor ticks are placed automatically
+//! \param [in] VarVal - The dummy variable of the axis's format expression
+//! \param [in] NIntervals - The number of intervals into which the axis is divided
+//! \param [in] format - The axis's format expression, as text
+//! \param [in] start - The position within <format> of the start of its arguments
+//! \param [in] formatExp - The compiled arguments of the format expression
+//! \param [in] args - Information about each argument of the format expression
+//! \param [in] PotTickList - The list of potential ticks
+//! \param [in] NPotTicks - The number of potential ticks
+//! \param [in] TickOrder - The potential ticks, sorted into order of priority
+//! \param [in] TicksAccepted - Array of flags indicating which ticks are used, and whether they are major or minor
+//! \param [in] OutContext - The ppl_memAlloc context in which to allocate the tick lists
+//! \return Zero on success, or one on failure
+
 static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double UnitMultiplier,
                                 const unsigned char *AutoTicks, pplObj *VarVal, const int NIntervals,
                                 const char *format, const int start, pplExpr **formatExp, const ArgumentInfo *args,
@@ -415,7 +484,16 @@ FAIL:
     return 1;
 }
 
-// Main entry point for automatic ticking of axes
+//! eps_plot_ticking_auto - Place ticks automatically on an axis with a format expression, choosing ticks at which the
+//! arguments of the format expression take round values
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] axis - The axis
+//! \param [in] UnitMultiplier - The factor by which values on the axis are multiplied to express them in the units
+//! shown on the axis
+//! \param [in|out] AutoTicks - Array of two flags indicating whether major and minor ticks are to be placed
+//! automatically
+//! \param [in] linkedto - The axis this axis is linked to, or NULL
+
 void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, unsigned char *AutoTicks,
                            pplset_axis *linkedto) {
     ppl_context *c = x->c;

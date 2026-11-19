@@ -45,6 +45,13 @@
 #include "epsMaker/eps_plot_threedimbuff.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_plot_LabelAlignment - Choose the alignment of a text label relative to its anchor point, given the direction in
+//! which the anchor point lies from the label
+//! \param [in] theta_pinpoint - The direction from the label to its anchor point, in radians, measured clockwise from
+//! upwards
+//! \param [out] HALIGN - Set to the horizontal alignment, one of the SW_HALIGN_* constants
+//! \param [out] VALIGN - Set to the vertical alignment, one of the SW_VALIGN_* constants
+
 void eps_plot_LabelAlignment(double theta_pinpoint, int *HALIGN, int *VALIGN) {
     theta_pinpoint = fmod(theta_pinpoint, 2 * M_PI);
     while (theta_pinpoint < 0.0) theta_pinpoint += 2 * M_PI;
@@ -75,6 +82,28 @@ void eps_plot_LabelAlignment(double theta_pinpoint, int *HALIGN, int *VALIGN) {
     }
     return;
 }
+
+//! eps_plot_axispaint - Draw a single axis, with its ticks, tick labels and axis label
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] ww - The style with which to draw the axis line
+//! \param [in] a - The axis to draw
+//! \param [in] xyz - The direction of the axis: 0 for x, 1 for y, 2 for z
+//! \param [in] CP2 - Unused
+//! \param [in] Lr - If true, tick labels are placed on the right-hand side of the axis, when viewed from its start;
+//! otherwise on the left
+//! \param [in] x1 - The x coordinate of the start of the axis, in postscript points
+//! \param [in] y1 - The y coordinate of the start of the axis, in postscript points
+//! \param [in] z1 - The depth of the start of the axis, for 3D plots, or NULL
+//! \param [in] x2 - The x coordinate of the end of the axis, in postscript points
+//! \param [in] y2 - The y coordinate of the end of the axis, in postscript points
+//! \param [in] z2 - The depth of the end of the axis, for 3D plots, or NULL
+//! \param [in] theta_a - The direction in which ticks point on one side of the axis, in radians, or NaN for no ticks on
+//! this side
+//! \param [in] theta_b - The direction in which ticks point on the other side of the axis, in radians, or NaN for no
+//! ticks on this side
+//! \param [out] OutputWidth - Set to the distance by which the axis's labels extend out from the axis, so that further
+//! axes can be placed beyond them
+//! \param [in] PrintLabels - If true, draw the tick labels and axis label; otherwise draw only the axis line and ticks
 
 void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz, const double CP2,
                         const unsigned char Lr, const double x1, const double y1, const double *z1, const double x2,
@@ -313,6 +342,16 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
         *OutputWidth += EPS_AXES_SEPARATION * M_TO_PS;
     }
 }
+
+//! eps_plot_axespaint - Draw all of the axes of a graph
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \param [in] pass - For 3D plots, zero to draw the axes at the back of the plot (before the data), or one to draw
+//! those at the front (after the data). 2D plots draw all their axes in pass one.
 
 void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y, const double width,
                         const double height, const double zdepth, const int pass) {

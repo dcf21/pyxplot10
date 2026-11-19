@@ -82,6 +82,9 @@
 #define STACK_CLEAN \
     while (c->stackPtr > stkLevelOld) { STACK_POP; }
 
+//! eps_pie_ReadAccessibleData - Read the data for a piechart canvas item from its data file or functions
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_pie_ReadAccessibleData(EPSComm *x) {
     ppl_context *c = x->c;
     int j, status = 0, errCount = DATAFILE_NERRS, NExpect = 1, Ncolumns;
@@ -223,6 +226,10 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     return;
 }
 
+//! eps_pie_YieldUpText - Collect the text items needed by a piechart canvas item (its title and segment labels), so
+//! that they can be typeset
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_pie_YieldUpText(EPSComm *x) {
     ppl_context *c = x->c;
     int j, Ncolumns, errCount = DATAFILE_NERRS;
@@ -320,6 +327,10 @@ void eps_pie_YieldUpText(EPSComm *x) {
     YIELD_TEXTITEM(x->current->settings.title);
     return;
 }
+
+//! eps_pie_RenderEPS - Render a piechart canvas item to postscript, placing each segment's label inside, outside or in
+//! a key, as requested
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_pie_RenderEPS(EPSComm *x) {
     ppl_context *c = x->c;

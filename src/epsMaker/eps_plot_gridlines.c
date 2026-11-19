@@ -38,6 +38,14 @@
 #include "epsMaker/eps_plot_gridlines.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_plot_gridlines - Draw the major and minor grid lines of a graph
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+
 void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double width, double height,
                         const double zdepth) {
     int i, j, k, l, m;

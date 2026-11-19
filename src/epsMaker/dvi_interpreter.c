@@ -37,6 +37,10 @@
 // Table of the operator functions to allow quick lookup without a long if ... else if ... statement
 int (*dviOpTable[58])(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op);
 
+//! makeDviOpTable - Build the table mapping each DVI opcode onto the function which implements it, so that operators
+//! can be looked up quickly
+//! \param [in] ec - The error-reporting context
+
 void makeDviOpTable(const pplerr_context *ec) {
     dviOpTable[0] = dviInOpSet1234;
     dviOpTable[1] = dviInOpSet1234;
@@ -100,7 +104,12 @@ void makeDviOpTable(const pplerr_context *ec) {
     return;
 }
 
-// Function to interpret an operator. This is a wrapper round the functions below.
+//! dviInterpretOperator - Interpret a single DVI operator, by calling the function which implements it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInterpretOperator(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     int (*func)(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) = NULL;
     int i = 0;
@@ -150,7 +159,15 @@ int dviInterpretOperator(pplerr_context *ec, dviInterpreterState *interp, DVIOpe
 // Functions that implement operators
 // ----------------------------------
 
-// Typeset a special character
+//! dviNonAsciiChar - Typeset a character which cannot be written directly in a postscript string, using its octal
+//! escape code
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] c - The character code
+//! \param [in] move - DVI_YES to move right by the width of the character after typesetting it, or DVI_NO to leave the
+//! position unchanged
+//! \return Zero on success, or a DVIE_* error code
+
 int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, const char move) {
     char s[64];
     int err;
@@ -197,7 +214,13 @@ int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, cons
     return 0;
 }
 
-// Interpreter functions for various types of dvi operators
+//! dviInOpChar - Implement the DVI_CHAR operators (opcodes 0-127), which typeset the character with that code and move
+//! right by its width
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     int charToTypeset = op->op;
     int err;
@@ -241,13 +264,24 @@ int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
     return 0;
 }
 
-// DVI_SET1234
+//! dviInOpSet1234 - Implement the DVI_SET1234 operator, which typesets a character with a code given explicitly in the
+//! operator, and moves right by its width
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpSet1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     return dviNonAsciiChar(ec, interp, op->ul[0], DVI_YES);
 }
 
-// DVI_SETRULE
-// Set a rule and move right
+//! dviInOpSetRule - Implement the DVI_SETRULE operator, which draws a filled rectangle (rule) and moves right by its
+//! width
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpSetRule(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     int err = 0;
 
@@ -270,13 +304,22 @@ int dviInOpSetRule(pplerr_context *ec, dviInterpreterState *interp, DVIOperator 
     return err;
 }
 
-// DVI_PUT
+//! dviInOpPut1234 - Implement the DVI_PUT1234 operator, which typesets a character without moving right
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpPut1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     return dviNonAsciiChar(ec, interp, op->ul[0], DVI_NO);
 }
 
-// DVI_PUTRULE
-// Set a rule and don't move right
+//! dviInOpPutRule - Implement the DVI_PUTRULE operator, which draws a filled rectangle (rule) without moving right
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpPutRule(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     int err = 0;
 
@@ -298,12 +341,23 @@ int dviInOpPutRule(pplerr_context *ec, dviInterpreterState *interp, DVIOperator 
     return err;
 }
 
-// DVI_NOP
+//! dviInOpNop - Implement the DVI_NOP operator, which does nothing
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpNop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     return 0;
 }
 
-// DVI_BOP
+//! dviInOpBop - Implement the DVI_BOP operator, which begins a new page, starting a new postscript page and resetting
+//! the position and stack
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpBop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Generate a new page
     postscriptPage *p;
@@ -338,7 +392,13 @@ int dviInOpBop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
     return 0;
 }
 
-// DVI_EOP
+//! dviInOpEop - Implement the DVI_EOP operator, which ends a page, finishing its postscript and recording its bounding
+//! box
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     double *bb;
 
@@ -405,7 +465,12 @@ int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
     return 0;
 }
 
-// DVI_PUSH
+//! dviInOpPush - Implement the DVI_PUSH operator, which pushes the current position and spacing values onto the stack
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpPush(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Push the current state on to the stack
     dviStackState *new;
@@ -415,7 +480,12 @@ int dviInOpPush(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
     return 0;
 }
 
-// DVI_POP
+//! dviInOpPop - Implement the DVI_POP operator, which pops the position and spacing values from the stack
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpPop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Pop the previous state off the stack
     dviStackState *new;
@@ -431,84 +501,151 @@ int dviInOpPop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
     return 0;
 }
 
-// DVI_RIGHT1234
+//! dviInOpRight1234 - Implement the DVI_RIGHT1234 operator, which moves right by a specified distance
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpRight1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->h += op->sl[0];
     return 0;
 }
 
-// DVI_W0
+//! dviInOpW0 - Implement the DVI_W0 operator, which moves right by the current w spacing
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpW0(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->h += interp->state->w;
     return 0;
 }
 
-// DVI_W1234
+//! dviInOpW1234 - Implement the DVI_W1234 operator, which sets the w spacing, and moves right by it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpW1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->w = op->sl[0];
     interp->state->h += interp->state->w;
     return 0;
 }
 
-// DVI_X0
+//! dviInOpX0 - Implement the DVI_X0 operator, which moves right by the current x spacing
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpX0(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->h += interp->state->x;
     return 0;
 }
 
-// DVI_X1234
+//! dviInOpX1234 - Implement the DVI_X1234 operator, which sets the x spacing, and moves right by it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpX1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->x = op->sl[0];
     interp->state->h += interp->state->x;
     return 0;
 }
 
-// DVI_DOWN1234
+//! dviInOpDown1234 - Implement the DVI_DOWN1234 operator, which moves down by a specified distance
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpDown1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->v += op->sl[0];
     return 0;
 }
 
-// DVI_Y0
+//! dviInOpY0 - Implement the DVI_Y0 operator, which moves down by the current y spacing
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpY0(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->v += interp->state->y;
     return 0;
 }
 
-// DVI_Y1234
+//! dviInOpY1234 - Implement the DVI_Y1234 operator, which sets the y spacing, and moves down by it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpY1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->y = op->sl[0];
     interp->state->v += interp->state->y;
     return 0;
 }
 
-// DVI_Z0
+//! dviInOpZ0 - Implement the DVI_Z0 operator, which moves down by the current z spacing
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpZ0(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->v += interp->state->z;
     return 0;
 }
 
-// DVI_Z1234
+//! dviInOpZ1234 - Implement the DVI_Z1234 operator, which sets the z spacing, and moves down by it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpZ1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     interp->state->z = op->sl[0];
     interp->state->v += interp->state->z;
     return 0;
 }
 
-// DVI_FNTi
+//! dviInOpFnt - Implement the DVI_FNTNUM operators (opcodes 171-234), which select font number 0-63, encoded in the
+//! opcode
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpFnt(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     int fn;
     fn = op->op - DVI_FNTNUMMIN;
     return dviChngFnt(ec, interp, fn);
 }
 
-// DVI_FNT1234
+//! dviInOpFnt1234 - Implement the DVI_FNT1234 operator, which selects a font whose number is given explicitly
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpFnt1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     dviChngFnt(ec, interp, op->ul[0]);
     return 0;
 }
 
-// DVI_SPECIAL1234
+//! dviInOpSpecial1234 - Implement the DVI_SPECIAL1234 operator, which passes a special command (\special{}) to the
+//! interpreter, e.g. to change color
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     int spesh;
     spesh = op->op - DVI_SPECIAL1234 + 1;
@@ -528,7 +665,13 @@ int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOpera
     return 0;
 }
 
-// DVI_FNTDEF1234
+//! dviInOpFntdef1234 - Implement the DVI_FNTDEF1234 operator, which defines a font, loading its metrics so that it can
+//! later be selected
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // XXX Should perhaps check that we're not re-defining an existing font here
     // XXX Could check that we're not after POST and hence that we need to do this
@@ -565,7 +708,13 @@ int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperat
     return dviGetTFM(ec, font);
 }
 
-// DVI_PRE
+//! dviInOpPre - Implement the DVI_PRE operator, which is the preamble of the DVI file, which sets the units of
+//! measurement and magnification
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpPre(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     unsigned long i, num, den, mag;
     i = op->ul[0];
@@ -585,12 +734,22 @@ int dviInOpPre(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
     return 0;
 }
 
-// DVI_POST -- nop
+//! dviInOpPost - Implement the DVI_POST operator, which begins the postamble of the DVI file, and is ignored
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     return 0;
 }
 
-// DVI_POSTPOST -- nop
+//! dviInOpPostPost - Implement the DVI_POSTPOST operator, which ends the postamble of the DVI file, and is ignored
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator to process
+//! \return Zero on success, or a DVIE_* error code
+
 int dviInOpPostPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     return 0;
 }
@@ -599,7 +758,12 @@ int dviInOpPostPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator
 // Functions for implementing special operators (DVI_SPECIAL)
 // ----------------------------------------------------------
 
-// Accumulate characters output in special mode into a string
+//! dviSpecialChar - Accumulate a character of the argument of a special command into the special-command buffer
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] op - The DVI operator containing the character
+//! \return Zero on success, or a DVIE_* error code
+
 int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, DVIOperator *op) {
     char *s;
     s = interp->spString + strlen(interp->spString);
@@ -607,7 +771,12 @@ int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, 
     return 0;
 }
 
-// Implement an accumulated special-mode command
+//! dviSpecialImplement - Implement a special command once its argument has been accumulated. Color commands produced by
+//! the LaTeX color package are converted into postscript; header commands are ignored, and others produce a warning.
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \return Zero on success, or a DVIE_* error code
+
 int dviSpecialImplement(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char errString[SSTR_LENGTH];
@@ -639,7 +808,13 @@ int dviSpecialImplement(pplerr_context *ec, dviInterpreterState *interp) {
     return err;
 }
 
-// Handle latex colour commands
+//! dviSpecialColourCommand - Implement a color special command, such as "color push rgb 1 0 0", by converting it into
+//! postscript
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] command - The text of the special command, after the word "color"
+//! \return Zero on success, or a DVIE_* error code
+
 int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, char *command) {
     char psText[SSTR_LENGTH];
 
@@ -683,7 +858,11 @@ int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, cha
     return 0;
 }
 
-// Pop a colour instruction off the end of the stack
+//! dviSpecialColourStackPop - Pop a color from the color stack, and restore the color below it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \return Zero on success, or a DVIE_* error code
+
 int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char *item;
@@ -708,7 +887,12 @@ int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp) {
     return 0;
 }
 
-// Push a colour onto the colour stack
+//! dviSpecialColourStackPush - Push a color onto the color stack, and switch to it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] psText - The postscript command which sets the color
+//! \return Zero on success, or a DVIE_* error code
+
 int dviSpecialColourStackPush(pplerr_context *ec, dviInterpreterState *interp, char *psText) {
     char *s;
     int len, err = 0;
@@ -732,7 +916,10 @@ int dviSpecialColourStackPush(pplerr_context *ec, dviInterpreterState *interp, c
 // Functions for manipulating interpreters
 // ---------------------------------------
 
-// Produce a new dvi interpreter (for a new dvi file, say)
+//! dviNewInterpreter - Create a new DVI interpreter, allocated in the current ppl_memAlloc context
+//! \param [in] ec - The error-reporting context
+//! \return The new interpreter, or NULL if memory allocation failed
+
 dviInterpreterState *dviNewInterpreter(pplerr_context *ec) {
     dviInterpreterState *interp;
     interp = (dviInterpreterState *) ppl_memAlloc(sizeof(dviInterpreterState));
@@ -806,7 +993,11 @@ dviInterpreterState *dviNewInterpreter(pplerr_context *ec) {
     return interp;
 }
 
-// Delete an interpreter
+//! dviDeleteInterpreter - Release a DVI interpreter. Its memory is freed when its ppl_memAlloc context is freed.
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \return Zero
+
 int dviDeleteInterpreter(pplerr_context *ec, dviInterpreterState *interp) {
     //free(interp->state);
     if (interp->currentStrlen != 0) {
@@ -829,8 +1020,11 @@ int dviDeleteInterpreter(pplerr_context *ec, dviInterpreterState *interp) {
     return 0;
 }
 
-// Clone an interpreter state, returning a pointer to the new version
-// XXX Make the name of this function consistent with usage elsewhere or vice versa
+//! dviCloneInterpState - Make a copy of a DVI stack state, which records the current position and spacing values
+//! \param [in] ec - The error-reporting context
+//! \param [in] orig - The DVI stack state to copy
+//! \return The copy, or NULL if memory allocation failed
+
 dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *orig) {
     void *clone;
     clone = ppl_memAlloc(sizeof(dviStackState));
@@ -842,7 +1036,10 @@ dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *orig
 // Functions for producing and manipulating postscript pages
 // ---------------------------------------------------------
 
-// Produce a new page of postscript
+//! dviNewPostscriptPage - Create a new, empty postscript page, allocated in the current ppl_memAlloc context
+//! \param [in] ec - The error-reporting context
+//! \return The new page, or NULL if memory allocation failed
+
 postscriptPage *dviNewPostscriptPage(pplerr_context *ec) {
     postscriptPage *page;
     page = (postscriptPage *) ppl_memAlloc(sizeof(postscriptPage));
@@ -863,7 +1060,11 @@ postscriptPage *dviNewPostscriptPage(pplerr_context *ec) {
     return page;
 }
 
-// Delete a page of postscript output. If we didn't have lt_memory, we'd need to free things at this point.
+//! dviDeletePostscriptPage - Release a postscript page, including its list of postscript commands
+//! \param [in] ec - The error-reporting context
+//! \param [in] page - The postscript page
+//! \return Zero
+
 int dviDeletePostscriptPage(const pplerr_context *ec, postscriptPage *page) {
     if (page->boundingBox != NULL) {
         //free(page->boundingBox);
@@ -876,7 +1077,11 @@ int dviDeletePostscriptPage(const pplerr_context *ec, postscriptPage *page) {
     return 0;
 }
 
-// Clear a set of postscript pages and state
+//! dviDeletePostscriptState - Release a postscript state, including its list of pages
+//! \param [in] ec - The error-reporting context
+//! \param [in] state - The postscript state
+//! \return Zero
+
 int dviDeletePostscriptState(const pplerr_context *ec, postscriptState *state) {
     // free state->pages
     state->Npages = 0;
@@ -889,7 +1094,12 @@ int dviDeletePostscriptState(const pplerr_context *ec, postscriptState *state) {
 // Functions for producing postscript commands
 // -------------------------------------------
 
-// Append a string to the set of postscript strings
+//! dviPostscriptAppend - Append a postscript command to the current page
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] new - The postscript command to append
+//! \return Zero on success, or a DVIE_* error code
+
 int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, const char *new) {
     char *s; // A temporary string pointer
     int len;
@@ -906,7 +1116,12 @@ int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, c
     return 0;
 }
 
-// Write some postscript to move to the current co-ordinates
+//! dviPostscriptMoveto - Append a postscript moveto command to the current page, to move to the current DVI position,
+//! if the postscript position does not already match it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \return Zero on success, or a DVIE_* error code
+
 int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
@@ -927,7 +1142,12 @@ int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp) {
     return 0;
 }
 
-// Write some postscript to draw a line to the current co-ordinates
+//! dviPostscriptLineto - Append a postscript lineto command to the current page, to draw a line to the current DVI
+//! position
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \return Zero on success, or a DVIE_* error code
+
 int dviPostscriptLineto(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
@@ -948,7 +1168,11 @@ int dviPostscriptLineto(pplerr_context *ec, dviInterpreterState *interp) {
     return 0;
 }
 
-// Write some postscript to close a path
+//! dviPostscriptClosepathFill - Append postscript commands to close and fill the current path
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \return Zero on success, or a DVIE_* error code
+
 int dviPostscriptClosepathFill(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
@@ -967,7 +1191,12 @@ int dviPostscriptClosepathFill(pplerr_context *ec, dviInterpreterState *interp) 
     return 0;
 }
 
-// Typeset the current buffered text
+//! dviTypeset - Typeset the run of characters accumulated in the interpreter's current string, writing postscript to
+//! show them and updating the bounding box of the page
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \return Zero on success, or a DVIE_* error code
+
 int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
     // This subroutine does the bulk of the actual postscript work, typesetting runs of characters
     dviStackState *postPos, *dviPos; // Current positions in dvi and postscript code
@@ -1037,7 +1266,12 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
     return 0;
 }
 
-// Change to a new font
+//! dviChngFnt - Change the current font, writing postscript to select it
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] fn - The number of the font to select, as defined by a DVI_FNTDEF operator
+//! \return Zero on success, or a DVIE_* error code
+
 int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
     listIterator *listIter;
     int len, err = 0;
@@ -1084,7 +1318,14 @@ int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
     return 0;
 }
 
-// Get the size (width, height, depth) of a glyph
+//! dviGetCharSize - Look up the dimensions of a character in the current font
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] s - The character code
+//! \param [out] size - Array into which to write the width, height, depth and italic correction of the character, in
+//! DVI units
+//! \return Zero on success, or a DVIE_* error code
+
 int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned char s, double *size) {
     dviTFM *tfm; // Details of this font
     int chnum; // Character number in this font
@@ -1122,7 +1363,15 @@ int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned cha
     return 0;
 }
 
-// Update a bounding box with the position and size of the current object to be typeset
+//! dviUpdateBoundingBox - Expand the bounding box of the current page, and of the current text item, to include an
+//! object at the current position
+//! \param [in] ec - The error-reporting context
+//! \param [in] interp - The state of the DVI interpreter
+//! \param [in] width - The width of the object, in DVI units
+//! \param [in] height - The height of the object above the baseline, in DVI units
+//! \param [in] depth - The depth of the object below the baseline, in DVI units
+//! \return Zero on success, or a DVIE_* error code
+
 int dviUpdateBoundingBox(pplerr_context *ec, dviInterpreterState *interp, const double width, const double height,
                          const double depth) {
     double *bb;

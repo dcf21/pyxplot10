@@ -71,7 +71,13 @@
     comp[2] = (comp[2] < 0.0) ? 0.0 : ((comp[2] > 1.0) ? 1.0 : comp[2]); \
     comp[3] = (comp[3] < 0.0) ? 0.0 : ((comp[3] > 1.0) ? 1.0 : comp[3]);
 
-// Yield up text items which label color scale of a colormap
+//! eps_plot_colormap_YieldText - Collect the text items which label the color scale of a colormap, so that they can be
+//! typeset
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] data - The data being plotted as a colormap
+//! \param [in] sg - The graph settings
+//! \param [in] pd - The descriptor of the plot item
+
 void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph *sg, canvas_plotdesc *pd) {
     dataBlock *blk;
     const int XSize = pd->GridXSize;
@@ -208,7 +214,24 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     return;
 }
 
-// Render a colormap to postscript
+//! eps_plot_colormap - Render a dataset as a colormap, by resampling it onto a regular grid and writing it as a bitmap
+//! image
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] data - The data to plot
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] xn - The axis direction (0=x, 1=y, 2=z) onto which the first data column is plotted
+//! \param [in] yn - The axis direction (0=x, 1=y, 2=z) onto which the second data column is plotted
+//! \param [in] zn - The axis direction (0=x, 1=y, 2=z) onto which the third data column is plotted
+//! \param [in] sg - The graph settings
+//! \param [in] pd - The descriptor of the plot item being drawn
+//! \param [in] pdn - The number of the plot item being drawn within the graph
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \return Zero on success, or one on failure
+
 int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim, const int xn, const int yn,
                       const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                       const double origin_y, const double width, const double height, const double zdepth) {
@@ -678,6 +701,15 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     fprintf(x->epsbuffer, "grestore\n");
     return 0;
 }
+
+//! eps_plot_colormap_DrawScales - Draw the color scales which accompany any colormaps on a graph
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \return Zero on success, or one on failure
 
 int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double origin_y, const double width,
                                  const double height, const double zdepth) {

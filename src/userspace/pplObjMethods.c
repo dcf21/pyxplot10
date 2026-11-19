@@ -1212,7 +1212,7 @@ static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, in
 
 //! pplmethod_colCompCMYK - Implement the componentsCMYK() method of colors, which returns a vector CMYK representation
 //! of a color
-//! \param [in] c - The Pyxplot context
+//! \param [in] dummy - The Pyxplot context (unused)
 //! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
 //! <self_this> member points to the object the method was called on. The return value is written into
 //! in[-1] (OUTPUT).
@@ -1298,7 +1298,7 @@ static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int 
 }
 
 //! pplmethod_colToCMYK - Implement the toCMYK() method of colors, which returns a CMYK representation of a color
-//! \param [in] c - The Pyxplot context
+//! \param [in] dummy - The Pyxplot context (unused)
 //! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
 //! <self_this> member points to the object the method was called on. The return value is written into
 //! in[-1] (OUTPUT).

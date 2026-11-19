@@ -78,6 +78,19 @@
 // wrong length, we do nothing; it will fail in due course in ppl_datafile
 // anyway. If the list is empty, we auto-generate a default list.
 
+//! eps_plot_AddUsingItemsForWithWords - Extend the list of "using" expressions for a plot item with additional columns,
+//! for any plot style modifiers which are given as expressions to be evaluated for each data point (e.g. "with color
+//! $3")
+//! \param [in] c - The Pyxplot context
+//! \param [in] ww - The plot style modifiers of the plot item
+//! \param [in|out] NExpect - The number of data columns expected, which is increased by the number of columns added
+//! \param [in|out] autoUsingList - Flag indicating whether the list of "using" expressions was generated automatically
+//! \param [in|out] usingList - Pointer to the array of "using" expressions, which may be reallocated
+//! \param [in|out] Nusing - The number of "using" expressions
+//! \param [in|out] NObjs - The number of columns which contain objects other than numbers
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \return Zero on success, or one on failure
+
 int eps_plot_AddUsingItemsForWithWords(ppl_context *c, const withWords *ww, int *NExpect, unsigned char *autoUsingList,
                                        pplExpr ***usingList, int *Nusing, int *NObjs, char *errtext) {
     *NObjs = 0;
@@ -169,6 +182,15 @@ int eps_plot_AddUsingItemsForWithWords(ppl_context *c, const withWords *ww, int 
         if (dbl > INT_MAX) dbl = INT_MAX - 1; \
     }
 
+//! eps_plot_WithWordsFromUsingItems - Set plot style modifiers which are given as expressions (e.g. "with color $3")
+//! from the extra data columns added by eps_plot_AddUsingItemsForWithWords(), for a single data point
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] ww - The plot style modifiers, which are updated with the values for this data point
+//! \param [in] DataRow - The numerical columns of the data point
+//! \param [in] ObjRow - The object columns of the data point
+//! \param [in] Ncolumns - The number of numerical columns
+//! \param [in] Ncol_obj - The number of object columns
+
 void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const double *DataRow, pplObj *ObjRow,
                                       const int Ncolumns, const int Ncol_obj) {
     int i = Ncolumns - 1, j = Ncol_obj - 1;
@@ -228,6 +250,16 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
     i--; \
     if (i < 0) i = 0;
 
+//! eps_plot_WithWordsCheckUsingItemsDimLess - Check that the extra data columns used to set plot style modifiers are
+//! dimensionless, reporting an error if not
+//! \param [in] c - The Pyxplot context
+//! \param [in] ww - The plot style modifiers of the plot item
+//! \param [in] firstValues - The values in the first row of data, used to check their physical units
+//! \param [in] Ncolumns - The number of numerical columns
+//! \param [in] Ncolumns_obj - The number of object columns
+//! \param [out] NDataCols - Set to the number of columns of data, excluding those used for plot style modifiers
+//! \return Zero on success, or one if any of the columns had physical units
+
 int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, const withWords *ww, pplObj *firstValues,
                                              const int Ncolumns, const int Ncolumns_obj, int *NDataCols) {
     int i = Ncolumns - 1;
@@ -246,6 +278,11 @@ int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, const withWords *ww
 
 // Private routines for sorting 3D positions by depth and azimuth when clipping 3D plots
 
+//! SortByDepth - Comparison function for qsort(), used to sort axes into order of depth on a 3D plot
+//! \param [in] x - Pointer to the first axis
+//! \param [in] y - Pointer to the second axis
+//! \return -1, 0 or 1 depending on the order of the axes
+
 static int SortByDepth(const void *x, const void *y) {
     const double *xd = (const double *) x;
     const double *yd = (const double *) y;
@@ -255,6 +292,11 @@ static int SortByDepth(const void *x, const void *y) {
 }
 
 static double SortByAzimuthXCentre, SortByAzimuthYCentre;
+
+//! SortByAzimuth - Comparison function for qsort(), used to sort axes into order of azimuth on a 3D plot
+//! \param [in] x - Pointer to the first axis
+//! \param [in] y - Pointer to the second axis
+//! \return -1, 0 or 1 depending on the order of the axes
 
 static int SortByAzimuth(const void *x, const void *y) {
     const double *xd = (const double *) x;
@@ -266,6 +308,10 @@ static int SortByAzimuth(const void *x, const void *y) {
     if (ax < ay) return -1;
     return 0;
 }
+
+//! TriSwap - Swap two doubles
+//! \param [in|out] a - The first double
+//! \param [in|out] b - The second double
 
 static void TriSwap(double *a, double *b) {
     double t[3];
@@ -303,6 +349,11 @@ static void TriSwap(double *a, double *b) {
 // datafiles and parametric functions. Do not read in data from non-parametric
 // functions as we need to finalise axis ranges first, before we know what
 // raster we will sample them on.
+
+//! eps_plot_ReadAccessibleData - Read the data for every plot item in a graph from data files, so that axis ranges can
+//! be determined. Functions are sampled later, by eps_plot_SampleFunctions(), once the ranges of the axes they are
+//! plotted against are known.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_plot_ReadAccessibleData(EPSComm *x) {
     ppl_context *c = x->c;
@@ -740,6 +791,10 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
 // datasets plotted by the plot command will then have been sampled and be
 // ready for plotting.
 
+//! eps_plot_SampleFunctions - Sample the functions plotted on a graph, once the ranges of the axes they are plotted
+//! against are known
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_plot_SampleFunctions(EPSComm *x) {
     ppl_context *c = x->c;
     int a, i, j, OrdinateRasterLen, Nsamples, OrdinateRasterLen2;
@@ -949,6 +1004,10 @@ void eps_plot_SampleFunctions(EPSComm *x) {
     return;
 }
 
+//! eps_plot_YieldUpText - Collect all of the text items needed by a graph (axis labels, tick labels, the title, the
+//! legend, and text labels), so that they can be typeset
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_plot_YieldUpText(EPSComm *x) {
     int j, k, l;
     canvas_plotdesc *pd;
@@ -1016,6 +1075,9 @@ void eps_plot_YieldUpText(EPSComm *x) {
 }
 
 // Finally, produce a postscript plot
+
+//! eps_plot_RenderEPS - Render a graph canvas item to postscript: its axes, grid lines, data, labels, arrows and legend
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_plot_RenderEPS(EPSComm *x) {
     ppl_context *c = x->c;

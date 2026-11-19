@@ -36,6 +36,12 @@
 #include "epsMaker/bmp_image.h"
 #include "epsMaker/bmp_bmpread.h"
 
+//! ppl_bmp_bmpread - Read a Windows bitmap (BMP) image file. On failure, an error is reported and <image->data> is set
+//! to NULL.
+//! \param [in] ec - The error-reporting context
+//! \param [in] in - The file handle of the BMP image
+//! \param [in] image - The image structure into which the image is read
+
 void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     unsigned char buff[60], encode, *p, c;
     unsigned width, height, depth, dw, excess;
@@ -270,6 +276,13 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     return;
 }
 
+//! ppl_bmp_bmp16read - Read the pixel data of a 16-bit-per-pixel (15- or 16-bit RGB) Windows bitmap image, converting
+//! it to 24-bit RGB
+//! \param [in] ec - The error-reporting context
+//! \param [in] in - The file handle of the BMP image, positioned at the start of the pixel data
+//! \param [in] header - The bitmap file's header, from which the bit masks are read
+//! \param [in] image - The image structure into which the image is read
+
 void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitmap_data *image) {
     unsigned char *palette;
     unsigned char *rowptr, *ptr;
@@ -350,6 +363,13 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
     free(rowptr);
     return;
 }
+
+//! ppl_bmp_demsrle - Decode the run-length encoded pixel data of a 4- or 8-bit Windows bitmap image
+//! \param [in] ec - The error-reporting context
+//! \param [in] image - The image structure into which the image is read
+//! \param [in] in - The run-length encoded data
+//! \param [in] len - The number of bytes of encoded data
+//! \return Zero on success, or one if the data was corrupt or memory allocation failed
 
 int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, const unsigned long len) {
     unsigned char *out, *c_in, *c_out, code, *end, odd, even;

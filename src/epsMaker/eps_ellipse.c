@@ -32,6 +32,9 @@
 #include "epsMaker/eps_ellipse.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_ellps_RenderEPS - Render an ellipse canvas item to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_ellps_RenderEPS(EPSComm *x) {
     int lt;
     unsigned char filled = 0, stroked = 0;

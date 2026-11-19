@@ -37,6 +37,24 @@
 #include "epsMaker/eps_plot_linedraw.h"
 #include "epsMaker/eps_settings.h"
 
+//! FilledRegion_Init - Begin drawing a filled region (e.g. for the fillcolor of a plot), whose outline is given in data
+//! coordinates and which is clipped to the edges of the graph
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] xa - The x axis
+//! \param [in] ya - The y axis
+//! \param [in] za - The z axis
+//! \param [in] xrn - The monotonic region of the x axis in which points lie
+//! \param [in] yrn - The monotonic region of the y axis in which points lie
+//! \param [in] zrn - The monotonic region of the z axis in which points lie
+//! \param [in] sg - The graph settings
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \return A handle for the filled region, allocated in the current ppl_memAlloc context, or NULL on failure
+
 FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int xrn,
                                       const int yrn, const int zrn, pplset_graph *sg, const unsigned char ThreeDim,
                                       const double origin_x, const double origin_y, const double width,
@@ -64,6 +82,12 @@ FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *
     output->points = ppl_listInit(0);
     return output;
 }
+
+//! FilledRegion_Point - Add a point to the outline of a filled region
+//! \param [in] X - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] fr - The handle of the filled region
+//! \param [in] x - The x coordinate of the point, in data coordinates
+//! \param [in] y - The y coordinate of the point, in data coordinates
 
 void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, const double x, const double y) {
     FilledRegionPoint p;
@@ -108,6 +132,12 @@ void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, const double x, cons
     return;
 }
 
+//! frac_sorter - Comparison function for qsort(), used to sort the points where a filled region's outline crosses the
+//! edge of the graph into order around the edge
+//! \param [in] av - Pointer to the first crossing point
+//! \param [in] bv - Pointer to the second crossing point
+//! \return -1, 0 or 1 depending on the order of the crossing points
+
 static int frac_sorter(const void *av, const void *bv) {
     const FilledRegionAxisCrossing *a = (const FilledRegionAxisCrossing *) av;
     const FilledRegionAxisCrossing *b = (const FilledRegionAxisCrossing *) bv;
@@ -124,6 +154,15 @@ static int frac_sorter(const void *av, const void *bv) {
     }
     return 0;
 }
+
+//! TestPointInside - Test whether a point lies inside the outline of a filled region, by counting how many times a ray
+//! from the point crosses the outline
+//! \param [in] fr - The handle of the filled region
+//! \param [in] X - The x coordinate of the point, in postscript points
+//! \param [in] Y - The y coordinate of the point, in postscript points
+//! \param [in] dir_x - The x component of the direction of the ray
+//! \param [in] dir_y - The y component of the direction of the ray
+//! \return One if the point lies inside the outline, zero otherwise
 
 static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, double Y, const int dir_x,
                                      const int dir_y) {
@@ -191,6 +230,13 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
         } \
         eps_core_BoundingBox(fr->x, X, Y, linewidth * EPS_DEFAULT_LINEWIDTH); \
     }
+
+//! OutputPath - Write the postscript path of the clipped outline of a filled region
+//! \param [in] fr - The handle of the filled region
+//! \param [in] CrossPointList - The list of points where the outline crosses the edge of the graph
+//! \param [in] nac - The number of points in <CrossPointList>
+//! \param [in] EndText - The postscript command with which to end the path, e.g. "fill" or "stroke"
+//! \param [in] linewidth - The line width with which to stroke the path
 
 static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPointList, const int nac, char *EndText,
                        const double linewidth) {
@@ -393,6 +439,14 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
     fprintf(fr->x->epsbuffer, "%s\n", EndText);
     return;
 }
+
+//! FilledRegion_Finish - Finish drawing a filled region, clipping its outline to the edges of the graph and writing it
+//! to postscript
+//! \param [in] X - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] fr - The handle of the filled region
+//! \param [in] linetype - The line type (dash pattern)
+//! \param [in] linewidth - The line width, as a multiple of the default line width
+//! \param [in] StrokeOutline - If true, also draw the outline of the region
 
 void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int linetype, const double linewidth,
                          const unsigned char StrokeOutline) {

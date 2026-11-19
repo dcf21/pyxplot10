@@ -36,6 +36,9 @@
 #include "epsMaker/eps_plot_threedimbuff.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_polygon_RenderEPS - Render a polygon canvas item to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_polygon_RenderEPS(EPSComm *x) {
     int i;
     unsigned char filled = 0, stroked = 0;

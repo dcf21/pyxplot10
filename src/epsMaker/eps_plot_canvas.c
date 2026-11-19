@@ -34,9 +34,16 @@
 #include "settings/settings.h"
 #include "settings/settingTypes.h"
 
-// Where along this axis, in the range 0 (left) to 1 (right) should the value
-// xin go? xrn = Region Number for interpolated axes which do not have
-// monotonically increasing ordinate values.
+//! eps_plot_axis_GetPosition - Return the fractional position along an axis at which a value should be plotted. This is
+//! a wrapper for pplaxis_GetPosition().
+//! \param [in] xin - The value to locate on the axis
+//! \param [in] xa - The axis, or NULL to return <xin> unchanged
+//! \param [in] xrn - For axes whose values are linearly interpolated from a non-monotonic function, the number of the
+//! monotonic region of the axis in which to look for <xin>
+//! \param [in] AllowOffBounds - If true, values outside the range of the axis return positions outside the range 0-1;
+//! otherwise they return NaN
+//! \return The position along the axis, in the range 0 to 1, or NaN if the value cannot be placed on the axis
+
 double eps_plot_axis_GetPosition(const double xin, pplset_axis *xa, const int xrn, const unsigned char AllowOffBounds) {
     int imin, imax, i;
     if (xa == NULL) return xin;
@@ -66,7 +73,12 @@ double eps_plot_axis_GetPosition(const double xin, pplset_axis *xa, const int xr
     else return (log(xin) - log(xa->MinFinal)) / (log(xa->MaxFinal) - log(xa->MinFinal)); // ... or logarithmic
 }
 
-// What is the value of this axis at point xin, in the range 0 (left) to 1 (right)?
+//! eps_plot_axis_InvGetPosition - Return the value of an axis at a fractional position along it. This is a wrapper for
+//! pplaxis_InvGetPosition().
+//! \param [in] xin - The position along the axis, in the range 0 to 1
+//! \param [in] xa - The axis
+//! \return The value of the axis at position <xin>
+
 double eps_plot_axis_InvGetPosition(const double xin, pplset_axis *xa) {
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {
@@ -81,7 +93,11 @@ double eps_plot_axis_InvGetPosition(const double xin, pplset_axis *xa) {
     else return xa->MinFinal * pow(xa->MaxFinal / xa->MinFinal, xin); // ... or logarithmic
 }
 
-// Query whether the value xin occurs within the range of this axis
+//! eps_plot_axis_InRange - Test whether a value lies within the range of an axis
+//! \param [in] xa - The axis
+//! \param [in] xin - The value to test
+//! \return One if the value lies within the range of the axis, zero otherwise
+
 int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
     int xrn, swapI, xminset = 0, xmaxset = 0;
     double xmin = 0, xmax = 0, swapD;
@@ -118,6 +134,21 @@ int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
     return 1; // Axis range is not fixed
 }
 
+//! eps_plot_ThreeDimProject - Project a point in the unit cube of a 3D plot onto the page, using the viewing angles set
+//! in the graph settings
+//! \param [in] xap - The fractional position of the point along the x axis
+//! \param [in] yap - The fractional position of the point along the y axis
+//! \param [in] zap - The fractional position of the point along the z axis
+//! \param [in] sg - The graph settings
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \param [out] xpos - Set to the x coordinate of the point on the page, in postscript points
+//! \param [out] ypos - Set to the y coordinate of the point on the page, in postscript points
+//! \param [out] depth - Set to the depth of the point, in postscript points, used to sort items into drawing order
+
 void eps_plot_ThreeDimProject(const double xap, const double yap, const double zap, const pplset_graph *sg,
                               const double origin_x, const double origin_y, const double width, const double height,
                               const double zdepth, double *xpos, double *ypos, double *depth) {
@@ -140,6 +171,36 @@ void eps_plot_ThreeDimProject(const double xap, const double yap, const double z
     *depth = y3;
     return;
 }
+
+//! eps_plot_GetPosition - Find the position on the page at which a data point should be plotted, and the directions of
+//! the axes at that point
+//! \param [out] xpos - Set to the x coordinate of the point on the page, in postscript points
+//! \param [out] ypos - Set to the y coordinate of the point on the page, in postscript points
+//! \param [out] depth - Set to the depth of the point, for 3D plots
+//! \param [out] xap - Set to the fractional position of the point along the x axis
+//! \param [out] yap - Set to the fractional position of the point along the y axis
+//! \param [out] zap - Set to the fractional position of the point along the z axis
+//! \param [out] theta_x - Set to the direction of the x axis at the point, in radians
+//! \param [out] theta_y - Set to the direction of the y axis at the point, in radians
+//! \param [out] theta_z - Set to the direction of the z axis at the point, in radians
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] xin - The x coordinate of the data point
+//! \param [in] yin - The y coordinate of the data point
+//! \param [in] zin - The z coordinate of the data point
+//! \param [in] xa - The x axis
+//! \param [in] ya - The y axis
+//! \param [in] za - The z axis
+//! \param [in] xrn - The monotonic region of the x axis in which to look for <xin>
+//! \param [in] yrn - The monotonic region of the y axis in which to look for <yin>
+//! \param [in] zrn - The monotonic region of the z axis in which to look for <zin>
+//! \param [in] sg - The graph settings
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \param [in] AllowOffBounds - If true, points outside the range of the axes are given positions off the edge of the
+//! graph; otherwise they return NaN
 
 void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap, double *yap, double *zap,
                           double *theta_x, double *theta_y, double *theta_z, const unsigned char ThreeDim,

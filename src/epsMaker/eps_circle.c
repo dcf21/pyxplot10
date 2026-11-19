@@ -32,6 +32,9 @@
 #include "epsMaker/eps_circle.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_circ_RenderEPS - Render a circle or arc canvas item to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_circ_RenderEPS(EPSComm *x) {
     int lt;
     unsigned char filled = 0, stroked = 0;

@@ -38,6 +38,9 @@
 #include "epsMaker/eps_eps.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_eps_RenderEPS - Render an eps canvas item, which embeds an encapsulated postscript file, to postscript
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_eps_RenderEPS(EPSComm *x) {
     FILE *inf;
     char filename[FNAME_LENGTH];
@@ -204,6 +207,15 @@ void eps_eps_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "\n");
     return;
 }
+
+//! eps_eps_ExtractBBox - Read the bounding box of an EPS file from its %%BoundingBox (or %%HiResBoundingBox) comment
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] in - The file handle of the EPS file
+//! \param [out] bl - Set to the left edge of the bounding box
+//! \param [out] bb - Set to the bottom edge of the bounding box
+//! \param [out] br - Set to the right edge of the bounding box
+//! \param [out] bt - Set to the top edge of the bounding box
+//! \param [out] GotBox - Set to one if a bounding box was found, zero otherwise
 
 void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, double *br, double *bt,
                          unsigned char *GotBox) {

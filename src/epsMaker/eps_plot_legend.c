@@ -53,6 +53,12 @@
 
 // Private routines for sorting 3D positions by depth and azimuth when working out where to put a legend on a 3D plot
 
+//! SortByDepth - Comparison function for qsort(), used to sort the possible positions of a legend on a 3D plot into
+//! order of depth
+//! \param [in] x - Pointer to the first position
+//! \param [in] y - Pointer to the second position
+//! \return -1, 0 or 1 depending on the order of the positions
+
 static int SortByDepth(const void *x, const void *y) {
     const double *xd = (const double *) x;
     const double *yd = (const double *) y;
@@ -62,6 +68,12 @@ static int SortByDepth(const void *x, const void *y) {
 }
 
 static double SortByAzimuthXCentre, SortByAzimuthYCentre, SortByAzimuthTarget;
+
+//! SortByAzimuthProximity - Comparison function for qsort(), used to sort the possible positions of a legend on a 3D
+//! plot by how close their azimuth is to the viewing direction
+//! \param [in] x - Pointer to the first position
+//! \param [in] y - Pointer to the second position
+//! \return -1, 0 or 1 depending on the order of the positions
 
 static int SortByAzimuthProximity(const void *x, const void *y) {
     const double *xd = (const double *) x;
@@ -78,6 +90,10 @@ static int SortByAzimuthProximity(const void *x, const void *y) {
     return 0;
 }
 
+//! TriSwap - Swap two doubles
+//! \param [in|out] a - The first double
+//! \param [in|out] b - The second double
+
 static void TriSwap(double *a, double *b) {
     double t[3];
     memcpy(t, a, 3 * sizeof(double));
@@ -87,6 +103,10 @@ static void TriSwap(double *a, double *b) {
 }
 
 // Graph legend API routines
+
+//! GraphLegend_YieldUpText - Collect the titles of the plot items in a graph's legend, generating automatic titles from
+//! their filenames or functions where none was given, so that they can be typeset
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void GraphLegend_YieldUpText(EPSComm *x) {
     canvas_plotdesc *pd;
@@ -244,7 +264,15 @@ void GraphLegend_YieldUpText(EPSComm *x) {
     } \
     }
 
-// Lay out all of the items in the current legend with a maximum allowed column height of TrialHeight.
+//! GraphLegend_ArrangeToHeight - Lay out all of the items in a graph's legend in columns, with a maximum column height
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] TrialHeight - The maximum height of each column, in postscript points
+//! \param [out] AttainedHeight - Set to the height of the tallest column
+//! \param [out] Ncolumns - Set to the number of columns used
+//! \param [out] ColumnX - Array into which to write the x position of each column
+//! \param [out] ColumnHeight - Array into which to write the height of each column
+//! \param [out] ColumnNItems - Array into which to write the number of items in each column
+
 void GraphLegend_ArrangeToHeight(const EPSComm *x, const double TrialHeight, double *AttainedHeight, int *Ncolumns,
                                  double *ColumnX, double *ColumnHeight, int *ColumnNItems) {
     canvas_plotdesc *pd;
@@ -275,6 +303,12 @@ void GraphLegend_ArrangeToHeight(const EPSComm *x, const double TrialHeight, dou
     *Ncolumns = ColumnNo + 1;
     return;
 }
+
+//! GraphLegend_Render - Draw a graph's legend, choosing its layout and position as requested by "set key"
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
 
 void GraphLegend_Render(EPSComm *x, const double width, const double height, const double zdepth) {
     double fs = x->current->settings.FontSize, CombinedHeight = 0.0, MinimumHeight = 0.0;

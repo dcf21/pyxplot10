@@ -62,7 +62,12 @@
 #include "children.h"
 #include "datafile.h"
 
-// Handy routine for copying files
+//! filecopy - Copy a file
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] in - The path of the file to copy
+//! \param [in] out - The path to copy it to
+//! \return Zero on success, or one on failure
+
 static int filecopy(EPSComm *x, const char *in, const char *out) {
     int status = 0, n;
     FILE *fi, *fo;
@@ -156,6 +161,14 @@ static void (*TextHandlers[])(EPSComm *) = {NULL, NULL, NULL, eps_text_YieldUpTe
 static void (*AfterHandlers[])(EPSComm *) = {NULL, NULL, NULL, canvas_CallLaTeX, canvas_MakeEPSBuffer, canvas_EPSWrite,
                                              NULL};
 
+
+//! ppl_canvas_draw - Render the multiplot canvas to the current output terminal. Each canvas item is rendered in
+//! several passes: data are read, text is collected and typeset with LaTeX, and then postscript is written, before
+//! being converted to the output format if required.
+//! \param [in] c - The Pyxplot context
+//! \param [out] unsuccessful_ops - Array of flags, one per canvas item ID, set to one for each item which could not be
+//! rendered
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int iterDepth) {
     static int lock = 0;
@@ -465,6 +478,10 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     for (i = 0; X[i] != '\0'; i++) \
         if (X[i] == '\n') linecount++;
 
+//! canvas_CallLaTeX - Write all of the text items on the canvas into a LaTeX document, typeset it with LaTeX, and read
+//! the resulting DVI file. LaTeX errors are traced back to the text item which caused them.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void canvas_CallLaTeX(EPSComm *x) {
     int linecount = 1, i, j, pid, LatexStatus, LatexStdIn, LatexOut;
     char filename[FNAME_LENGTH], *str_buffer;
@@ -724,7 +741,10 @@ void canvas_CallLaTeX(EPSComm *x) {
     return;
 }
 
-// Make a temporary buffer file into which the eps fragments for objects is temporarily stored
+//! canvas_MakeEPSBuffer - Create a temporary buffer file into which the postscript fragments for each canvas item are
+//! written, before the overall bounding box is known
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void canvas_MakeEPSBuffer(EPSComm *x) {
     x->epsbuffer = tmpfile();
     if (x->epsbuffer == NULL) {
@@ -735,7 +755,10 @@ void canvas_MakeEPSBuffer(EPSComm *x) {
     return;
 }
 
-// Finally output postscript file, once all of the eps fragments are written to temporary buffer and bounding box is known
+//! canvas_EPSWrite - Write the final postscript file, with a header giving the overall bounding box, followed by the
+//! postscript fragments from the temporary buffer file
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void canvas_EPSWrite(EPSComm *x) {
     int i;
     double PAGEwidth, PAGEheight, margin_left, margin_top, margin_bottom;
@@ -941,7 +964,23 @@ void canvas_EPSWrite(EPSComm *x) {
     return;
 }
 
-// Write a text item out from dvi buffer
+//! canvas_EPSRenderTextItem - Write the postscript for a text item, taken from the typeset DVI output
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] strout - Set to point to a string containing the postscript, or NULL to write it directly to the output
+//! file
+//! \param [in] pageno - The page number of the text item within the DVI output
+//! \param [in] xpos - The x position of the text item's anchor point, in postscript points
+//! \param [in] ypos - The y position of the text item's anchor point, in postscript points
+//! \param [in] halign - The horizontal alignment of the text relative to its anchor point, one of the SW_HALIGN_*
+//! constants
+//! \param [in] valign - The vertical alignment of the text relative to its anchor point, one of the SW_VALIGN_*
+//! constants
+//! \param [in] colstr - The postscript command to set the color of the text
+//! \param [in] fontsize - The font size, as a multiple of the default font size
+//! \param [in] rotate - The angle by which to rotate the text, in radians
+//! \param [out] width - Set to the width of the text item, in postscript points (optional)
+//! \param [out] height - Set to the height of the text item, in postscript points (optional)
+
 void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, const int halign,
                               const int valign, char *colstr, double fontsize, double rotate, double *width,
                               double *height) {
@@ -1071,7 +1110,11 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     return;
 }
 
-// Convert a portrait EPS file to landscape by changing its bounding box and adding a linear transformation to the top
+//! canvas_EPSLandscapify - Convert a portrait EPS file to landscape orientation, by changing its bounding box and
+//! adding a coordinate transformation to the top of the file
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] transform - Character buffer into which to write the postscript coordinate transformation
+
 void canvas_EPSLandscapify(EPSComm *x, char *transform) {
     double width, height;
     width = x->bb_right - x->bb_left;
@@ -1084,7 +1127,11 @@ void canvas_EPSLandscapify(EPSComm *x, char *transform) {
     return;
 }
 
-// Enlarge an EPS file to fill a page by changing its bounding box and adding a linear transformation to the top
+//! canvas_EPSEnlarge - Enlarge an EPS file to fill the page, by changing its bounding box and adding a coordinate
+//! transformation to the top of the file
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] transform - Character buffer into which to write the postscript coordinate transformation
+
 void canvas_EPSEnlarge(EPSComm *x, char *transform) {
     double EPSwidth, EPSheight, PAGEwidth, PAGEheight;
     double margin_left, margin_right, margin_top, margin_bottom;

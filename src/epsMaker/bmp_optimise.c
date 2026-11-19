@@ -38,6 +38,11 @@
 #include "epsMaker/bmp_optimise.h"
 #include "epsMaker/bmp_image.h"
 
+//! ppl_bmp_colour_count - Count the number of distinct colors in an RGB image, and if there are few enough, convert it
+//! to a paletted image to reduce its size
+//! \param [in] ec - The error-reporting context
+//! \param [in] image - The image structure into which the image is read
+
 void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     unsigned long size, i;
     int ncols, j, colour;
@@ -113,6 +118,11 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     return;
 }
 
+//! ppl_bmp_palette_check - Check whether all of the colors in a paletted image are shades of grey, and if so convert it
+//! to a greyscale image
+//! \param [in] ec - The error-reporting context
+//! \param [in] image - The image structure into which the image is read
+
 void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
     int i;
     unsigned long size;
@@ -137,6 +147,11 @@ void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
     }
     return;
 }
+
+//! ppl_bmp_grey_check - Check whether all of the pixels in an RGB image are shades of grey, and if so convert it to a
+//! greyscale image
+//! \param [in] ec - The error-reporting context
+//! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
     int i, grey, depth = 8, magic, test;
@@ -229,6 +244,11 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
     image->pal_len = 0;
     return;
 }
+
+//! ppl_bmp_compact - Reduce the bit depth of a paletted or greyscale image to the minimum needed to represent its
+//! colors, packing several pixels into each byte
+//! \param [in] ec - The error-reporting context
+//! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
     int ncols, i, j, height, width;

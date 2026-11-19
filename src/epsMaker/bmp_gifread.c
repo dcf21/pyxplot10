@@ -36,6 +36,11 @@
 #include "epsMaker/bmp_image.h"
 #include "epsMaker/bmp_gifread.h"
 
+//! ppl_bmp_gifread - Read a GIF image file. On failure, an error is reported and <image->data> is set to NULL.
+//! \param [in] ec - The error-reporting context
+//! \param [in] in - The file handle of the GIF image
+//! \param [in] image - The image structure into which the image is read
+
 void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     unsigned char buff[8], flags, len, *rawz;
     int gcm, ncols, interlaced;
@@ -330,6 +335,11 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     return;
 }
 
+//! ppl_bmp_de_gifinterlace - Reorder the rows of an interlaced GIF image into their natural order
+//! \param [in] ec - The error-reporting context
+//! \param [in] image - The image structure into which the image is read
+//! \return Zero on success, or one if memory allocation failed
+
 int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
     int i, j;
     unsigned char *out, *in, *outp;
@@ -375,6 +385,14 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
 }
 
 #define MAXCS 12
+
+//! ppl_bmp_de_lzw - Decompress the LZW-compressed pixel data of a GIF image
+//! \param [in] ec - The error-reporting context
+//! \param [in] buff - The compressed data
+//! \param [out] out - Buffer into which to write the decompressed pixel data
+//! \param [in] len - The size of the buffer <out>
+//! \param [in] cs - The initial LZW code size, in bits
+//! \return The number of bytes of decompressed data, or zero on failure
 
 unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned char *out, const unsigned long len,
                              int cs) {
@@ -457,6 +475,13 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
     ppl_error(ec, ERR_FILE, -1, -1, NULL);
     return 0;
 }
+
+//! ppl_bmp_de_lzw_bits - Extract an LZW code from a stream of packed bits
+//! \param [in] ec - The error-reporting context
+//! \param [in] c - The packed bit stream
+//! \param [in] st - The position of the first bit of the code within the stream
+//! \param [in] len - The length of the code, in bits
+//! \return The code
 
 unsigned int ppl_bmp_de_lzw_bits(const pplerr_context *ec, unsigned char *c, const int st, const int len) {
     unsigned tmp, mask;

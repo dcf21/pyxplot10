@@ -33,6 +33,35 @@
 #include "epsMaker/eps_plot_threedimbuff.h"
 #include "epsMaker/eps_settings.h"
 
+//! LineDraw_FindCrossingPoints - Find where a line segment between two points crosses the edges of a graph, so that it
+//! can be clipped
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] x1 - The x coordinate of the first point, in postscript points
+//! \param [in] y1 - The y coordinate of the first point, in postscript points
+//! \param [in] z1 - The depth of the first point
+//! \param [in] xap1 - The fractional position of the first point along the x axis
+//! \param [in] yap1 - The fractional position of the first point along the y axis
+//! \param [in] zap1 - The fractional position of the first point along the z axis
+//! \param [in] x2 - The x coordinate of the second point, in postscript points
+//! \param [in] y2 - The y coordinate of the second point, in postscript points
+//! \param [in] z2 - The depth of the second point
+//! \param [in] xap2 - The fractional position of the second point along the x axis
+//! \param [in] yap2 - The fractional position of the second point along the y axis
+//! \param [in] zap2 - The fractional position of the second point along the z axis
+//! \param [out] Inside1 - Set to one if the first point lies inside the graph
+//! \param [out] Inside2 - Set to one if the second point lies inside the graph
+//! \param [out] cx1 - Set to the x coordinate of the first crossing point
+//! \param [out] cy1 - Set to the y coordinate of the first crossing point
+//! \param [out] cz1 - Set to the depth of the first crossing point
+//! \param [out] cx2 - Set to the x coordinate of the second crossing point
+//! \param [out] cy2 - Set to the y coordinate of the second crossing point
+//! \param [out] cz2 - Set to the depth of the second crossing point
+//! \param [out] face1 - Set to the face of the graph crossed at the first crossing point
+//! \param [out] AxisPos1 - Set to the fractional position along that face of the first crossing point
+//! \param [out] face2 - Set to the face of the graph crossed at the second crossing point
+//! \param [out] AxisPos2 - Set to the fractional position along that face of the second crossing point
+//! \param [out] NCrossings - Set to the number of crossing points found
+
 void LineDraw_FindCrossingPoints(const EPSComm *x, const double x1, const double y1, const double z1, const double xap1,
                                  const double yap1, const double zap1, const double x2, const double y2,
                                  const double z2, const double xap2, const double yap2, const double zap2, int *Inside1,
@@ -92,6 +121,24 @@ void LineDraw_FindCrossingPoints(const EPSComm *x, const double x1, const double
     return;
 }
 
+//! LineDraw_Init - Begin drawing a line through a series of points in data coordinates, which is clipped to the edges
+//! of the graph
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] xa - The x axis
+//! \param [in] ya - The y axis
+//! \param [in] za - The z axis
+//! \param [in] xrn - The monotonic region of the x axis in which points lie
+//! \param [in] yrn - The monotonic region of the y axis in which points lie
+//! \param [in] zrn - The monotonic region of the z axis in which points lie
+//! \param [in] sg - The graph settings
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \return A handle for the line, allocated in the current ppl_memAlloc context, or NULL on failure
+
 LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int xrn,
                               const int yrn, const int zrn, pplset_graph *sg, const unsigned char ThreeDim,
                               const double origin_x, const double origin_y, const double width, const double height,
@@ -117,6 +164,23 @@ LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, ppls
     output->x1set = 0;
     return output;
 }
+
+//! LineDraw_Point - Add a point to a line, drawing the segment from the previous point (clipped to the edges of the
+//! graph) if the pen is down
+//! \param [in] X - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] ld - The handle of the line
+//! \param [in] x - The x coordinate of the point, in data coordinates
+//! \param [in] y - The y coordinate of the point, in data coordinates
+//! \param [in] z - The z coordinate of the point, in data coordinates
+//! \param [in] x_offset - Offset to add to the x coordinate, in data coordinates
+//! \param [in] y_offset - Offset to add to the y coordinate, in data coordinates
+//! \param [in] z_offset - Offset to add to the z coordinate, in data coordinates
+//! \param [in] x_perpoffset - Offset to add to the x coordinate perpendicular to the line, in postscript points
+//! \param [in] y_perpoffset - Offset to add to the y coordinate perpendicular to the line, in postscript points
+//! \param [in] z_perpoffset - Offset to add to the depth perpendicular to the line, in postscript points
+//! \param [in] linetype - The line type (dash pattern)
+//! \param [in] linewidth - The line width, as a multiple of the default line width
+//! \param [in] colstr - The postscript command to set the color of the line
 
 void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double y, const double z,
                     const double x_offset, const double y_offset, const double z_offset, const double x_perpoffset,
@@ -219,6 +283,10 @@ void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double
     ld->zpo1 = z_perpoffset;
     return;
 }
+
+//! LineDraw_PenUp - Lift the pen, so that the next point added to a line starts a new segment
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] ld - The handle of the line
 
 void LineDraw_PenUp(const EPSComm *x, LineDrawHandle *ld) {
     ThreeDimBuffer_linepenup(ld->x);

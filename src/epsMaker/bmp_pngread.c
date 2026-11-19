@@ -36,6 +36,12 @@
 #include "epsMaker/bmp_image.h"
 #include "epsMaker/bmp_pngread.h"
 
+//! ppl_bmp_pngread - Read a PNG image file using libpng. On failure, an error is reported and <image->data> is set to
+//! NULL.
+//! \param [in] ec - The error-reporting context
+//! \param [in] in - The file handle of the PNG image
+//! \param [in] image - The image structure into which the image is read
+
 void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     int depth, ncols, ntrans, png_colour_type, i, j;
     unsigned width, height, row_bytes;

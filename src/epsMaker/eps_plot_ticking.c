@@ -54,6 +54,14 @@
 #include "epsMaker/eps_plot_ticking_auto2.h"
 #include "epsMaker/eps_plot_ticking_auto3.h"
 
+//! eps_plot_ticking - Decide the positions and labels of an axis's major and minor ticks, either automatically or from
+//! the user's settings, and compose its final label including any units
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] axis - The axis
+//! \param [in] AxisUnitStyle - The style in which units are shown in the axis label, one of the SW_AXISUNITSTY_*
+//! constants
+//! \param [in] linkedto - The axis this axis is linked to, whose ticks should be copied, or NULL
+
 void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pplset_axis *linkedto) {
     int i, j, MajMin, N, xrn;
     const double logmin = 1e-10;
@@ -426,6 +434,14 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
     return;
 }
 
+//! TickLabelAutoGen - Generate the label for a tick, rendering its value with the minimum number of significant figures
+//! needed
+//! \param [in] X - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] output - Set to point to the label, allocated in the ppl_memAlloc context <OutContext>
+//! \param [in] x - The value of the tick
+//! \param [in] log_base - The base of the logarithmic axis on which the tick lies, or 1 for a linear axis
+//! \param [in] OutContext - The ppl_memAlloc context in which to allocate the label
+
 void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int OutContext) {
     int SF = X->c->set->term_current.SignificantFigures;
     double ApproxMargin;
@@ -461,6 +477,16 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
     sprintf(*output, "$%s$", X->c->errcontext.tempErrStr);
     return;
 }
+
+//! TickLabelFromFormat - Generate the label for a tick by evaluating the axis's format expression
+//! \param [in] X - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] output - Set to point to the label, allocated in the ppl_memAlloc context <OutContext>
+//! \param [in] FormatExp - The axis's format expression
+//! \param [in] x - The value of the tick
+//! \param [in] xunit - The physical units of the axis
+//! \param [in] xyz - The direction of the axis (0=x, 1=y, 2=z), which determines the name of the dummy variable in the
+//! format expression
+//! \param [in] OutContext - The ppl_memAlloc context in which to allocate the label
 
 void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const double x, const pplObj *xunit,
                          const int xyz, int OutContext) {

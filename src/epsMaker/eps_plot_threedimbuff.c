@@ -48,6 +48,9 @@ static double pointsize_old;
 static int pointsize_old_SET;
 static char *colstr_old;
 
+//! ThreeDimBuffer_Reset - Empty the 3D display buffer
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void ThreeDimBuffer_Reset(const EPSComm *x) {
     ThreeDimBuffer_ACTIVE = 0;
     ThreeDimBuffer_LineSegmentID = 0;
@@ -57,6 +60,11 @@ void ThreeDimBuffer_Reset(const EPSComm *x) {
     colstr_old = NULL;
     return;
 }
+
+//! ThreeDimBuffer_Activate - Start buffering the postscript for each item drawn, so that items can be sorted into order
+//! of depth before being written. Used when drawing 3D plots.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \return Zero
 
 int ThreeDimBuffer_Activate(EPSComm *x) {
     ThreeDimBuffer_Deactivate(x);
@@ -74,6 +82,12 @@ struct DepthArrayEntry {
     void *item;
 };
 
+//! ThreeDimBuffer_qsort_slave - Comparison function for qsort(), used to sort the items in the 3D display buffer into
+//! order of depth, from back to front
+//! \param [in] x - Pointer to the first item
+//! \param [in] y - Pointer to the second item
+//! \return -1, 0 or 1 depending on the order of the items
+
 static int ThreeDimBuffer_qsort_slave(const void *x, const void *y) {
     const struct DepthArrayEntry *x1 = (const struct DepthArrayEntry *) x;
     const struct DepthArrayEntry *y1 = (const struct DepthArrayEntry *) y;
@@ -82,6 +96,11 @@ static int ThreeDimBuffer_qsort_slave(const void *x, const void *y) {
     else if (x1->depth < y1->depth) return 1.0;
     else return 0.0;
 }
+
+//! ThreeDimBuffer_Deactivate - Stop buffering postscript, and write all of the buffered items in order of depth, from
+//! back to front
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \return Zero on success, or one if memory allocation failed
 
 int ThreeDimBuffer_Deactivate(EPSComm *x) {
     int Nitems, i, j;
@@ -136,6 +155,18 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
     return 0;
 }
 
+//! ThreeDimBuffer_writeps - Write a fragment of postscript, either directly to the output, or to the 3D display buffer
+//! if it is active
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] z - The depth of the item, used to sort the 3D display buffer
+//! \param [in] linetype - The line type (dash pattern)
+//! \param [in] linewidth - The line width, as a multiple of the default line width
+//! \param [in] offset - The offset into the dash pattern at which to start
+//! \param [in] pointsize - The size of any point symbol drawn
+//! \param [in] colstr - The postscript command to set the color
+//! \param [in] psfrag - The fragment of postscript to write
+//! \return Zero on success, or one if memory allocation failed
+
 int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const double linewidth, const double offset,
                            double pointsize, char *colstr, char *psfrag) {
     ThreeDimBufferItem *item;
@@ -169,6 +200,26 @@ int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const
     }
     return 0;
 }
+
+//! ThreeDimBuffer_linesegment - Draw a line segment, either directly to the output, or to the 3D display buffer if it
+//! is active
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] z - The depth of the line segment, used to sort the 3D display buffer
+//! \param [in] linetype - The line type (dash pattern)
+//! \param [in] linewidth - The line width, as a multiple of the default line width
+//! \param [in] colstr - The postscript command to set the color
+//! \param [in] x0 - The x coordinate of the point before the start of the segment, used to join consecutive segments
+//! smoothly
+//! \param [in] y0 - The y coordinate of the point before the start of the segment
+//! \param [in] x1 - The x coordinate of the start of the segment, in postscript points
+//! \param [in] y1 - The y coordinate of the start of the segment, in postscript points
+//! \param [in] x2 - The x coordinate of the end of the segment, in postscript points
+//! \param [in] y2 - The y coordinate of the end of the segment, in postscript points
+//! \param [in] FirstSegment - If true, this is the first segment of a line
+//! \param [in] broken - If true, the segment does not join onto the previous one
+//! \param [in] LengthOffset - The distance along the line at which the segment starts, used to keep dash patterns
+//! continuous
+//! \return Zero on success, or one if memory allocation failed
 
 int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, const double linewidth, char *colstr,
                                double x0, double y0, double x1, double y1, double x2, double y2,
@@ -245,6 +296,11 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
     }
     return 0;
 }
+
+//! ThreeDimBuffer_linepenup - Finish the line currently being drawn, writing a postscript stroke command if the 3D
+//! display buffer is not active
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \return Zero
 
 int ThreeDimBuffer_linepenup(const EPSComm *x) {
     if (!ThreeDimBuffer_ACTIVE) {

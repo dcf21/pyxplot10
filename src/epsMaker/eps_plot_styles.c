@@ -52,7 +52,17 @@
 #include "epsMaker/eps_settings.h"
 #include "epsMaker/eps_style.h"
 
-// Work out the default set of with words for a plot item
+//! eps_withwords_default - Work out the default plot style modifiers for a plot item, cycling through colors, line
+//! types and point types for successive items
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] output - The default plot style modifiers
+//! \param [in] sg - The graph settings
+//! \param [in] functions - If true, the plot item is a function rather than a data file
+//! \param [in] Ccounter - The number of plot items which have been assigned colors so far
+//! \param [in] LTcounter - The number of plot items which have been assigned line types so far
+//! \param [in] PTcounter - The number of plot items which have been assigned point types so far
+//! \param [in] color - If true, cycle through colors; otherwise plot everything in black and cycle through line types
+
 void eps_withwords_default(const EPSComm *x, withWords *output, const pplset_graph *sg, const unsigned char functions,
                            const int Ccounter, const int LTcounter, const int PTcounter, const unsigned char color) {
     int i, j;
@@ -95,6 +105,17 @@ void eps_withwords_default(const EPSComm *x, withWords *output, const pplset_gra
     return;
 }
 
+//! eps_withwords_default_counterinc - Advance the counters of colors, line types and point types used by
+//! eps_withwords_default(), after a plot item has been drawn
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in|out] Ccounter - The number of plot items which have been assigned colors so far
+//! \param [in|out] LTcounter - The number of plot items which have been assigned line types so far
+//! \param [in|out] PTcounter - The number of plot items which have been assigned point types so far
+//! \param [in] color - If true, colors are cycled; otherwise line types are cycled
+//! \param [in] ww_final - The plot style modifiers with which the plot item was drawn, used to skip counters which it
+//! set explicitly
+//! \param [in] sg - The graph settings
+
 void eps_withwords_default_counterinc(const EPSComm *x, int *Ccounter, int *LTcounter, int *PTcounter,
                                       const unsigned char color, const withWords *ww_final, const pplset_graph *sg) {
     const int style = ww_final->linespoints;
@@ -128,7 +149,12 @@ void eps_withwords_default_counterinc(const EPSComm *x, int *Ccounter, int *LTco
     return;
 }
 
-// Return the number of columns of data which are required to plot in any given plot style
+//! eps_plot_styles_NDataColumns - Return the number of columns of data which are required to plot in a given plot style
+//! \param [in] ec - The error-reporting context
+//! \param [in] style - The plot style, one of the SW_STYLE_* constants
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \return The number of columns of data required
+
 int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsigned char ThreeDim) {
     if (style == SW_STYLE_POINTS) return 2 + (ThreeDim != 0);
     else if (style == SW_STYLE_LINES) return 2 + (ThreeDim != 0);
@@ -255,7 +281,25 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsi
         X->DataUnit = Y; \
     }
 
-// Update the usage of axes to include data from a particular data table, plotted in a particular style
+//! eps_plot_styles_UpdateUsage - Update the record of the range of values plotted against a set of axes, to include a
+//! data table plotted in a given style
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] data - The data to plot
+//! \param [in] style - The plot style, one of the SW_STYLE_* constants
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] a1 - The axis onto which the first data column is plotted
+//! \param [in] a2 - The axis onto which the second data column is plotted
+//! \param [in] a3 - The axis onto which the third data column is plotted
+//! \param [in] sg - The graph settings
+//! \param [in] xyz1 - The direction (0=x, 1=y, 2=z) of the axis <a1>
+//! \param [in] xyz2 - The direction (0=x, 1=y, 2=z) of the axis <a2>
+//! \param [in] xyz3 - The direction (0=x, 1=y, 2=z) of the axis <a3>
+//! \param [in] n1 - The number of the axis <a1>
+//! \param [in] n2 - The number of the axis <a2>
+//! \param [in] n3 - The number of the axis <a3>
+//! \param [in] id - The ID number of the canvas item, used in error messages
+//! \return Zero on success, or one if the data had physical units which conflict with the axes
+
 int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, unsigned char ThreeDim, pplset_axis *a1,
                                 pplset_axis *a2, pplset_axis *a3, pplset_graph *sg, int xyz1, int xyz2, int xyz3,
                                 int n1, int n2, int n3, int id) {
@@ -929,7 +973,26 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
     return 0;
 }
 
-// Render a dataset to postscript
+//! eps_plot_dataset - Render a data table to postscript, in a given plot style
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] data - The data to plot
+//! \param [in] style - The plot style, one of the SW_STYLE_* constants
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] a1 - The axis onto which the first data column is plotted
+//! \param [in] a2 - The axis onto which the second data column is plotted
+//! \param [in] a3 - The axis onto which the third data column is plotted
+//! \param [in] xn - The axis direction (0=x, 1=y, 2=z) onto which the first data column is plotted
+//! \param [in] yn - The axis direction (0=x, 1=y, 2=z) onto which the second data column is plotted
+//! \param [in] zn - The axis direction (0=x, 1=y, 2=z) onto which the third data column is plotted
+//! \param [in] sg - The graph settings
+//! \param [in] pd - The descriptor of the plot item being drawn
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \return Zero on success, or one on failure
+
 int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const unsigned char ThreeDim, pplset_axis *a1,
                      pplset_axis *a2, pplset_axis *a3, int xn, int yn, const int zn, pplset_graph *sg,
                      canvas_plotdesc *pd, const double origin_x, const double origin_y, const double width,
@@ -1932,7 +1995,20 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     return 0;
 }
 
-// Produce an icon representing a dataset on the graph's legend
+//! eps_plot_LegendIcon - Draw the icon representing a plot item in a graph's legend
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] i - The number of the plot item
+//! \param [in] pd - The descriptor of the plot item being drawn
+//! \param [in] xpos - The x position of the icon, in postscript points
+//! \param [in] ypos - The y position of the icon, in postscript points
+//! \param [in] scale - The scale factor by which to draw the icon
+//! \param [in] a1 - The axis onto which the first data column is plotted
+//! \param [in] a2 - The axis onto which the second data column is plotted
+//! \param [in] a3 - The axis onto which the third data column is plotted
+//! \param [in] xn - The axis direction (0=x, 1=y, 2=z) onto which the first data column is plotted
+//! \param [in] yn - The axis direction (0=x, 1=y, 2=z) onto which the second data column is plotted
+//! \param [in] zn - The axis direction (0=x, 1=y, 2=z) onto which the third data column is plotted
+
 void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xpos, double ypos, double scale,
                          pplset_axis *a1, pplset_axis *a2, pplset_axis *a3, const int xn, const int yn, const int zn) {
     const int style = pd->ww_final.linespoints;

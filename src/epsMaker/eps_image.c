@@ -46,6 +46,10 @@
 #include "epsMaker/eps_image.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_image_RenderEPS - Render an image canvas item, which embeds a bitmap image, to postscript, compressing it where
+//! possible
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+
 void eps_image_RenderEPS(EPSComm *x) {
     bitmap_data data;
     FILE *infile;

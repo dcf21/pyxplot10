@@ -49,6 +49,10 @@ char *ppl_kpse_PathList[3][MAX_PATHS];
 unsigned char ppl_kpse_PathRecursive[3][MAX_PATHS];
 #endif
 
+//! ppl_kpse_wrap_init - Read the search paths for TeX font files (TFM, PFA and PFB) by running kpsewhich, for use when
+//! looking up fonts
+//! \param [in] c - The Pyxplot context
+
 void ppl_kpse_wrap_init(const ppl_context *c) {
 #ifdef HAVE_KPATHSEA
     kpse_set_program_name("dvips", "dvips");
@@ -143,6 +147,14 @@ void ppl_kpse_wrap_init(const ppl_context *c) {
 }
 
 #ifndef HAVE_KPATHSEA
+
+//! ppl_kpse_wrap_test_path - Test whether a file exists in a directory, optionally searching subdirectories recursively
+//! \param [in] ec - The error-reporting context
+//! \param [in] s - The filename to search for
+//! \param [in] path - The directory to search in
+//! \param [in] recurse - If true, also search subdirectories
+//! \return The full path of the file, stored in a static buffer, or NULL if it was not found
+
 char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned char recurse) {
     int pos;
     DIR *dp;
@@ -182,6 +194,13 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
     return found ? buffer : NULL;
 }
 
+//! ppl_kpse_wrap_find_file - Search a list of directories for a file
+//! \param [in] ec - The error-reporting context
+//! \param [in] s - The filename to search for
+//! \param [in] paths - NULL-terminated array of the directories to search
+//! \param [in] RecurseList - Array of flags indicating whether each directory should be searched recursively
+//! \return The full path of the file, stored in a static buffer, or NULL if it was not found
+
 char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigned char *RecurseList) {
     int i;
     char *output;
@@ -197,6 +216,11 @@ char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigne
 }
 #endif
 
+//! ppl_kpse_wrap_find_pfa - Search the TeX font search path for a PFA font file
+//! \param [in] ec - The error-reporting context
+//! \param [in] s - The filename to search for
+//! \return The full path of the file, stored in a static buffer, or NULL if it was not found
+
 char *ppl_kpse_wrap_find_pfa(const pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
@@ -205,6 +229,11 @@ char *ppl_kpse_wrap_find_pfa(const pplerr_context *ec, char *s) {
 #endif
 }
 
+//! ppl_kpse_wrap_find_pfb - Search the TeX font search path for a PFB font file
+//! \param [in] ec - The error-reporting context
+//! \param [in] s - The filename to search for
+//! \return The full path of the file, stored in a static buffer, or NULL if it was not found
+
 char *ppl_kpse_wrap_find_pfb(const pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
@@ -212,6 +241,11 @@ char *ppl_kpse_wrap_find_pfb(const pplerr_context *ec, char *s) {
     return ppl_kpse_wrap_find_file(ec, s, ppl_kpse_PathList[2], ppl_kpse_PathRecursive[2]);
 #endif
 }
+
+//! ppl_kpse_wrap_find_tfm - Search the TeX font search path for a TFM font metric file
+//! \param [in] ec - The error-reporting context
+//! \param [in] s - The filename to search for
+//! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
 char *ppl_kpse_wrap_find_tfm(const pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA

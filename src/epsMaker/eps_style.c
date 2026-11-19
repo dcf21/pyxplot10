@@ -27,7 +27,12 @@
 
 #include "epsMaker/eps_style.h"
 
-// Line types
+//! eps_LineType - Return the postscript command to set a line type (dash pattern)
+//! \param [in] lt - The line type
+//! \param [in] lw - The line width, by which the dash lengths are scaled
+//! \param [in] offset - The offset into the dash pattern at which to start
+//! \return The postscript command, stored in a static buffer which is overwritten by subsequent calls
+
 char *eps_LineType(int lt, double lw, double offset) {
     static char output[256];
     lt = (lt - 1) % 9;
