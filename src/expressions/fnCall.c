@@ -855,7 +855,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             int k;
             for (k = inExprCharPos; ((inExpr->ascii[k] != '(') && (inExpr->ascii[k] != '\0')); k++);
             if (inExpr->ascii[k] == '(') k++;
-            for (; ((inExpr->ascii[k] > '\0') && (inExpr->ascii[k] <= ' ')); k++);
+            for (; ((inExpr->ascii[k] > '\0') && ((unsigned char) inExpr->ascii[k] <= ' ')); k++);
             if (nArgs == 3) step = &v;
             else if (nArgs == 4) step = &args[3];
             else {
@@ -902,7 +902,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             int k;
             for (k = inExprCharPos; ((inExpr->ascii[k] != '(') && (inExpr->ascii[k] != '\0')); k++);
             if (inExpr->ascii[k] == '(') k++;
-            for (; ((inExpr->ascii[k] > '\0') && (inExpr->ascii[k] <= ' ')); k++);
+            for (; ((inExpr->ascii[k] > '\0') && ((unsigned char) inExpr->ascii[k] <= ' ')); k++);
             if (nArgs != 4) {
                 sprintf(context->errStat.errBuff, "The int_d() function takes two or three arguments; %d supplied.",
                         nArgs - 1);

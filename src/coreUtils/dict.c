@@ -436,7 +436,7 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
     if (clash) {
         ptr = in->first;
         while (ptr != NULL) {
-            for (k = 0; ((ptr->key[k] > ' ') && (ptr->key[k] == key[k])); k++);
+            for (k = 0; (((unsigned char) ptr->key[k] > ' ') && (ptr->key[k] == key[k])); k++);
             if ((ptr->key[k] == '\0') && (!(isalnum(key[k]) || (key[k] == '_')))) {
                 *ptrout = ptr;
                 return;
@@ -447,7 +447,7 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
 
     // Need to search "int_d?"-like wildcards
     for (i = 0; magicFns[i] != NULL; i++) {
-        for (k = 0; ((magicFns[i][k] > ' ') && (magicFns[i][k] == key[k])); k++);
+        for (k = 0; (((unsigned char) magicFns[i][k] > ' ') && (magicFns[i][k] == key[k])); k++);
         if (magicFns[i][k] == '\0') // each magic function name can be followed by a variable name
         {
             int l = 0;
@@ -461,7 +461,7 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
             SubsString[l] = '\0';
             ptr = in->first;
             while (ptr != NULL) {
-                for (k = 0; ((ptr->key[k] > ' ') && (ptr->key[k] == magicFns[i][k])); k++);
+                for (k = 0; (((unsigned char) ptr->key[k] > ' ') && (ptr->key[k] == magicFns[i][k])); k++);
                 if ((magicFns[i][k] == '\0') && (ptr->key[k] == '\0')) {
                     *ptrout = ptr;
                     return;

@@ -90,7 +90,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
             if (!newWord) buf[pos++] = '\0';
             newWord = 1;
             pos = 0;
-            if ((c <= ' ') && (c != '\0')) continue;
+            if (((unsigned char) c <= ' ') && (c != '\0')) continue;
             if (strcmp(buf, dummyVar) == 0) {
                 containsDummy = 1;
                 if (containsOperator || (NWords > 1)) fail = 1;

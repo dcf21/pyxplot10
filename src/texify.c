@@ -339,7 +339,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             ei = ei + (1 + q);
             if (tokenBuff[ei].state != (unsigned char) 'P') continue; // we don't have closing bracket
             ei++;
-            while ((tokenBuff[ei].state == (unsigned char) 'P') && (in[i] <= ' ') && (in[i] >= '\0') && (ei < tlen)) {
+            while ((tokenBuff[ei].state == (unsigned char) 'P') && ((unsigned char) in[i] <= ' ') && (in[i] >= '\0') &&
+                   (ei < tlen)) {
                 ei++;
             } // ffw over function arguments
             memcpy(&c->stack[k], &val, sizeof(pplObj));
@@ -437,7 +438,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             const char quoteType = in[i];
             for (ei = i; ((ei < tlen) && (tokenBuff[ei].state == o)); ei++);
             l = ei - i;
-            while ((l > 1) && (in[i + l - 1] >= '\0') && (in[i + l - 1] <= ' ')) l--; // Strip trailing spaces
+            while ((l > 1) && (in[i + l - 1] >= '\0') && ((unsigned char) in[i + l - 1] <= ' '))
+                l--; // Strip trailing spaces
             if ((quoteType == '\'') || (quoteType == '\"')) {
                 l -= 2;
                 i++;
@@ -504,7 +506,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             k += strlen(out + k);
             i++;
             i++;
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if ((o == 'G') || (o == 'T') || (o == 'V')) // variable name
         {
             int mathrm = (o == 'T') || (o == 'V');
@@ -534,7 +536,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
 
                 // Find ( at beginning of function arguments
                 for (bi = i; isalnum(in[bi]) || (in[bi] == '_'); bi++);
-                for (; (in[bi] > '\0') && (in[bi] <= ' '); bi++);
+                for (; (in[bi] > '\0') && ((unsigned char) in[bi] <= ' '); bi++);
                 if (in[bi] != '(') goto variableName; // could not find (
                 ppl_strBracketMatch(in + bi, '(', ')', cp, &ncp, &cbp, 16); // Search for a ) to match the (
                 if (cbp <= 0) goto variableName; // could not find )
@@ -644,7 +646,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 FFW_N(3);
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if (o == 'J') // a binary operator
         {
             if (MARKUP_MATCH("**")) {
@@ -733,7 +735,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 FFW_N(1);
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if (o == 'K') // a terniary operator
         {
             if (MARKUP_MATCH("?")) {
@@ -744,33 +746,33 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 FFW_N(1);
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if ((o == 'M') || (o == 'Q')) // list literal
         {
             if (in[i] == '[') snprintf(out + k, outlen - k, "\\left[");
             if (in[i] == ']') snprintf(out + k, outlen - k, "\\right]");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if (o == 'N') // dictionary literal
         {
             if (in[i] == '{') snprintf(out + k, outlen - k, "\\left\\{");
             if (in[i] == '}') snprintf(out + k, outlen - k, "\\right\\}");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if (o == 'O') // dollar operator
         {
             if (in[i] == '$') snprintf(out + k, outlen - k, "\\$");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if (o == 'R') // dot operator
         {
             if (in[i] == '.') snprintf(out + k, outlen - k, ".");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else if (o == 'S') // assignment operator
         {
             if (MARKUP_MATCH("=")) {
@@ -811,7 +813,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 FFW_N(3);
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && (in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
         } else // unknown token
         {
             FFW_TOKEN;

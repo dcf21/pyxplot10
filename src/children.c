@@ -336,7 +336,7 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
         int state = 0, i;
         char *filename = in + 1;
         for (i = 1; in[i] != '\0'; i++)
-            if (((in[i] > ' ') || (in[i] < '\0')) || ((i > 1) && (in[i - 1] == '\\'))) {
+            if ((((unsigned char) in[i] > ' ') || (in[i] < '\0')) || ((i > 1) && (in[i - 1] == '\\'))) {
                 if (!state) {
                     filename = in + i;
                     state = 1;
@@ -390,7 +390,7 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
 
     // Split up command line into words
     for (i = 0; fname[i] != '\0'; i++) {
-        if (((fname[i] > ' ') || (fname[i] < '\0')) || ((i > 1) && (fname[i - 1] == '\\'))) {
+        if ((((unsigned char) fname[i] > ' ') || (fname[i] < '\0')) || ((i > 1) && (fname[i - 1] == '\\'))) {
             if (state) {
             } // In the middle of a word... keep going
             else {

@@ -44,11 +44,11 @@ list *ppl_strSplit(char *in) {
     text_buffer = (char *) malloc(strlen(in) + 1);
     while (in[pos] != '\0') {
         // Scan along to find the next word
-        while ((in[pos] <= ' ') && (in[pos] > '\0')) pos++;
+        while (((unsigned char) in[pos] <= ' ') && (in[pos] > '\0')) pos++;
         start = pos;
 
         // Scan along to find the end of this word
-        while ((in[pos] > ' ') && (in[pos] > '\0')) pos++;
+        while (((unsigned char) in[pos] > ' ') && (in[pos] > '\0')) pos++;
         end = pos;
 
         if (end > start) {

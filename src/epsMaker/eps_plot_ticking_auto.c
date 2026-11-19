@@ -564,10 +564,10 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     }
     if (format[i] != quoteType) goto FAIL;
     i += tripleQuote ? 3 : 1;
-    for (; ((format[i] <= ' ') && (format[i] != '\0')); i++);
+    for (; (((unsigned char) format[i] <= ' ') && (format[i] != '\0')); i++);
     if (format[i] != '%') goto FAIL;
     i++;
-    for (; ((format[i] <= ' ') && (format[i] != '\0')); i++);
+    for (; (((unsigned char) format[i] <= ' ') && (format[i] != '\0')); i++);
     if (format[i] != '(') goto FAIL;
     ppl_strBracketMatch(format + i, '(', ')', CommaPositions, &NArgs, &j, MAX_ARGS);
     if (j < 0) goto FAIL;

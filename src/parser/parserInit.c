@@ -118,36 +118,37 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
             stk[(*i) - 1]->type = type;
             j++;
         } // If storage variable name begins '0', zero repeats are allowed; a REP2 item, not a REP item
-        if ((cmdText[j] > ' ') && (cmdText[j] != '@')) {
+        if (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) {
             varNameStart = j;
-            while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++; // FFW over variable name
+            while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++; // FFW over variable name
             varNameEnd = j;
         }
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
-        while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
+        while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
-        while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
+        while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         k = (int) ppl_getFloat(cmdText + j, NULL);
-        while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
+        while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->outStackPos = k;
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         l = (int) ppl_getFloat(cmdText + j, NULL);
-        while ((cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
+        while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->listLen = l;
-        while ((cmdText[j] != '\0') && (cmdText[j] != '\n') && (cmdText[j] < ' ')) j++; // FFW over trailing whitespace
+        while ((cmdText[j] != '\0') && (cmdText[j] != '\n') && ((unsigned char) cmdText[j] < ' '))
+            j++; // FFW over trailing whitespace
 
         if (varNameStart > -1) {
             stk[(*i) - 1]->varName = (char *) malloc((varNameEnd - varNameStart + 1) * sizeof(char));
@@ -188,12 +189,14 @@ int ppl_parserInit(ppl_context *c) {
         int stackPos = 0, cmdLetter, rootStackLen, nc = 0;
         parserNode *defnStack[16];
 
-        while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] <= ' ')) inPos++; // Ignore whitespace
+        while ((ppl_cmdList[inPos] != '\0') && ((unsigned char) ppl_cmdList[inPos] <= ' '))
+            inPos++; // Ignore whitespace
         rootStackLen =
                 (int) ppl_getFloat(ppl_cmdList + inPos,
                                    &nc); // Each line of command list begins with the length of the root stack namespace
         inPos += nc;
-        while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] <= ' ')) inPos++; // Ignore whitespace
+        while ((ppl_cmdList[inPos] != '\0') && ((unsigned char) ppl_cmdList[inPos] <= ' '))
+            inPos++; // Ignore whitespace
         if (ppl_cmdList[inPos] == '\0') break; // End of cmdList -- all instructions have now been read
         if ((ppl_cmdList[inPos] >= '@') && (ppl_cmdList[inPos + 1] >= 'a') && (ppl_cmdList[inPos + 1] <= 'z'))
             cmdLetter = (int) (ppl_cmdList[inPos + 1] - 'a');
@@ -203,7 +206,8 @@ int ppl_parserInit(ppl_context *c) {
 
         // Loop over words in instruction definition
         while (1) {
-            while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] != '\n') && (ppl_cmdList[inPos] <= ' '))
+            while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] != '\n') &&
+                   ((unsigned char) ppl_cmdList[inPos] <= ' '))
                 inPos++; // Ignore whitespace
             if ((ppl_cmdList[inPos] == '\0') || (ppl_cmdList[inPos] == '\n')) break; // Newline means end of instruction
 
@@ -293,7 +297,8 @@ int ppl_parserInit(ppl_context *c) {
                 newNode->firstChild = newNode->nextSibling = NULL;
 
                 strStart = inPos;
-                while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++; // FFW over match string
+                while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
+                    inPos++; // FFW over match string
                 newNode->matchString = (char *) malloc((inPos - strStart + 1) * sizeof(char));
                 if (newNode->matchString == NULL) {
                     ppl_fatal(e, __FILE__, __LINE__, "Out of memory whilst setting up Pyxplot's command line parser.");
@@ -309,7 +314,8 @@ int ppl_parserInit(ppl_context *c) {
                 }
 
                 strStart = inPos;
-                while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++; // FFW over variable name
+                while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
+                    inPos++; // FFW over variable name
                 newNode->varName = (char *) malloc((inPos - strStart + 1) * sizeof(char));
                 if (newNode->varName == NULL) {
                     ppl_fatal(e, __FILE__, __LINE__, "Out of memory whilst setting up Pyxplot's command line parser.");
@@ -323,7 +329,7 @@ int ppl_parserInit(ppl_context *c) {
                 }
 
                 strStart = inPos;
-                while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
+                while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
                     inPos++; // FFW over output string literal
                 if (strStart == inPos) {
                     newNode->outString =
@@ -344,14 +350,14 @@ int ppl_parserInit(ppl_context *c) {
                 }
 
                 k = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
-                while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
+                while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->acLevel = k;
                 if (ppl_cmdList[inPos++] != '@') {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
                 l = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
-                while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
+                while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->outStackPos = l;
                 if (ppl_cmdList[inPos++] != '@') {
                     ppl_snprintfTrunc(msg, sizeof(msg),
@@ -359,9 +365,10 @@ int ppl_parserInit(ppl_context *c) {
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
                 m = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
-                while ((ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
+                while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->listLen = m;
-                while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] != '\n') && (ppl_cmdList[inPos] < ' '))
+                while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] != '\n') &&
+                       ((unsigned char) ppl_cmdList[inPos] < ' '))
                     inPos++; // FFW over trailing whitespace
 
                 target = &(defnStack[stackPos - 1]->firstChild); // Pointer to where first child of parent is linked

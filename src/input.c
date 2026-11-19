@@ -314,7 +314,7 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
 
     // Find last character of presently entered line. If it's a \, buffer line and collect another
     for (i = 0; in[i] != '\0'; i++);
-    for (; ((i > 0) && (in[i] <= ' ')); i--);
+    for (; ((i > 0) && ((unsigned char) in[i] <= ' ')); i--);
     if (in[i] == '\\') {
         if (context->inputLineAddBuffer == NULL) {
             context->inputLineAddBuffer = (char *) malloc(i + 1);
@@ -419,7 +419,7 @@ int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, con
     {
         int i = 0, j = 0;
         for (i = 0; line[i] != '\0'; i++)
-            if (line[i] > ' ') {
+            if ((unsigned char) line[i] > ' ') {
                 j = 1;
                 break;
             }

@@ -351,10 +351,10 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
             };
             strcpy(filterArgs, filter);
             for (i = j = k = 0; filterArgs[i] != '\0'; i++) {
-                if ((k == 0) && (filterArgs[i] > ' ')) {
+                if ((k == 0) && ((unsigned char) filterArgs[i] > ' ')) {
                     k = 1;
                     argList[j++] = filterArgs + i;
-                } else if ((k == 1) && (filterArgs[i] <= ' ')) {
+                } else if ((k == 1) && ((unsigned char) filterArgs[i] <= ' ')) {
                     k = 0;
                     filterArgs[i] = '\0';
                 }
@@ -430,7 +430,7 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
                         linenumber_count, block_count, index_number, usingRowCol, input->ascii, colHeads, NcolHeads,
                         colUnits, NcolUnits);
 
-    while ((l > 0) && (input->ascii[l] >= '\0') && (input->ascii[l] <= ' ')) l--;
+    while ((l > 0) && (input->ascii[l] >= '\0') && ((unsigned char) input->ascii[l] <= ' ')) l--;
     if (ppl_validFloat(input->ascii, &i) &&
         (i > l)) // using 1:2 -- number is column number -- "1" means "the contents of column 1", i.e. "$1".
     {
@@ -738,11 +738,11 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
                 } else {
                     int caught = 0, p = 0;
                     for (; (s[p] != '\0'); p++) {
-                        if (s[p] <= ' ') {
+                        if ((unsigned char) s[p] <= ' ') {
                             hadspace[Ncols] = 1;
                         } else if (s[p] == ',') {
                             p++;
-                            while ((s[p] != '\0') && (s[p] <= ' ')) { p++; }
+                            while ((s[p] != '\0') && ((unsigned char) s[p] <= ' ')) { p++; }
                             caught = 1;
                             hadspace[Ncols] = hadcomma[Ncols] = 1;
                         } else {
@@ -1083,7 +1083,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         file_linenumber++;
         ppl_strStrip(lineptr, linebuffer);
 
-        for (j = 0; ((linebuffer[j] != '\0') && (linebuffer[j] <= ' ')); j++);
+        for (j = 0; ((linebuffer[j] != '\0') && ((unsigned char) linebuffer[j] <= ' ')); j++);
         if (linebuffer[j] == '\0') // We have a blank line
         {
             if (prev_blanklines > 1) continue; // A very long gap in the datafile
@@ -1111,7 +1111,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
 
         // Ignore comment lines
         if (linebuffer[j] == '#') {
-            for (i = j + 1; ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')); i++);
+            for (i = j + 1; ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')); i++);
             if ((strncmp(linebuffer + i, "Columns:", 8) == 0) &&
                 (usingRowCol == DATAFILE_COL)) // '# Columns:' means we have a list of column headings
             {
@@ -1121,11 +1121,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                                       file_linenumber);
                     ppl_log(&c->errcontext, msg);
                 }
-                while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
+                while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (j = i; linebuffer[j] != '\0'; j++) {
-                    if (linebuffer[j] <= ' ') {
+                    if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
                         itemsOnLine++;
@@ -1146,7 +1146,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (j = 0; cptr[j] != '\0'; j++) {
-                    if (cptr[j] <= ' ') {
+                    if ((unsigned char) cptr[j] <= ' ') {
                         cptr[j] = '\0';
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
@@ -1172,11 +1172,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                                       file_linenumber);
                     ppl_log(&c->errcontext, msg);
                 }
-                while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
+                while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (j = i; linebuffer[j] != '\0'; j++) {
-                    if (linebuffer[j] <= ' ') {
+                    if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
                         itemsOnLine++;
@@ -1197,7 +1197,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (j = 0; cptr[j] != '\0'; j++) {
-                    if (cptr[j] <= ' ') {
+                    if ((unsigned char) cptr[j] <= ' ') {
                         cptr[j] = '\0';
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
@@ -1223,11 +1223,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                                       file_linenumber);
                     ppl_log(&c->errcontext, msg);
                 }
-                while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
+                while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (j = i; linebuffer[j] != '\0'; j++) {
-                    if (linebuffer[j] <= ' ') {
+                    if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
                         itemsOnLine++;
@@ -1248,10 +1248,10 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (k = 0; cptr[k] != '\0'; k++) {
-                    if (cptr[k] <= ' ') {
+                    if ((unsigned char) cptr[k] <= ' ') {
                         continue;
                     } else {
-                        for (l = 0; cptr[k + l] > ' '; l++);
+                        for (l = 0; (unsigned char) cptr[k + l] > ' '; l++);
                         cptr[k + l] = '\0';
                         m = -1;
                         columnUnits[itemsOnLine].refCount = 1;
@@ -1286,11 +1286,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                                       file_linenumber);
                     ppl_log(&c->errcontext, msg);
                 }
-                while ((linebuffer[i] != '\0') && (linebuffer[i] <= ' ')) i++;
+                while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (j = i; linebuffer[j] != '\0'; j++) {
-                    if (linebuffer[j] <= ' ') {
+                    if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
                         itemsOnLine++;
@@ -1311,10 +1311,10 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 for (k = 0; cptr[k] != '\0'; k++) {
-                    if (cptr[k] <= ' ') {
+                    if ((unsigned char) cptr[k] <= ' ') {
                         continue;
                     } else {
-                        for (l = 0; cptr[k + l] > ' '; l++);
+                        for (l = 0; (unsigned char) cptr[k + l] > ' '; l++);
                         cptr[k + l] = '\0';
                         m = -1;
                         rowUnits[itemsOnLine].refCount = 1;
@@ -1391,11 +1391,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             hadwhitespace = 1;
             hadcomma = 0;
             for (i = 0; linebuffer[i] != '\0'; i++) {
-                if (linebuffer[i] <= ' ') {
+                if ((unsigned char) linebuffer[i] <= ' ') {
                     hadwhitespace = 1;
                 } else if (linebuffer[i] == ',') {
                     int j;
-                    for (j = i + 1; ((linebuffer[j] <= ' ') && (linebuffer[j] != '\0')); j++);
+                    for (j = i + 1; (((unsigned char) linebuffer[j] <= ' ') && (linebuffer[j] != '\0')); j++);
                     colData[itemsOnLine++] = linebuffer + j;
                     hadwhitespace = hadcomma = 1;
                 } else {

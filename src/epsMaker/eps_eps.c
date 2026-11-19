@@ -257,19 +257,19 @@ void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, dou
             if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%BoundingBox: . . . .
             {
                 i = 0;
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 blt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 bbt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 brt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 btt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
@@ -286,19 +286,19 @@ void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, dou
             if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%HiResBoundingBox: . . . .
             {
                 i = 0;
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 blt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 bbt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 brt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
                 btt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box

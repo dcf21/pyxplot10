@@ -46,12 +46,12 @@ double ppl_getFloat(const char *str, int *Nchars) {
     int pos2 = 0;
 
     if ((str[pos + 0] == 'n') && (str[pos + 1] == 'a') && (str[pos + 2] == 'n') && (str[pos + 3] >= '\0') &&
-        (str[pos + 3] <= ' ')) {
+        ((unsigned char) str[pos + 3] <= ' ')) {
         if (Nchars != NULL) *Nchars = 3;
         return GSL_NAN;
     }
     if ((str[pos + 0] == 'N') && (str[pos + 1] == 'A') && (str[pos + 2] == 'N') && (str[pos + 3] >= '\0') &&
-        (str[pos + 3] <= ' ')) {
+        ((unsigned char) str[pos + 3] <= ' ')) {
         if (Nchars != NULL) *Nchars = 3;
         return GSL_NAN;
     }
@@ -117,13 +117,13 @@ int ppl_validFloat(const char *str, int *end) {
     int pos2 = 0;
 
     if ((str[pos + 0] == 'n') && (str[pos + 1] == 'a') && (str[pos + 2] == 'n') && (str[pos + 3] >= '\0') &&
-        (str[pos + 3] <= ' ')) {
+        ((unsigned char) str[pos + 3] <= ' ')) {
         pos += 3;
         had_number = 1;
         goto VALID_FLOAT_ENDED;
     }
     if ((str[pos + 0] == 'N') && (str[pos + 1] == 'A') && (str[pos + 2] == 'N') && (str[pos + 3] >= '\0') &&
-        (str[pos + 3] <= ' ')) {
+        ((unsigned char) str[pos + 3] <= ' ')) {
         pos += 3;
         had_number = 1;
         goto VALID_FLOAT_ENDED;
@@ -168,7 +168,7 @@ int ppl_validFloat(const char *str, int *end) {
     }
 
 VALID_FLOAT_ENDED:
-    while ((str[pos] != '\0') && (str[pos] <= ' ')) pos++; /* Fast-forward over spaces at end */
+    while ((str[pos] != '\0') && ((unsigned char) str[pos] <= ' ')) pos++; /* Fast-forward over spaces at end */
     if ((!had_number) || (!expvalid)) return 0;
     if (end == NULL) return 1;
     if ((*end >= 0) && (pos < *end)) return 0;
@@ -285,10 +285,11 @@ void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength)
     // Read the file one character at a time with getc(), which is much faster than calling fscanf() per character
     while (!cancellationFlag) {
         const int ch = getc(file);
-        // Characters are tested as signed chars, so control characters and bytes above 127 are both dropped
         const char c = (char) ch;
         if ((ch == EOF) || (c == '\n')) break;
-        if ((((int) c) <= 31) && (c != '\t')) continue;
+        // Drop ASCII control characters other than tab (e.g. the \r of DOS line endings). Bytes above 127 are kept,
+        // so that UTF-8 text survives.
+        if ((ch < 32) && (c != '\t')) continue;
         if (MaxLenPtr != NULL) {
             // Grow the malloced buffer as needed, leaving room for the null terminator
             if (i > MaxLength - 4) {
@@ -318,8 +319,8 @@ void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength)
 
 void ppl_getWord(char *out, const char *in, const int max) {
     int count = 0;
-    while ((*in <= ' ') && (*in > '\0')) in++; /* Fast-forward over preceding whitespace */
-    while (((*in > ' ') || (*in < '\0')) && (count < (max - 1))) {
+    while (((unsigned char) *in <= ' ') && (*in > '\0')) in++; /* Fast-forward over preceding whitespace */
+    while ((((unsigned char) *in > ' ') || (*in < '\0')) && (count < (max - 1))) {
         *(out++) = *(in++);
         count++;
     }
@@ -331,9 +332,9 @@ void ppl_getWord(char *out, const char *in, const int max) {
 //! \return The pointer to the first non-whitespace character of the second word in the input string
 
 char *ppl_nextWord(char *in) {
-    while ((*in <= ' ') && (*in > '\0')) in++; /* Fast-forward over preceding whitespace */
-    while ((*in > ' ') || (*in < '\0')) in++; /* Fast-forward over one word */
-    while ((*in <= ' ') && (*in > '\0')) in++; /* Fast-forward over whitespace before next word */
+    while (((unsigned char) *in <= ' ') && (*in > '\0')) in++; /* Fast-forward over preceding whitespace */
+    while (((unsigned char) *in > ' ') || (*in < '\0')) in++; /* Fast-forward over one word */
+    while (((unsigned char) *in <= ' ') && (*in > '\0')) in++; /* Fast-forward over whitespace before next word */
     return in; /* Return pointer to next word */
 }
 
@@ -362,10 +363,10 @@ char *ppl_friendlyTimestring() {
 
 char *ppl_strStrip(const char *in, char *out) {
     char *scan = out;
-    while ((*in <= ' ') && (*in > '\0')) in++;
+    while (((unsigned char) *in <= ' ') && (*in > '\0')) in++;
     while ((*in != '\0')) *(scan++) = *(in++);
     scan--;
-    while ((scan > out) && (*scan <= ' ') && (*scan >= '\0')) scan--;
+    while ((scan > out) && ((unsigned char) *scan <= ' ') && (*scan >= '\0')) scan--;
     *++scan = '\0';
     return out;
 }
@@ -406,7 +407,7 @@ char *ppl_strLower(const char *in, char *out) {
 char *ppl_strUnderline(const char *in, char *out) {
     char *scan = out;
     while (*in != '\0') {
-        if ((*in >= ' ') || (*in < '\0')) *scan++ = '-';
+        if (((unsigned char) *in >= ' ') || (*in < '\0')) *scan++ = '-';
         in++;
     }
     *scan = '\0';
@@ -481,7 +482,8 @@ int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin)
 
     if ((candidate == NULL) || (test == NULL)) return -1;
 
-    for (j = 0; ((candidate[j] > '\0') && (candidate[j] <= ' ')); j++); // Fast-forward over whitespace at beginning
+    for (j = 0; ((candidate[j] > '\0') && ((unsigned char) candidate[j] <= ' '));
+         j++); // Fast-forward over whitespace at beginning
 
     for (i = 0; 1; i++, j++)
         if (test[i] != '\0') {
@@ -489,14 +491,14 @@ int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin)
             {
                 if (i < Nmin) return -1; // We've not passed enough characters yet
 
-                if (candidate[j] <= ' ') // Word terminated with space...
+                if ((unsigned char) candidate[j] <= ' ') // Word terminated with space...
                 {
                     return j;
                 } else if ((isalnum(candidate[j]) == 0) && (candidate[j] != '_')) // Word terminated with punctuation...
                 {
                     // Alphanumeric test strings can be terminated by punctuation; others must have spaces after them
                     for (i = 0; test[i] != '\0'; i++)
-                        if ((test[i] > ' ') && (isalnum(test[i]) == 0) && (test[i] != '_')) return -1;
+                        if (((unsigned char) test[i] > ' ') && (isalnum(test[i]) == 0) && (test[i] != '_')) return -1;
                     return j;
                 } else // Word terminated with more letters
                 {
@@ -504,14 +506,14 @@ int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin)
                 }
             }
         } else { // We've hit the end of the test string
-            if (candidate[j] <= ' ') // Word terminated with space...
+            if ((unsigned char) candidate[j] <= ' ') // Word terminated with space...
             {
                 return j;
             } else if ((isalnum(candidate[j]) == 0) && (candidate[j] != '_')) // Word terminated with punctuation...
             {
                 // Alphanumeric test strings can be terminated by punctuation; others must have spaces after them
                 for (i = 0; test[i] != '\0'; i++)
-                    if ((test[i] > ' ') && (isalnum(test[i]) == 0) && (test[i] != '_')) return -1;
+                    if (((unsigned char) test[i] > ' ') && (isalnum(test[i]) == 0) && (test[i] != '_')) return -1;
                 return j;
             } else // Word terminated with more letters
             {
@@ -533,7 +535,8 @@ void ppl_strWordWrap(const char *in, char *out, const int width) {
             0; // If we meet > 1 linefeed during a period of whitespace, it marks the beginning of a new paragraph
     int i, j;
     for (i = 0, j = 0; in[i] != '\0'; i++) {
-        if ((WhiteSpace == 1) && (in[i] <= ' ')) // Once we've encountered one space, ignore any further whitespaceness
+        if ((WhiteSpace == 1) &&
+            ((unsigned char) in[i] <= ' ')) // Once we've encountered one space, ignore any further whitespaceness
         {
             if (j == 0) j++; // If we open document with a new paragraph, we haven't already put down a space character
             if ((in[i] == '\n') && (++LineFeeds == 2)) {
@@ -545,7 +548,7 @@ void ppl_strWordWrap(const char *in, char *out, const int width) {
             }
             continue;
         }
-        if ((WhiteSpace == 0) && (in[i] <= ' ')) // First whitespace character after a string of letters
+        if ((WhiteSpace == 0) && ((unsigned char) in[i] <= ' ')) // First whitespace character after a string of letters
         {
             if (in[i] == '\n') LineFeeds = 1;
             out[j] = ' ';

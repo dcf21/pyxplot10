@@ -281,7 +281,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
     }
 
     // FFW over spaces
-    while ((line[*linepos] != '\0') && (line[*linepos] <= ' ')) (*linepos)++;
+    while ((line[*linepos] != '\0') && ((unsigned char) line[*linepos] <= ' ')) (*linepos)++;
 
     // Deal with the node we've been given
     switch (node->type) {
@@ -334,7 +334,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                 if (strncmp(line + *linepos, "END", 3) == 0) {
                     int i, endBlock = 1;
                     for (i = 3; line[*linepos + i] != '\0'; i++)
-                        if (line[*linepos + i] > ' ') {
+                        if ((unsigned char) line[*linepos + i] > ' ') {
                             endBlock = 0;
                             break;
                         }
@@ -412,7 +412,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                     if (line[*linepos] == '{') {
                         s->waitingForBrace = 0;
                         (*linepos)++;
-                        while ((line[*linepos] != '\0') && (line[*linepos] <= ' ')) (*linepos)++; // FFW over spaces
+                        while ((line[*linepos] != '\0') && ((unsigned char) line[*linepos] <= ' '))
+                            (*linepos)++; // FFW over spaces
                         if (line[*linepos] == '\0') goto codeblock_write_prompt;
                     } else if (line[*linepos] == '\0') {
                         goto codeblock_write_prompt;
@@ -526,12 +527,13 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                 if ((*linepos > 0) && (isalnum(line[(*linepos) - 1])) && (atNLastPos != *linepos))
                     goto finished_looking_for_tabcomp; // 'plot a' cannot tab complete 'using' without space
 
-                for (i = 0; ((line[*linepos + i] > ' ') && (node->matchString[i] > ' ')); i++)
+                for (i = 0;
+                     (((unsigned char) line[*linepos + i] > ' ') && ((unsigned char) node->matchString[i] > ' ')); i++)
                     if (toupper(line[*linepos + i]) != toupper(node->matchString[i])) {
                         status = 0;
                         goto item_cleanup; // We don't match the beginning of this string
                     }
-                if ((node->acLevel == -1) && (node->matchString[i] <= ' '))
+                if ((node->acLevel == -1) && ((unsigned char) node->matchString[i] <= ' '))
                     goto finished_looking_for_tabcomp; // We've matched an @n string right to the end... move on
                 if ((*tabCompNo) != 0) {
                     status = 0;
@@ -550,7 +552,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
             if (node->acLevel == -1) {
                 int i;
                 status = 1;
-                for (i = 0; (node->matchString[i] > ' '); i++)
+                for (i = 0; ((unsigned char) node->matchString[i] > ' '); i++)
                     if (toupper(line[*linepos + i]) != toupper(node->matchString[i])) {
                         status = 0;
                         break; // We don't match this string
@@ -617,8 +619,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                 }
                             } else if (node->matchString[1] == 'S') {
                                 for (explen = 0;
-                                     ((line[*linepos + explen] > ' ') && (line[*linepos + explen] != '\'') &&
-                                      (line[*linepos + explen] != '\"'));
+                                     (((unsigned char) line[*linepos + explen] > ' ') &&
+                                      (line[*linepos + explen] != '\'') && (line[*linepos + explen] != '\"'));
                                      explen++);
                                 if (explen == 0) {
                                     status = 0;
@@ -720,7 +722,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                 goto item_cleanup;
                             }
                             if (vectorAllowed && (vectorCount + 1 < vectorLength)) {
-                                while ((line[*linepos + explen] > '\0') && (line[*linepos + explen] <= ' '))
+                                while ((line[*linepos + explen] > '\0') &&
+                                       ((unsigned char) line[*linepos + explen] <= ' '))
                                     explen++; // ffw over whitespace
                                 if (line[*linepos + explen] == ',') {
                                     explen++;
@@ -747,7 +750,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                     (strncmp(line + *linepos, "'--'", 4) != 0))
                                     isInline = 0;
                                 for (j = 4; j < explen; j++)
-                                    if (line[*linepos + j] > ' ') isInline = 0;
+                                    if ((unsigned char) line[*linepos + j] > ' ') isInline = 0;
                                 if (isInline) s->NinlineDatafiles[blockDepth]++;
                                 pplObjExpression(&val, 0, (void *) expr);
                                 ppl_parserAtomAdd(s->pl[blockDepth], s->pl[blockDepth]->stackOffset + node->outStackPos,
@@ -1081,7 +1084,7 @@ cleanup:
     // If we have succeeded in parsing, we should by now have consumed a whole line; if there is trailig text, that's an error
     if ((level == 0) && (status < 2) && (s != NULL)) {
         if (status == 1) {
-            while ((line[*linepos] > '\0') && (line[*linepos] <= ' ')) (*linepos)++;
+            while ((line[*linepos] > '\0') && ((unsigned char) line[*linepos] <= ' ')) (*linepos)++;
             if (line[*linepos] != '\0') {
                 if (s->eLlinePos <= *linepos) {
                     if (s->eLlinePos < *linepos) {
@@ -1546,7 +1549,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
     if (blockDepth == 0) ppl_parserStatReInit(s);
 
     // Fetch first non-whitespace character of command string
-    for (i = 0; ((line[i] >= '\0') && (line[i] <= ' ')); i++);
+    for (i = 0; ((line[i] >= '\0') && ((unsigned char) line[i] <= ' ')); i++);
     if ((line[i] >= 'a') && (line[i] <= 'z')) cln = (int) (line[i] - 'a');
     else if ((line[i] >= 'A') && (line[i] <= 'Z')) cln = (int) (line[i] - 'A');
     else cln = 26;

@@ -118,7 +118,7 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
     }
         if (txt == NULL) txt = txtauto;
         sgn = (!lt) ? 1 : -1;
-        while ((version[i] > '\0') && (version[i] <= ' ')) i++;
+        while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '\0') return;
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
             j = 10 * j + (version[i] - '0');
@@ -126,10 +126,10 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         }
         if ((sgn * VERSION_MAJ < sgn * j) && (!pass)) VERSION_FAIL;
         if (sgn * VERSION_MAJ > sgn * j) pass = 1;
-        while ((version[i] > '\0') && (version[i] <= ' ')) i++;
+        while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '.') i++;
         else if (version[i] != '\0') { VERSION_MALF; }
-        while ((version[i] > '\0') && (version[i] <= ' ')) i++;
+        while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if ((version[i] == '\0') && (sgn == -1) && (!pass)) VERSION_FAIL;
         if (version[i] == '\0') return;
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
@@ -138,10 +138,10 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         }
         if ((sgn * VERSION_MIN < sgn * j) && (!pass)) VERSION_FAIL;
         if (sgn * VERSION_MIN > sgn * j) pass = 1;
-        while ((version[i] > '\0') && (version[i] <= ' ')) i++;
+        while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '.') i++;
         else if (version[i] != '\0') { VERSION_MALF; }
-        while ((version[i] > '\0') && (version[i] <= ' ')) i++;
+        while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if ((version[i] == '\0') && (sgn == -1) && (!pass)) VERSION_FAIL;
         if (version[i] == '\0') return;
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
@@ -150,7 +150,7 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         }
         if ((sgn * VERSION_REV < sgn * j) && (!pass)) VERSION_FAIL;
         if (sgn * VERSION_REV > sgn * j) pass = 1;
-        while ((version[i] > '\0') && (version[i] <= ' ')) i++;
+        while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] != '\0') { VERSION_MALF; }
         if ((version[i] == '\0') && (sgn == -1) && (!pass)) VERSION_FAIL;
     }

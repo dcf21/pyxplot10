@@ -405,7 +405,7 @@ static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int 
     }
     lst = (list *) OUTPUT.auxil;
     for (i = 0, j = 0;; i++)
-        if ((instr[i] <= ' ') && (instr[i] >= '\0')) {
+        if (((unsigned char) instr[i] <= ' ') && (instr[i] >= '\0')) {
             if (j < i) {
                 pplObj v;
                 char *s = (char *) malloc(i - j + 1);
@@ -498,10 +498,10 @@ static void pplmethod_strStrip(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
     COPYSTR(tmp, work);
-    for (i = 0; ((tmp[i] > '\0') && (tmp[i] <= ' ')); i++);
+    for (i = 0; ((tmp[i] > '\0') && ((unsigned char) tmp[i] <= ' ')); i++);
     for (j = 0; tmp[i] != '\0'; i++, j++) tmp[j] = tmp[i];
     j--;
-    for (; ((j >= 0) && (tmp[j] > '\0') && (tmp[j] <= ' ')); j--) tmp[j] = '\0';
+    for (; ((j >= 0) && (tmp[j] > '\0') && ((unsigned char) tmp[j] <= ' ')); j--) tmp[j] = '\0';
     tmp[j + 1] = '\0';
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
@@ -522,7 +522,7 @@ static void pplmethod_strLStrip(ppl_context *c, pplObj *in, const int nArgs, int
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
     COPYSTR(tmp, work);
-    for (i = 0; ((tmp[i] > '\0') && (tmp[i] <= ' ')); i++);
+    for (i = 0; ((tmp[i] > '\0') && ((unsigned char) tmp[i] <= ' ')); i++);
     for (j = 0; tmp[i] != '\0'; i++, j++) tmp[j] = tmp[i];
     tmp[j] = '\0';
     pplObjStr(&OUTPUT, 0, 1, tmp);
@@ -545,7 +545,7 @@ static void pplmethod_strRStrip(ppl_context *c, pplObj *in, const int nArgs, int
     COPYSTR(tmp, work);
     for (j = 0; tmp[i] != '\0'; i++, j++) tmp[j] = tmp[i];
     j--;
-    for (; ((j >= 0) && (tmp[j] > '\0') && (tmp[j] <= ' ')); j--) tmp[j] = '\0';
+    for (; ((j >= 0) && (tmp[j] > '\0') && ((unsigned char) tmp[j] <= ' ')); j--) tmp[j] = '\0';
     tmp[j + 1] = '\0';
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }

@@ -57,7 +57,7 @@
                     char *c = (char *) (X)->auxil; \
                     d = ppl_getFloat(c, &len); \
                     if (len > 0) { \
-                        while ((c[len] > '\0') && (c[len] <= ' ')) len++; \
+                        while ((c[len] > '\0') && ((unsigned char) c[len] <= ' ')) len++; \
                     } \
                     if ((len < 0) || (c[len] != '\0')) { \
                         *status = 1; \

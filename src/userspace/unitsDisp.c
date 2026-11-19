@@ -629,14 +629,14 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
     double power = 1.0, powerneg = 1.0, multiplier;
     pplObjNum(out, out->amMalloced, 0.0, 0.0);
 
-    while ((in[i] <= ' ') && (in[i] != '\0')) i++;
+    while (((unsigned char) in[i] <= ' ') && (in[i] != '\0')) i++;
     out->real = ppl_getFloat(in + i, &j); // Unit strings can have numbers out the front
     if (j < 0) j = 0;
     i += j;
     if (j == 0) {
         out->real = 1.0;
     } else {
-        while ((in[i] <= ' ') && (in[i] != '\0')) i++;
+        while (((unsigned char) in[i] <= ' ') && (in[i] != '\0')) i++;
         if (in[i] == '*') i++;
         else if (in[i] == '/') {
             i++;
@@ -646,7 +646,7 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
 
     while (powerneg != 0.0) {
         p = 0;
-        while ((in[i] <= ' ') && (in[i] != '\0')) i++;
+        while (((unsigned char) in[i] <= ' ') && (in[i] != '\0')) i++;
         for (j = 0; j < c->unit_pos; j++) {
             multiplier = 1.0;
             if ((k = ppl_unitNameCmp(in + i, c->unit_database[j].nameAp, 1)) != 0) p = 1;
@@ -715,7 +715,7 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
             }
             if (p == 0) continue;
             i += k;
-            while ((in[i] <= ' ') && (in[i] != '\0')) i++;
+            while (((unsigned char) in[i] <= ' ') && (in[i] != '\0')) i++;
             if (((in[i] == '^') && (i++, 1)) || (((in[i] == '*') && (in[i + 1] == '*')) && (i += 2, 1))) {
                 power = ppl_getFloat(in + i, &k);
                 if (k <= 0) {
@@ -724,7 +724,7 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
                     return;
                 }
                 i += k;
-                while ((in[i] <= ' ') && (in[i] != '\0')) i++;
+                while (((unsigned char) in[i] <= ' ') && (in[i] != '\0')) i++;
             }
 
             if (c->unit_database[j].tempType != 0) {
@@ -807,7 +807,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
     while ((powerneg != 0.0) && (outpos < UNITS_MAX_BASEUNITS)) {
         PrefixOut = -1;
         p = 0;
-        while ((instr[i] <= ' ') && (instr[i] != '\0')) i++;
+        while (((unsigned char) instr[i] <= ' ') && (instr[i] != '\0')) i++;
         for (j = 0; j < c->unit_pos; j++) {
             if ((k = ppl_unitNameCmp(instr + i, c->unit_database[j].nameAp, 1)) != 0) p = 1;
             else if ((k = ppl_unitNameCmp(instr + i, c->unit_database[j].nameAs, 1)) != 0) p = 1;
@@ -875,7 +875,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
             }
             if (p == 0) continue;
             i += k;
-            while ((instr[i] <= ' ') && (instr[i] != '\0')) i++;
+            while (((unsigned char) instr[i] <= ' ') && (instr[i] != '\0')) i++;
             if (((instr[i] == '^') && (i++, 1)) || (((instr[i] == '*') && (instr[i + 1] == '*')) && (i += 2, 1))) {
                 power = ppl_getFloat(instr + i, &k);
                 if (k <= 0) {
@@ -884,7 +884,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
                     return;
                 }
                 i += k;
-                while ((instr[i] <= ' ') && (instr[i] != '\0')) i++;
+                while (((unsigned char) instr[i] <= ' ') && (instr[i] != '\0')) i++;
             }
             (*output)->UnitID[outpos] = j;
             (*output)->prefix[outpos] = PrefixOut;

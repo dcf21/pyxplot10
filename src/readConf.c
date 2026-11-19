@@ -1427,7 +1427,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             {
                 int i = 0, j = 0;
                 for (i = 0; linebuffer[i] != '\0'; i++)
-                    if (linebuffer[i] > ' ') {
+                    if ((unsigned char) linebuffer[i] > ' ') {
                         j = 1;
                         break;
                     }
@@ -1457,7 +1457,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             {
                 int i = 0, j = 0;
                 for (i = 0; linebuffer[i] != '\0'; i++)
-                    if (linebuffer[i] > ' ') {
+                    if ((unsigned char) linebuffer[i] > ' ') {
                         j = 1;
                         break;
                     }
@@ -1510,9 +1510,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         strncpy(output, setkey + j, i - j); \
         output[i - j] = '\0'; \
     } \
-    while ((setkey[i] <= ' ') && (setkey[i] != '\0')) i++; \
+    while (((unsigned char) setkey[i] <= ' ') && (setkey[i] != '\0')) i++; \
     if (setkey[i] == sep) i++; \
-    while ((setkey[i] <= ' ') && (setkey[i] != '\0')) i++; \
+    while (((unsigned char) setkey[i] <= ' ') && (setkey[i] != '\0')) i++; \
     j = i;
 
             i = j = 0;
@@ -1629,7 +1629,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 {
                     int i = 0, j = 0;
                     for (i = 0; linebuffer[i] != '\0'; i++)
-                        if (linebuffer[i] > ' ') {
+                        if ((unsigned char) linebuffer[i] > ' ') {
                             j = 1;
                             break;
                         }

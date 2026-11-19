@@ -187,7 +187,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
     buffSize = context->tokenBuffLen - outOffset;
 
     while (state != 'U') {
-        while ((in[scanpos] != '\0') && (in[scanpos] <= ' ')) { SAMESTATE; } // Sop up whitespace
+        while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) { SAMESTATE; } // Sop up whitespace
         oldpos = scanpos;
 
         for (trialpos = 0; ((trialstate = allowed[(int) (state - 'A')][trialpos]) != '\0'); trialpos++) {
@@ -253,7 +253,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         return;
                     }
                     NEWSTATE(1, 0, 0); // Record the one character opening bracket
-                    while ((in[scanpos] != '\0') && (in[scanpos] <= ' ')) {
+                    while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
                         SAMESTATE;
                         n++;
                     } // Sop up whitespace
@@ -505,7 +505,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         SAMESTATE;
                         n++;
                         slice = 1;
-                        while ((in[scanpos] != '\0') && (in[scanpos] <= ' ')) {
+                        while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
                             SAMESTATE;
                             n++;
                         } // Sop up whitespace
@@ -532,7 +532,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             trialstate = 'J';
                             NEWSTATE(1, PPL_OP_COLLECT, 18);
                             j--; // Treat : separating ranges as a , operator (collect items on stack)
-                            while ((in[scanpos] != '\0') && (in[scanpos] <= ' ')) {
+                            while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
                                 SAMESTATE;
                                 j--;
                             } // Sop up whitespace
@@ -582,7 +582,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         return;
                     }
                     NEWSTATE(1, 0, 0); // Record the one character opening bracket
-                    while ((in[scanpos] != '\0') && (in[scanpos] <= ' ')) {
+                    while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
                         SAMESTATE;
                         n++;
                     } // Sop up whitespace
