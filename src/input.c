@@ -113,7 +113,10 @@ void ppl_interactiveSession(ppl_context *context) {
                 if (context->inputLineAddBuffer != NULL) {
                     strcpy(prompt, ".......> ");
                 } else {
-                    snprintf(prompt, 16, "%s.......", ps->prompt);
+                    // Continuation prompt: the first seven characters of the prompt, padded with dots
+                    int k;
+                    for (k = 0; (k < 7) && (ps->prompt[k] != '\0'); k++) prompt[k] = ps->prompt[k];
+                    for (; k < 7; k++) prompt[k] = '.';
                     strcpy(prompt + 7, "> ");
                 }
 
@@ -145,7 +148,10 @@ void ppl_interactiveSession(ppl_context *context) {
                 if (context->inputLineAddBuffer != NULL) {
                     strcpy(prompt, ".......> ");
                 } else {
-                    snprintf(prompt, 16, "%s.......", ps->prompt);
+                    // Continuation prompt: the first seven characters of the prompt, padded with dots
+                    int k;
+                    for (k = 0; (k < 7) && (ps->prompt[k] != '\0'); k++) prompt[k] = ps->prompt[k];
+                    for (; k < 7; k++) prompt[k] = '.';
                     strcpy(prompt + 7, "> ");
                 }
                 printf("%s", prompt);

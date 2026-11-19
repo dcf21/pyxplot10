@@ -26,6 +26,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
 
 #include "settings/settings.h"
 
@@ -802,4 +803,23 @@ int ppl_strWildcardTest(const char *test, const char *wildcard) {
         if (test[i++] == '\0') return 0;
     }
     return 0;
+}
+
+//! ppl_snprintfTrunc - Write formatted output into a fixed-size buffer, truncating it if it does not fit. This is
+//! intended for messages, where truncation is acceptable; it must not be used for filenames or commands, where
+//! truncation would change their meaning.
+//! \param [out] out - The character buffer into which to write the output. It is always null-terminated.
+//! \param [in] size - The size of the buffer <out>
+//! \param [in] format - The printf-style format string
+//! \return The number of characters which would have been written had <out> been large enough, as for snprintf()
+
+int ppl_snprintfTrunc(char *out, const size_t size, const char *format, ...) {
+    va_list args;
+    int n;
+    if (size == 0) return 0;
+    va_start(args, format);
+    n = vsnprintf(out, size, format, args);
+    va_end(args);
+    out[size - 1] = '\0';
+    return n;
 }

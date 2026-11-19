@@ -68,7 +68,7 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
     if (msg == NULL) msg = context->tempErrStr;
     ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
     if (msg != temp_stringA) {
-        snprintf(temp_stringA, BLEN, "%s", msg);
+        ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN] = '\0';
         msg = temp_stringA;
     }
@@ -79,8 +79,8 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
     {
         // When processing scripts, print error location
         if ((context->error_input_linenumber != -1) && (strcmp(context->error_input_filename, "") != 0)) {
-            snprintf(temp_stringB + i, BLEN - i, "%s:%d:", context->error_input_filename,
-                     context->error_input_linenumber);
+            ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "%s:%d:", context->error_input_filename,
+                              context->error_input_linenumber);
             i += strlen(temp_stringB + i);
             if ((ErrType != ERR_STACKED) && (i < BLEN - 2)) {
                 temp_stringB[i++] = ' ';
@@ -91,44 +91,44 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
         // Prepend error type
         switch (ErrType) {
             case ERR_INTERNAL:
-                snprintf(temp_stringB + i, BLEN - i, "Internal error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Internal error: ");
                 break;
             case ERR_MEMORY:
             case ERR_GENERIC:
-                snprintf(temp_stringB + i, BLEN - i, "Error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Error: ");
                 break;
             case ERR_SYNTAX:
-                snprintf(temp_stringB + i, BLEN - i, "Syntax error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Syntax error: ");
                 break;
             case ERR_NUMERICAL:
-                snprintf(temp_stringB + i, BLEN - i, "Numerical error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Numerical error: ");
                 break;
             case ERR_FILE:
-                snprintf(temp_stringB + i, BLEN - i, "File error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "File error: ");
                 break;
             case ERR_RANGE:
-                snprintf(temp_stringB + i, BLEN - i, "Range error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Range error: ");
                 break;
             case ERR_UNIT:
-                snprintf(temp_stringB + i, BLEN - i, "Unit error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Unit error: ");
                 break;
             case ERR_OVERFLOW:
-                snprintf(temp_stringB + i, BLEN - i, "Overflow error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Overflow error: ");
                 break;
             case ERR_NAMESPACE:
-                snprintf(temp_stringB + i, BLEN - i, "Namespace error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Namespace error: ");
                 break;
             case ERR_TYPE:
-                snprintf(temp_stringB + i, BLEN - i, "Type error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Type error: ");
                 break;
             case ERR_INTERRUPT:
-                snprintf(temp_stringB + i, BLEN - i, "Interrupt error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Interrupt error: ");
                 break;
             case ERR_DICTKEY:
-                snprintf(temp_stringB + i, BLEN - i, "Key error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Key error: ");
                 break;
             case ERR_ASSERT:
-                snprintf(temp_stringB + i, BLEN - i, "Assertion error: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Assertion error: ");
                 break;
         }
         i += strlen(temp_stringB + i);
@@ -138,20 +138,20 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
         if (ApplyHighlighting) {
             if (j == HighlightPos1 - 1) {
                 if (reverse == 0) {
-                    snprintf(temp_stringB + i, BLEN - i, "\x1b[7m");
+                    ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "\x1b[7m");
                     i += strlen(temp_stringB + i);
                 }
                 reverse = 3;
                 HighlightPos1 = -1;
             } else if (j == HighlightPos2 - 1) {
                 if (reverse == 0) {
-                    snprintf(temp_stringB + i, BLEN - i, "\x1b[7m");
+                    ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "\x1b[7m");
                     i += strlen(temp_stringB + i);
                 }
                 reverse = 3;
                 HighlightPos2 = -1;
             } else if (reverse == 1) {
-                snprintf(temp_stringB + i, BLEN - i, "\x1b[27m");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "\x1b[27m");
                 i += strlen(temp_stringB + i);
                 reverse = 0;
             } else if (reverse > 1) reverse--;
@@ -166,7 +166,7 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
         }
     }
     if (ApplyHighlighting && (reverse != 0)) {
-        snprintf(temp_stringB + i, BLEN - i, "\x1b[27m");
+        ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "\x1b[27m");
         i += strlen(temp_stringB + i);
         reverse = 0;
     }
@@ -176,13 +176,13 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
 
     // Print message in color or monochrome
     if (ApplyHighlighting)
-        snprintf(temp_stringC, BLEN, "%s%s%s\n",
-                 *(char **) ppl_fetchSettingName(context, context->session_default.color_err, SW_TERMCOL_INT,
-                                                 (void *) SW_TERMCOL_TXT, sizeof(char *)),
-                 temp_stringB,
-                 *(char **) ppl_fetchSettingName(context, SW_TERMCOL_NOR, SW_TERMCOL_INT, (void *) SW_TERMCOL_TXT,
-                                                 sizeof(char *)));
-    else snprintf(temp_stringC, BLEN, "%s\n", temp_stringB);
+        ppl_snprintfTrunc(temp_stringC, BLEN, "%s%s%s\n",
+                          *(char **) ppl_fetchSettingName(context, context->session_default.color_err, SW_TERMCOL_INT,
+                                                          (void *) SW_TERMCOL_TXT, sizeof(char *)),
+                          temp_stringB,
+                          *(char **) ppl_fetchSettingName(context, SW_TERMCOL_NOR, SW_TERMCOL_INT,
+                                                          (void *) SW_TERMCOL_TXT, sizeof(char *)));
+    else ppl_snprintfTrunc(temp_stringC, BLEN, "%s\n", temp_stringB);
     temp_stringC[BLEN] = '\0';
     fputs(temp_stringC, stderr);
     return;
@@ -198,11 +198,12 @@ void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
     char introline[FNAME_LENGTH];
     if (msg == NULL) msg = context->tempErrStr;
     if (msg != temp_stringE) {
-        snprintf(temp_stringE, BLEN, "%s", msg);
+        ppl_snprintfTrunc(temp_stringE, BLEN, "%s", msg);
         temp_stringE[BLEN - 1] = '\0';
         msg = temp_stringE;
     }
-    snprintf(introline, FNAME_LENGTH, "Fatal Error encountered in %s at line %d: %s", file, line, temp_stringE);
+    ppl_snprintfTrunc(introline, FNAME_LENGTH, "Fatal Error encountered in %s at line %d: %s", file, line,
+                      temp_stringE);
     introline[FNAME_LENGTH - 1] = '\0';
     ppl_error(context, ERR_PREFORMED, -1, -1, introline);
     if (DEBUG) ppl_log(context, "Terminating with error condition 1.");
@@ -221,7 +222,7 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
 
     if (msg == NULL) msg = context->tempErrStr;
     if (msg != temp_stringA) {
-        snprintf(temp_stringA, BLEN, "%s", msg);
+        ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN - 1] = '\0';
         msg = temp_stringA;
     }
@@ -232,8 +233,8 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
     {
         // When processing scripts, print error location
         if ((context->error_input_linenumber != -1) && (strcmp(context->error_input_filename, "") != 0)) {
-            snprintf(temp_stringB + i, BLEN - i, "%s:%d:", context->error_input_filename,
-                     context->error_input_linenumber);
+            ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "%s:%d:", context->error_input_filename,
+                              context->error_input_linenumber);
             i += strlen(temp_stringB + i);
             if ((ErrType != ERR_STACKED) && (i < BLEN - 2)) {
                 temp_stringB[i++] = ' ';
@@ -244,62 +245,62 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
         // Prepend error type
         switch (ErrType) {
             case ERR_INTERNAL:
-                snprintf(temp_stringB + i, BLEN - i, "Internal warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Internal warning: ");
                 break;
             case ERR_MEMORY:
             case ERR_GENERIC:
-                snprintf(temp_stringB + i, BLEN - i, "Warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Warning: ");
                 break;
             case ERR_SYNTAX:
-                snprintf(temp_stringB + i, BLEN - i, "Syntax warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Syntax warning: ");
                 break;
             case ERR_NUMERICAL:
-                snprintf(temp_stringB + i, BLEN - i, "Numerical warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Numerical warning: ");
                 break;
             case ERR_FILE:
-                snprintf(temp_stringB + i, BLEN - i, "File warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "File warning: ");
                 break;
             case ERR_RANGE:
-                snprintf(temp_stringB + i, BLEN - i, "Range warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Range warning: ");
                 break;
             case ERR_UNIT:
-                snprintf(temp_stringB + i, BLEN - i, "Unit warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Unit warning: ");
                 break;
             case ERR_OVERFLOW:
-                snprintf(temp_stringB + i, BLEN - i, "Overflow warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Overflow warning: ");
                 break;
             case ERR_NAMESPACE:
-                snprintf(temp_stringB + i, BLEN - i, "Namespace warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Namespace warning: ");
                 break;
             case ERR_TYPE:
-                snprintf(temp_stringB + i, BLEN - i, "Type warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Type warning: ");
                 break;
             case ERR_INTERRUPT:
-                snprintf(temp_stringB + i, BLEN - i, "Interrupt warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Interrupt warning: ");
                 break;
             case ERR_DICTKEY:
-                snprintf(temp_stringB + i, BLEN - i, "Key warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Key warning: ");
                 break;
             case ERR_ASSERT:
-                snprintf(temp_stringB + i, BLEN - i, "Assertion warning: ");
+                ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "Assertion warning: ");
                 break;
         }
         i += strlen(temp_stringB + i);
     }
 
-    snprintf(temp_stringB + i, BLEN - i, "%s", msg);
+    ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "%s", msg);
 
     if (DEBUG) { ppl_log(context, temp_stringB); }
 
     // Print message in color or monochrome
     if ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1))
-        snprintf(temp_stringC, BLEN, "%s%s%s\n",
-                 *(char **) ppl_fetchSettingName(context, context->session_default.color_wrn, SW_TERMCOL_INT,
-                                                 (void *) SW_TERMCOL_TXT, sizeof(char *)),
-                 temp_stringB,
-                 *(char **) ppl_fetchSettingName(context, SW_TERMCOL_NOR, SW_TERMCOL_INT, (void *) SW_TERMCOL_TXT,
-                                                 sizeof(char *)));
-    else snprintf(temp_stringC, BLEN, "%s\n", temp_stringB);
+        ppl_snprintfTrunc(temp_stringC, BLEN, "%s%s%s\n",
+                          *(char **) ppl_fetchSettingName(context, context->session_default.color_wrn, SW_TERMCOL_INT,
+                                                          (void *) SW_TERMCOL_TXT, sizeof(char *)),
+                          temp_stringB,
+                          *(char **) ppl_fetchSettingName(context, SW_TERMCOL_NOR, SW_TERMCOL_INT,
+                                                          (void *) SW_TERMCOL_TXT, sizeof(char *)));
+    else ppl_snprintfTrunc(temp_stringC, BLEN, "%s\n", temp_stringB);
     temp_stringC[BLEN] = '\0';
     fputs(temp_stringC, stderr);
     return;
@@ -312,22 +313,22 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
 void ppl_report(pplerr_context *context, char *msg) {
     if (msg == NULL) msg = context->tempErrStr;
     if (msg != temp_stringA) {
-        snprintf(temp_stringA, BLEN, "%s", msg);
+        ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN - 1] = '\0';
     }
     if (DEBUG) {
-        snprintf(temp_stringC, BLEN, "%s%s", "Reporting:\n", temp_stringA);
+        ppl_snprintfTrunc(temp_stringC, BLEN, "%s%s", "Reporting:\n", temp_stringA);
         temp_stringC[BLEN] = '\0';
         ppl_log(context, temp_stringC);
     }
     if ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDOUT_FILENO) == 1))
-        snprintf(temp_stringC, BLEN, "%s%s%s\n",
-                 *(char **) ppl_fetchSettingName(context, context->session_default.color_rep, SW_TERMCOL_INT,
-                                                 (void *) SW_TERMCOL_TXT, sizeof(char *)),
-                 temp_stringA,
-                 *(char **) ppl_fetchSettingName(context, SW_TERMCOL_NOR, SW_TERMCOL_INT, (void *) SW_TERMCOL_TXT,
-                                                 sizeof(char *)));
-    else snprintf(temp_stringC, BLEN, "%s\n", temp_stringA);
+        ppl_snprintfTrunc(temp_stringC, BLEN, "%s%s%s\n",
+                          *(char **) ppl_fetchSettingName(context, context->session_default.color_rep, SW_TERMCOL_INT,
+                                                          (void *) SW_TERMCOL_TXT, sizeof(char *)),
+                          temp_stringA,
+                          *(char **) ppl_fetchSettingName(context, SW_TERMCOL_NOR, SW_TERMCOL_INT,
+                                                          (void *) SW_TERMCOL_TXT, sizeof(char *)));
+    else ppl_snprintfTrunc(temp_stringC, BLEN, "%s\n", temp_stringA);
     temp_stringC[BLEN] = '\0';
     fputs(temp_stringC, stdout);
     return;
@@ -358,7 +359,7 @@ void ppl_log(pplerr_context *context, char *msg) {
 
     if (msg == NULL) msg = context->tempErrStr;
     if (msg != temp_stringD) {
-        snprintf(temp_stringD, BLEN, "%s", msg);
+        ppl_snprintfTrunc(temp_stringD, BLEN, "%s", msg);
         temp_stringD[BLEN - 1] = '\0';
     }
     fprintf(logfile, "[%s] [%s] %s\n", ppl_strStrip(ppl_friendlyTimestring(), linebuffer), context->error_source,

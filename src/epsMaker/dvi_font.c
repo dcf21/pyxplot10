@@ -220,7 +220,12 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
             fclose(fpin);
             return DVIE_MEMORY;
         }
-        snprintf(PFApath, SSTR_LENGTH, "%s%s%s.pfa", ec->session_default.tempdir, PATHLINK, font->name);
+        if (snprintf(PFApath, SSTR_LENGTH, "%s%s%s.pfa", ec->session_default.tempdir, PATHLINK, font->name) >=
+            SSTR_LENGTH) {
+            ppl_error(ec, ERR_INTERNAL, -1, -1, "Path of temporary PFA font file is too long");
+            fclose(fpin);
+            return DVIE_INTERNAL;
+        }
         fpout = fopen(PFApath, "w");
         if (fpout == NULL) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot write to pfa file %s", PFApath);

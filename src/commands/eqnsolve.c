@@ -177,8 +177,8 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
             data->warnExprId = i;
             data->warnExprNo = 1;
             data->warnPos = c->errStat.errPosExpr;
-            sprintf(data->warntext, "An algebraic error was encountered at %s: %s",
-                    printParameterValues(data, c->errcontext.tempErrStr), c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(data->warntext, LSTR_LENGTH, "An algebraic error was encountered at %s: %s",
+                              printParameterValues(data, c->errcontext.tempErrStr), c->errStat.errMsgExpr);
             ppl_tbClear(c);
             return GSL_NAN;
         }
@@ -202,8 +202,8 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
                 data->warnExprId = i;
                 data->warnExprNo = 2;
                 data->warnPos = c->errStat.errPosExpr;
-                sprintf(data->warntext, "An algebraic error was encountered at %s: %s",
-                        printParameterValues(data, c->errcontext.tempErrStr), c->errStat.errMsgExpr);
+                ppl_snprintfTrunc(data->warntext, LSTR_LENGTH, "An algebraic error was encountered at %s: %s",
+                                  printParameterValues(data, c->errcontext.tempErrStr), c->errStat.errMsgExpr);
                 ppl_tbClear(c);
                 return GSL_NAN;
             }

@@ -260,26 +260,28 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsi
 
 // UpdateUsage... assert that axis X should be dimensionally compatible with unit Y
 #define UUAU(XYZ, XYZN, X, Y) \
-    if ((X->HardUnitSet) && (!ppl_unitsDimEqual(&X->HardUnit, &(Y)))) { \
-        sprintf(x->c->errcontext.tempErrStr, \
-                "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> as compared to range of axis, which has units of <%s>.", \
-                "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &(Y), NULL, NULL, 0, 1, 0), \
-                ppl_printUnit(x->c, &X->HardUnit, NULL, NULL, 1, 1, 0)); \
-        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL); \
-        return 1; \
-    } \
-    if ((X->DataUnitSet) && (!ppl_unitsDimEqual(&X->DataUnit, &(Y)))) { \
-        sprintf(x->c->errcontext.tempErrStr, \
-                "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> and <%s>.", \
-                "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &X->DataUnit, NULL, NULL, 0, 1, 0), \
-                ppl_printUnit(x->c, &(Y), NULL, NULL, 1, 1, 0)); \
-        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL); \
-        return 1; \
-    } \
-    if (!X->DataUnitSet) { \
-        X->DataUnitSet = 1; \
-        X->DataUnit = Y; \
-    }
+    do { \
+        if ((X->HardUnitSet) && (!ppl_unitsDimEqual(&X->HardUnit, &(Y)))) { \
+            sprintf(x->c->errcontext.tempErrStr, \
+                    "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> as compared to range of axis, which has units of <%s>.", \
+                    "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &(Y), NULL, NULL, 0, 1, 0), \
+                    ppl_printUnit(x->c, &X->HardUnit, NULL, NULL, 1, 1, 0)); \
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL); \
+            return 1; \
+        } \
+        if ((X->DataUnitSet) && (!ppl_unitsDimEqual(&X->DataUnit, &(Y)))) { \
+            sprintf(x->c->errcontext.tempErrStr, \
+                    "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> and <%s>.", \
+                    "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &X->DataUnit, NULL, NULL, 0, 1, 0), \
+                    ppl_printUnit(x->c, &(Y), NULL, NULL, 1, 1, 0)); \
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL); \
+            return 1; \
+        } \
+        if (!X->DataUnitSet) { \
+            X->DataUnitSet = 1; \
+            X->DataUnit = Y; \
+        } \
+    } while (0)
 
 //! eps_plot_styles_UpdateUsage - Update the record of the range of values plotted against a set of axes, to include a
 //! data table plotted in a given style

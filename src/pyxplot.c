@@ -240,8 +240,9 @@ int main(const int argc, char **argv) {
         // Read GNU Readline history
 #ifdef HAVE_READLINE
         if (DEBUG) ppl_log(&context->errcontext, "Reading GNU Readline history.");
-        sprintf(tempdirpath, "%s%s%s", context->errcontext.session_default.homedir, PATHLINK, ".pyxplot_history");
-        read_history(tempdirpath);
+        if (snprintf(tempdirpath, FNAME_LENGTH, "%s%s%s", context->errcontext.session_default.homedir, PATHLINK,
+                     ".pyxplot_history") < FNAME_LENGTH)
+            read_history(tempdirpath);
         stifle_history(1000);
 #endif
 
@@ -275,8 +276,9 @@ int main(const int argc, char **argv) {
 #ifdef HAVE_READLINE
     if (context->willBeInteractive > 0) {
         if (DEBUG) ppl_log(&context->errcontext, "Saving GNU Readline history.");
-        sprintf(tempdirpath, "%s%s%s", context->errcontext.session_default.homedir, PATHLINK, ".pyxplot_history");
-        write_history(tempdirpath);
+        if (snprintf(tempdirpath, FNAME_LENGTH, "%s%s%s", context->errcontext.session_default.homedir, PATHLINK,
+                     ".pyxplot_history") < FNAME_LENGTH)
+            write_history(tempdirpath);
     }
 #endif
 

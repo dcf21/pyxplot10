@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "expressions/traceback_fns.h"
+#include "stringTools/asciidouble.h"
 #include "stringTools/strConstants.h"
 #include "userspace/context.h"
 
@@ -200,7 +201,7 @@ void ppl_tbWrite(ppl_context *c) {
         const int lp2 = c->errStat.errPosExpr;
         traceback *t = &c->errStat.tbLevel[0];
         if ((t->sourceId == c->errStat.sourceIdCmd) && (lp >= 0)) {
-            snprintf(out + i, outLen - i, "%s\n", c->errStat.errMsgCmd);
+            ppl_snprintfTrunc(out + i, outLen - i, "%s\n", c->errStat.errMsgCmd);
             i += strlen(out + i);
             for (k = 0; ((k < lp) && (i < outLen)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, " |\n");

@@ -898,7 +898,7 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
     int i;
     for (i = 0; i < Ncols; i++) {
         int end = 0, ep = 0, es = 0;
-        char ascii[10];
+        char ascii[16];
         pplExpr *exptmp = NULL;
         sprintf(ascii, "%d", i + 1);
         ppl_expCompile(c, 0, 0, "", ascii, &end, 0, 0, 0, &exptmp, &ep, &es, errtext);
@@ -1587,7 +1587,8 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                         else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
                         else errt = "Fail occurred.";
                         COUNTERR_BEGIN;
-                        sprintf(c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                c->errcontext.tempErrStr, LSTR_LENGTH,
                                 "%s: Could not evaluate expression <%s>. The error, encountered at character position %d, was: '%s'",
                                 buffer, fnlist[j]->ascii, errp, errt);
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
@@ -2154,7 +2155,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         } else if ((Nusing == 1) && (Ncols == 2)) // Need two columns; one supplied
         {
             int end = 0, ep = 0, es = 0;
-            char ascii[10];
+            char ascii[16];
             pplExpr *exptmp = NULL;
             usingExprs[1] = usingExprs[0];
             sprintf(ascii, "%d", 0);

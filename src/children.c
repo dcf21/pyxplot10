@@ -348,8 +348,9 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
                         "Received gv_singlewindow request. Putting into existing window with pid %d.", GhostView_pid);
                 ppl_log(&context->errcontext, NULL);
             }
-            sprintf(cmd, "cp -f %s %s", filename, context->pplcsp_ghostView_fname);
-            if (system(cmd) != 0)
+            if (snprintf(cmd, FNAME_LENGTH, "cp -f %s %s", filename, context->pplcsp_ghostView_fname) >= FNAME_LENGTH) {
+                if (DEBUG) ppl_log(&context->errcontext, "Filename of postscript document is too long to copy.");
+            } else if (system(cmd) != 0)
                 if (DEBUG) {
                     ppl_log(&context->errcontext,
                             "Failed to copy postscript document into existing gv_singlewindow session.");

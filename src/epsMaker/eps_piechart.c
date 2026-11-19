@@ -31,6 +31,7 @@
 #include "coreUtils/errorReport.h"
 #include "coreUtils/list.h"
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 
 #include "expressions/expCompile_fns.h"
 #include "expressions/traceback_fns.h"
@@ -294,7 +295,8 @@ void eps_pie_YieldUpText(EPSComm *x) {
                 else if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
                 else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
                 else errt = "Fail occurred.";
-                sprintf(c->errcontext.tempErrStr, "Error in format expression <%s>: %s", formatExpr->ascii, errt);
+                ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH, "Error in format expression <%s>: %s",
+                                  formatExpr->ascii, errt);
                 ppl_warning(&c->errcontext, ERR_TYPE, c->errcontext.tempErrStr);
                 COUNTERR_END;
                 ppl_tbClear(c);
@@ -665,7 +667,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
 
         // Title of piechart
         x->LaTeXpageno = x->current->TitleTextID;
-        if ((x->current->settings.title != NULL) && (x->current->settings.title[0] != '\0')) {
+        if (x->current->settings.title[0] != '\0') {
             const int pageno = x->LaTeXpageno++;
             canvas_EPSRenderTextItem(x, NULL, pageno, xpos / M_TO_PS, (vtitle + 8) / M_TO_PS, SW_HALIGN_CENT,
                                      SW_VALIGN_BOT, x->CurrentColor, x->current->settings.FontSize, 0.0, NULL, NULL);

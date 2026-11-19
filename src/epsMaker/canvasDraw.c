@@ -239,8 +239,9 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     // Create filename for temporary LaTeX document
     comm.TeXFilename = TeXFilenameTemp;
     TeXFile_counter++;
-    sprintf(TeXFilenameTemp, "%s%spyxplot_%d_%ld", c->errcontext.session_default.tempdir, PATHLINK, getpid(),
-            TempFile_counter);
+    if (snprintf(TeXFilenameTemp, FNAME_LENGTH, "%s%spyxplot_%d_%ld", c->errcontext.session_default.tempdir, PATHLINK,
+                 getpid(), TempFile_counter) >= FNAME_LENGTH)
+        ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Path of temporary directory is too long.");
 
     // Case 1: EPS and PS terminals. Postscript output will be saved immediately in situ.
     if ((termtype == SW_TERMTYPE_EPS) || (termtype == SW_TERMTYPE_PS)) {
@@ -257,8 +258,9 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     {
         comm.EPSFilename = EPSFilenameTemp;
         TempFile_counter++;
-        sprintf(EPSFilenameTemp, "%s%spyxplot_%d_%ld.eps", c->errcontext.session_default.tempdir, PATHLINK, getpid(),
-                TempFile_counter);
+        if (snprintf(EPSFilenameTemp, FNAME_LENGTH, "%s%spyxplot_%d_%ld.eps", c->errcontext.session_default.tempdir,
+                     PATHLINK, getpid(), TempFile_counter) >= FNAME_LENGTH)
+            ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Path of temporary directory is too long.");
         if ((termtype == SW_TERMTYPE_X11S) || (termtype == SW_TERMTYPE_X11M) || (termtype == SW_TERMTYPE_X11P)) {
             comm.title = TitleTemp; // In X11 terminals, we give eps files numbered titles
             sprintf(TitleTemp, "Pyxplot Output %ld", TempFile_counter);
@@ -274,10 +276,11 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     }
 
     // Make GSOutputTemp a temporary file that ghostscript can spit data out to (with a shell-safe filename)
-    sprintf(GSOutputTemp, "%s%spyxplot_%d_%ld%s", c->errcontext.session_default.tempdir, PATHLINK, getpid(),
-            TempFile_counter, (termtype == SW_TERMTYPE_GIF) ? ".gif" : ".tmp");
-    sprintf(GSOutputTemp2, "%s%spyxplot_%d_%ld_%s", c->errcontext.session_default.tempdir, PATHLINK, getpid(),
-            TempFile_counter, (termtype == SW_TERMTYPE_GIF) ? ".gif" : ".tmp");
+    if ((snprintf(GSOutputTemp, FNAME_LENGTH, "%s%spyxplot_%d_%ld%s", c->errcontext.session_default.tempdir, PATHLINK,
+                  getpid(), TempFile_counter, (termtype == SW_TERMTYPE_GIF) ? ".gif" : ".tmp") >= FNAME_LENGTH) ||
+        (snprintf(GSOutputTemp2, FNAME_LENGTH, "%s%spyxplot_%d_%ld_%s", c->errcontext.session_default.tempdir, PATHLINK,
+                  getpid(), TempFile_counter, (termtype == SW_TERMTYPE_GIF) ? ".gif" : ".tmp") >= FNAME_LENGTH))
+        ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Path of temporary directory is too long.");
 
     // Set up communications data structure for objects we are rendering
     comm.itemlist = (canvas_itemlist *) c->canvas_items;

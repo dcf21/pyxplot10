@@ -1095,7 +1095,7 @@ cleanup:
             }
         }
         if (status == 0) {
-            snprintf(c->errStat.errBuff, LSTR_LENGTH, "At this point, was expecting %s.", s->expectingList);
+            ppl_snprintfTrunc(c->errStat.errBuff, LSTR_LENGTH, "At this point, was expecting %s.", s->expectingList);
             c->errStat.errBuff[LSTR_LENGTH - 1] = '\0';
             PARSE_TBADD(ERR_SYNTAX, s->eLlinePos, line);
         }

@@ -1221,7 +1221,7 @@ void eps_plot_RenderEPS(EPSComm *x) {
 
     // Put the title on the top of the graph
     x->LaTeXpageno = x->current->TitleTextID;
-    if ((x->current->settings.title != NULL) && (x->current->settings.title[0] != '\0')) {
+    if (x->current->settings.title[0] != '\0') {
         const int pageno = x->LaTeXpageno++;
         withWords ww;
         ppl_withWordsZero(c, &ww);

@@ -1214,9 +1214,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 }
             }
             else {
-                sprintf(c->errcontext.tempErrStr,
-                        "Error in line %d of configuration file %s: Unrecognised setting name '%s'.", linecounter,
-                        ConfigFname, setkey);
+                ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH,
+                                  "Error in line %d of configuration file %s: Unrecognised setting name '%s'.",
+                                  linecounter, ConfigFname, setkey);
                 ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr);
                 continue;
             }
@@ -1274,9 +1274,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else {
-                sprintf(c->errcontext.tempErrStr,
-                        "Error in line %d of configuration file %s: Unrecognised setting name '%s'.", linecounter,
-                        ConfigFname, setkey);
+                ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH,
+                                  "Error in line %d of configuration file %s: Unrecognised setting name '%s'.",
+                                  linecounter, ConfigFname, setkey);
                 ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr);
                 continue;
             }
@@ -1321,9 +1321,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr);
                 }
             } else {
-                sprintf(c->errcontext.tempErrStr,
-                        "Error in line %d of configuration file %s: Unrecognised setting name '%s'.", linecounter,
-                        ConfigFname, setkey);
+                ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH,
+                                  "Error in line %d of configuration file %s: Unrecognised setting name '%s'.",
+                                  linecounter, ConfigFname, setkey);
                 ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr);
                 continue;
             }
@@ -1332,9 +1332,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             ppl_strUpper(setkey, setkey);
             if (strcmp(setkey, "PREAMBLE") == 0) strcpy(c->set->term_default.LatexPreamble, setvalue);
             else {
-                sprintf(c->errcontext.tempErrStr,
-                        "Error in line %d of configuration file %s: Unrecognised setting name '%s'.", linecounter,
-                        ConfigFname, setkey);
+                ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH,
+                                  "Error in line %d of configuration file %s: Unrecognised setting name '%s'.",
+                                  linecounter, ConfigFname, setkey);
                 ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr);
                 continue;
             }
@@ -1415,7 +1415,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr); \
             continue; \
         } else { \
-            output = (char *) malloc(strlen(last) + 1); \
+            output = strdup(last); \
             if (output == NULL) { \
                 sprintf(c->errcontext.tempErrStr, \
                         "Error in line %d of configuration file %s: Out of memory error whilst generating new unit.", \
@@ -1423,7 +1423,6 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr); \
                 continue; \
             } \
-            strcpy(output, last); \
         } \
     } else { \
         output = (char *) malloc(i - j + 1); \
@@ -1475,8 +1474,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 j = k = -1;
                 ppl_unitsStringEvaluate(c, setvalue, &setnumeric, &k, &j, errtext);
                 if (j >= 0) {
-                    sprintf(c->errcontext.tempErrStr, "Error in line %d of configuration file %s: %s", linecounter,
-                            ConfigFname, errtext);
+                    ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH,
+                                      "Error in line %d of configuration file %s: %s", linecounter, ConfigFname,
+                                      errtext);
                     ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr);
                     continue;
                 }
@@ -1740,9 +1740,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else {
-                sprintf(c->errcontext.tempErrStr,
-                        "Error in line %d of configuration file %s: Unrecognised setting name '%s'.", linecounter,
-                        ConfigFname, setkey);
+                ppl_snprintfTrunc(c->errcontext.tempErrStr, LSTR_LENGTH,
+                                  "Error in line %d of configuration file %s: Unrecognised setting name '%s'.",
+                                  linecounter, ConfigFname, setkey);
                 ppl_warning(&c->errcontext, ERR_PREFORMED, c->errcontext.tempErrStr);
                 continue;
             }
@@ -1765,8 +1765,9 @@ void ppl_readconfig(ppl_context *c) {
     int i;
     char ConfigFname[FNAME_LENGTH];
 
-    sprintf(ConfigFname, "%s%s%s", c->errcontext.session_default.homedir, PATHLINK, ".pyxplotrc");
-    ppl_readConfigFile(c, ConfigFname);
+    if (snprintf(ConfigFname, FNAME_LENGTH, "%s%s%s", c->errcontext.session_default.homedir, PATHLINK, ".pyxplotrc") <
+        FNAME_LENGTH)
+        ppl_readConfigFile(c, ConfigFname);
     sprintf(ConfigFname, "%s", ".pyxplotrc");
     ppl_readConfigFile(c, ConfigFname);
 

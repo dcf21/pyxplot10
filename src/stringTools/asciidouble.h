@@ -69,4 +69,6 @@ char *ppl_strEscapify(const char *in, char *out);
 
 int ppl_strWildcardTest(const char *test, const char *wildcard);
 
+int ppl_snprintfTrunc(char *out, size_t size, const char *format, ...) __attribute__((format(printf, 3, 4)));
+
 #endif

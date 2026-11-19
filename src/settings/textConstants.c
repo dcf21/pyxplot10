@@ -46,9 +46,9 @@ char ppltxt_show[LSTR_LENGTH];
 //! command-line help text and the startup banner
 
 void ppltxt_init() {
-    sprintf(ppltxt_version, "Pyxplot %s", VERSION);
+    ppl_snprintfTrunc(ppltxt_version, sizeof(ppltxt_version), "Pyxplot %s", VERSION);
 
-    sprintf(ppltxt_help, "%s\n\
+    ppl_snprintfTrunc(ppltxt_help, sizeof(ppltxt_help), "%s\n\
 %s\n\
 \n\
 Usage: pyxplot <options> <filelist>\n\
@@ -65,9 +65,9 @@ full Users' Guide can be found in the file:\n\
 \n\
 Extensive documentation is also available at <http://www.pyxplot.org.uk>, which\n\
 also provides contact information for bug reports.\n",
-            ppltxt_version, ppl_strUnderline(ppltxt_version, ppltxt_version_underline), DOCDIR, PATHLINK);
+                      ppltxt_version, ppl_strUnderline(ppltxt_version, ppltxt_version_underline), DOCDIR, PATHLINK);
 
-    sprintf(ppltxt_welcome, "\n\
+    ppl_snprintfTrunc(ppltxt_welcome, sizeof(ppltxt_welcome), "\n\
                         _       _      PYXPLOT\n\
  _ __  _   ___  ___ __ | | ___ | |_    Version %s\n\
 | '_ \\| | | \\ \\/ / '_ \\| |/ _ \\| __|   %s\n\
@@ -77,16 +77,16 @@ also provides contact information for bug reports.\n",
 \n\
 For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 ",
-            VERSION, DATE);
+                      VERSION, DATE);
 
-    sprintf(ppltxt_invalid, "\n\
+    ppl_snprintfTrunc(ppltxt_invalid, sizeof(ppltxt_invalid), "\n\
  %%s\n\
 /|\\ \n\
  |\n\
 Error: Unrecognised command.\n\
 ");
 
-    sprintf(ppltxt_valid_set_options, "\n\
+    ppl_snprintfTrunc(ppltxt_valid_set_options, sizeof(ppltxt_valid_set_options), "\n\
 'arrow', 'autoscale', 'axescolor', 'axis', 'axisunitstyle', 'backup', 'bar',\n\
 'binorigin', 'binwidth', 'boxfrom', 'boxwidth', 'c1format', 'c1label',\n\
 'calendar', 'clip', 'colmap', 'colkey', 'contours', 'c<n>range', 'data style',\n\
@@ -102,13 +102,13 @@ Error: Unrecognised command.\n\
 '[xyz]<n>format', '[xyz]<n>label', '[xyz]<n>range', '<m>[xyz]<n>tics'\n\
 ");
 
-    sprintf(ppltxt_set_noword, "\n\
+    ppl_snprintfTrunc(ppltxt_set_noword, sizeof(ppltxt_set_noword), "\n\
 Set options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 %s\n\
 ",
-            ppltxt_valid_set_options);
+                      ppltxt_valid_set_options);
 
-    sprintf(ppltxt_unset_noword, "\n\
+    ppl_snprintfTrunc(ppltxt_unset_noword, sizeof(ppltxt_unset_noword), "\n\
 Unset options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 \n\
 'arrow', 'autoscale', 'axescolor', 'axis', 'axisunitstyle', 'backup', 'bar',\n\
@@ -125,19 +125,19 @@ Unset options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 '[xyz]<n>range', '<m>[xyz]<n>tics'\n\
 ");
 
-    sprintf(ppltxt_set, "\n\
+    ppl_snprintfTrunc(ppltxt_set, sizeof(ppltxt_set), "\n\
 Error: Invalid set option '%%s'.\n\
 \n\
 %s",
-            ppltxt_set_noword);
+                      ppltxt_set_noword);
 
-    sprintf(ppltxt_unset, "\n\
+    ppl_snprintfTrunc(ppltxt_unset, sizeof(ppltxt_unset), "\n\
 Error: Invalid unset option '%%s'.\n\
 \n\
 %s",
-            ppltxt_unset_noword);
+                      ppltxt_unset_noword);
 
-    sprintf(ppltxt_show, "\n\
+    ppl_snprintfTrunc(ppltxt_show, sizeof(ppltxt_show), "\n\
 Valid 'show' options are:\n\
 \n\
 'all', 'arrows', 'axes', 'functions', 'settings', 'labels', 'linestyles',\n\

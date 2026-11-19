@@ -104,10 +104,17 @@ void eps_eps_RenderEPS(EPSComm *x) {
     if ((x->current->calcbbox) || (!GotBBox)) // Calculate bounding box for EPS file using ghostview
     {
         char command[LSTR_LENGTH], tmpdata[FNAME_LENGTH];
-        sprintf(tmpdata, "%s%s%s", x->c->errcontext.session_default.tempdir, PATHLINK,
-                "bbox_in"); // Temporary file for gs to output bounding box into
-        sprintf(command, "%s -dQUIET -dSAFER -dBATCH -dNOPAUSE -sDEVICE=bbox %s > %s 2> %s", GHOSTSCRIPT_COMMAND,
-                filename, tmpdata, tmpdata);
+        // Temporary file for gs to output bounding box into
+        if ((snprintf(tmpdata, FNAME_LENGTH, "%s%s%s", x->c->errcontext.session_default.tempdir, PATHLINK, "bbox_in") >=
+             FNAME_LENGTH) ||
+            (snprintf(command, LSTR_LENGTH, "%s -dQUIET -dSAFER -dBATCH -dNOPAUSE -sDEVICE=bbox %s > %s 2> %s",
+                      GHOSTSCRIPT_COMMAND, filename, tmpdata, tmpdata) >= LSTR_LENGTH)) {
+            ppl_snprintfTrunc(x->c->errcontext.tempErrStr, LSTR_LENGTH,
+                              "Filename of EPS file '%s' is too long to calculate its bounding box.", filename);
+            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, x->c->errcontext.tempErrStr);
+            *(x->status) = 1;
+            return;
+        }
         if (system(command))
             if (DEBUG) { ppl_log(&x->c->errcontext, "Ghostscript returned non-zero return value."); }
         inf = fopen(tmpdata, "r");
