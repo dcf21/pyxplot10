@@ -74,6 +74,19 @@
 //! version requirement is not met
 //! \param [in] c - The Pyxplot context
 //! \param [in] pl - The compiled command line, used to report errors
+//! versionError - Report an error in the version clause of an assert command
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command
+//! \param [in] in - The parser output for the command
+//! \param [in] errType - The type of error, one of the ERR_* constants
+//! \param [in] msg - The error message
+
+static void versionError(ppl_context *c, const parserLine *pl, const parserOutput *in, const int errType,
+                         const char *msg) {
+    ppl_snprintfTrunc(c->errStat.errBuff, LSTR_LENGTH, "%s", msg);
+    ppl_tbAddLine(c, pl, errType, in->stkCharPos[PARSE_assert_version], "");
+}
+
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutput *in) {
@@ -102,18 +115,6 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         char txtauto[64];
         ppl_snprintfTrunc(txtauto, sizeof(txtauto), "This script requires a%s version of Pyxplot (%s %s)",
                           (!lt) ? " newer" : "n older", (!lt) ? ">=" : "<", version);
-#define VERSION_FAIL \
-    { \
-        snprintf(c->errStat.errBuff, LSTR_LENGTH, "%s", txt); \
-        ppl_tbAddLine(c, pl, ERR_ASSERT, in->stkCharPos[PARSE_assert_version], ""); \
-        return; \
-    }
-#define VERSION_MALF \
-    { \
-        snprintf(c->errStat.errBuff, LSTR_LENGTH, "Malformed version string."); \
-        ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_assert_version], ""); \
-        return; \
-    }
         if (txt == NULL) txt = txtauto;
         sgn = (!lt) ? 1 : -1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
@@ -122,35 +123,68 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
             j = 10 * j + (version[i] - '0');
             if (j > 1e6) j = 1e6;
         }
-        if ((sgn * VERSION_MAJ < sgn * j) && (!pass)) VERSION_FAIL;
+        if ((sgn * VERSION_MAJ < sgn * j) && (!pass)) {
+            versionError(c, pl, in, ERR_ASSERT, txt);
+            return;
+        }
         if (sgn * VERSION_MAJ > sgn * j) pass = 1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '.') i++;
-        else if (version[i] != '\0') { VERSION_MALF; }
+        else if (version[i] != '\0') {
+            {
+                versionError(c, pl, in, ERR_SYNTAX, "Malformed version string.");
+                return;
+            }
+        }
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
-        if ((version[i] == '\0') && (sgn == -1) && (!pass)) VERSION_FAIL;
+        if ((version[i] == '\0') && (sgn == -1) && (!pass)) {
+            versionError(c, pl, in, ERR_ASSERT, txt);
+            return;
+        }
         if (version[i] == '\0') return;
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
             j = 10 * j + (version[i] - '0');
             if (j > 1e6) j = 1e6;
         }
-        if ((sgn * VERSION_MIN < sgn * j) && (!pass)) VERSION_FAIL;
+        if ((sgn * VERSION_MIN < sgn * j) && (!pass)) {
+            versionError(c, pl, in, ERR_ASSERT, txt);
+            return;
+        }
         if (sgn * VERSION_MIN > sgn * j) pass = 1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '.') i++;
-        else if (version[i] != '\0') { VERSION_MALF; }
+        else if (version[i] != '\0') {
+            {
+                versionError(c, pl, in, ERR_SYNTAX, "Malformed version string.");
+                return;
+            }
+        }
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
-        if ((version[i] == '\0') && (sgn == -1) && (!pass)) VERSION_FAIL;
+        if ((version[i] == '\0') && (sgn == -1) && (!pass)) {
+            versionError(c, pl, in, ERR_ASSERT, txt);
+            return;
+        }
         if (version[i] == '\0') return;
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
             j = 10 * j + (version[i] - '0');
             if (j > 1e6) j = 1e6;
         }
-        if ((sgn * VERSION_REV < sgn * j) && (!pass)) VERSION_FAIL;
+        if ((sgn * VERSION_REV < sgn * j) && (!pass)) {
+            versionError(c, pl, in, ERR_ASSERT, txt);
+            return;
+        }
         if (sgn * VERSION_REV > sgn * j) pass = 1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
-        if (version[i] != '\0') { VERSION_MALF; }
-        if ((version[i] == '\0') && (sgn == -1) && (!pass)) VERSION_FAIL;
+        if (version[i] != '\0') {
+            {
+                versionError(c, pl, in, ERR_SYNTAX, "Malformed version string.");
+                return;
+            }
+        }
+        if ((version[i] == '\0') && (sgn == -1) && (!pass)) {
+            versionError(c, pl, in, ERR_ASSERT, txt);
+            return;
+        }
     }
 
     return;

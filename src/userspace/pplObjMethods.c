@@ -66,18 +66,6 @@
 
 dict **pplObjMethods;
 
-#define COPYSTR(X, Y) \
-    { \
-        X = (char *) malloc(strlen(Y) + 1); \
-        if (X == NULL) { \
-            *status = 1; \
-            *errType = ERR_MEMORY; \
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory."); \
-            return; \
-        } \
-        strcpy(X, Y); \
-    }
-
 
 // Universal methods of all objects
 
@@ -110,6 +98,7 @@ static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *st
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_data()"};
     int count = 0;
     char *keys[4096], *key, *tmp;
     pplObj v;
@@ -138,7 +127,7 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
                 }
             if (!new) continue;
             if (item->objType == PPLOBJ_FUNC) continue; // Non-methods only
-            COPYSTR(tmp, key);
+            if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
             pplObjStr(&v, 1, 1, tmp);
             ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
             keys[count++] = key;
@@ -155,7 +144,7 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
             }
         if (!new) continue;
         if (item->objType == PPLOBJ_FUNC) continue; // Non-methods only
-        COPYSTR(tmp, key);
+        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         pplObjStr(&v, 1, 1, tmp);
         ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
         keys[count++] = key;
@@ -175,6 +164,7 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_contents()"};
     int count = 0;
     char *keys[4096], *key, *tmp;
     pplObj v;
@@ -202,7 +192,7 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
                     break;
                 }
             if (!new) continue;
-            COPYSTR(tmp, key);
+            if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
             pplObjStr(&v, 1, 1, tmp);
             ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
             keys[count++] = key;
@@ -218,7 +208,7 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
                 break;
             }
         if (!new) continue;
-        COPYSTR(tmp, key);
+        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         pplObjStr(&v, 1, 1, tmp);
         ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
         keys[count++] = key;
@@ -237,6 +227,7 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_methods()"};
     int count = 0;
     char *keys[4096], *key, *tmp;
     pplObj v;
@@ -265,7 +256,7 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
                 }
             if (!new) continue;
             if (item->objType != PPLOBJ_FUNC) continue; // List methods only
-            COPYSTR(tmp, key);
+            if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
             pplObjStr(&v, 1, 1, tmp);
             ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
             keys[count++] = key;
@@ -282,7 +273,7 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
             }
         if (!new) continue;
         if (item->objType != PPLOBJ_FUNC) continue; // List methods only
-        COPYSTR(tmp, key);
+        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         pplObjStr(&v, 1, 1, tmp);
         ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
         keys[count++] = key;
@@ -342,10 +333,11 @@ static void pplmethod_type(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strUpper(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_strUpper()"};
     int i = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
-    COPYSTR(tmp, work);
+    if ((tmp = ppl_funcStrdup(&call, work)) == NULL) return;
     while (tmp[i] != '\0') {
         tmp[i] = toupper(tmp[i]);
         i++;
@@ -364,10 +356,11 @@ static void pplmethod_strUpper(ppl_context *c, pplObj *in, const int nArgs, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strLower(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_strLower()"};
     int i = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
-    COPYSTR(tmp, work);
+    if ((tmp = ppl_funcStrdup(&call, work)) == NULL) return;
     while (tmp[i] != '\0') {
         tmp[i] = tolower(tmp[i]);
         i++;
@@ -489,10 +482,11 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_strStrip()"};
     int i, j;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
-    COPYSTR(tmp, work);
+    if ((tmp = ppl_funcStrdup(&call, work)) == NULL) return;
     for (i = 0; ((tmp[i] > '\0') && ((unsigned char) tmp[i] <= ' ')); i++);
     for (j = 0; tmp[i] != '\0'; i++, j++) tmp[j] = tmp[i];
     j--;
@@ -513,10 +507,11 @@ static void pplmethod_strStrip(ppl_context *c, pplObj *in, const int nArgs, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strLStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_strLStrip()"};
     int i = 0, j = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
-    COPYSTR(tmp, work);
+    if ((tmp = ppl_funcStrdup(&call, work)) == NULL) return;
     for (i = 0; ((tmp[i] > '\0') && ((unsigned char) tmp[i] <= ' ')); i++);
     for (j = 0; tmp[i] != '\0'; i++, j++) tmp[j] = tmp[i];
     tmp[j] = '\0';
@@ -534,10 +529,11 @@ static void pplmethod_strLStrip(ppl_context *c, pplObj *in, const int nArgs, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strRStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_strRStrip()"};
     int i = 0, j = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
-    COPYSTR(tmp, work);
+    if ((tmp = ppl_funcStrdup(&call, work)) == NULL) return;
     for (j = 0; tmp[i] != '\0'; i++, j++) tmp[j] = tmp[i];
     j--;
     for (; ((j >= 0) && (tmp[j] > '\0') && ((unsigned char) tmp[j] <= ' ')); j--) tmp[j] = '\0';
@@ -834,23 +830,6 @@ static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *s
 
 // Date methods
 
-#define TZ_INIT \
-    double offset; \
-    { \
-        if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) { \
-            *status = 1; \
-            *errType = ERR_TYPE; \
-            ppl_snprintfTrunc( \
-                    errText, LSTR_LENGTH, \
-                    "The function %s requires a string as its first argument; supplied argument had type <%s>.", \
-                    FunctionDescription, pplObjTypeNames[in[0].objType]); \
-            return; \
-        } \
-        if (nArgs > 0) ppl_calendarTimezoneSet(c, 1, (char *) in[0].auxil); \
-        else ppl_calendarTimezoneSet(c, 0, NULL); \
-        ppl_calendarTimezoneOffset(c, t->real, NULL, &offset); \
-        ppl_calendarTimezoneUnset(c); \
-    }
 
 //! pplmethod_dateToDayOfMonth - Implement the toDayOfMonth(<timezone>) method of dates, which returns the day of the
 //! month of a date object in the current calendar
@@ -861,15 +840,42 @@ static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *s
 //! \param [in] nArgs - The number of arguments passed to the method
 //! \param [out] status - Set to one if an error occurred
 //! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! methodTimezoneOffset - Work out the offset from UTC of the timezone in which a date method should work, which is
+//! given as an optional string argument, or else is the timezone set by the user (set timezone)
+//! \param [in] f - The call to the method
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [in] t - The date object
+//! \param [out] offset - Set to the offset from UTC, in seconds
+//! \return Zero on success, or nonzero if the timezone argument was not a string (which has been reported)
+
+static int methodTimezoneOffset(pplFuncCall *f, const int nArgs, const pplObj *t, double *offset) {
+    const pplObj *in = f->in;
+    if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) {
+        *f->status = 1;
+        *f->errType = ERR_TYPE;
+        ppl_snprintfTrunc(f->errText, LSTR_LENGTH,
+                          "The function %s requires a string as its first argument; supplied argument had type <%s>.",
+                          f->description, pplObjTypeNames[in[0].objType]);
+        return 1;
+    }
+    if (nArgs > 0) ppl_calendarTimezoneSet(f->c, 1, (char *) in[0].auxil);
+    else ppl_calendarTimezoneSet(f->c, 0, NULL);
+    ppl_calendarTimezoneOffset(f->c, t->real, NULL, offset);
+    ppl_calendarTimezoneUnset(f->c);
+    return 0;
+}
+
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
     char *FunctionDescription = "toDayOfMonth(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
     if (*status) {
         *errType = ERR_RANGE;
@@ -892,10 +898,14 @@ static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nAr
 static void pplmethod_dateToDayWeekName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
     char *FunctionDescription = "toDayWeekName(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj *t = in[-1].self_this;
     char *tmp;
-    TZ_INIT;
-    COPYSTR(tmp, ppl_getWeekDayName(c, floor(fmod((t->real + offset) / 3600 / 24 + 3, 7))));
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
+    if ((tmp = ppl_funcStrdup(&call, ppl_getWeekDayName(c, floor(fmod((t->real + offset) / 3600 / 24 + 3, 7))))) ==
+        NULL)
+        return;
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
@@ -913,8 +923,10 @@ static void pplmethod_dateToDayWeekName(ppl_context *c, pplObj *in, const int nA
 static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
     char *FunctionDescription = "toDayWeekNum(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     pplObjNum(&OUTPUT, 0, floor(fmod((t->real + offset) / 3600 / 24 + 4, 7)) + 1, 0);
 }
 
@@ -932,10 +944,12 @@ static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nAr
 static void pplmethod_dateToHour(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     char *FunctionDescription = "toHour(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
     if (*status) {
         *errType = ERR_RANGE;
@@ -973,10 +987,12 @@ static void pplmethod_dateToJD(ppl_context *c, pplObj *in, const int nArgs, int 
 static void pplmethod_dateToMinute(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
     char *FunctionDescription = "toMinute(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
     if (*status) {
         *errType = ERR_RANGE;
@@ -1014,17 +1030,19 @@ static void pplmethod_dateToMJD(ppl_context *c, pplObj *in, const int nArgs, int
 static void pplmethod_dateToMonthName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                       char *errText) {
     char *FunctionDescription = "toMonthName(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
     char *tmp;
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
     if (*status) {
         *errType = ERR_RANGE;
         return;
     }
-    COPYSTR(tmp, ppl_getMonthName(c, month));
+    if ((tmp = ppl_funcStrdup(&call, ppl_getMonthName(c, month))) == NULL) return;
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
@@ -1042,10 +1060,12 @@ static void pplmethod_dateToMonthName(ppl_context *c, pplObj *in, const int nArg
 static void pplmethod_dateToMonthNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                      char *errText) {
     char *FunctionDescription = "toMonthNum(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
     if (*status) {
         *errType = ERR_RANGE;
@@ -1068,10 +1088,12 @@ static void pplmethod_dateToMonthNum(ppl_context *c, pplObj *in, const int nArgs
 static void pplmethod_dateToSecond(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
     char *FunctionDescription = "toSecond(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
     if (*status) {
         *errType = ERR_RANGE;
@@ -1164,10 +1186,12 @@ static void pplmethod_dateToUnix(ppl_context *c, pplObj *in, const int nArgs, in
 static void pplmethod_dateToYear(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     char *FunctionDescription = "toYear(<timezone>)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
     pplObj *t = in[-1].self_this;
-    TZ_INIT;
+    double offset;
+    if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
     if (*status) {
         *errType = ERR_RANGE;
@@ -3175,6 +3199,7 @@ static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_dictItems()"};
     char *key, *tmp;
     pplObj v, va, vb, *item;
     list *l, *l2;
@@ -3190,7 +3215,7 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
         v.refCount = 1;
         va.refCount = 1;
         vb.refCount = 1;
-        COPYSTR(tmp, key);
+        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         if (pplObjStr(&va, 1, 1, tmp) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -3222,6 +3247,7 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_dictKeys()"};
     char *key, *tmp;
     pplObj v, *item;
     list *l;
@@ -3235,7 +3261,7 @@ static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int 
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-        COPYSTR(tmp, key);
+        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         pplObjStr(&v, 1, 1, tmp);
         ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
     }
@@ -3268,6 +3294,7 @@ static void pplmethod_dictLen(ppl_context *c, pplObj *in, const int nArgs, int *
 
 static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplmethod_dictValues()"};
     char *key, *tmp;
     pplObj v, *item;
     list *l;
@@ -3281,7 +3308,7 @@ static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, in
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-        COPYSTR(tmp, key);
+        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         pplObjCpy(&v, item, 0, 1, 1);
         ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
     }

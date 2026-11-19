@@ -983,6 +983,15 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
 //! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
 //! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
 //! suppressed
+//! closeDataInput - Close the stream from which a data file was being read, unless it is stdin or data was being
+//! read from the command line
+//! \param [in] input - The stream
+//! \param [in] readFromCommandLine - True if data was being read from lines following the command, not a file
+
+static void closeDataInput(FILE *input, const int readFromCommandLine) {
+    if ((!readFromCommandLine) && (input != stdin)) fclose(input);
+}
+
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int wildcardMatchNumber, char *filenameOut,
@@ -1064,10 +1073,6 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         }
     }
 
-#define FCLOSE_FI \
-    { \
-        if ((!readFromCommandLine) && (filtered_input != stdin)) fclose(filtered_input); \
-    }
 
     // Keep a record of the memory context we're going to output into, and then make a scratchpad context
     contextOutput = persistent ? 0 : ppl_memAlloc_GetMemContext();
@@ -1080,7 +1085,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                           "Out of memory whilst trying to allocate data table to read data from file.");
         *status = 1;
         if (DEBUG) ppl_log(&c->errcontext, errtext);
-        FCLOSE_FI;
+        closeDataInput(filtered_input, readFromCommandLine);
         return;
     }
     if (usingRowCol == DATAFILE_ROW) {
@@ -1090,7 +1095,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                               "Out of memory whilst trying to allocate data table to read data from file.");
             *status = 1;
             if (DEBUG) ppl_log(&c->errcontext, errtext);
-            FCLOSE_FI;
+            closeDataInput(filtered_input, readFromCommandLine);
             return;
         }
     }
@@ -1167,7 +1172,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (05).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
-                    FCLOSE_FI;
+                    closeDataInput(filtered_input, readFromCommandLine);
                     return;
                 }
                 itemsOnLine = 0;
@@ -1218,7 +1223,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (06).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
-                    FCLOSE_FI;
+                    closeDataInput(filtered_input, readFromCommandLine);
                     return;
                 }
                 itemsOnLine = 0;
@@ -1269,7 +1274,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (07).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
-                    FCLOSE_FI;
+                    closeDataInput(filtered_input, readFromCommandLine);
                     return;
                 }
                 itemsOnLine = 0;
@@ -1333,7 +1338,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (08).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
-                    FCLOSE_FI;
+                    closeDataInput(filtered_input, readFromCommandLine);
                     return;
                 }
                 itemsOnLine = 0;
@@ -1391,7 +1396,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                                       block_count, index_number, rowHeadings, NrowHeadings, rowUnits, NrowUnits, status,
                                       errtext, errCount, iterDepth);
             if (*status) {
-                FCLOSE_FI;
+                closeDataInput(filtered_input, readFromCommandLine);
                 return;
             }
             cptr = rawDataTab->current->text[rawDataTab->current->blockPosition] =
@@ -1400,7 +1405,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory whilst placing data into text spool.");
                 *status = 1;
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
-                FCLOSE_FI;
+                closeDataInput(filtered_input, readFromCommandLine);
                 return;
             }
             strcpy(cptr, linebuffer);
@@ -1409,7 +1414,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory whilst placing data into text spool.");
                 *status = 1;
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
-                FCLOSE_FI;
+                closeDataInput(filtered_input, readFromCommandLine);
                 return;
             }
             discontinuity = 0;
@@ -1453,7 +1458,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
     }
 
     // Close input file
-    FCLOSE_FI;
+    closeDataInput(filtered_input, readFromCommandLine);
 
     // If we are reading rows, go through all of the data that we've read and rotate it by 90 degrees
     if (usingRowCol == DATAFILE_ROW) {

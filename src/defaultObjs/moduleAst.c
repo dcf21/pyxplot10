@@ -207,30 +207,6 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
 
 // Lambda Cold Dark Matter Cosmology Wrappers
 
-#define CHECK_LCDM_INPUTS(XN, H0NUM) \
-    if (ppl_funcCheckUnit(&call, &in[XN], H0NUM, "a recession velocity per unit distance", UNIT_TIME, -1)) return; \
-    if (in[XN].dimensionless) in[XN].real *= 1e3 / (GSL_CONST_MKSA_PARSEC * 1e6); \
-    if (!(in[XN + 1].dimensionless && in[XN + 2].dimensionless)) { \
-        *status = 1; \
-        *errType = ERR_UNIT; \
-        ppl_snprintfTrunc( \
-                errText, LSTR_LENGTH, \
-                "The %s function can only act upon dimensionless values for w_m and w_l. Supplied values have dimensions of <%s> and <%s>.", \
-                FunctionDescription, ppl_printUnit(c, &in[XN + 1], NULL, NULL, 0, 1, 0), \
-                ppl_printUnit(c, &in[XN + 2], NULL, NULL, 1, 1, 0)); \
-        return; \
-    }
-
-#define CHECK_LCDM_REDSHIFT \
-    if (!(in[0].dimensionless)) { \
-        *status = 1; \
-        *errType = ERR_UNIT; \
-        ppl_snprintfTrunc( \
-                errText, LSTR_LENGTH, \
-                "The %s function can only act upon dimensionless values for redshift. Supplied value has dimensions of <%s>.", \
-                FunctionDescription, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0)); \
-        return; \
-    }
 
 //! pplfunc_Lcdm_age - Implement the function ast.Lcdm_age(H0,w_m,w_l) in the ast module, which returns the current age
 //! of the Universe in an L_CDM cosmology
@@ -240,12 +216,52 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
 //! \param [in] nArgs - The number of arguments passed to the function
 //! \param [out] status - Set to one if an error occurred
 //! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! checkLcdmInputs - Check the cosmological parameters passed to a function which uses a Lambda-CDM cosmology: the
+//! Hubble constant, which may be dimensionless (in km/s/Mpc), and the dimensionless density parameters w_m and w_l
+//! \param [in] f - The call to the built-in function
+//! \param [in] h0Index - The index of the argument which is the Hubble constant; w_m and w_l follow it
+//! \param [in] h0Position - The position of the Hubble constant in the argument list, e.g. "first", for error messages
+//! \return Zero if the arguments are acceptable, or nonzero if not (and this has been reported)
+
+static int checkLcdmInputs(pplFuncCall *f, const int h0Index, const char *h0Position) {
+    pplObj *in = f->in;
+    if (ppl_funcCheckUnit(f, &in[h0Index], h0Position, "a recession velocity per unit distance", UNIT_TIME, -1))
+        return 1;
+    if (in[h0Index].dimensionless) in[h0Index].real *= 1e3 / (GSL_CONST_MKSA_PARSEC * 1e6); // From km/s/Mpc
+    if (!(in[h0Index + 1].dimensionless && in[h0Index + 2].dimensionless)) {
+        *f->status = 1;
+        *f->errType = ERR_UNIT;
+        ppl_snprintfTrunc(f->errText, LSTR_LENGTH,
+                          "The %s function can only act upon dimensionless values for w_m and w_l. Supplied values "
+                          "have dimensions of <%s> and <%s>.",
+                          f->description, ppl_printUnit(f->c, &in[h0Index + 1], NULL, NULL, 0, 1, 0),
+                          ppl_printUnit(f->c, &in[h0Index + 2], NULL, NULL, 1, 1, 0));
+        return 1;
+    }
+    return 0;
+}
+
+//! checkRedshift - Check that the first argument of a built-in function, a redshift, is dimensionless
+//! \param [in] f - The call to the built-in function
+//! \return Zero if the argument is acceptable, or nonzero if not (and this has been reported)
+
+static int checkRedshift(pplFuncCall *f) {
+    if (f->in[0].dimensionless) return 0;
+    *f->status = 1;
+    *f->errType = ERR_UNIT;
+    ppl_snprintfTrunc(f->errText, LSTR_LENGTH,
+                      "The %s function can only act upon dimensionless values for redshift. Supplied value has "
+                      "dimensions of <%s>.",
+                      f->description, ppl_printUnit(f->c, &f->in[0], NULL, NULL, 0, 1, 0));
+    return 1;
+}
+
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    CHECK_LCDM_INPUTS(0, "first");
+    if (checkLcdmInputs(&call, 0, "first")) return;
     OUTPUT.real = Lcdm_age(in[0].real, in[1].real, in[2].real);
     ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_TIME);
     if (ppl_funcCheckOutput(&call)) return;
@@ -264,8 +280,8 @@ void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    CHECK_LCDM_INPUTS(1, "second");
-    CHECK_LCDM_REDSHIFT;
+    if (checkLcdmInputs(&call, 1, "second")) return;
+    if (checkRedshift(&call)) return;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real);
     ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
     OUTPUT.exponent[UNIT_ANGLE] = -1;
@@ -285,8 +301,8 @@ void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *sta
 void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DA(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    CHECK_LCDM_INPUTS(1, "second");
-    CHECK_LCDM_REDSHIFT;
+    if (checkLcdmInputs(&call, 1, "second")) return;
+    if (checkRedshift(&call)) return;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real);
     ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
     if (ppl_funcCheckOutput(&call)) return;
@@ -305,8 +321,8 @@ void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DL(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    CHECK_LCDM_INPUTS(1, "second");
-    CHECK_LCDM_REDSHIFT;
+    if (checkLcdmInputs(&call, 1, "second")) return;
+    if (checkRedshift(&call)) return;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real) * pow(1 + in[0].real, 2);
     ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
     if (ppl_funcCheckOutput(&call)) return;
@@ -325,8 +341,8 @@ void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DM(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    CHECK_LCDM_INPUTS(1, "second");
-    CHECK_LCDM_REDSHIFT;
+    if (checkLcdmInputs(&call, 1, "second")) return;
+    if (checkRedshift(&call)) return;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real) * (1 + in[0].real);
     ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
     if (ppl_funcCheckOutput(&call)) return;
@@ -345,8 +361,8 @@ void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_t(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    CHECK_LCDM_INPUTS(1, "second");
-    CHECK_LCDM_REDSHIFT;
+    if (checkLcdmInputs(&call, 1, "second")) return;
+    if (checkRedshift(&call)) return;
     OUTPUT.real = Lcdm_t_from_z(in[0].real, in[1].real, in[2].real, in[3].real);
     ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_TIME);
     if (ppl_funcCheckOutput(&call)) return;
@@ -365,7 +381,7 @@ void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_z(t,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    CHECK_LCDM_INPUTS(1, "second");
+    if (checkLcdmInputs(&call, 1, "second")) return;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a time", UNIT_TIME, 1)) return;
     OUTPUT.real = Lcdm_z_from_t(in[0].real, in[1].real, in[2].real, in[3].real);
     if (ppl_funcCheckOutput(&call)) return;

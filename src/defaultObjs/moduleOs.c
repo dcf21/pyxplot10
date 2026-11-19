@@ -46,17 +46,6 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsChecks.h"
 
-#define COPYSTR(X, Y) \
-    { \
-        X = (char *) malloc(strlen(Y) + 1); \
-        if (X == NULL) { \
-            *status = 1; \
-            *errType = ERR_MEMORY; \
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory."); \
-            return; \
-        } \
-        strcpy(X, Y); \
-    }
 
 //! pplfunc_osChdir - Implement the function os.chdir(x) in the os module, which changes working directory to x
 //! \param [in] c - The Pyxplot context
@@ -95,8 +84,9 @@ void pplfunc_osChdir(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetCwd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplfunc_osGetCwd()"};
     char *tmp;
-    COPYSTR(tmp, c->errcontext.session_default.cwd);
+    if ((tmp = ppl_funcStrdup(&call, c->errcontext.session_default.cwd)) == NULL) return;
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
@@ -308,6 +298,7 @@ void pplfunc_osGetRealName(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplfunc_osGlob()"};
     wordexp_t w;
     glob_t g;
     pplObj v;
@@ -341,7 +332,7 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     for (i = 0; i < w.we_wordc; i++) {
         if (glob(w.we_wordv[i], 0, NULL, &g) != 0) continue;
         for (j = 0; j < g.gl_pathc; j++) {
-            COPYSTR(tmp, g.gl_pathv[j]);
+            if ((tmp = ppl_funcStrdup(&call, g.gl_pathv[j])) == NULL) return;
             pplObjStr(&v, 1, 1, tmp);
             ppl_listAppendCpy(l, &v, sizeof(v));
         }
@@ -399,6 +390,7 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplfunc_osStat()"};
     char *tmp, permissions[] = "---------";
     dict *d;
     pplObj v;
@@ -443,21 +435,21 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     pplObjNum(&v, 1, s.st_uid, 0);
     ppl_dictAppendCpy(d, "uid", &v, sizeof(v));
     if (S_ISREG(s.st_mode)) {
-        COPYSTR(tmp, "regular file");
+        if ((tmp = ppl_funcStrdup(&call, "regular file")) == NULL) return;
     } else if (S_ISDIR(s.st_mode)) {
-        COPYSTR(tmp, "directory");
+        if ((tmp = ppl_funcStrdup(&call, "directory")) == NULL) return;
     } else if (S_ISCHR(s.st_mode)) {
-        COPYSTR(tmp, "character special");
+        if ((tmp = ppl_funcStrdup(&call, "character special")) == NULL) return;
     } else if (S_ISBLK(s.st_mode)) {
-        COPYSTR(tmp, "block special");
+        if ((tmp = ppl_funcStrdup(&call, "block special")) == NULL) return;
     } else if (S_ISFIFO(s.st_mode)) {
-        COPYSTR(tmp, "fifo");
+        if ((tmp = ppl_funcStrdup(&call, "fifo")) == NULL) return;
     } else if (S_ISLNK(s.st_mode)) {
-        COPYSTR(tmp, "symbolic link");
+        if ((tmp = ppl_funcStrdup(&call, "symbolic link")) == NULL) return;
     } else if (S_ISSOCK(s.st_mode)) {
-        COPYSTR(tmp, "socket");
+        if ((tmp = ppl_funcStrdup(&call, "socket")) == NULL) return;
     } else {
-        COPYSTR(tmp, "other");
+        if ((tmp = ppl_funcStrdup(&call, "other")) == NULL) return;
     }
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "type", &v, sizeof(v));
@@ -470,7 +462,7 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     if (s.st_mode & S_IROTH) permissions[6] = 'r';
     if (s.st_mode & S_IWOTH) permissions[7] = 'w';
     if (s.st_mode & S_IXOTH) permissions[8] = 'x';
-    COPYSTR(tmp, permissions);
+    if ((tmp = ppl_funcStrdup(&call, permissions)) == NULL) return;
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "permissions", &v, sizeof(v));
     return;
@@ -520,6 +512,7 @@ void pplfunc_osTmpfile(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    pplFuncCall call = {c, in, status, errType, errText, "pplfunc_osUname()"};
     char *tmp;
     dict *d;
     pplObj v;
@@ -539,19 +532,19 @@ void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, i
         return;
     }
     d = (dict *) OUTPUT.auxil;
-    COPYSTR(tmp, u.sysname);
+    if ((tmp = ppl_funcStrdup(&call, u.sysname)) == NULL) return;
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "sysname", &v, sizeof(v));
-    COPYSTR(tmp, u.nodename);
+    if ((tmp = ppl_funcStrdup(&call, u.nodename)) == NULL) return;
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "nodename", &v, sizeof(v));
-    COPYSTR(tmp, u.release);
+    if ((tmp = ppl_funcStrdup(&call, u.release)) == NULL) return;
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "release", &v, sizeof(v));
-    COPYSTR(tmp, u.version);
+    if ((tmp = ppl_funcStrdup(&call, u.version)) == NULL) return;
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "version", &v, sizeof(v));
-    COPYSTR(tmp, u.machine);
+    if ((tmp = ppl_funcStrdup(&call, u.machine)) == NULL) return;
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "machine", &v, sizeof(v));
     return;

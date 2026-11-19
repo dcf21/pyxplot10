@@ -35,10 +35,6 @@
 #include "stringTools/asciidouble.h"
 #include "stringTools/strConstants.h"
 
-#define ADDON \
-    *dp = gsl_complex_add(*dp, gsl_complex_mul(f, c)); \
-    *dq = gsl_complex_add(*dq, gsl_complex_mul(g, c)); \
-    c = gsl_complex_mul(c, zd)
 
 //! airy_series_y1 - Evaluate the first of the two Maclaurin series from which the Airy functions are built,
 //! f(z) = 1 + z^3/3! + 1*4 z^6/6! + ... (Abramowitz & Stegun 10.4.3)
@@ -730,6 +726,22 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
 //! \param [out] dq - The coefficient multiplying the derivative of the Airy function at z0
 //! \param [in] zd - The displacement z - z0 of the point at which the function is required
 //! \param [in] z0 - The point about which the expansion is made
+//! airyAddTerm - Add the next term of the Taylor series for an Airy function and its derivative, and advance the
+//! power of (z - z0)
+//! \param [in,out] dp - The sum of the series for the function
+//! \param [in,out] dq - The sum of the series for its derivative
+//! \param [in] f - The coefficient of the term in the series for the function
+//! \param [in] g - The coefficient of the term in the series for the derivative
+//! \param [in,out] c - The current power of (z - z0), divided by the factorial; multiplied by <zd>
+//! \param [in] zd - (z - z0)
+
+static void airyAddTerm(gsl_complex *dp, gsl_complex *dq, const gsl_complex f, const gsl_complex g, gsl_complex *c,
+                        const gsl_complex zd) {
+    *dp = gsl_complex_add(*dp, gsl_complex_mul(f, *c));
+    *dq = gsl_complex_add(*dq, gsl_complex_mul(g, *c));
+    *c = gsl_complex_mul(*c, zd);
+}
+
 //! \param [in] k - Zero to compute the function itself (Ai or Bi), or one to compute its derivative (Ai' or Bi')
 
 void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_complex z0, const double k) {
@@ -755,63 +767,63 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
     c = gsl_complex_div_real(c, 4.0 - k);
     f = z2;
     g = gsl_complex_rect(2.0, 0.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 5.0 - k);
     f = gsl_complex_mul_real(z0, 4.0);
     g = z2;
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 6.0 - k);
     f = gsl_complex_add_real(z3, 4.0);
     g = gsl_complex_mul_real(z0, 6.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 7.0 - k);
     f = gsl_complex_mul_real(z2, 9.0);
     g = gsl_complex_add_real(z3, 10.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 8.0 - k);
     f = gsl_complex_mul(z0, gsl_complex_add_real(z3, 28.0));
     g = gsl_complex_mul_real(z2, 12.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 9.0 - k);
     f = gsl_complex_add_real(gsl_complex_mul_real(z3, 16.0), 28.0);
     g = gsl_complex_mul(z0, gsl_complex_add_real(z3, 52.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 10.0 - k);
     f = gsl_complex_mul(z2, gsl_complex_add_real(z3, 100.0));
     g = gsl_complex_add_real(gsl_complex_mul_real(z3, 20.0), 80.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 11.0 - k);
     f = gsl_complex_mul(z0, gsl_complex_add_real(gsl_complex_mul_real(z3, 25.0), 280.0));
     g = gsl_complex_mul(z2, gsl_complex_add_real(z3, 160.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 12.0 - k);
     f = gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 260.0), z3), 280.0);
     g = gsl_complex_mul(z0, gsl_complex_add_real(gsl_complex_mul_real(z3, 30.0), 600.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 13.0 - k);
     f = gsl_complex_mul(z2, gsl_complex_add_real(gsl_complex_mul_real(z3, 36.0), 1380.0));
     g = gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 380.0), z3), 880.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 14.0 - k);
     f = gsl_complex_mul(z0, gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 560.0), z3), 3640.0));
     g = gsl_complex_mul(z2, gsl_complex_add_real(gsl_complex_mul_real(z3, 42.0), 2520.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 15.0 - k);
     f = gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(gsl_complex_mul_real(z3, 49.0), 4760.0), z3), 3640.0);
     g = gsl_complex_mul(z0, gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 770.0), z3), 8680.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 16.0 - k);
     f = gsl_complex_mul(z2, gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 1064.0), z3), 22960.0));
     g = gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(gsl_complex_mul_real(z3, 56.0), 7840.0), z3),
                              12320.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 17.0 - k);
     f = gsl_complex_mul(
             z0,
             gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(gsl_complex_mul_real(z3, 64.0), 13160.0), z3),
                                  58240.0));
     g = gsl_complex_mul(z2, gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 1400.0), z3), 46480.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 18.0 - k);
     f = gsl_complex_add_real(
             gsl_complex_mul(gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 1848.0), z3), 99120.0), z3),
@@ -820,7 +832,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
             z0,
             gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(gsl_complex_mul_real(z3, 72.0), 20160.0), z3),
                                  151200.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 19.0 - k);
     f = gsl_complex_mul(
             z2,
@@ -829,7 +841,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
     g = gsl_complex_add_real(
             gsl_complex_mul(gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 2352.0), z3), 179760.0), z3),
             209440.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 20.0 - k);
     f = gsl_complex_mul(
             z0,
@@ -841,7 +853,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
             z2,
             gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(gsl_complex_mul_real(z3, 90.0), 45360.0), z3),
                                  987840.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 21.0 - k);
     f = gsl_complex_add_real(
             gsl_complex_mul(gsl_complex_add_real(
@@ -855,7 +867,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                     gsl_complex_mul(
                             gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 3720.0), z3), 562800.0), z3),
                     3082240.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 22.0 - k);
     f = gsl_complex_mul(
             z2,
@@ -869,7 +881,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                                     4583040.0),
                             z3),
             4188800.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 23.0 - k);
     f = gsl_complex_mul(
             z0,
@@ -887,7 +899,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                     gsl_complex_mul(
                             gsl_complex_add_real(gsl_complex_mul(gsl_complex_add_real(z3, 5610.0), z3), 1515360.0), z3),
                     23826880.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 24.0 - k);
     f = gsl_complex_add_real(
             gsl_complex_mul(
@@ -908,7 +920,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                                     16964640.0),
                             z3),
                     71998080.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 25.0 - k);
     f = gsl_complex_mul(
             z2,
@@ -929,7 +941,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                             129236800.0),
                     z3),
             96342400.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 26.0 - k);
     f = gsl_complex_mul(
             z0,
@@ -953,7 +965,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                                     53333280.0),
                             z3),
                     643843200.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 27.0 - k);
     f = gsl_complex_add_real(
             gsl_complex_mul(
@@ -979,7 +991,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                                     553352800.0),
                             z3),
                     1896294400.0));
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 28.0 - k);
     f = gsl_complex_mul(
             z2,
@@ -1005,7 +1017,7 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
                             4004000000.0),
                     z3),
             2504902400.0);
-    ADDON;
+    airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 29.0 - k);
     f = gsl_complex_mul(
             z0,

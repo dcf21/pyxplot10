@@ -292,6 +292,23 @@ int ppl_funcCheckUnit(pplFuncCall *f, const pplObj *x, const char *description, 
     return 0;
 }
 
+//! ppl_funcStrdup - Copy a string into newly malloced memory, reporting an error if memory runs out
+//! \param [in] f - The call to the built-in function
+//! \param [in] str - The string to copy
+//! \return The copy, or NULL if memory ran out (which has been reported)
+
+char *ppl_funcStrdup(pplFuncCall *f, const char *str) {
+    char *out = (char *) malloc(strlen(str) + 1);
+    if (out == NULL) {
+        *f->status = 1;
+        *f->errType = ERR_MEMORY;
+        ppl_snprintfTrunc(f->errText, LSTR_LENGTH, "Out of memory.");
+        return NULL;
+    }
+    strcpy(out, str);
+    return out;
+}
+
 //! ppl_funcSetComplexOutput - Set the result of a built-in function to a GSL complex number, marking it as real if
 //! its imaginary part is zero
 //! \param [out] out - The result of the built-in function
