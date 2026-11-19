@@ -24,7 +24,7 @@
 
 #include "settings/settings.h"
 
-void eps_plot_colormap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg, canvas_plotdesc *pd);
+void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph *sg, canvas_plotdesc *pd);
 int eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int xn, int yn, int zn, pplset_graph *sg,
                       canvas_plotdesc *pd, int pdn, double origin_x, double origin_y, double width, double height,
                       double zdepth);

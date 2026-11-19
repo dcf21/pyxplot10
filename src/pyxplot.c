@@ -69,7 +69,7 @@
 sigjmp_buf ppl_sigjmpToMain;
 sigjmp_buf *ppl_sigjmpFromSigInt = NULL;
 
-int main(int argc, char **argv) {
+int main(const int argc, char **argv) {
     int i, fail = 0;
     int tempdirnumber = 1;
     char tempdirpath[FNAME_LENGTH];
@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void ppl_sigIntHandle(int signo) {
+void ppl_sigIntHandle(const int signo) {
     sigjmp_buf *destination = ppl_sigjmpFromSigInt;
     ppl_sigjmpFromSigInt =
             NULL; // DO NOT recursively go back to the same sigint handler over and over again if it doesn't seem to work.

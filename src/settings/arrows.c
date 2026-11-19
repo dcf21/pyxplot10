@@ -123,8 +123,8 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     return;
 }
 
-void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab,
-                     int quiet) {
+void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutput *in, const parserLine *pl,
+                     const int *ptab, const int quiet) {
     int pos;
     pplarrow_object **first;
 

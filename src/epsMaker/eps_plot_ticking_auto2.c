@@ -75,7 +75,7 @@ static void TickScheme2_sprintf(char *out, const int OutLen, const double UnitMu
     return;
 }
 
-static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, int LogBase) {
+static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, const int LogBase) {
     unsigned char stopping;
     int i, divisor;
 
@@ -103,12 +103,12 @@ static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, i
     return;
 }
 
-static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, double OoM, unsigned char IsLog,
-                                int LogBase, int *FactorsTen, int NFactors) {
+static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, const double OoM, const unsigned char IsLog,
+                                const int LogBase, const int *FactorsTen, const int NFactors) {
     int i, LevelDescend = 1;
     *NTickSchemes = 0;
     while (pow(10.0, LevelDescend - 1) < (10.0 * TICKS_MAXIMUM)) {
-        double OoMscan = OoM / pow(10.0, LevelDescend);
+        const double OoMscan = OoM / pow(10.0, LevelDescend);
         if (IsLog && (OoMscan > 0.09) && (OoMscan < 0.11)) {
             GenerateLogTickSchemes(TickSchemes, NTickSchemes, LogBase);
         } else {
@@ -128,7 +128,7 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, doub
 }
 
 // Return up to a maximum of MaxFactors factors of in. Factors are returned to array out.
-static void factorise(int in, int *out, int MaxFactors, int FactorMax, int *NFactors) {
+static void factorise(const int in, int *out, const int MaxFactors, const int FactorMax, int *NFactors) {
     int i, j = 0, k, N = sqrt(in);
     for (i = 2; i <= N; i++)
         if (in % i == 0) {
@@ -149,8 +149,8 @@ static void factorise(int in, int *out, int MaxFactors, int FactorMax, int *NFac
 }
 
 // Main entry point for automatic ticking of axes
-void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, double UnitMultiplier, unsigned char *AutoTicks,
-                            pplset_axis *linkedto) {
+void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
+                            const pplset_axis *linkedto) {
     int i, j, k, N, OutContext, ContextRough = -1, NFactorsTen, LogBase, number_ticks, major, OverlayMatch;
     unsigned char IsLog = (axis->LogFinal == SW_BOOL_TRUE);
     int FactorsTen[MAX_FACTORS];
@@ -243,7 +243,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, double UnitMultiplier
 
             // Try each tick scheme in turn
             for (i = 0; i < NTickSchemes; i++) {
-                double ts_min = outer_min + TickSchemes[i].offset;
+                const double ts_min = outer_min + TickSchemes[i].offset;
                 TL_trial_len = 0;
                 for (j = 0; j < ((outer_max - outer_min) / TickSchemes[i].ticksep + 1.5); j++) {
                     if (TL_trial_len >= TICKS_MAXIMUM) break;
@@ -274,7 +274,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, double UnitMultiplier
                     for (j = 0; axis->TickListStrings[j] != NULL; j++) {
                         OverlayMatch = 0;
                         for (k = 0; k < TL_trial_len; k++) {
-                            double pos = eps_plot_axis_GetPosition(TL_trial[k] / UnitMultiplier, axis, 0, 0);
+                            const double pos = eps_plot_axis_GetPosition(TL_trial[k] / UnitMultiplier, axis, 0, 0);
                             if (fabs(pos - axis->TickListPositions[j]) > 1e-4) continue;
                             for (k++; k < TL_trial_len; k++) TL_trial[k - 1] = TL_trial[k];
                             TL_trial_len--;
@@ -325,7 +325,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, double UnitMultiplier
 
             // Commit list of ticks
             for (i = j = 0; i < TL_best_len; i++) {
-                double xtmp = TL_best[i];
+                const double xtmp = TL_best[i];
                 TLP[j] = eps_plot_axis_GetPosition(xtmp / UnitMultiplier, axis, 0, 0);
                 if (!gsl_finite(TLP[j])) continue;
                 if (major) {

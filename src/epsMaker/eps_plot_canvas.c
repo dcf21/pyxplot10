@@ -37,7 +37,8 @@
 // Where along this axis, in the range 0 (left) to 1 (right) should the value
 // xin go? xrn = Region Number for interpolated axes which do not have
 // monotonically increasing ordinate values.
-double eps_plot_axis_GetPosition(double xin, pplset_axis *xa, int xrn, unsigned char AllowOffBounds) {
+double eps_plot_axis_GetPosition(const double xin, const pplset_axis *xa, const int xrn,
+                                 const unsigned char AllowOffBounds) {
     int imin, imax, i;
     if (xa == NULL) return xin;
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
@@ -67,11 +68,11 @@ double eps_plot_axis_GetPosition(double xin, pplset_axis *xa, int xrn, unsigned 
 }
 
 // What is the value of this axis at point xin, in the range 0 (left) to 1 (right)?
-double eps_plot_axis_InvGetPosition(double xin, pplset_axis *xa) {
+double eps_plot_axis_InvGetPosition(const double xin, const pplset_axis *xa) {
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {
-        int i = floor(xin * (AXISLINEARINTERPOLATION_NPOINTS - 1));
-        double x = xin * (AXISLINEARINTERPOLATION_NPOINTS - 1) - i;
+        const int i = floor(xin * (AXISLINEARINTERPOLATION_NPOINTS - 1));
+        const double x = xin * (AXISLINEARINTERPOLATION_NPOINTS - 1) - i;
         if (i >= AXISLINEARINTERPOLATION_NPOINTS - 1)
             return xa->AxisLinearInterpolation[AXISLINEARINTERPOLATION_NPOINTS - 1];
         if (i < 0) return xa->AxisLinearInterpolation[0];
@@ -82,7 +83,7 @@ double eps_plot_axis_InvGetPosition(double xin, pplset_axis *xa) {
 }
 
 // Query whether the value xin occurs within the range of this axis
-int eps_plot_axis_InRange(pplset_axis *xa, double xin) {
+int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
     int xrn, swapI, xminset = 0, xmaxset = 0;
     double xmin = 0, xmax = 0, swapD;
 
@@ -118,8 +119,9 @@ int eps_plot_axis_InRange(pplset_axis *xa, double xin) {
     return 1; // Axis range is not fixed
 }
 
-void eps_plot_ThreeDimProject(double xap, double yap, double zap, pplset_graph *sg, double origin_x, double origin_y,
-                              double width, double height, double zdepth, double *xpos, double *ypos, double *depth) {
+void eps_plot_ThreeDimProject(const double xap, const double yap, const double zap, const pplset_graph *sg,
+                              const double origin_x, const double origin_y, const double width, const double height,
+                              const double zdepth, double *xpos, double *ypos, double *depth) {
     double x, y, z, x2, y2, z2, x3, y3, z3;
 
     x = width * (xap - 0.5);
@@ -141,10 +143,11 @@ void eps_plot_ThreeDimProject(double xap, double yap, double zap, pplset_graph *
 }
 
 void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap, double *yap, double *zap,
-                          double *theta_x, double *theta_y, double *theta_z, unsigned char ThreeDim, double xin,
-                          double yin, double zin, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn,
-                          int zrn, pplset_graph *sg, double origin_x, double origin_y, double width, double height,
-                          double zdepth, unsigned char AllowOffBounds) {
+                          double *theta_x, double *theta_y, double *theta_z, const unsigned char ThreeDim,
+                          const double xin, const double yin, const double zin, pplset_axis *xa, pplset_axis *ya,
+                          pplset_axis *za, const int xrn, const int yrn, const int zrn, pplset_graph *sg,
+                          const double origin_x, const double origin_y, const double width, const double height,
+                          const double zdepth, const unsigned char AllowOffBounds) {
     // Convert (xin,yin,zin) to axis positions on the range of 0-1
     *xap = eps_plot_axis_GetPosition(xin, xa, xrn, 1);
     *yap = eps_plot_axis_GetPosition(yin, ya, yrn, 1);

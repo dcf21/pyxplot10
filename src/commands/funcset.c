@@ -50,7 +50,7 @@
 
 #define TBADD(et, charpos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, charpos, pl->linetxt, "")
 
-void ppl_directive_funcset(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     pplObj *stk = in->stk;
     pplFunc *f = NULL;
     int i, j, nArgs = 0, pos, posR, argListLen = 0;
@@ -165,7 +165,7 @@ void ppl_directive_funcset(ppl_context *c, parserLine *pl, parserOutput *in, int
 
             // If maximum and minimum are the wrong way around, swap them
             if (f->minActive[j] && f->maxActive[j] && (min->real > max->real)) {
-                double tmp = f->max[j].real;
+                const double tmp = f->max[j].real;
                 f->max[j].real = f->min[j].real;
                 f->min[j].real = tmp;
             }
@@ -300,8 +300,8 @@ void ppl_directive_funcset(ppl_context *c, parserLine *pl, parserOutput *in, int
 
 supersede:
     {
-        int rc = tmpObj->refCount;
-        int om = tmpObj->amMalloced;
+        const int rc = tmpObj->refCount;
+        const int om = tmpObj->amMalloced;
         tmpObj->refCount = 1;
         tmpObj->amMalloced = 0;
         ppl_garbageObject(tmpObj);

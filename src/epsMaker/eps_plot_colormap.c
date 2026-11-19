@@ -72,10 +72,10 @@
     comp[3] = (comp[3] < 0.0) ? 0.0 : ((comp[3] > 1.0) ? 1.0 : comp[3]);
 
 // Yield up text items which label color scale of a colormap
-void eps_plot_colormap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg, canvas_plotdesc *pd) {
+void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph *sg, canvas_plotdesc *pd) {
     dataBlock *blk;
-    int XSize = pd->GridXSize;
-    int YSize = pd->GridYSize;
+    const int XSize = pd->GridXSize;
+    const int YSize = pd->GridYSize;
     int i, j, k, l, Ncol;
     double CMin, CMax, PhysicalLength, PhysicalLengthMajor, PhysicalLengthMinor;
     double origin_x, origin_y, width, height, zdepth;
@@ -109,7 +109,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg, 
     if (CMinAuto || CMaxAuto)
         for (j = 0; j < YSize; j++)
             for (i = 0; i < XSize; i++) {
-                double val = blk->data_real[2 + Ncol * (i + XSize * j)];
+                const double val = blk->data_real[2 + Ncol * (i + XSize * j)];
                 if (!gsl_finite(val)) continue;
                 if ((CMinAuto) && ((!CMinSet) || (CMin > val)) && ((!CLog) || (val > 0.0))) {
                     CMin = val;
@@ -209,9 +209,9 @@ void eps_plot_colormap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg, 
 }
 
 // Render a colormap to postscript
-int eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int xn, int yn, int zn, pplset_graph *sg,
-                      canvas_plotdesc *pd, int pdn, double origin_x, double origin_y, double width, double height,
-                      double zdepth) {
+int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim, const int xn, const int yn,
+                      const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
+                      const double origin_y, const double width, const double height, const double zdepth) {
     double scale_x, scale_y, scale_z;
     dataBlock *blk;
     int XSize = pd->GridXSize;
@@ -344,7 +344,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int x
         if (CMinAuto[c] || CMaxAuto[c])
             for (j = 0; j < YSize; j++)
                 for (i = 0; i < XSize; i++) {
-                    double val = blk->data_real[c + 2 + Ncol_real * (i + XSize * j)];
+                    const double val = blk->data_real[c + 2 + Ncol_real * (i + XSize * j)];
                     if (!gsl_finite(val)) continue;
                     if ((CMinAuto[c]) && ((!CMinSet[c]) || (CMin[c] > val)) && ((!CLog[c]) || (val > 0.0))) {
                         CMin[c] = val;
@@ -362,7 +362,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int x
 
         // Reverse range of color scale if requested
         if (sg->Creverse[c] == SW_BOOL_TRUE) {
-            double td = CMin[c];
+            const double td = CMin[c];
             unsigned char tc = CMinSet[c], tc2 = CMinAuto[c];
             CMinAuto[c] = CMaxAuto[c];
             CMinSet[c] = CMaxSet[c];
@@ -679,8 +679,8 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int x
     return 0;
 }
 
-int eps_plot_colormap_DrawScales(EPSComm *x, double origin_x, double origin_y, double width, double height,
-                                 double zdepth) {
+int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double origin_y, const double width,
+                                 const double height, const double zdepth) {
     int i, j, k;
     long p;
     double xmin, xmax, ymin, ymax;

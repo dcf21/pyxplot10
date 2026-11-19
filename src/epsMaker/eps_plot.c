@@ -78,7 +78,7 @@
 // wrong length, we do nothing; it will fail in due course in ppl_datafile
 // anyway. If the list is empty, we auto-generate a default list.
 
-int eps_plot_AddUsingItemsForWithWords(ppl_context *c, withWords *ww, int *NExpect, unsigned char *autoUsingList,
+int eps_plot_AddUsingItemsForWithWords(ppl_context *c, const withWords *ww, int *NExpect, unsigned char *autoUsingList,
                                        pplExpr ***usingList, int *Nusing, int *NObjs, char *errtext) {
     *NObjs = 0;
     *autoUsingList = 0;
@@ -169,8 +169,8 @@ int eps_plot_AddUsingItemsForWithWords(ppl_context *c, withWords *ww, int *NExpe
         if (dbl > INT_MAX) dbl = INT_MAX - 1; \
     }
 
-void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, double *DataRow, pplObj *ObjRow, int Ncolumns,
-                                      int Ncol_obj) {
+void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const double *DataRow, pplObj *ObjRow,
+                                      const int Ncolumns, const int Ncol_obj) {
     int i = Ncolumns - 1, j = Ncol_obj - 1;
     double dbl;
 
@@ -228,8 +228,8 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, double *Dat
     i--; \
     if (i < 0) i = 0;
 
-int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, withWords *ww, pplObj *firstValues, int Ncolumns,
-                                             int Ncolumns_obj, int *NDataCols) {
+int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, const withWords *ww, pplObj *firstValues,
+                                             const int Ncolumns, const int Ncolumns_obj, int *NDataCols) {
     int i = Ncolumns - 1;
 
     if (ww->linespoints == SW_STYLE_CONTOURMAP) return 0; // Contourplot evaluate expressions in terms of c1
@@ -347,8 +347,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
     // Also, transfer range information from [Min,Max,unit] to [HardMin,HardMax,HardUnit].
     for (j = 0; j < 3; j++) {
         pplset_axis *axes = axissets[j];
-        double PhysicalLengthMajor = ScreenSize[j] / (0.015 + 0.01 * fabs(sin(ScreenBearing[j])));
-        double PhysicalLengthMinor = ScreenSize[j] / 0.004;
+        const double PhysicalLengthMajor = ScreenSize[j] / (0.015 + 0.01 * fabs(sin(ScreenBearing[j])));
+        const double PhysicalLengthMinor = ScreenSize[j] / 0.004;
 
         for (i = 0; i < MAX_AXES; i++) {
             axes[i].AxisValueTurnings = 0;
@@ -499,10 +499,10 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
             ppl_linRaster(ordinate_raster, x->current->settings.Tmin.real, x->current->settings.Tmax.real,
                           x->current->settings.samples);
     } else {
-        int SX = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
-                                                                     : x->current->settings.SamplesX;
-        int SY = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
-                                                                     : x->current->settings.SamplesY;
+        const int SX = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                                                                           : x->current->settings.SamplesX;
+        const int SY = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                                                                           : x->current->settings.SamplesY;
 
         ordinate_raster = (double *) ppl_memAlloc(x->current->settings.SamplesX * sizeof(double));
         ordinate2_raster = (double *) ppl_memAlloc(x->current->settings.SamplesY * sizeof(double));
@@ -567,7 +567,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
             memcpy(UsingList, pd->UsingList, NUsing * sizeof(pplExpr *));
 
             if (pd->ww_final.linespoints == SW_STYLE_COLORMAP) {
-                int listlen = NUsing;
+                const int listlen = NUsing;
                 if ((listlen >= 3) && (listlen <= 6)) NExpect = listlen;
                 else if ((pd->function) && (pd->NFunctions >= 3) && (pd->NFunctions <= 6)) NExpect = pd->NFunctions;
             }
@@ -781,7 +781,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             memcpy(UsingList, pd->UsingList, NUsing * sizeof(pplExpr *));
 
             if (pd->ww_final.linespoints == SW_STYLE_COLORMAP) {
-                int listlen = NUsing;
+                const int listlen = NUsing;
                 if ((listlen >= 3) && (listlen <= 6)) NExpect = listlen;
                 else if ((pd->function) && (pd->NFunctions >= 1) && (pd->NFunctions <= 4)) NExpect = pd->NFunctions + 2;
             }
@@ -1082,7 +1082,7 @@ void eps_plot_RenderEPS(EPSComm *x) {
 
     // Render colormaps and then contourmaps
     for (j = 0; j < 2; j++) {
-        int style = j ? SW_STYLE_CONTOURMAP : SW_STYLE_COLORMAP;
+        const int style = j ? SW_STYLE_CONTOURMAP : SW_STYLE_COLORMAP;
         for (pd = x->current->plotitems, i = 0; pd != NULL; pd = pd->next, i++) // loop over all datasets
             if (pd->ww_final.linespoints == style) {
                 x->LaTeXpageno = x->current->DatasetTextID[i];
@@ -1160,7 +1160,7 @@ void eps_plot_RenderEPS(EPSComm *x) {
     // Put the title on the top of the graph
     x->LaTeXpageno = x->current->TitleTextID;
     if ((x->current->settings.title != NULL) && (x->current->settings.title[0] != '\0')) {
-        int pageno = x->LaTeXpageno++;
+        const int pageno = x->LaTeXpageno++;
         withWords ww;
         ppl_withWordsZero(c, &ww);
         if (x->current->settings.TextColor > 0) {

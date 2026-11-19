@@ -40,7 +40,7 @@ const char *dviops[58] = {"set1",    "set2",    "set3",    "set4",    "setrule",
                           "fnt1",    "fnt2",    "fnt3",    "fnt4",    "special1", "special2", "special3", "special4",
                           "fntdef1", "fntdef2", "fntdef3", "fntdef4", "pre",      "post",     "postpost"};
 
-dviInterpreterState *ReadDviFile(pplerr_context *ec, char *filename, int *status) {
+dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *status) {
     FILE *fp;
     DVIOperator op;
     int i;
@@ -287,7 +287,7 @@ int ReadUChar(pplerr_context *ec, FILE *fp, int *uc) {
 }
 
 // Read a long int from a dvi file (using the DVI long int format)
-int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, int n) {
+int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, const int n) {
     int err, v, i;
     unsigned long int fv;
     if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
@@ -301,7 +301,7 @@ int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, int n) {
 }
 
 // Read a signed int from a dvi file
-int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, int n) {
+int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int n) {
     int err, v, i;
     signed long int fv;
     if ((err = ReadUChar(ec, fp, &v)) != 0) return err;

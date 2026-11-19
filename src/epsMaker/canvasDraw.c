@@ -157,7 +157,7 @@ static void (*AfterHandlers[])(EPSComm *) = {NULL, NULL, NULL, canvas_CallLaTeX,
                                              NULL};
 
 
-void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, int iterDepth) {
+void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int iterDepth) {
     static int lock = 0;
     int i, j, termtype, status = 0, CSPCommand = 0;
     static long TempFile_counter = 0, TeXFile_counter = 0;
@@ -940,8 +940,9 @@ void canvas_EPSWrite(EPSComm *x) {
 }
 
 // Write a text item out from dvi buffer
-void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, int halign, int valign,
-                              char *colstr, double fontsize, double rotate, double *width, double *height) {
+void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, const int halign,
+                              const int valign, char *colstr, double fontsize, double rotate, double *width,
+                              double *height) {
     postscriptPage *dviPage;
     listIterator *ListIter;
     char *cptr, *out;

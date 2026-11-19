@@ -29,8 +29,8 @@
 #include "userspace/pplObj.h"
 
 void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
-void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab,
-                     int quiet);
+void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, const parserLine *pl,
+                     const int *ptab, int quiet);
 void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
 unsigned char ppllabel_compare(ppl_context *context, ppllabel_object *a, ppllabel_object *b);
 void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_object **in);

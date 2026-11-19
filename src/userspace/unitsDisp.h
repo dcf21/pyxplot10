@@ -31,15 +31,16 @@ extern const char *SIprefixes_abbrev[];
 extern const char *SIprefixes_latex[];
 #endif
 
-char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, pplObj *in, int N, char *formatString, char formatChar,
-                                        int maxLen, int requiredArgs, int arg1i, int arg2i);
-char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, int N, int typeable, int NSigFigs);
-void ppl_udFindOptimalNextUnit(ppl_context *c, pplObj *in, unsigned char first, unit **best, double *pow);
-void ppl_udPrefixFix(ppl_context *c, pplObj *in, unit **UnitList, double *UnitPow, int *UnitPref, int Nunits);
+char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, int N, const char *formatString,
+                                        char formatChar, int maxLen, int requiredArgs, int arg1i, int arg2i);
+char *ppl_unitsNumericDisplay(ppl_context *c, const pplObj *in, int N, int typeable, int NSigFigs);
+void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, unsigned char first, unit **best, double *pow);
+void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const double *UnitPow, int *UnitPref,
+                     int Nunits);
 char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, double *numberOutImag, int N,
                     int DivAllowed, int typeable);
 int ppl_unitNameCmp(const char *in, const char *unit, const unsigned char caseSensitive);
-void ppl_unitsStringEvaluate(ppl_context *c, char *in, pplObj *out, int *end, int *errpos, char *errText);
+void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, int *end, int *errpos, char *errText);
 void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, int OutputContext, int *errpos,
                           char *errText);
 

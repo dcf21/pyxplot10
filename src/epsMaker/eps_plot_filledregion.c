@@ -37,9 +37,10 @@
 #include "epsMaker/eps_plot_linedraw.h"
 #include "epsMaker/eps_settings.h"
 
-FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn,
-                                      int zrn, pplset_graph *sg, unsigned char ThreeDim, double origin_x,
-                                      double origin_y, double width, double height, double zdepth) {
+FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int xrn,
+                                      const int yrn, const int zrn, pplset_graph *sg, const unsigned char ThreeDim,
+                                      const double origin_x, const double origin_y, const double width,
+                                      const double height, const double zdepth) {
     FilledRegionHandle *output;
     output = (FilledRegionHandle *) ppl_memAlloc(sizeof(FilledRegionHandle));
     if (output == NULL) return NULL;
@@ -64,7 +65,7 @@ FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *
     return output;
 }
 
-void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, double x, double y) {
+void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, const double x, const double y) {
     FilledRegionPoint p;
     double xpos, ypos, depth, xap, yap, zap, ap1, ap2;
     unsigned char f1, f2;
@@ -124,7 +125,8 @@ static int frac_sorter(const void *av, const void *bv) {
     return 0;
 }
 
-static unsigned char TestPointInside(FilledRegionHandle *fr, double X, double Y, int dir_x, int dir_y) {
+static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, double Y, const int dir_x,
+                                     const int dir_y) {
     unsigned char inside;
     double x_intersect, y_intersect;
     int i, n, Npoints;
@@ -190,8 +192,8 @@ static unsigned char TestPointInside(FilledRegionHandle *fr, double X, double Y,
         eps_core_BoundingBox(fr->x, X, Y, linewidth * EPS_DEFAULT_LINEWIDTH); \
     }
 
-static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPointList, int nac, char *EndText,
-                       double linewidth) {
+static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPointList, const int nac, char *EndText,
+                       const double linewidth) {
     unsigned char face, sense, inside_ahead, FillSide, CurrentFace, first_point = 1, first_subpath = 1, fail = 0;
     int i, inew, j, k, l, dir_x, dir_y;
     listItem *li, *lil = NULL;
@@ -392,8 +394,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
     return;
 }
 
-void FilledRegion_Finish(EPSComm *X, FilledRegionHandle *fr, int linetype, double linewidth,
-                         unsigned char StrokeOutline) {
+void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int linetype, const double linewidth,
+                         const unsigned char StrokeOutline) {
     unsigned char f1, f2, first_point = 1, first_subpath = 1;
     int i, j, k, kn, l, NCrossings, i1, i2;
     double lastx, lasty, lastxap, lastyap;

@@ -54,7 +54,7 @@
 #include "epsMaker/eps_plot_ticking_auto2.h"
 #include "epsMaker/eps_plot_ticking_auto3.h"
 
-void eps_plot_ticking(EPSComm *x, pplset_axis *axis, int AxisUnitStyle, pplset_axis *linkedto) {
+void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pplset_axis *linkedto) {
     int i, j, MajMin, N, xrn;
     const double logmin = 1e-10;
     double UnitMultiplier = 1.0;
@@ -106,7 +106,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, int AxisUnitStyle, pplset_a
                 ppl_warning(&x->c->errcontext, ERR_NUMERICAL, NULL);
             }
             if (axis->LogFinal != SW_BOOL_TRUE) {
-                double step = ppl_max(1.0, 1e-3 * fabs(axis->MinFinal));
+                const double step = ppl_max(1.0, 1e-3 * fabs(axis->MinFinal));
                 axis->MinFinal -= step;
                 axis->MaxFinal += step;
             } else {
@@ -462,8 +462,8 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
     return;
 }
 
-void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, double x, pplObj *xunit, int xyz,
-                         int OutContext) {
+void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const double x, const pplObj *xunit,
+                         const int xyz, int OutContext) {
     int lOP, rc;
     const int stkLevelOld = X->c->stackPtr;
     pplObj *outval;

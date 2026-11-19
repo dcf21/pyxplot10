@@ -111,7 +111,7 @@ void ppl_PaperSizeInit() {
     return;
 }
 
-void ppl_PaperSizeByName(char *name, double *height, double *width) {
+void ppl_PaperSizeByName(const char *name, double *height, double *width) {
     int i = 0;
     while (1) {
         if (strcmp(PaperSizeList[i].name, "END") == 0) // The requested papersize doesn't exist
@@ -130,7 +130,7 @@ void ppl_PaperSizeByName(char *name, double *height, double *width) {
     }
 }
 
-void ppl_GetPaperName(char *name, double *height, double *width) {
+void ppl_GetPaperName(char *name, const double *height, const double *width) {
     int i = 0;
     while (1) {
         if (strcmp(PaperSizeList[i].name, "END") == 0) // The requested papersize doesn't exist

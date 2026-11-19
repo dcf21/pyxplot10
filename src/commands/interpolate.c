@@ -81,8 +81,8 @@ static int interpolateSorter(const void *x, const void *y) {
     else return 0;
 }
 
-void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth,
-                               int mode) {
+void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                               const int iterDepth, const int mode) {
     pplObj *stk = in->stk;
     dataTable *data;
     dataBlock *blk;
@@ -293,7 +293,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                     MaxList[jms] = xdata[jms * data->Nrows + ims];
             }
             if (MaxList[jms] <= MinList[jms]) {
-                double t = MinList[jms];
+                const double t = MinList[jms];
                 MinList[jms] = t * 0.999;
                 MaxList[jms] = t * 1.001;
             }

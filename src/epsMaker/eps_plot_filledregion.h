@@ -60,7 +60,7 @@ FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *
                                       int zrn, pplset_graph *sg, unsigned char ThreeDim, double origin_x,
                                       double origin_y, double width, double height, double zdepth);
 void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, double x, double y);
-void FilledRegion_Finish(EPSComm *X, FilledRegionHandle *fr, int linetype, double linewidth,
+void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, int linetype, double linewidth,
                          unsigned char StrokeOutline);
 
 #endif

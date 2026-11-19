@@ -38,7 +38,8 @@
 #include "epsMaker/eps_plot_gridlines.h"
 #include "epsMaker/eps_settings.h"
 
-void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double width, double height, double zdepth) {
+void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double width, double height,
+                        const double zdepth) {
     int i, j, k, l, m;
     double left, right, adepth, bdepth, cdepth, ddepth, x1, y1, x2, y2, ap_back[3];
     pplset_axis *axes;
@@ -144,7 +145,7 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
                                     n = (j != 0) ? 0 : 1;
                                     o = (j != 2) ? 2 : 1;
                                     if (m) {
-                                        int t = n;
+                                        const int t = n;
                                         n = o;
                                         o = t;
                                     }

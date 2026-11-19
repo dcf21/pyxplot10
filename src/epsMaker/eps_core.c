@@ -57,7 +57,7 @@ void eps_core_WritePSColor(EPSComm *x) {
 }
 
 // Set the color of the EPS we are painting
-void eps_core_SetColor(EPSComm *x, withWords *ww, unsigned char WritePS) {
+void eps_core_SetColor(EPSComm *x, withWords *ww, const unsigned char WritePS) {
     // Color may be specified as a named color, or as RGB components, or may not be specified at all, in which case we use black
     if (ww->USEcolor1234) {
         if ((!gsl_finite(ww->color1)) || (!gsl_finite(ww->color2)) || (!gsl_finite(ww->color3))) {
@@ -125,7 +125,7 @@ void eps_core_SetFillColor(EPSComm *x, withWords *ww) {
 
 static char TempColor[256];
 
-void eps_core_SwitchTo_FillColor(EPSComm *x, unsigned char WritePS) {
+void eps_core_SwitchTo_FillColor(EPSComm *x, const unsigned char WritePS) {
     strcpy(TempColor,
            x->CurrentColor); // Buffer the color we're stroking with so we can restore it in eps_core_SwitchFrom_FillColor
     if ((strcmp(x->CurrentFillColor, x->LastPSColor) != 0) && WritePS && (x->CurrentFillColor[0] != '\0')) {
@@ -136,7 +136,7 @@ void eps_core_SwitchTo_FillColor(EPSComm *x, unsigned char WritePS) {
     return;
 }
 
-void eps_core_SwitchFrom_FillColor(EPSComm *x, unsigned char WritePS) {
+void eps_core_SwitchFrom_FillColor(EPSComm *x, const unsigned char WritePS) {
     if ((strcmp(TempColor, x->LastPSColor) != 0) && WritePS && (TempColor[0] != '\0')) {
         strcpy(x->LastPSColor, TempColor);
         fprintf(x->epsbuffer, "%s\n", x->LastPSColor);
@@ -156,7 +156,7 @@ void eps_core_SetLinewidth(EPSComm *x, double lw, int lt, double offset) {
 }
 
 // Update the EPS bounding box
-void eps_core_BoundingBox(EPSComm *x, double xpos, double ypos, double lw) {
+void eps_core_BoundingBox(EPSComm *x, const double xpos, const double ypos, const double lw) {
     if ((!x->bb_set) || (x->bb_left > (xpos - lw / 2))) x->bb_left = (xpos - lw / 2);
     if ((!x->bb_set) || (x->bb_right < (xpos + lw / 2))) x->bb_right = (xpos + lw / 2);
     if ((!x->bb_set) || (x->bb_bottom > (ypos - lw / 2))) x->bb_bottom = (ypos - lw / 2);
@@ -166,7 +166,8 @@ void eps_core_BoundingBox(EPSComm *x, double xpos, double ypos, double lw) {
 }
 
 // Update plot item bounding box
-void eps_core_PlotBoundingBox(EPSComm *x, double xpos, double ypos, double lw, unsigned char UpdatePsBB) {
+void eps_core_PlotBoundingBox(EPSComm *x, const double xpos, const double ypos, const double lw,
+                              const unsigned char UpdatePsBB) {
     if (x->current->PlotLeftMargin > (xpos - lw / 2)) x->current->PlotLeftMargin = (xpos - lw / 2);
     if (x->current->PlotRightMargin < (xpos + lw / 2)) x->current->PlotRightMargin = (xpos + lw / 2);
     if (x->current->PlotBottomMargin > (ypos - lw / 2)) x->current->PlotBottomMargin = (ypos - lw / 2);

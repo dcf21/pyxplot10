@@ -34,7 +34,7 @@
 
 int cancellationFlag = 0;
 
-int main(int argc, char **argv) {
+int main(const int argc, char **argv) {
     char help_string[LSTR_LENGTH], version_string[FNAME_LENGTH], version_string_underline[FNAME_LENGTH],
             warntext[FNAME_LENGTH];
     char *filename = NULL;

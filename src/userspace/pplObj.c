@@ -63,7 +63,7 @@ void pplObjInit(ppl_context *c) {
     return;
 }
 
-pplObj *pplObjNum(pplObj *in, unsigned char amMalloced, double real, double imag) {
+pplObj *pplObjNum(pplObj *in, const unsigned char amMalloced, const double real, const double imag) {
     int i;
     in->objType = PPLOBJ_NUM;
     in->real = real;
@@ -80,7 +80,7 @@ pplObj *pplObjNum(pplObj *in, unsigned char amMalloced, double real, double imag
     return in;
 }
 
-pplObj *pplObjStr(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, char *str) {
+pplObj *pplObjStr(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, char *str) {
     in->objType = PPLOBJ_ZOM; // In case we get interrupted
     in->auxil = (void *) str;
     in->auxilMalloced = auxilMalloced;
@@ -95,7 +95,7 @@ pplObj *pplObjStr(pplObj *in, unsigned char amMalloced, unsigned char auxilMallo
     return in;
 }
 
-pplObj *pplObjBool(pplObj *in, unsigned char amMalloced, int stat) {
+pplObj *pplObjBool(pplObj *in, const unsigned char amMalloced, const int stat) {
     int i;
     in->objType = PPLOBJ_BOOL;
     in->real = stat;
@@ -115,7 +115,7 @@ pplObj *pplObjBool(pplObj *in, unsigned char amMalloced, int stat) {
     return in;
 }
 
-pplObj *pplObjDate(pplObj *in, unsigned char amMalloced, double unixTime) {
+pplObj *pplObjDate(pplObj *in, const unsigned char amMalloced, const double unixTime) {
     in->objType = PPLOBJ_DATE;
     in->real = unixTime;
     in->auxil = NULL;
@@ -130,7 +130,8 @@ pplObj *pplObjDate(pplObj *in, unsigned char amMalloced, double unixTime) {
     return in;
 }
 
-pplObj *pplObjColor(pplObj *in, unsigned char amMalloced, int scheme, double c1, double c2, double c3, double c4) {
+pplObj *pplObjColor(pplObj *in, const unsigned char amMalloced, const int scheme, double c1, double c2, double c3,
+                    double c4) {
     if (c1 < 0) c1 = 0;
     if (c1 > 1) c1 = 1;
     if (c2 < 0) c2 = 0;
@@ -158,7 +159,7 @@ pplObj *pplObjColor(pplObj *in, unsigned char amMalloced, int scheme, double c1,
     return in;
 }
 
-pplObj *pplObjDict(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, dict *d) {
+pplObj *pplObjDict(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced, dict *d) {
     in->objType = PPLOBJ_ZOM;
     if (d == NULL) in->auxil = (void *) ppl_dictInit(auxilMalloced);
     else in->auxil = (void *) d;
@@ -175,7 +176,8 @@ pplObj *pplObjDict(pplObj *in, unsigned char amMalloced, unsigned char auxilMall
     return in;
 }
 
-pplObj *pplObjModule(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, unsigned char frozen) {
+pplObj *pplObjModule(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced,
+                     const unsigned char frozen) {
     in->objType = PPLOBJ_ZOM;
     in->auxil = (void *) ppl_dictInit(auxilMalloced);
     ((dict *) in->auxil)->immutable = frozen;
@@ -192,7 +194,7 @@ pplObj *pplObjModule(pplObj *in, unsigned char amMalloced, unsigned char auxilMa
     return in;
 }
 
-pplObj *pplObjList(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, list *l) {
+pplObj *pplObjList(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced, list *l) {
     in->objType = PPLOBJ_ZOM;
     if (l == NULL) in->auxil = (void *) ppl_listInit(auxilMalloced);
     else in->auxil = (void *) l;
@@ -209,7 +211,7 @@ pplObj *pplObjList(pplObj *in, unsigned char amMalloced, unsigned char auxilMall
     return in;
 }
 
-pplObj *pplObjVector(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, int size) {
+pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, const int size) {
     int i;
     pplVector *pv;
     pplVectorRaw *pvr;
@@ -248,7 +250,8 @@ pplObj *pplObjVector(pplObj *in, unsigned char amMalloced, unsigned char auxilMa
     return in;
 }
 
-pplObj *pplObjMatrix(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, int size1, int size2) {
+pplObj *pplObjMatrix(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, const int size1,
+                     const int size2) {
     int i;
     pplMatrix *pm;
     pplMatrixRaw *pmr;
@@ -287,7 +290,8 @@ pplObj *pplObjMatrix(pplObj *in, unsigned char amMalloced, unsigned char auxilMa
     return in;
 }
 
-pplObj *pplObjFile(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, FILE *f, int pipe) {
+pplObj *pplObjFile(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, FILE *f,
+                   const int pipe) {
     in->objType = PPLOBJ_ZOM;
     if (auxilMalloced) in->auxil = (void *) malloc(sizeof(pplFile));
     else in->auxil = (void *) ppl_memAlloc(sizeof(pplFile));
@@ -308,7 +312,7 @@ pplObj *pplObjFile(pplObj *in, unsigned char amMalloced, unsigned char auxilMall
     return in;
 }
 
-pplObj *pplObjFunc(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplFunc *f) {
+pplObj *pplObjFunc(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, pplFunc *f) {
     in->objType = PPLOBJ_ZOM;
     in->auxilLen = sizeof(pplFunc);
     in->auxil = (void *) f;
@@ -323,7 +327,7 @@ pplObj *pplObjFunc(pplObj *in, unsigned char amMalloced, unsigned char auxilMall
     return in;
 }
 
-pplObj *pplObjType(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplType *t) {
+pplObj *pplObjType(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, pplType *t) {
     in->objType = PPLOBJ_ZOM;
     in->auxilLen = sizeof(pplType);
     in->auxil = (void *) t;
@@ -338,7 +342,7 @@ pplObj *pplObjType(pplObj *in, unsigned char amMalloced, unsigned char auxilMall
     return in;
 }
 
-pplObj *pplObjNull(pplObj *in, unsigned char amMalloced) {
+pplObj *pplObjNull(pplObj *in, const unsigned char amMalloced) {
     in->objType = PPLOBJ_NULL;
     in->objPrototype = &pplObjPrototypes[PPLOBJ_NULL];
     in->self_lval = NULL;
@@ -349,7 +353,8 @@ pplObj *pplObjNull(pplObj *in, unsigned char amMalloced) {
     return in;
 }
 
-pplObj *pplObjException(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, char *str, int errCode) {
+pplObj *pplObjException(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, char *str,
+                        const int errCode) {
     in->objType = PPLOBJ_ZOM;
     in->auxil = (void *) str;
     in->auxilMalloced = auxilMalloced;
@@ -365,7 +370,7 @@ pplObj *pplObjException(pplObj *in, unsigned char amMalloced, unsigned char auxi
     return in;
 }
 
-pplObj *pplObjGlobal(pplObj *in, unsigned char amMalloced) {
+pplObj *pplObjGlobal(pplObj *in, const unsigned char amMalloced) {
     in->objType = PPLOBJ_GLOB;
     in->objPrototype = &pplObjPrototypes[PPLOBJ_GLOB];
     in->self_lval = NULL;
@@ -376,7 +381,7 @@ pplObj *pplObjGlobal(pplObj *in, unsigned char amMalloced) {
     return in;
 }
 
-pplObj *pplObjExpression(pplObj *in, unsigned char amMalloced, void *bytecode) {
+pplObj *pplObjExpression(pplObj *in, const unsigned char amMalloced, void *bytecode) {
     in->objType = PPLOBJ_EXP;
     in->auxil = bytecode;
     in->auxilMalloced = 1;
@@ -390,7 +395,7 @@ pplObj *pplObjExpression(pplObj *in, unsigned char amMalloced, void *bytecode) {
     return in;
 }
 
-pplObj *pplObjBytecode(pplObj *in, unsigned char amMalloced, void *parserline) {
+pplObj *pplObjBytecode(pplObj *in, const unsigned char amMalloced, void *parserline) {
     in->objType = PPLOBJ_BYT;
     in->auxil = parserline;
     in->auxilMalloced = 1;
@@ -404,7 +409,7 @@ pplObj *pplObjBytecode(pplObj *in, unsigned char amMalloced, void *parserline) {
     return in;
 }
 
-pplObj *pplObjZom(pplObj *in, unsigned char amMalloced) {
+pplObj *pplObjZom(pplObj *in, const unsigned char amMalloced) {
     in->objType = PPLOBJ_ZOM;
     in->objPrototype = &pplObjPrototypes[PPLOBJ_ZOM];
     in->self_lval = NULL;
@@ -415,7 +420,7 @@ pplObj *pplObjZom(pplObj *in, unsigned char amMalloced) {
     return in;
 }
 
-pplObj *pplObjUser(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplObj *prototype) {
+pplObj *pplObjUser(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced, pplObj *prototype) {
     in->objType = PPLOBJ_ZOM;
     in->auxil = (void *) ppl_dictInit(auxilMalloced);
     if (in->auxil == NULL) return NULL;
@@ -434,8 +439,9 @@ pplObj *pplObjUser(pplObj *in, unsigned char amMalloced, unsigned char auxilMall
     return in;
 }
 
-pplObj *pplObjCpy(pplObj *out, pplObj *in, unsigned char lval, unsigned char outMalloced, unsigned char useMalloc) {
-    int rc = (out == NULL) ? 1 : out->refCount;
+pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsigned char outMalloced,
+                  const unsigned char useMalloc) {
+    const int rc = (out == NULL) ? 1 : out->refCount;
     int t;
 
     if (in == NULL) return NULL;
@@ -534,8 +540,9 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, unsigned char lval, unsigned char out
     return out;
 }
 
-pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, int deep, unsigned char outMalloced, unsigned char useMalloc) {
-    int t = in->objType;
+pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned char outMalloced,
+                      unsigned char useMalloc) {
+    const int t = in->objType;
 
     if (in == NULL) return NULL;
 

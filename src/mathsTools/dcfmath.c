@@ -38,35 +38,35 @@ void ppl_makeMachineEpsilon() {
     return;
 }
 
-double ppl_max(double x, double y) {
+double ppl_max(const double x, const double y) {
     if (x > y) return x;
     return y;
 }
 
-double ppl_min(double x, double y) {
+double ppl_min(const double x, const double y) {
     if (x < y) return x;
     return y;
 }
 
-double ppl_max3(double x, double y, double z) {
-    double o = x > y ? x : y;
+double ppl_max3(const double x, const double y, const double z) {
+    const double o = x > y ? x : y;
     if (o > z) return o;
     return z;
 }
 
-double ppl_min3(double x, double y, double z) {
-    double o = x < y ? x : y;
+double ppl_min3(const double x, const double y, const double z) {
+    const double o = x < y ? x : y;
     if (o < z) return o;
     return z;
 }
 
-int ppl_sgn(double x) {
+int ppl_sgn(const double x) {
     if (x == 0) return 0;
     if (x < 0) return -1;
     return 1;
 }
 
-void ppl_linRaster(double *out, double min, double max, int Nsteps) {
+void ppl_linRaster(double *out, const double min, const double max, int Nsteps) {
     int i;
     if (Nsteps < 2) Nsteps = 2; // Avoid division by zero
     for (i = 0; i < Nsteps; i++) out[i] = min + (max - min) * ((double) i / (double) (Nsteps - 1));
@@ -82,11 +82,11 @@ void ppl_logRaster(double *out, double min, double max, int Nsteps) {
     return;
 }
 
-double ppl_degs(double rad) {
+double ppl_degs(const double rad) {
     return rad * 180 / M_PI;
 }
 
-double ppl_rads(double degrees) {
+double ppl_rads(const double degrees) {
     return degrees * M_PI / 180;
 }
 
@@ -100,7 +100,7 @@ int ppl_dblSort(const void *a, const void *b) {
 
 int ppl_gcd(int a, int b) {
     while (b > 0) {
-        int tmp = a % b;
+        const int tmp = a % b;
         a = b;
         b = tmp;
     }

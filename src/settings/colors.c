@@ -40,9 +40,10 @@
 #include "userspace/pplObjCmp.h"
 #include "pplConstants.h"
 
-int ppl_colorFromDict(ppl_context *c, parserOutput *in, parserLine *pl, const int *ptab, int stkbase, int fillColor,
-                      int *outcol, int *outcolspace, pplExpr **EXPoutcol, double *outcol1, double *outcol2,
-                      double *outcol3, double *outcol4, unsigned char *USEcol, unsigned char *USEcol1234) {
+int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, const int *ptab, int stkbase,
+                      const int fillColor, int *outcol, int *outcolspace, pplExpr **EXPoutcol, double *outcol1,
+                      double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
+                      unsigned char *USEcol1234) {
     int pos = ptab[fillColor ? PARSE_INDEX_fillcolor : PARSE_INDEX_color];
     pplObj *col = &in->stk[stkbase + pos];
     int s;

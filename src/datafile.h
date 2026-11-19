@@ -111,26 +111,27 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
                            pplExpr *selectExpr, int continuity, char *filename, long block_count, long index_number,
                            char **colHeads, int NcolHeads, pplObj *colUnits, int NcolUnits, int *status, char *errtext,
                            int *errCount, int iterDepth);
-dataTable *ppldata_sort(ppl_context *c, dataTable *in, int sortCol, int ignoreContinuity);
+dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, int sortCol, int ignoreContinuity);
 
 int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, int Ncols, char *errtext);
 
 void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, int wildcardMatchNumber, char *filenameOut,
                       parserLine **dataSpool, int indexNo, pplExpr **usingExprs, int autoUsingExprs, int Ncols,
                       int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, int usingRowCol,
-                      long *everyList, int continuity, int persistent, int *status, char *errtext, int *errCount,
+                      const long *everyList, int continuity, int persistent, int *status, char *errtext, int *errCount,
                       int iterDepth);
-void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, int fnlist_len, double *rasterX,
-                       int rasterXlen, int parametric, pplObj *unitX, double *rasterY, int rasterYlen, pplObj *unitY,
-                       pplExpr **usingExprs, int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr,
-                       pplExpr *selectExpr, pplExpr *sortBy, int continuity, int *status, char *errtext, int *errCount,
-                       int iterDepth);
+void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, int fnlist_len, const double *rasterX,
+                       int rasterXlen, int parametric, pplObj *unitX, const double *rasterY, int rasterYlen,
+                       pplObj *unitY, pplExpr **usingExprs, int autoUsingExprs, int Ncols, int NusingObjs,
+                       pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, int continuity, int *status,
+                       char *errtext, int *errCount, int iterDepth);
 void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, int objListLen, pplExpr **usingExprs,
                          int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr,
                          pplExpr *sortBy, int continuity, int *status, char *errtext, int *errCount, int iterDepth);
-void ppldata_fromCmd(ppl_context *c, dataTable **out, parserLine *pl, parserOutput *in, int wildcardMatchNumber,
-                     char *filenameOut, parserLine **dataSpool, const int *ptab, const int stkbase, int Ncols,
-                     int NusingObjs, double *min, int *minSet, double *max, int *maxSet, pplObj *unitRange,
-                     int persistent, int *status, char *errtext, int *errCount, int iterDepth);
+void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, const parserOutput *in,
+                     int wildcardMatchNumber, char *filenameOut, parserLine **dataSpool, const int *ptab,
+                     const int stkbase, int Ncols, int NusingObjs, const double *min, const int *minSet,
+                     const double *max, const int *maxSet, pplObj *unitRange, int persistent, int *status,
+                     char *errtext, int *errCount, int iterDepth);
 
 #endif

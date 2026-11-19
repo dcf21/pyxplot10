@@ -47,8 +47,8 @@
 #include "epsMaker/eps_plot_ticking_auto2.h"
 #include "epsMaker/eps_plot_ticking_auto3.h"
 
-void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, double UnitMultiplier, unsigned char *AutoTicks,
-                            pplset_axis *linkedto) {
+void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
+                            const pplset_axis *linkedto) {
     int i, Nticks_maj, Nticks_min, OutContext;
 
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto3()");

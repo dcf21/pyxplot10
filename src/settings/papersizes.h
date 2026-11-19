@@ -23,7 +23,7 @@
 #define _PAPERSIZES_H 1
 
 void ppl_PaperSizeInit();
-void ppl_PaperSizeByName(char *name, double *height, double *width);
-void ppl_GetPaperName(char *name, double *height, double *width);
+void ppl_PaperSizeByName(const char *name, double *height, double *width);
+void ppl_GetPaperName(char *name, const double *height, const double *width);
 
 #endif

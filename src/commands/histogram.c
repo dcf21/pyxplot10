@@ -63,7 +63,8 @@ static int hcompare(const void *x, const void *y) {
     else return 0.0;
 }
 
-void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                             const int iterDepth) {
     pplObj *stk = in->stk;
     dataTable *data;
     dataBlock *blk;
@@ -295,7 +296,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, i
         if (minSet[0]) xbinmin = logAxis ? log(min[0]) : min[0];
         if (maxSet[0]) xbinmax = logAxis ? log(max[0]) : max[0];
         if (xbinmax < xbinmin) {
-            double temp = xbinmax;
+            const double temp = xbinmax;
             xbinmax = xbinmin;
             xbinmin = temp;
         }

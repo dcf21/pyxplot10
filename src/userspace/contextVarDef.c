@@ -46,8 +46,9 @@
 
 #define TBADD(et, pos) ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, et, pos, linetxt, "")
 
-void ppl_contextVarHierLookup(ppl_context *c, int srcLineN, int srcId, char *srcFname, char *linetxt, pplObj *stk,
-                              int *stkPos, pplObj **out, int base, int offset) {
+void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcId, const char *srcFname,
+                              const char *linetxt, pplObj *stk, const int *stkPos, pplObj **out, const int base,
+                              int offset) {
     int first = 1;
     int pos = base;
 
@@ -77,7 +78,7 @@ void ppl_contextVarHierLookup(ppl_context *c, int srcLineN, int srcId, char *src
             ppl_contextGetVarPointer(c, name, out, &tmp);
             ppl_contextRestoreVarPointer(c, name, &tmp);
             if ((*out)->objType == PPLOBJ_GLOB) {
-                int ns_ptr = c->ns_ptr;
+                const int ns_ptr = c->ns_ptr;
                 c->ns_ptr = 1;
                 ppl_contextGetVarPointer(c, name, out, &tmp);
                 ppl_contextRestoreVarPointer(c, name, &tmp);
@@ -138,7 +139,7 @@ void ppl_contextVarHierLookup(ppl_context *c, int srcLineN, int srcId, char *src
     return;
 }
 
-void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, int returnGlobObjs) {
+void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, const int returnGlobObjs) {
     int i;
     for (i = c->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
         pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[i], name);
@@ -151,11 +152,11 @@ void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, int retur
     return;
 }
 
-void ppl_contextGetVarPointer(ppl_context *c, char *name, pplObj **output, pplObj *temp) {
+void ppl_contextGetVarPointer(const ppl_context *c, char *name, pplObj **output, pplObj *temp) {
     dict *d = c->namespaces[c->ns_ptr];
     *output = (pplObj *) ppl_dictLookup(d, name);
     if (*output != NULL) {
-        int om = (*output)->amMalloced;
+        const int om = (*output)->amMalloced;
         *temp = **output;
         pplObjNum(*output, om, 1, 0);
     } else // If variable is not defined, create it now
@@ -168,13 +169,13 @@ void ppl_contextGetVarPointer(ppl_context *c, char *name, pplObj **output, pplOb
     }
 }
 
-void ppl_contextRestoreVarPointer(ppl_context *c, char *name, pplObj *temp) {
+void ppl_contextRestoreVarPointer(const ppl_context *c, char *name, pplObj *temp) {
     dict *d = c->namespaces[c->ns_ptr];
     pplObj *obj = (pplObj *) ppl_dictLookup(d, name);
     if (obj != NULL) {
-        int om = obj->amMalloced;
-        int tm = temp->amMalloced;
-        int rc = obj->refCount;
+        const int om = obj->amMalloced;
+        const int tm = temp->amMalloced;
+        const int rc = obj->refCount;
         obj->amMalloced = 0;
         ppl_garbageObject(obj);
         memcpy(obj, temp, sizeof(pplObj));
@@ -182,7 +183,7 @@ void ppl_contextRestoreVarPointer(ppl_context *c, char *name, pplObj *temp) {
         obj->refCount = rc;
         pplObjZom(temp, tm);
     } else {
-        int tm = temp->amMalloced;
+        const int tm = temp->amMalloced;
         temp->amMalloced = 1;
         temp->refCount = 1;
         ppl_dictAppendCpy(d, name, temp, sizeof(pplObj));

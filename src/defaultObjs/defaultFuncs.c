@@ -74,7 +74,7 @@
         if (c->stack[c->stackPtr].refCount != 0) { fprintf(stderr, "Stack forward reference detected."); } \
     }
 
-void ppl_addMagicFunction(dict *n, char *name, int id, char *shortdesc, char *latex, char *desc) {
+void ppl_addMagicFunction(dict *n, const char *name, const int id, char *shortdesc, char *latex, char *desc) {
     pplObj v;
     pplFunc *f = malloc(sizeof(pplFunc));
     if (f == NULL) return;
@@ -100,8 +100,9 @@ void ppl_addMagicFunction(dict *n, char *name, int id, char *shortdesc, char *la
     return;
 }
 
-pplFunc *ppl_addSystemFunc(dict *n, char *name, int minArgs, int maxArgs, int numOnly, int notNan, int realOnly,
-                           int dimlessOnly, void *fn, char *shortdesc, char *latex, char *desc) {
+pplFunc *ppl_addSystemFunc(dict *n, const char *name, const int minArgs, const int maxArgs, const int numOnly,
+                           const int notNan, const int realOnly, const int dimlessOnly, void *fn, char *shortdesc,
+                           char *latex, char *desc) {
     pplObj v;
     pplFunc *f = malloc(sizeof(pplFunc));
     if (f == NULL) return NULL;
@@ -127,14 +128,15 @@ pplFunc *ppl_addSystemFunc(dict *n, char *name, int minArgs, int maxArgs, int nu
     return f;
 }
 
-void ppl_addSystemMethod(dict *n, char *name, int minArgs, int maxArgs, int numOnly, int notNan, int realOnly,
-                         int dimlessOnly, void *fn, char *shortdesc, char *latex, char *desc) {
+void ppl_addSystemMethod(dict *n, char *name, const int minArgs, const int maxArgs, const int numOnly, const int notNan,
+                         const int realOnly, const int dimlessOnly, void *fn, char *shortdesc, char *latex,
+                         char *desc) {
     pplFunc *f = ppl_addSystemFunc(n, name, minArgs, maxArgs, numOnly, notNan, realOnly, dimlessOnly, fn, shortdesc,
                                    latex, desc);
     f->needSelfThis = 1;
 }
 
-void pplfunc_abs(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_abs(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "abs(z)";
     IF_1COMPLEX {
         OUTPUT.real = hypot(in[0].real, in[0].imag);
@@ -147,7 +149,7 @@ void pplfunc_abs(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_acos(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_acos(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acos(z)";
     gsl_complex z;
     IF_1COMPLEX {
@@ -163,7 +165,7 @@ void pplfunc_acos(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_acosh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_acosh(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acosh(z)";
     gsl_complex z;
     IF_1COMPLEX {
@@ -177,7 +179,7 @@ void pplfunc_acosh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_acot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_acot(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acot(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -187,7 +189,7 @@ void pplfunc_acot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_acoth(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_acoth(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acoth(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -196,7 +198,7 @@ void pplfunc_acoth(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_acsc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_acsc(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acsc(z)";
     gsl_complex z;
     IF_1COMPLEX {
@@ -212,7 +214,7 @@ void pplfunc_acsc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_acsch(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_acsch(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acsch(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -221,7 +223,7 @@ void pplfunc_acsch(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_airy_ai(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_airy_ai(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_ai(z)";
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -234,7 +236,7 @@ void pplfunc_airy_ai(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_airy_ai_diff(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_ai_diff(z)";
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -247,7 +249,7 @@ void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, int nArgs, int *status, in
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_airy_bi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_airy_bi(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_bi(z)";
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -260,7 +262,7 @@ void pplfunc_airy_bi(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_airy_bi_diff(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_bi_diff(z)";
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -273,7 +275,7 @@ void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, int nArgs, int *status, in
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_arg(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_arg(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "arg(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -282,7 +284,7 @@ void pplfunc_arg(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_asec(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_asec(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asec(z)";
     gsl_complex z;
     IF_1COMPLEX {
@@ -298,7 +300,7 @@ void pplfunc_asec(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_asech(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_asech(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asech(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -307,7 +309,7 @@ void pplfunc_asech(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_asin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_asin(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asin(z)";
     gsl_complex z;
     IF_1COMPLEX {
@@ -323,7 +325,7 @@ void pplfunc_asin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_asinh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_asinh(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asinh(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -332,7 +334,7 @@ void pplfunc_asinh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_atan(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_atan(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atan(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -342,7 +344,7 @@ void pplfunc_atan(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_atanh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_atanh(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atanh(z)";
     gsl_complex z;
     IF_1COMPLEX {
@@ -357,7 +359,7 @@ void pplfunc_atanh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_atan2(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_atan2(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atan2(x,y)";
     CHECK_2INPUT_DIMMATCH;
     OUTPUT.real = atan2(in[0].real, in[1].real);
@@ -365,69 +367,69 @@ void pplfunc_atan2(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_besseli(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_besseli(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besseli(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_il_scaled((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_besselI(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_besselI(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselI(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_In((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_besselj(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_besselj(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselj(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_jl((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_besselJ(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_besselJ(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselJ(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_Jn((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_besselk(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_besselk(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselk(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_kl_scaled((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_besselK(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_besselK(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselK(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_Kn((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_bessely(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_bessely(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "bessely(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_yl((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_besselY(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_besselY(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselY(l,x)";
     CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
     OUTPUT.real = gsl_sf_bessel_Yn((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_beta(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_beta(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "beta(a,b)";
     OUTPUT.real = gsl_sf_beta(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_call(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "call(f,a)";
     const int stkLevelOld = c->stackPtr;
     list *argList;
@@ -509,13 +511,13 @@ void pplfunc_call(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     return;
 }
 
-void pplfunc_ceil(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_ceil(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ceil(x)";
     OUTPUT.real = ceil(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_chr(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_chr(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chr(x)";
     char *out;
     CHECK_NEEDINT(in[0], "s", "function can only evaluate integer ASCII codes");
@@ -530,32 +532,36 @@ void pplfunc_chr(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
-void pplfunc_classOf(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_classOf(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                     const char *errText) {
     pplObjCpy(&OUTPUT, in[0].objPrototype, 0, 0, 1);
 }
 
-void pplfunc_cmp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_cmp(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                 const char *errText) {
     void *a = &in[0];
     void *b = &in[1];
     OUTPUT.real = pplObjCmpQuiet(&a, &b);
 }
 
-void pplfunc_cmyk(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_cmyk(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                  const char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_CMYK, in[0].real, in[1].real, in[2].real, in[3].real);
 }
 
-void pplfunc_conjugate(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_conjugate(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "conjugate(z)";
     memcpy(&OUTPUT, in, sizeof(pplObj));
     OUTPUT.imag *= -1;
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_copy(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_copy(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                  const char *errText) {
     pplObjDeepCpy(&OUTPUT, &in[0], 0, 0, 1);
 }
 
-void pplfunc_cos(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_cos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cos(x)";
     int i;
     gsl_complex z;
@@ -572,7 +578,7 @@ void pplfunc_cos(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_cosh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_cosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cosh(x)";
     int i;
     gsl_complex z;
@@ -589,7 +595,7 @@ void pplfunc_cosh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_cot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_cot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cot(x)";
     int i;
     gsl_complex z;
@@ -600,7 +606,7 @@ void pplfunc_cot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_coth(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_coth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "coth(x)";
     int i;
     gsl_complex z;
@@ -611,7 +617,7 @@ void pplfunc_coth(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_cross(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cross(a,b)";
     int t1 = in[0].objType;
     int t2 = in[1].objType;
@@ -665,7 +671,7 @@ void pplfunc_cross(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     ppl_uaMul(c, &in[0], &in[1], &OUTPUT, status, errType, errText);
 }
 
-void pplfunc_csc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_csc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "csc(x)";
     int i;
     gsl_complex z;
@@ -676,7 +682,7 @@ void pplfunc_csc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_csch(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_csch(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "csch(x)";
     int i;
     gsl_complex z;
@@ -687,11 +693,12 @@ void pplfunc_csch(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_deepcopy(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_deepcopy(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                      const char *errText) {
     pplObjDeepCpy(&OUTPUT, &in[0], 1, 0, 1);
 }
 
-void pplfunc_degrees(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_degrees(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "degrees(x)";
     int i;
     CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
@@ -699,37 +706,37 @@ void pplfunc_degrees(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_ellK(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_ellK(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintK(k)";
     OUTPUT.real = gsl_sf_ellint_Kcomp(in[0].real, GSL_PREC_DOUBLE);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_ellE(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_ellE(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintE(k)";
     OUTPUT.real = gsl_sf_ellint_Ecomp(in[0].real, GSL_PREC_DOUBLE);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_ellP(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_ellP(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintP(k,n)";
     OUTPUT.real = gsl_sf_ellint_Pcomp(in[0].real, in[1].real, GSL_PREC_DOUBLE);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_erf(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_erf(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "erf(x)";
     OUTPUT.real = gsl_sf_erf(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_erfc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_erfc(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "erfc(x)";
     OUTPUT.real = gsl_sf_erfc(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_eval(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const int stkLevelOld = c->stackPtr;
     int explen = -1, errPos = -1, lastOpAssign;
     char *exp;
@@ -780,7 +787,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     return;
 }
 
-void pplfunc_exp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_exp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "exp(z)";
     int i;
     gsl_complex z;
@@ -797,7 +804,7 @@ void pplfunc_exp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_expm1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_expm1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "expm1(x)";
     int i;
     CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "dimensionless or an angle", UNIT_ANGLE, 1);
@@ -805,14 +812,14 @@ void pplfunc_expm1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_expint(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_expint(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "expint(n,x)";
     CHECK_NEEDSINT(in[0], "n", "function's first argument must be");
     OUTPUT.real = gsl_sf_expint_En((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_factors(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_factors(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
     list *l;
     int i, n = (int) in[0].real;
@@ -836,26 +843,27 @@ void pplfunc_factors(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     return;
 }
 
-void pplfunc_finite(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_finite(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                    const char *errText) {
     pplObjBool(&OUTPUT, 0, 0);
     if ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && (in[0].flagComplex)) return;
     if ((!gsl_finite(in[0].real)) || (!gsl_finite(in[0].imag))) return;
     OUTPUT.real = 1;
 }
 
-void pplfunc_floor(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_floor(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "floor(x)";
     OUTPUT.real = floor(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_gamma(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_gamma(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gamma(x)";
     OUTPUT.real = gsl_sf_gamma(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_gcd(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_gcd(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gcd(x,...)";
     int i, out;
     for (i = 0; i < nArgs; i++) {
@@ -868,50 +876,53 @@ void pplfunc_gcd(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_globals(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_globals(ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                     const char *errText) {
     pplObjDict(&OUTPUT, 0, 1, c->namespaces[1]);
     __sync_add_and_fetch(&c->namespaces[1]->refCount, 1);
 }
 
-void pplfunc_gray(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_gray(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                  const char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, in[0].real, in[0].real, in[0].real, 0);
 }
 
-void pplfunc_heaviside(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_heaviside(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "heaviside(x)";
     if (in[0].real >= 0) OUTPUT.real = 1.0;
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_hsb(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_hsb(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                 const char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_HSB, in[0].real, in[1].real, in[2].real, 0);
 }
 
-void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_hyperg_0F1(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_0F1(c,x)";
     OUTPUT.real = gsl_sf_hyperg_0F1(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_hyperg_1F1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_hyperg_1F1(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_1F1(a,b,x)";
     OUTPUT.real = gsl_sf_hyperg_1F1(in[0].real, in[1].real, in[2].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_hyperg_2F0(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_2F0(a,b,x)";
     OUTPUT.real = gsl_sf_hyperg_2F0(in[0].real, in[1].real, in[2].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_hyperg_2F1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_hyperg_2F1(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_2F1(a,b,c,x)";
     OUTPUT.real = gsl_sf_hyperg_2F1(in[0].real, in[1].real, in[2].real, in[3].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_hyperg_U(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_hyperg_U(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_U(a,b,x)";
     OUTPUT.real = gsl_sf_hyperg_U(in[0].real, in[1].real, in[2].real);
     CHECK_OUTPUT_OKAY;
@@ -951,7 +962,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     ppl_unitsDimCpy(&OUTPUT, in);
 }
 
-void pplfunc_imag(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_imag(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Im(z)";
     if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
@@ -970,7 +981,7 @@ void pplfunc_imag(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     ppl_unitsDimCpy(&OUTPUT, in);
 }
 
-void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_jacobi_cn(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_cn(u,m)";
     {
         double t1, t2, t3;
@@ -983,7 +994,7 @@ void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_jacobi_dn(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_dn(u,m)";
     {
         double t1, t2, t3;
@@ -996,7 +1007,7 @@ void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_jacobi_sn(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_sn(u,m)";
     {
         double t1, t2, t3;
@@ -1009,19 +1020,19 @@ void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_lambert_W0(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_lambert_W0(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lambert_W0(x)";
     OUTPUT.real = gsl_sf_lambert_W0(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_lambert_W1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_lambert_W1(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lambert_W1(x)";
     OUTPUT.real = gsl_sf_lambert_Wm1(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_lcm(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_lcm(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lcm(x,...)";
     int i, gcd, lcm_i, zero = 0;
     double lcm;
@@ -1065,28 +1076,28 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_ldexp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_ldexp(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ldexp(x,y)";
     CHECK_NEEDSINT(in[1], "y", "function's second argument must be");
     OUTPUT.real = ldexp(in[0].real, (int) in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_legendreP(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_legendreP(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "legendreP(l,x)";
     CHECK_NEEDINT(in[0], "l", "function's first argument must be");
     OUTPUT.real = gsl_sf_legendre_Pl((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_legendreQ(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_legendreQ(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "legendreQ(l,x)";
     CHECK_NEEDINT(in[0], "l", "function's first argument must be");
     OUTPUT.real = gsl_sf_legendre_Ql((int) in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_len(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_len(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int t = in->objType;
     if ((t == PPLOBJ_DICT) || (t == PPLOBJ_MOD) || (t == PPLOBJ_USER)) OUTPUT.real = ((dict *) in->auxil)->length;
     else if (t == PPLOBJ_LIST) OUTPUT.real = ((list *) in->auxil)->length;
@@ -1103,12 +1114,13 @@ void pplfunc_len(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     return;
 }
 
-void pplfunc_locals(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_locals(ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                    const char *errText) {
     pplObjDict(&OUTPUT, 0, 1, c->namespaces[c->ns_ptr]);
     __sync_add_and_fetch(&c->namespaces[c->ns_ptr]->refCount, 1);
 }
 
-void pplfunc_log(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_log(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "log(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -1117,7 +1129,7 @@ void pplfunc_log(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_log10(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_log10(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "log10(z)";
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -1126,7 +1138,7 @@ void pplfunc_log10(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_logn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "logn(z,n)";
     gsl_complex z;
     pplObj base;
@@ -1141,7 +1153,7 @@ void pplfunc_logn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_lrange(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lrange([f],l,[s])";
     double start, end, step, n;
     int i;
@@ -1183,7 +1195,8 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
-void pplfunc_max(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_max(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                 const char *errText) {
     if (nArgs == 0) {
         pplObjNull(&OUTPUT, 0);
         return;
@@ -1237,7 +1250,8 @@ void pplfunc_max(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     }
 }
 
-void pplfunc_min(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_min(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                 const char *errText) {
     if (nArgs == 0) {
         pplObjNull(&OUTPUT, 0);
         return;
@@ -1291,7 +1305,7 @@ void pplfunc_min(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     }
 }
 
-void pplfunc_mod(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_mod(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "mod(x,y)";
     if (in[0].real * ppl_machineEpsilon * 10 > in[1].real) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
@@ -1310,7 +1324,7 @@ void pplfunc_mod(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
-void pplfunc_open(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_open(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     FILE *f;
     char *mode;
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -1337,7 +1351,7 @@ void pplfunc_open(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     pplObjFile(&OUTPUT, 0, 1, f, 0);
 }
 
-void pplfunc_ord(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_ord(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ord(s)";
     int t = in[0].objType;
     if (t != PPLOBJ_STR) {
@@ -1350,7 +1364,7 @@ void pplfunc_ord(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     OUTPUT.real = (double) ((char *) in[0].auxil)[0];
 }
 
-void pplfunc_ordinal(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_ordinal(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ordinal(n)";
     char *out;
     int n = (int) ceil(fabs(log10(in[0].real)));
@@ -1374,11 +1388,11 @@ void pplfunc_ordinal(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
-void pplfunc_pow(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_pow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     ppl_uaPow(c, &in[0], &in[1], &OUTPUT, status, errType, errText);
 }
 
-void pplfunc_prime(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_prime(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "prime(x)";
     CHECK_NEEDINT(in[0], "x", "function's argument must be an integer in the range");
     pplObjBool(&OUTPUT, 0, 0);
@@ -1403,7 +1417,7 @@ void pplfunc_prime(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_primefactors(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_primefactors(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
     list *l;
     int i, n = (int) in[0].real;
@@ -1456,7 +1470,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, int nArgs, int *status, in
     return;
 }
 
-void pplfunc_radians(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_radians(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "radians(x)";
     int i;
     CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
@@ -1468,7 +1482,7 @@ void pplfunc_radians(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_raise(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_raise(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "raise(e,s)";
     if (nArgs != 2) {
         *status = 1;
@@ -1499,7 +1513,7 @@ void pplfunc_raise(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     return;
 }
 
-void pplfunc_range(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "range([f],l,[s])";
     double start, end, step, n;
     int i;
@@ -1541,18 +1555,19 @@ void pplfunc_range(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
-void pplfunc_real(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_real(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Re(z)";
     OUTPUT.real = in[0].real;
     CHECK_OUTPUT_OKAY;
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
-void pplfunc_rgb(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_rgb(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                 const char *errText) {
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, in[0].real, in[1].real, in[2].real, 0);
 }
 
-void pplfunc_romanNum(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_romanNum(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "romanNumeral(n)";
     char *h[] = {"", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"};
     char *t[] = {"", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"};
@@ -1590,7 +1605,7 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, int nArgs, int *status, int *e
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
-void pplfunc_root(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj x1, x2;
     double tmpdbl;
     char *FunctionDescription = "root(z,n)";
@@ -1637,13 +1652,13 @@ void pplfunc_root(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_round(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_round(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "round(x)";
     OUTPUT.real = round(in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_sec(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sec(z)";
     int i;
     gsl_complex z;
@@ -1654,7 +1669,7 @@ void pplfunc_sec(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_sech(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sech(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sech(z)";
     int i;
     gsl_complex z;
@@ -1665,11 +1680,12 @@ void pplfunc_sech(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_sgn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sgn(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                 const char *errText) {
     OUTPUT.real = ppl_sgn(in[0].real);
 }
 
-void pplfunc_sin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sin(z)";
     int i;
     gsl_complex z;
@@ -1686,7 +1702,7 @@ void pplfunc_sin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_sinc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sinc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sinc(z)";
     int i;
     gsl_complex z;
@@ -1708,7 +1724,7 @@ void pplfunc_sinc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_sinh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sinh(z)";
     int i;
     gsl_complex z;
@@ -1725,7 +1741,7 @@ void pplfunc_sinh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_sqrt(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sqrt(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sqrt(z)";
     int i;
     gsl_complex z;
@@ -1744,7 +1760,7 @@ void pplfunc_sqrt(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTy
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] = in[0].exponent[i] / 2;
 }
 
-void pplfunc_sum(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if (nArgs == 0) {
         pplObjNum(&OUTPUT, 0, 0, 0);
         return;
@@ -1821,7 +1837,7 @@ void pplfunc_sum(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     }
 }
 
-void pplfunc_tan(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_tan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tan(z)";
     int i;
     gsl_complex z;
@@ -1838,7 +1854,7 @@ void pplfunc_tan(ppl_context *c, pplObj *in, int nArgs, int *status, int *errTyp
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_tanh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_tanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tanh(z)";
     int i;
     gsl_complex z;
@@ -1892,7 +1908,7 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     return;
 }
 
-void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_texifyText(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "texifyText(s)";
     char *instr = (char *) in[0].auxil;
     char *outstr;
@@ -1921,18 +1937,19 @@ void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int 
     return;
 }
 
-void pplfunc_tophat(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_tophat(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tophat(x,sigma)";
     CHECK_2INPUT_DIMMATCH;
     if (fabs(in[0].real) <= fabs(in[1].real)) OUTPUT.real = 1.0;
 }
 
-void pplfunc_typeOf(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_typeOf(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
+                    const char *errText) {
     pplObjCpy(&OUTPUT, &pplObjPrototypes[in[0].objType], 0, 0, 1);
     OUTPUT.self_lval = NULL;
 }
 
-void pplfunc_zernike(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "zernike(n,m,r,phi)";
     CHECK_3INPUT_DIMLESS;
@@ -1973,7 +1990,7 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_zernikeR(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_zernikeR(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "zernikeR(n,m,r)";
     CHECK_NEEDINT(in[0], "n", "function can only evaluate Zernike polynomials");
@@ -2011,7 +2028,7 @@ void pplfunc_zernikeR(ppl_context *c, pplObj *in, int nArgs, int *status, int *e
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_zeta(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_zeta(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "zeta(z)";
     gsl_complex zi, z;
     IF_1COMPLEX {

@@ -50,7 +50,7 @@
 #include "userspace/context.h"
 #include "userspace/pplObj_fns.h"
 
-static void _ReadConfig_FetchKey(char *line, char *out) {
+static void _ReadConfig_FetchKey(const char *line, char *out) {
     char *scan = out;
     while ((*line != '\0') && ((*(scan) = *(line++)) != '=')) scan++;
     *scan = '\0';
@@ -58,7 +58,7 @@ static void _ReadConfig_FetchKey(char *line, char *out) {
     return;
 }
 
-static void _ReadConfig_FetchValue(char *line, char *out) {
+static void _ReadConfig_FetchValue(const char *line, char *out) {
     char *scan = out;
     while ((*line != '\0') && (*(line++) != '='));
     while (*line != '\0') *(scan++) = *(line++);
@@ -454,7 +454,8 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
     }
 
             DO_CRANGE(0, "1")
-            DO_CRANGE(1, "2") DO_CRANGE(2, "3") DO_CRANGE(3, "4")
+            DO_CRANGE(1, "2")
+            DO_CRANGE(2, "3") DO_CRANGE(3, "4")
 
                     else if (strcmp(setkey, "DATASTYLE") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_STYLE_INT, SW_STYLE_STR)) > 0) {

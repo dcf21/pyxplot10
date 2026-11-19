@@ -528,7 +528,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                         ArrowType = (best_label_margin < 0.0) ? SW_PIEKEYPOS_OUTSIDE : SW_PIEKEYPOS_INSIDE;
 
                     if (ArrowType == SW_PIEKEYPOS_INSIDE) { // Labelling pie wedges inside pie
-                        int pageno = x->LaTeXpageno++;
+                        const int pageno = x->LaTeXpageno++;
                         eps_core_SetColor(x, &ww_txt, 1);
                         canvas_EPSRenderTextItem(x, NULL, pageno, (xpos + rad * sin(a) * best_label_rpos) / M_TO_PS,
                                                  (ypos + rad * cos(a) * best_label_rpos) / M_TO_PS, SW_HALIGN_CENT,
@@ -580,13 +580,13 @@ void eps_pie_RenderEPS(EPSComm *x) {
                                                  x->current->settings.FontSize, 0.0, NULL, NULL);
                     } else // Labelling pie wedges in a key
                     {
-                        int pageno = x->LaTeXpageno++;
+                        const int pageno = x->LaTeXpageno++;
                         double h = xpos + rad * 1.2; // Position of left of key
                         double v = ypos + TotalHeight / 2 - key_vpos -
                                 TextHeight[ItemNo] / 2; // Vertical position of centre of key item
                         double s = MARGIN_HSIZE_LEFT * 0.45 /
                                 3; // Controls size of filled square which appears next to wedge label
-                        double st = MARGIN_HSIZE_LEFT * 0.67;
+                        const double st = MARGIN_HSIZE_LEFT * 0.67;
 
                         // Work out what fillcolor to use
                         for (l = 0; l < PALETTE_LENGTH; l++)
@@ -653,7 +653,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
         // Title of piechart
         x->LaTeXpageno = x->current->TitleTextID;
         if ((x->current->settings.title != NULL) && (x->current->settings.title[0] != '\0')) {
-            int pageno = x->LaTeXpageno++;
+            const int pageno = x->LaTeXpageno++;
             canvas_EPSRenderTextItem(x, NULL, pageno, xpos / M_TO_PS, (vtitle + 8) / M_TO_PS, SW_HALIGN_CENT,
                                      SW_VALIGN_BOT, x->CurrentColor, x->current->settings.FontSize, 0.0, NULL, NULL);
         }

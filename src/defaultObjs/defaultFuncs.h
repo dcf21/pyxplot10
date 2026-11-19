@@ -28,48 +28,52 @@
 #include "userspace/pplObj.h"
 #include "userspace/pplObjFunc.h"
 
-void ppl_addMagicFunction(dict *n, char *name, int id, char *shortdesc, char *latex, char *desc);
-pplFunc *ppl_addSystemFunc(dict *n, char *name, int minArgs, int maxArgs, int numOnly, int notNan, int realOnly,
+void ppl_addMagicFunction(dict *n, const char *name, int id, char *shortdesc, char *latex, char *desc);
+pplFunc *ppl_addSystemFunc(dict *n, const char *name, int minArgs, int maxArgs, int numOnly, int notNan, int realOnly,
                            int dimlessOnly, void *fn, char *shortdesc, char *latex, char *desc);
 void ppl_addSystemMethod(dict *n, char *name, int minArgs, int maxArgs, int numOnly, int notNan, int realOnly,
                          int dimlessOnly, void *fn, char *shortdesc, char *latex, char *desc);
 
-void pplfunc_abs(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_acos(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_acosh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_acot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_acoth(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_acsc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_acsch(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_airy_ai(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_airy_bi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_arg(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_asec(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_asech(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_asin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_asinh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_atan(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_atanh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_abs(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_acos(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_acosh(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_acot(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_acoth(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_acsc(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_acsch(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_airy_ai(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_airy_ai_diff(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_airy_bi(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_airy_bi_diff(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_arg(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_asec(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_asech(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_asin(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_asinh(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_atan(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_atanh(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_atan2(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_besseli(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_besselI(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_besselj(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_besselJ(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_besselk(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_besselK(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_bessely(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_besselY(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_beta(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_besseli(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_besselI(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_besselj(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_besselJ(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_besselk(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_besselK(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_bessely(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_besselY(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_beta(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_call(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_ceil(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_chr(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_classOf(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_cmp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_cmyk(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_conjugate(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_copy(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_ceil(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_chr(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_classOf(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                     const char *errText);
+void pplfunc_cmp(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                 const char *errText);
+void pplfunc_cmyk(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                  const char *errText);
+void pplfunc_conjugate(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_copy(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                  const char *errText);
 void pplfunc_cos(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_cosh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_cot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
@@ -78,80 +82,89 @@ void pplfunc_cross(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
 void pplfunc_csc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_csch(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_degrees(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_deepcopy(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_ellK(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_ellE(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_ellP(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_erf(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_erfc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_deepcopy(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                      const char *errText);
+void pplfunc_ellK(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_ellE(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_ellP(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_erf(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_erfc(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_eval(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_exp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_expm1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_expint(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_factors(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_finite(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_floor(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_gamma(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_gcd(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_globals(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_gray(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_heaviside(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_hsb(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_hyperg_1F1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_hyperg_2F1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_hyperg_U(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_expint(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_factors(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_finite(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                    const char *errText);
+void pplfunc_floor(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_gamma(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_gcd(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_globals(ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType, const char *errText);
+void pplfunc_gray(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                  const char *errText);
+void pplfunc_heaviside(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_hsb(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                 const char *errText);
+void pplfunc_hyperg_0F1(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_hyperg_1F1(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_hyperg_2F0(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_hyperg_2F1(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_hyperg_U(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_imag(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_lambert_W0(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_lambert_W1(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_lcm(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_ldexp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_legendreP(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_legendreQ(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_len(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_locals(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_log(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_log10(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_imag(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_jacobi_cn(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_jacobi_dn(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_jacobi_sn(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_lambert_W0(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_lambert_W1(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_lcm(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_ldexp(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_legendreP(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_legendreQ(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_len(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_locals(ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType, const char *errText);
+void pplfunc_log(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_log10(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_logn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_lrange(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_max(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_min(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_mod(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_open(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_ord(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_ordinal(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_max(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                 const char *errText);
+void pplfunc_min(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                 const char *errText);
+void pplfunc_mod(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_open(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_ord(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_ordinal(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_pow(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_prime(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_primefactors(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_prime(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_primefactors(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_radians(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_raise(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_raise(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_range(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_rgb(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_real(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_romanNum(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_rgb(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                 const char *errText);
+void pplfunc_real(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_romanNum(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_root(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_round(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_round(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_sec(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_sech(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_sgn(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_sgn(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                 const char *errText);
 void pplfunc_sin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_sinc(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_sinh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_sqrt(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_sqrt(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_sum(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_tan(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_tanh(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_texifyText(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_tophat(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_typeOf(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_typeOf(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                    const char *errText);
 void pplfunc_zernike(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_zernikeR(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_zeta(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_zernikeR(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_zeta(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif

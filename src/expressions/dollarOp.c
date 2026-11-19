@@ -55,10 +55,10 @@
         } \
     }
 
-void ppl_dollarOp_config(ppl_context *c, char **columns_str, pplObj *columns_val, int Ncols, char *filename,
-                         long file_linenumber, long *file_linenumbers, long linenumber_count, long block_count,
-                         long index_number, int usingRowCol, char *usingExpr, char **colHeads, int NcolHeads,
-                         pplObj *colUnits, int NcolUnits) {
+void ppl_dollarOp_config(ppl_context *c, char **columns_str, pplObj *columns_val, const int Ncols, char *filename,
+                         const long file_linenumber, long *file_linenumbers, const long linenumber_count,
+                         const long block_count, const long index_number, const int usingRowCol, char *usingExpr,
+                         char **colHeads, const int NcolHeads, pplObj *colUnits, const int NcolUnits) {
     c->dollarStat.columns_str = columns_str;
     c->dollarStat.columns_val = columns_val;
     c->dollarStat.Ncols = Ncols;
@@ -98,7 +98,7 @@ void ppl_dollarOp_deconfig(ppl_context *c) {
     return;
 }
 
-void ppl_dollarOp_fetchColByNum(ppl_context *c, pplExpr *inExpr, int inExprCharPos, int colNum) {
+void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, int colNum) {
     pplObj *out = &c->stack[c->stackPtr - 1];
     pplObjNum(out, 0, 0, 0);
     out->refCount = 1;
@@ -145,7 +145,7 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, pplExpr *inExpr, int inExprCharP
     return;
 }
 
-void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *colName) {
+void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, const int inExprCharPos, char *colName) {
     int i;
     for (i = 0; i < c->dollarStat.NcolHeads; i++)
         if (strcmp(colName, c->dollarStat.colHeads[i]) == 0) {

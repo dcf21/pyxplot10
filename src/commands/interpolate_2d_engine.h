@@ -26,9 +26,10 @@
 #include "settings/settings.h"
 #include "userspace/context.h"
 
-void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, const double *in, const long InSize,
-                       const int ColNum, const int NCols, const double x, const double y);
-void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, dataTable *in, pplset_axis *axis_x,
-                       pplset_axis *axis_y, unsigned char SampleToEdge, int *XSizeOut, int *YSizeOut);
+void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph *sg, const double *in,
+                       const long InSize, const int ColNum, const int NCols, const double x, const double y);
+void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, const dataTable *in,
+                       pplset_axis *axis_x, pplset_axis *axis_y, unsigned char SampleToEdge, int *XSizeOut,
+                       int *YSizeOut);
 
 #endif

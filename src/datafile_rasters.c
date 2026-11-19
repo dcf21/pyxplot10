@@ -42,8 +42,9 @@
 #include "userspace/pplObjFunc.h"
 #include "userspace/unitsArithmetic.h"
 
-void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, int fnlist_len, char *dummyVar, double *min,
-                                          double *max, pplObj *unit, double **raster, int *rasterLen) {
+void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, const int fnlist_len, const char *dummyVar,
+                                          const double *min, const double *max, const pplObj *unit, double **raster,
+                                          int *rasterLen) {
     int i, j, pos, commaPos = 0, bracketLevel = 0, containsOperator = 0, containsDummy = 0, NWords = 0, outputContext,
                    contextRough = -1;
     int dummyArgNo = 0;
@@ -147,7 +148,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, int 
         if (outputRaster == NULL) goto CLEANUP;
 
         for (i = 0; i < (desc->Nbins - 1); i++) {
-            double midpoint =
+            const double midpoint =
                     desc->log ? sqrt(desc->bins[i] * desc->bins[i + 1]) : ((desc->bins[i] + desc->bins[i + 1]) / 2);
             if (((min == NULL) || (*min <= midpoint)) && ((max == NULL) || (*max >= midpoint))) {
                 outputRaster[rasterCount++] = midpoint;
@@ -166,7 +167,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, int 
         if (outputRaster == NULL) goto CLEANUP;
 
         for (i = 0; i < desc->XSize[dummyArgNo]; i++) {
-            double x = (i - desc->XSize[dummyArgNo] / 2.0) / desc->range[dummyArgNo].real;
+            const double x = (i - desc->XSize[dummyArgNo] / 2.0) / desc->range[dummyArgNo].real;
             if (((min == NULL) || (*min <= x)) && ((max == NULL) || (*max >= x))) { outputRaster[rasterCount++] = x; }
         }
 

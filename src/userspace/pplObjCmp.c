@@ -33,10 +33,10 @@
 #include "userspace/unitsArithmetic.h"
 #include "userspace/unitsDisp.h"
 
-void pplcol_RGBtoHSB(double ri, double gi, double bi, double *ho, double *so, double *bo) {
-    double M = ppl_max3(ri, gi, bi);
-    double m = ppl_min3(ri, gi, bi);
-    double C = M - m;
+void pplcol_RGBtoHSB(const double ri, const double gi, const double bi, double *ho, double *so, double *bo) {
+    const double M = ppl_max3(ri, gi, bi);
+    const double m = ppl_min3(ri, gi, bi);
+    const double C = M - m;
     if (C == 0) *ho = 0;
     else if (M == ri) *ho = fmod((gi - bi) / C, 6);
     else if (M == gi) *ho = (bi - ri) / C + 2;
@@ -53,7 +53,8 @@ void pplcol_RGBtoHSB(double ri, double gi, double bi, double *ho, double *so, do
     if (*bo > 1) *bo = 1;
 }
 
-void pplcol_CMYKtoRGB(double ci, double mi, double yi, double ki, double *ro, double *go, double *bo) {
+void pplcol_CMYKtoRGB(const double ci, const double mi, const double yi, const double ki, double *ro, double *go,
+                      double *bo) {
     *ro = 1.0 - (ci + ki);
     *go = 1.0 - (mi + ki);
     *bo = 1.0 - (yi + ki);
@@ -65,12 +66,12 @@ void pplcol_CMYKtoRGB(double ci, double mi, double yi, double ki, double *ro, do
     if (*bo > 1) *bo = 1;
 }
 
-void pplcol_HSBtoRGB(double hi, double si, double bi, double *ro, double *go, double *bo) {
-    double ch = si * bi;
+void pplcol_HSBtoRGB(double hi, const double si, const double bi, double *ro, double *go, double *bo) {
+    const double ch = si * bi;
     double h2;
-    int h2i = (int) (h2 = hi * 6);
-    double x = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
-    double m = bi - ch;
+    const int h2i = (int) (h2 = hi * 6);
+    const double x = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
+    const double m = bi - ch;
     switch (h2i) {
         case 0:
             *ro = ch;
@@ -121,13 +122,15 @@ void pplcol_HSBtoRGB(double hi, double si, double bi, double *ro, double *go, do
     if (*bo > 1) *bo = 1;
 }
 
-void pplcol_CMYKtoHSB(double ci, double mi, double yi, double ki, double *ho, double *so, double *bo) {
+void pplcol_CMYKtoHSB(const double ci, const double mi, const double yi, const double ki, double *ho, double *so,
+                      double *bo) {
     double r, g, b;
     pplcol_CMYKtoRGB(ci, mi, yi, ki, &r, &g, &b);
     pplcol_RGBtoHSB(r, g, b, ho, so, bo);
 }
 
-void pplcol_RGBtoCMYK(double ri, double gi, double bi, double *co, double *mo, double *yo, double *ko) {
+void pplcol_RGBtoCMYK(const double ri, const double gi, const double bi, double *co, double *mo, double *yo,
+                      double *ko) {
     *ko = 1.0 - ppl_max3(ri, gi, bi);
     *co = 1.0 - ri - *ko;
     *mo = 1.0 - gi - *ko;
@@ -142,13 +145,14 @@ void pplcol_RGBtoCMYK(double ri, double gi, double bi, double *co, double *mo, d
     if (*ko > 1) *ko = 1;
 }
 
-void pplcol_HSBtoCMYK(double hi, double si, double bi, double *co, double *mo, double *yo, double *ko) {
+void pplcol_HSBtoCMYK(const double hi, const double si, const double bi, double *co, double *mo, double *yo,
+                      double *ko) {
     double r, g, b;
     pplcol_HSBtoRGB(hi, si, bi, &r, &g, &b);
     pplcol_RGBtoCMYK(r, g, b, co, mo, yo, ko);
 }
 
-static int SGN(int x) {
+static int SGN(const int x) {
     if (x == 0) return 0;
     if (x < 0) return -1;
     return 1;
@@ -161,11 +165,11 @@ int pplObjCmpQuiet(const void *a, const void *b) {
 }
 
 int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int *errType, char *errText,
-              int iterDepth) {
+              const int iterDepth) {
     int t1 = a->objType;
     int t2 = b->objType;
-    int t1o = pplObjTypeOrder[t1];
-    int t2o = pplObjTypeOrder[t2];
+    const int t1o = pplObjTypeOrder[t1];
+    const int t2o = pplObjTypeOrder[t2];
     if (cancellationFlag) return 0;
     if (iterDepth > 250) return 0;
     if ((c != NULL) && (t1o != t2o)) {

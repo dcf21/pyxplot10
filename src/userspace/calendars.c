@@ -104,7 +104,7 @@ double ppl_switchOverJD(ppl_context *ct) {
 
 // Functions for looking up the names of the Nth calendar month and the Nth day of the week
 
-char *ppl_getMonthName(ppl_context *ct, int i) {
+char *ppl_getMonthName(const ppl_context *ct, const int i) {
     switch (ct->set->term_current.CalendarOut) {
         case SW_CALENDAR_HEBREW:
             switch (i) {
@@ -199,7 +199,7 @@ char *ppl_getMonthName(ppl_context *ct, int i) {
     return "???";
 }
 
-char *ppl_getWeekDayName(ppl_context *ct, int i) {
+char *ppl_getWeekDayName(const ppl_context *ct, int i) {
     if (i < 0) i += 7;
     switch (i) {
         case 0:
@@ -230,7 +230,7 @@ static int hebrewMonthLengths[6][13] = {
         {30, 29, 30, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29}, // Regular   Embolismic Year
         {30, 30, 30, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29}}; // Complete  Embolismic Year
 
-void ppl_getHebrewNewYears(ppl_context *ct, int GregYear, int *YearNumbers, double *JDs, int *YearTypes) {
+void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearNumbers, double *JDs, int *YearTypes) {
     int i;
     long X, C, S, A, a, b, j, D, MONTH = 3;
     double Q, JD, r;
@@ -273,8 +273,8 @@ void ppl_getHebrewNewYears(ppl_context *ct, int GregYear, int *YearNumbers, doub
     return;
 }
 
-double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, int day, int hour, int min, int sec, int *status,
-                            char *errText) {
+double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day, const int hour, const int min,
+                            const int sec, int *status, char *errText) {
     int i;
     int YearNumbers[3], YearTypes[3];
     double JD, DayFraction, JDs[3];
@@ -306,7 +306,8 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, int day, int h
     return JD + DayFraction;
 }
 
-void ppl_hebrewFromUnixTime(ppl_context *ct, double UT, int *year, int *month, int *day, int *status, char *errText) {
+void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, const int *status,
+                            const char *errText) {
     long a, c, d, e, f;
     int i, j;
     int JulMon, JulYr;
@@ -339,8 +340,8 @@ void ppl_hebrewFromUnixTime(ppl_context *ct, double UT, int *year, int *month, i
 
 // Routines for converting between unix times and the Islamic calendar
 
-double ppl_islamicToUnixTime(ppl_context *ct, int year, int month, int day, int hour, int min, int sec, int *status,
-                             char *errText) {
+double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, const int day, const int hour,
+                             const int min, const int sec, int *status, char *errText) {
     long N, Q, R, A, W, Q1, Q2, G, K, E, J, X, JD;
     double DayFraction;
 
@@ -383,12 +384,13 @@ double ppl_islamicToUnixTime(ppl_context *ct, int year, int month, int day, int 
     return JD + DayFraction;
 }
 
-void ppl_islamicFromUnixTime(ppl_context *ct, double UT, int *year, int *month, int *day, int *status, char *errText) {
+void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
+                             char *errText) {
     long a, b, c, d, e, f;
     int JulDay, JulMon, JulYr;
     long W, N, A, B, C, C2, D, Q, R, J, K, O, H, JJ, CL, DL, S, m;
     double C1;
-    double JD = (UT / 86400.0) + 2440587.5;
+    const double JD = (UT / 86400.0) + 2440587.5;
 
     if (JD < 1948439.5) {
         *status = 1;
@@ -470,8 +472,8 @@ void ppl_islamicFromUnixTime(ppl_context *ct, double UT, int *year, int *month, 
 
 // Routines for converting between unix times and calendar dates in Gregorian and Julian calendars
 
-double ppl_toUnixTime(ppl_context *ct, int year, int month, int day, int hour, int min, int sec, int *status,
-                      char *errText) {
+double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const int hour, const int min, const int sec,
+                      int *status, char *errText) {
     double JD, DayFraction, LastJulian, FirstGregorian, ReqDate;
     int b;
 
@@ -541,12 +543,12 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, int day, int hour, i
     return JD + DayFraction;
 }
 
-void ppl_fromUnixTime(ppl_context *ct, double UT, int *year, int *month, int *day, int *hour, int *min, double *sec,
-                      int *status, char *errText) {
+void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, int *hour, int *min,
+                      double *sec, int *status, char *errText) {
     long a, b, c, d, e, f;
     double DayFraction;
     int temp;
-    double JD = (UT / 86400.0) + 2440587.5;
+    const double JD = (UT / 86400.0) + 2440587.5;
     if (month == NULL) month = &temp; // Dummy placeholder, since we need month later in the calculation
 
     if ((JD < -1e8) || (JD > 1e8) || (!gsl_finite(JD))) {
@@ -676,8 +678,8 @@ void ppl_dateString(ppl_context *ct, char *out, double UT, const char *format, c
     out[k] = '\0'; // Null terminate string
 }
 
-void ppl_timeDiffStr(ppl_context *ct, char *out, double UT1, double UT2, const char *format, int *status,
-                     char *errText) {
+void ppl_timeDiffStr(const ppl_context *ct, char *out, const double UT1, const double UT2, const char *format,
+                     int *status, char *errText) {
     int j = 0, k = 0;
     long gapYears, gapDays, gapHours, gapMinutes, gapSeconds;
 
@@ -739,18 +741,18 @@ void ppl_timeDiffStr(ppl_context *ct, char *out, double UT1, double UT2, const c
     return;
 }
 
-void ppl_calendarTimezoneSet(ppl_context *ct, int specified, char *tz) {
+void ppl_calendarTimezoneSet(const ppl_context *ct, const int specified, const char *tz) {
     if (specified) setenv("TZ", tz, 1);
     else setenv("TZ", ct->set->term_current.timezone, 1);
     return;
 }
 
-void ppl_calendarTimezoneUnset(ppl_context *ct) {
+void ppl_calendarTimezoneUnset(const ppl_context *ct) {
     setenv("TZ", "UTC", 1);
     return;
 }
 
-void ppl_calendarTimezoneOffset(ppl_context *ct, double unixTime, char *tzNameOut, double *offset) {
+void ppl_calendarTimezoneOffset(const ppl_context *ct, double unixTime, char *tzNameOut, double *offset) {
     struct tm *t;
     int out = 0, i;
     for (i = 0; i < 2; i++) {

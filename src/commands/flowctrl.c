@@ -76,9 +76,10 @@
         } \
     }
 
-void ppl_directive_break(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                         const int iterDepth) {
     pplObj *stk = in->stk;
-    int named = (stk[PARSE_break_loopname].objType == PPLOBJ_STR);
+    const int named = (stk[PARSE_break_loopname].objType == PPLOBJ_STR);
     char *name = (char *) stk[PARSE_break_loopname].auxil;
 
     if (named) {
@@ -105,9 +106,10 @@ void ppl_directive_break(ppl_context *c, parserLine *pl, parserOutput *in, int i
     return;
 }
 
-void ppl_directive_continue(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_continue(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                            const int iterDepth) {
     pplObj *stk = in->stk;
-    int named = (stk[PARSE_continue_loopname].objType == PPLOBJ_STR);
+    const int named = (stk[PARSE_continue_loopname].objType == PPLOBJ_STR);
     char *name = (char *) stk[PARSE_continue_loopname].auxil;
 
     if (named) {
@@ -134,10 +136,11 @@ void ppl_directive_continue(ppl_context *c, parserLine *pl, parserOutput *in, in
     return;
 }
 
-void ppl_directive_return(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_return(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                          const int iterDepth) {
     pplObj *stk = in->stk;
     pplObj *retval = &stk[PARSE_return_return_value];
-    int gotval = (retval->objType != PPLOBJ_ZOM);
+    const int gotval = (retval->objType != PPLOBJ_ZOM);
 
     if (!c->shellReturnable) {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "The return statement can only be placed inside subroutines.");
@@ -153,15 +156,16 @@ void ppl_directive_return(ppl_context *c, parserLine *pl, parserOutput *in, int 
     return;
 }
 
-void ppl_directive_do(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                      const int iterDepth) {
     int criterion = 1;
     pplObj *stk = in->stk;
     parserLine *plc = (parserLine *) stk[PARSE_do_code].auxil;
     pplExpr *cond = (pplExpr *) stk[PARSE_do_condition].auxil;
     char *name = (char *) stk[PARSE_do_loopname].auxil;
-    int named = (stk[PARSE_do_loopname].objType == PPLOBJ_STR);
+    const int named = (stk[PARSE_do_loopname].objType == PPLOBJ_STR);
     ppl_context *context = c; // Needed for CAST_TO_BOOL
-    int shellBreakableOld = c->shellBreakable;
+    const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
     if (named) c->shellLoopName[iterDepth] = name;
@@ -205,25 +209,26 @@ cleanup:
     return;
 }
 
-void ppl_directive_for(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                       const int iterDepth) {
     pplObj *stk = in->stk;
-    int BASICstyle = (stk[PARSE_for_var_name].objType == PPLOBJ_STR);
+    const int BASICstyle = (stk[PARSE_for_var_name].objType == PPLOBJ_STR);
     char *varname = (char *) stk[PARSE_for_var_name].auxil;
     pplObj *beginVal = &stk[PARSE_for_start_value];
     pplObj *endVal = &stk[PARSE_for_final_value];
     pplObj *stepVal = &stk[PARSE_for_step_size], stepTmp;
-    int stepGot = (stk[PARSE_for_step_size].objType == PPLOBJ_NUM);
+    const int stepGot = (stk[PARSE_for_step_size].objType == PPLOBJ_NUM);
     parserLine *plc = (parserLine *) stk[PARSE_for_code].auxil;
     pplExpr *begin = (pplExpr *) stk[PARSE_for_begin].auxil;
-    int beginGot = (stk[PARSE_for_begin].objType == PPLOBJ_EXP);
+    const int beginGot = (stk[PARSE_for_begin].objType == PPLOBJ_EXP);
     pplExpr *cond = (pplExpr *) stk[PARSE_for_criterion].auxil;
-    int condGot = (stk[PARSE_for_criterion].objType == PPLOBJ_EXP);
+    const int condGot = (stk[PARSE_for_criterion].objType == PPLOBJ_EXP);
     pplExpr *end = (pplExpr *) stk[PARSE_for_iterate].auxil;
-    int endGot = (stk[PARSE_for_iterate].objType == PPLOBJ_EXP);
+    const int endGot = (stk[PARSE_for_iterate].objType == PPLOBJ_EXP);
     char *name = (char *) stk[PARSE_for_loopname].auxil;
-    int named = (stk[PARSE_for_loopname].objType == PPLOBJ_STR);
+    const int named = (stk[PARSE_for_loopname].objType == PPLOBJ_STR);
     ppl_context *context = c; // Needed for CAST_TO_BOOL
-    int shellBreakableOld = c->shellBreakable;
+    const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
     if (named) c->shellLoopName[iterDepth] = name;
@@ -232,7 +237,7 @@ void ppl_directive_for(ppl_context *c, parserLine *pl, parserOutput *in, int int
 
     if (BASICstyle) {
         double iter;
-        int forwards = stepGot ? (stepVal->real > 0) : (endVal->real > beginVal->real);
+        const int forwards = stepGot ? (stepVal->real > 0) : (endVal->real > beginVal->real);
 
         if (!stepGot) // If no step is specified, make it equal to one SI unit
         {
@@ -345,14 +350,15 @@ cleanup:
     return;
 }
 
-void ppl_directive_foreach(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                           const int iterDepth) {
     pplObj *stk = in->stk;
     pplObj *iter = &stk[PARSE_foreach_item_list];
     parserLine *plc = (parserLine *) stk[PARSE_foreach_code].auxil;
     char *varname = (char *) stk[PARSE_foreach_var_name].auxil;
     char *name = (char *) stk[PARSE_foreach_loopname].auxil;
-    int named = (stk[PARSE_foreach_loopname].objType == PPLOBJ_STR);
-    int shellBreakableOld = c->shellBreakable;
+    const int named = (stk[PARSE_foreach_loopname].objType == PPLOBJ_STR);
+    const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
     if (named) c->shellLoopName[iterDepth] = name;
@@ -494,15 +500,16 @@ cleanup:
     return;
 }
 
-void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                           const int iterDepth) {
     pplObj *stk = in->stk;
     parserLine *plc = (parserLine *) stk[PARSE_foreachdatum_code].auxil;
     int Nvars = 0, i, status = 0, errCount = 5;
     char *varname[USING_ITEMS_MAX];
     int pos = PARSE_foreachdatum_variables;
     char *name = (char *) stk[PARSE_foreachdatum_loopname].auxil;
-    int named = (stk[PARSE_foreachdatum_loopname].objType == PPLOBJ_STR);
-    int shellBreakableOld = c->shellBreakable;
+    const int named = (stk[PARSE_foreachdatum_loopname].objType == PPLOBJ_STR);
+    const int shellBreakableOld = c->shellBreakable;
     pplObj *varObj[USING_ITEMS_MAX], vartmp[USING_ITEMS_MAX];
     pplObj unit[USING_ITEMS_MAX];
     int minSet[USING_ITEMS_MAX], maxSet[USING_ITEMS_MAX];
@@ -673,11 +680,12 @@ cleanup:
     return;
 }
 
-void ppl_directive_if(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                      const int iterDepth) {
     pplObj *stk = in->stk;
     parserLine *pl_if = (parserLine *) stk[PARSE_if_code].auxil;
     parserLine *pl_else = (parserLine *) stk[PARSE_if_code_else].auxil;
-    int gotelse = (stk[PARSE_if_code_else].objType == PPLOBJ_BYT);
+    const int gotelse = (stk[PARSE_if_code_else].objType == PPLOBJ_BYT);
     pplExpr *cond = (pplExpr *) stk[PARSE_if_criterion].auxil;
     ppl_context *context = c; // Needed for CAST_TO_BOOL
     pplObj *val;
@@ -751,7 +759,8 @@ void ppl_directive_if(ppl_context *c, parserLine *pl, parserOutput *in, int inte
     return;
 }
 
-void ppl_directive_subrt(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                         const int iterDepth) {
     pplObj *stk = in->stk;
     parserLine *plsub = (parserLine *) stk[PARSE_subroutine_code].auxil;
     int pos, nArgs = 0, argListLen = 0, i, om, rc;
@@ -843,15 +852,16 @@ fail:
     return;
 }
 
-void ppl_directive_while(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_while(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                         const int iterDepth) {
     int criterion = 1;
     pplObj *stk = in->stk;
     parserLine *plc = (parserLine *) stk[PARSE_while_code].auxil;
     pplExpr *cond = (pplExpr *) stk[PARSE_while_criterion].auxil;
     char *name = (char *) stk[PARSE_while_loopname].auxil;
-    int named = (stk[PARSE_while_loopname].objType == PPLOBJ_STR);
+    const int named = (stk[PARSE_while_loopname].objType == PPLOBJ_STR);
     ppl_context *context = c; // Needed for CAST_TO_BOOL
-    int shellBreakableOld = c->shellBreakable;
+    const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
     if (named) c->shellLoopName[iterDepth] = name;
@@ -896,7 +906,8 @@ cleanup:
     return;
 }
 
-void ppl_directive_with(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                        const int iterDepth) {
     pplObj *stk = in->stk;
     parserLine *pl2 = (parserLine *) stk[PARSE_with_code].auxil;
     pplObj *obj = &stk[PARSE_with_namespace];

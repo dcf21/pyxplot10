@@ -79,7 +79,7 @@ int ppl_unitsDimEqual3(const unit *a, const unit *b) {
     return 1;
 }
 
-unsigned char ppl_tempTypeMatch(unsigned char a, unsigned char b) {
+unsigned char ppl_tempTypeMatch(const unsigned char a, const unsigned char b) {
     if ((a < 1) || (b < 1))
         return 1; // anything is compatible with something which doesn't have dimensions of temperature
     return (a == b);

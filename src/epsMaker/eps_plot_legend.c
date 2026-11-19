@@ -245,8 +245,8 @@ void GraphLegend_YieldUpText(EPSComm *x) {
     }
 
 // Lay out all of the items in the current legend with a maximum allowed column height of TrialHeight.
-void GraphLegend_ArrangeToHeight(EPSComm *x, double TrialHeight, double *AttainedHeight, int *Ncolumns, double *ColumnX,
-                                 double *ColumnHeight, int *ColumnNItems) {
+void GraphLegend_ArrangeToHeight(const EPSComm *x, const double TrialHeight, double *AttainedHeight, int *Ncolumns,
+                                 double *ColumnX, double *ColumnHeight, int *ColumnNItems) {
     canvas_plotdesc *pd;
     int i, ColumnNo = 0;
     double ColumnYPos = 0.0, ColumnWidth = 0.0;
@@ -276,7 +276,7 @@ void GraphLegend_ArrangeToHeight(EPSComm *x, double TrialHeight, double *Attaine
     return;
 }
 
-void GraphLegend_Render(EPSComm *x, double width, double height, double zdepth) {
+void GraphLegend_Render(EPSComm *x, const double width, const double height, const double zdepth) {
     double fs = x->current->settings.FontSize, CombinedHeight = 0.0, MinimumHeight = 0.0;
     double xoff = 0, yoff = 0;
     double ColumnX[MAX_LEGEND_COLUMNS], ColumnHeight[MAX_LEGEND_COLUMNS];
@@ -384,7 +384,7 @@ void GraphLegend_Render(EPSComm *x, double width, double height, double zdepth) 
     // Horizonal justification
     if (hfixed && (ColumnX[Ncolumns] < width - 2 * LEGEND_MARGIN) && (Ncolumns > 1) &&
         (ColumnX[Ncolumns] >= width - 2 * LEGEND_MARGIN - LEGEND_HGAP_MAXIMUM * (Ncolumns - 1))) {
-        double GapPerColumn = (width - 2 * LEGEND_MARGIN - ColumnX[Ncolumns]) / Ncolumns;
+        const double GapPerColumn = (width - 2 * LEGEND_MARGIN - ColumnX[Ncolumns]) / Ncolumns;
         if (gsl_finite(GapPerColumn)) {
             LOOP_OVER_DATASETS;
             pd->TitleFinal_xpos += pd->TitleFinal_col * GapPerColumn;
@@ -520,8 +520,8 @@ void GraphLegend_Render(EPSComm *x, double width, double height, double zdepth) 
         if (SortByAzimuthTarget > -100) {
             int i;
             double xap, yap, zap, data[3 * 8];
-            double origin_x = x->current->settings.OriginX.real * M_TO_PS;
-            double origin_y = x->current->settings.OriginY.real * M_TO_PS;
+            const double origin_x = x->current->settings.OriginX.real * M_TO_PS;
+            const double origin_y = x->current->settings.OriginY.real * M_TO_PS;
             for (i = 0; i < 8; i++) {
                 xap = ((i & 1) != 0);
                 yap = ((i & 2) != 0);

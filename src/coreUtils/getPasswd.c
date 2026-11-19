@@ -30,7 +30,7 @@
 #include "coreUtils/errorReport.h"
 #include "pplConstants.h"
 
-struct passwd *UnixGetPwEntry(pplerr_context *context) {
+struct passwd *UnixGetPwEntry(const pplerr_context *context) {
     int uid;
     struct passwd *ptr;
 
@@ -60,7 +60,7 @@ char *ppl_unixGetHomeDir(pplerr_context *context) {
     return ptr->pw_dir;
 }
 
-char *ppl_unixGetUserHomeDir(pplerr_context *context, char *username) {
+char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username) {
     struct passwd *ptr;
     setpwent(); // Ditto memory leak comment above
     while ((ptr = getpwent()) != NULL)

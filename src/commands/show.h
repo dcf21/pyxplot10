@@ -26,6 +26,6 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppl_directive_show(ppl_context *c, parserLine *pl, parserOutput *in, int interactive);
+void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive);
 
 #endif

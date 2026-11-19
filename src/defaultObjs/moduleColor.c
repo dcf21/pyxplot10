@@ -108,7 +108,8 @@ static double cie_color_match[N_CIE_STEPS][3] = {
         {0.0000, 0.0000, 0.0000}};
 
 
-static void xyz_to_rgb(struct colorSystem *cs, double xc, double yc, double zc, double *r, double *g, double *b) {
+static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const double yc, const double zc, double *r,
+                       double *g, double *b) {
     double xr, yr, zr, xg, yg, zg, xb, yb, zb;
     double xw, yw, zw;
     double rx, ry, rz, gx, gy, gz, bx, by, bz;
@@ -162,7 +163,7 @@ static void xyz_to_rgb(struct colorSystem *cs, double xc, double yc, double zc, 
     return;
 }
 
-static int inside_gamut(double r, double g, double b) {
+static int inside_gamut(const double r, const double g, const double b) {
     return (r >= 0) && (g >= 0) && (b >= 0);
 }
 
@@ -187,7 +188,7 @@ static int constrain_rgb(double *r, double *g, double *b) {
     return 0; // Colour within RGB gamut
 }
 
-void pplfunc_colWavelen(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "wavelength(lambda,norm)";
     double p0, wi, wj, x, y, z, r, g, b, norm;
     int i, j;
@@ -227,8 +228,8 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, int nArgs, int *status, int 
         double xyz = gsl_hypot3(x, y, z);
         if (xyz > 1) xyz = 1;
         if (xyz < 0) xyz = 0;
-        double XYZ = pow(xyz, GAMMA_FUDGE);
-        double gamma = XYZ / xyz;
+        const double XYZ = pow(xyz, GAMMA_FUDGE);
+        const double gamma = XYZ / xyz;
         x *= gamma;
         y *= gamma;
         z *= gamma;
@@ -261,7 +262,7 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, int nArgs, int *status, int 
         } \
     }
 
-void pplfunc_colSpectrum(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "spectrum(spec,norm)";
     pplFunc *fi;
     const int stkLevelOld = c->stackPtr;
@@ -307,7 +308,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, int nArgs, int *status, int
     }
 
     for (i = 0; i < N_CIE_STEPS; i++) {
-        double wlen = (CIE_WLEN_MIN + i * CIE_WLEN_STEPSIZE) * 1e-9;
+        const double wlen = (CIE_WLEN_MIN + i * CIE_WLEN_STEPSIZE) * 1e-9;
         double w;
         pplExpr dummy;
 
@@ -368,8 +369,8 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, int nArgs, int *status, int
         double xyz = gsl_hypot3(x, y, z);
         if (xyz > 1) xyz = 1;
         if (xyz < 0) xyz = 0;
-        double XYZ = pow(xyz, GAMMA_FUDGE);
-        double gamma = XYZ / xyz;
+        const double XYZ = pow(xyz, GAMMA_FUDGE);
+        const double gamma = XYZ / xyz;
         x *= gamma;
         y *= gamma;
         z *= gamma;

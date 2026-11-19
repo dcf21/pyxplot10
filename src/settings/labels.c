@@ -147,8 +147,8 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     return;
 }
 
-void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab,
-                     int quiet) {
+void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, const parserLine *pl,
+                     const int *ptab, const int quiet) {
     int pos;
     ppllabel_object **first;
 

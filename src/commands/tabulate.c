@@ -49,8 +49,8 @@
 #include "datafile.h"
 
 // Display data from a data block
-static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data, int *minSet, double *min, int *maxSet,
-                                   double *max, pplObj *unit, char *format) {
+static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data, const int *minSet, const double *min,
+                                   const int *maxSet, const double *max, pplObj *unit, char *format) {
     dataBlock *blk;
     char *cptr, tmpchr = '\0';
     double tmpdbl, multiplier[USING_ITEMS_MAX];
@@ -222,7 +222,8 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
 
 #define TBADD2(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
-void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                            const int iterDepth) {
     wordexp_t wordExp;
     int pos;
     pplObj *stk = in->stk;
@@ -331,7 +332,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, in
 
         for (w = 0;; w++) {
             // Descend into new memory context
-            int contextLocal = ppl_memAlloc_DescendIntoNewContext();
+            const int contextLocal = ppl_memAlloc_DescendIntoNewContext();
             int status = 0;
 
             // Fetch data

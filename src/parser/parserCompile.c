@@ -65,7 +65,8 @@ static char *strDup(const char *in, int N) {
     return out;
 }
 
-void ppl_parserAtomAdd(parserLine *in, int stackOutPos, int linePos, char *options, pplExpr *expr, pplObj *literal) {
+void ppl_parserAtomAdd(parserLine *in, const int stackOutPos, const int linePos, const char *options, pplExpr *expr,
+                       const pplObj *literal) {
     parserAtom *output = (parserAtom *) malloc(sizeof(parserAtom));
     if (output == NULL) return;
     output->stackOutPos = stackOutPos;
@@ -93,9 +94,9 @@ void ppl_parserAtomAdd(parserLine *in, int stackOutPos, int linePos, char *optio
     in->lastAtom = output;
 }
 
-static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcLineN, long srcId, char *srcFname,
-                         char *line, int *linepos, parserNode *node, int *tabCompNo, int tabCompStart, char *tabCompTxt,
-                         int level, int blockDepth, int *match) {
+static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, const int srcLineN, const long srcId,
+                         char *srcFname, char *line, int *linepos, parserNode *node, int *tabCompNo,
+                         const int tabCompStart, char *tabCompTxt, const int level, int blockDepth, int *match) {
     int status = 0; // 0=fail; 1=pass; 2=tab completion returned; 3=want another line.
 
     // If node is NULL, this means we're putting back together a hierarchy of SEQs that we earlier descended out of to look for more input statements
@@ -125,7 +126,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
                 int separator = 1;
                 char sepStr[4];
                 parserNode sepNode;
-                int oldStackOffset = s->oldStackOffset[blockDepth][level];
+                const int oldStackOffset = s->oldStackOffset[blockDepth][level];
                 sepStr[0] = node->varName[strlen(node->varName) - 1];
                 sepStr[1] = '\0';
                 if (isalnum(sepStr[0])) separator = 0;
@@ -152,8 +153,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
 
                 // See whether REP repeats again
                 while (1) {
-                    int lineposOld = *linepos;
-                    int matchOld = *match;
+                    const int lineposOld = *linepos;
+                    const int matchOld = *match;
                     int lineposOld2;
                     parserNode *nodeIter = node->firstChild;
 
@@ -189,7 +190,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
                         nodeIter = nodeIter->nextSibling;
                     }
                     if ((s != NULL) && writeOut) {
-                        int oldStackLen = s->pl[blockDepth]->stackLen;
+                        const int oldStackLen = s->pl[blockDepth]->stackLen;
                         pplObj val;
                         val.refCount = 1;
                         pplObjNum(&val, 1, oldStackLen, 0);
@@ -359,7 +360,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             } else {
                 char *cmd =
                         (char *) s->pl[blockDepth]->firstAtom->literal->auxil; // THIS ASSUMES DIRECTIVE IS FIRST ATOM
-                int first = (s->blockDepth < blockDepth + 1);
+                const int first = (s->blockDepth < blockDepth + 1);
                 int i;
 
                 // Test for opening brace
@@ -532,7 +533,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             // Treat items which are not @n
             else if (node->matchString[0] != '%') // Items which do not begin % match themselves
             {
-                int i = ppl_strAutocomplete(line + *linepos, node->matchString, node->acLevel);
+                const int i = ppl_strAutocomplete(line + *linepos, node->matchString, node->acLevel);
                 if (i < 0) {
                     status = 0;
                 } else {
@@ -551,12 +552,12 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             {
                 pplExpr *expr;
                 int explen = 0, errPos = -1, errType;
-                int dollarAllowed = ((node->matchString[1] == 'E') || (node->matchString[2] == 'E') ||
-                                     (node->matchString[1] == 'F'));
-                int equalsAllowed = (node->matchString[1] != 'g');
-                int commaAllowed = (node->matchString[1] == 'F');
-                int vectorAllowed = (node->matchString[1] == 'P') || (node->matchString[1] == 'p');
-                int vectorLength = (node->matchString[1] == 'P') ? 3 : 2;
+                const int dollarAllowed = ((node->matchString[1] == 'E') || (node->matchString[2] == 'E') ||
+                                           (node->matchString[1] == 'F'));
+                const int equalsAllowed = (node->matchString[1] != 'g');
+                const int commaAllowed = (node->matchString[1] == 'F');
+                const int vectorAllowed = (node->matchString[1] == 'P') || (node->matchString[1] == 'p');
+                const int vectorLength = (node->matchString[1] == 'P') ? 3 : 2;
                 int vectorCount = 0;
                 int gotComma = 0;
 
@@ -840,7 +841,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             int first = 1, separator = 1;
             char sepStr[4];
             parserNode sepNode;
-            int oldStackOffset = (s == NULL) ? 0 : s->pl[blockDepth]->stackOffset;
+            const int oldStackOffset = (s == NULL) ? 0 : s->pl[blockDepth]->stackOffset;
             if (s != NULL) s->oldStackOffset[blockDepth][level] = oldStackOffset;
             sepStr[0] = node->varName[strlen(node->varName) - 1];
             sepStr[1] = '\0';
@@ -856,8 +857,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             sepNode.nextSibling = NULL;
 
             while (1) {
-                int lineposOld = *linepos;
-                int matchOld = *match;
+                const int lineposOld = *linepos;
+                const int matchOld = *match;
                 int lineposOld2;
                 parserNode *nodeIter = node->firstChild;
 
@@ -893,7 +894,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
                     nodeIter = nodeIter->nextSibling;
                 }
                 if ((s != NULL) && writeOut) {
-                    int oldStackLen = s->pl[blockDepth]->stackLen;
+                    const int oldStackLen = s->pl[blockDepth]->stackLen;
                     pplObj val;
                     val.refCount = 1;
                     pplObjNum(&val, 1, oldStackLen, 0);
@@ -925,8 +926,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             goto cleanup;
         }
         case PN_TYPE_OPT: {
-            int lineposOld = *linepos;
-            int matchOld = *match;
+            const int lineposOld = *linepos;
+            const int matchOld = *match;
             parserNode *nodeIter = node->firstChild;
             int wo = 0;
             while (1) {
@@ -958,8 +959,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             memset((void *) excluded, 0, PER_MAXSIZE);
             while (repeating) {
                 int count = 0;
-                int lineposOld = *linepos;
-                int matchOld = *match;
+                const int lineposOld = *linepos;
+                const int matchOld = *match;
                 parserNode *nodeIter = node->firstChild;
                 int wo = 0, secondPass = 0;
                 repeating = 0;
@@ -996,8 +997,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
             goto cleanup;
         }
         case PN_TYPE_ORA: {
-            int lineposOld = *linepos;
-            int matchOld = *match;
+            const int lineposOld = *linepos;
+            const int matchOld = *match;
             parserNode *nodeIter = node->firstChild;
             int wo = 0, secondPass = 0;
             while (nodeIter != NULL) {
@@ -1114,7 +1115,7 @@ void ppl_parserStatReInit(parserStatus *in) {
     return;
 }
 
-void ppl_parserStatAdd(parserStatus *in, int bd, parserLine *pl) {
+void ppl_parserStatAdd(parserStatus *in, const int bd, parserLine *pl) {
     if (in->pl[bd] != NULL) {
         pl->prev = in->pl[bd];
         in->pl[bd]->next = pl;
@@ -1135,7 +1136,7 @@ void ppl_parserStatFree(parserStatus **in) {
     *in = NULL;
 }
 
-void ppl_parserLineInit(parserLine **in, int srcLineN, long srcId, char *srcFname, char *line) {
+void ppl_parserLineInit(parserLine **in, const int srcLineN, const long srcId, char *srcFname, char *line) {
     parserLine *output = NULL;
     *in = NULL;
 
@@ -1224,8 +1225,8 @@ void ppl_parserLineFree(parserLine *in) {
     } \
     LOOP_END(0)
 
-int ppl_parserCompile(ppl_context *c, parserStatus *s, int srcLineN, long srcId, char *srcFname, char *line,
-                      int expandMacros, int blockDepth) {
+int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const long srcId, char *srcFname, char *line,
+                      const int expandMacros, const int blockDepth) {
     listIterator *cmdIter = NULL;
     int i, cln, containsMacros = 0;
     int obLen = LSTR_LENGTH, obPos;
@@ -1504,7 +1505,7 @@ void ppl_parseAutocompleteSetContext(ppl_context *c) {
     return;
 }
 
-char *ppl_parseAutocomplete(const char *dummy, int status) {
+char *ppl_parseAutocomplete(const char *dummy, const int status) {
     static int matchNum = 0, start = 0;
     static char *linebuff = NULL, *line = NULL;
     char *output = NULL;
@@ -1584,7 +1585,7 @@ char *ppl_parseAutocomplete(const char *dummy, int status) {
     return NULL; // Tell readline we have no more matches to offer
 }
 
-char **ppl_rl_completion(const char *text, int start, int end) {
+char **ppl_rl_completion(const char *text, const int start, const int end) {
     char **matches;
     char *firstItem;
 

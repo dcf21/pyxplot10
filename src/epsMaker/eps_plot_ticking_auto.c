@@ -149,7 +149,7 @@ int compare_PotentialTicks(const void *x, const void *y) {
 }
 
 // Return up to a maximum of MaxFactors factors of in. Factors are returned to array out.
-static void factorise(int in, int *out, int MaxFactors, int FactorMax, int *NFactors) {
+static void factorise(const int in, int *out, const int MaxFactors, const int FactorMax, int *NFactors) {
     int i, j = 0, k, N = sqrt(in);
     for (i = 2; i <= N; i++)
         if (in % i == 0) {
@@ -258,7 +258,7 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
         {
             for (j = i - 1; j >= 0; j--) // Scan left for nearest accepted tick
                 if (TicksAcceptedOut[j] == 1) {
-                    double gap = fabs(PotTickList[id].IntervalNum - PotTickList[TickOrder[j].id].IntervalNum) *
+                    const double gap = fabs(PotTickList[id].IntervalNum - PotTickList[TickOrder[j].id].IntervalNum) *
                             AxisLength / (NIntervals - 1);
                     if (gap < 1) *FLAGacceptable = 0; // Gap between this tick and that to our left is too small
                     break;
@@ -281,11 +281,12 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
 }
 
 // Take a list of accepted ticks and convert these into a final TickList to associate with axis
-static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double UnitMultiplier, unsigned char *AutoTicks,
-                                pplObj *VarVal, const int NIntervals, char *format, const int start,
-                                pplExpr **formatExp, const ArgumentInfo *args, const PotentialTick *PotTickList,
-                                const int NPotTicks, const ArgLeagueTableEntry *TickOrder,
-                                const unsigned char *TicksAccepted, int OutContext) {
+static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double UnitMultiplier,
+                                const unsigned char *AutoTicks, pplObj *VarVal, const int NIntervals,
+                                const char *format, const int start, pplExpr **formatExp, const ArgumentInfo *args,
+                                const PotentialTick *PotTickList, const int NPotTicks,
+                                const ArgLeagueTableEntry *TickOrder, const unsigned char *TicksAccepted,
+                                int OutContext) {
     ppl_context *c = X->c;
     int i, jMAJ, jMIN, Nmajor = 0, Nminor = 0;
     double axispos, x, x1, x2;
@@ -415,7 +416,7 @@ FAIL:
 }
 
 // Main entry point for automatic ticking of axes
-void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, double UnitMultiplier, unsigned char *AutoTicks,
+void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, unsigned char *AutoTicks,
                            pplset_axis *linkedto) {
     ppl_context *c = x->c;
     int i, j, k, start, NArgs, OutContext, ContextRough = -1, CommaPositions[MAX_ARGS + 2], NFactorsLogBase, LogBase;
@@ -728,7 +729,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, double UnitMultiplier,
                         // Should a tick go on the left extreme of the axis?
                         if (j == 1) {
                             for (n = 0; n < Nsteps; n++) {
-                                double divisor = pow(LogBase, OoM - n);
+                                const double divisor = pow(LogBase, OoM - n);
                                 if ((gsl_finite(divisor)) && (fabs(floor(xn / divisor + 0.5) - xn / divisor) < 1e-12)) {
                                     int priority = 0;
                                     if (n == 0) {
@@ -751,9 +752,9 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, double UnitMultiplier,
                         }
                         // Should tick go within body of interval j-1 -> j?
                         for (n = 0; n < Nsteps; n++) {
-                            double divisor = pow(LogBase, OoM - n);
+                            const double divisor = pow(LogBase, OoM - n);
                             if ((gsl_finite(divisor)) && (floor(xn / divisor) != floor(yn / divisor))) {
-                                double zn = fabs(xn) > fabs(yn) ? xn : yn;
+                                const double zn = fabs(xn) > fabs(yn) ? xn : yn;
                                 int priority = 0;
                                 if (n == 0) {
                                     priority = -1; // Marking 0.1 is more important than marking 1.1
@@ -776,15 +777,17 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, double UnitMultiplier,
                     // Ticks which mark the passing of fractions of the Nth significant digit
                     if (n < Nsteps)
                         for (m = n; m >= n - ((ZeroInInterval || (j == 1)) ? Nsteps : 3); m--) {
-                            double divisor = pow(LogBase, OoM - m);
+                            const double divisor = pow(LogBase, OoM - m);
                             int o;
                             if (gsl_finite(divisor))
                                 for (o = 0; o < NFactorsLogBase; o++) {
-                                    double xnfd = xn / divisor * pow(LogBase, FACTOR_MULTIPLY) / FactorsLogBase[o];
-                                    double ynfd = yn / divisor * pow(LogBase, FACTOR_MULTIPLY) / FactorsLogBase[o];
-                                    int xnf = floor(xnfd);
-                                    int ynf = floor(ynfd);
-                                    int priority = (floor(fabs(xn / divisor)) == 0) ? 0 : -1;
+                                    const double xnfd =
+                                            xn / divisor * pow(LogBase, FACTOR_MULTIPLY) / FactorsLogBase[o];
+                                    const double ynfd =
+                                            yn / divisor * pow(LogBase, FACTOR_MULTIPLY) / FactorsLogBase[o];
+                                    const int xnf = floor(xnfd);
+                                    const int ynf = floor(ynfd);
+                                    const int priority = (floor(fabs(xn / divisor)) == 0) ? 0 : -1;
                                     if (xnf != ynf) {
                                         ADDTICK(i, NOT_THROW, OoM - m, 2 * (o + 1) + priority,
                                                 ((xnf > ynf) ? xnf : ynf) * divisor / pow(LogBase, FACTOR_MULTIPLY) *

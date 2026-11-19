@@ -345,7 +345,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
     return;
 }
 
-int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, unsigned long len) {
+int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, const unsigned long len) {
     unsigned char *out, *c_in, *c_out, code, *end, odd, even;
     unsigned long i, j, delta, size, height, width;
     int eol, rle;

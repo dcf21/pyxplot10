@@ -33,7 +33,7 @@
 
 void _ppl_dictRemoveEngine(dict *in, dictItem *ptr);
 
-dict *ppl_dictInit(int useMalloc) {
+dict *ppl_dictInit(const int useMalloc) {
     dict *out;
     if (useMalloc) out = (dict *) malloc(sizeof(dict));
     else out = (dict *) ppl_memAlloc(sizeof(dict));
@@ -172,7 +172,7 @@ static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, i
     return NULL;
 }
 
-int ppl_dictLen(dict *in) {
+int ppl_dictLen(const dict *in) {
     if (in == NULL) return 0;
     return in->length;
 }
@@ -216,7 +216,7 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
     return 0;
 }
 
-int ppl_dictAppendCpy(dict *in, const char *key, void *item, int size) {
+int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int size) {
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
     void *cpy;
     int cmp = -1, hash;
@@ -275,7 +275,7 @@ void *ppl_dictLookup(dict *in, const char *key) {
     return ppl_dictLookupHash(in, key, hash);
 }
 
-void *ppl_dictLookupHash(dict *in, const char *key, int hash) {
+void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
     int clash;
     dictItem *ptr;
 
@@ -299,7 +299,7 @@ void *ppl_dictLookupHash(dict *in, const char *key, int hash) {
     return NULL;
 }
 
-void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, int SubsMaxLen, dictItem **ptrout) {
+void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int SubsMaxLen, dictItem **ptrout) {
     int hash, clash, i, k, keylen;
     char *magicFns[] = {"diff_d", "int_d", NULL};
     dictItem *ptr;
@@ -413,7 +413,7 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
     return 1;
 }
 
-int ppl_dictRemove(dict *in, void *item) {
+int ppl_dictRemove(dict *in, const void *item) {
     dictItem *ptr;
     if (in == NULL) return 1;
     ptr = in->first;
@@ -448,7 +448,7 @@ int ppl_dictRemoveAll(dict *in, void *item) {
     return 0;
 }
 
-dictIterator *ppl_dictIterateInit(dict *in) {
+dictIterator *ppl_dictIterateInit(const dict *in) {
     if (in == NULL) return NULL;
     return in->first;
 }

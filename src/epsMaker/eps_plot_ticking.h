@@ -29,7 +29,7 @@
 
 void eps_plot_ticking(EPSComm *x, pplset_axis *axis, int AxisUnitStyle, pplset_axis *linkedto);
 void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int OutContext);
-void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, double x, pplObj *xunit, int xyz,
+void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, double x, const pplObj *xunit, int xyz,
                          int OutContext);
 
 #endif

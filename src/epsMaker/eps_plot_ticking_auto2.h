@@ -25,7 +25,7 @@
 #include "epsMaker/eps_comm.h"
 #include "settings/settings.h"
 
-void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, double UnitMultiplier, unsigned char *AutoTicks,
-                            pplset_axis *linkedto);
+void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, double UnitMultiplier, const unsigned char *AutoTicks,
+                            const pplset_axis *linkedto);
 
 #endif

@@ -37,7 +37,7 @@
 // Table of the operator functions to allow quick lookup without a long if ... else if ... statement
 int (*dviOpTable[58])(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op);
 
-void makeDviOpTable(pplerr_context *ec) {
+void makeDviOpTable(const pplerr_context *ec) {
     dviOpTable[0] = dviInOpSet1234;
     dviOpTable[1] = dviInOpSet1234;
     dviOpTable[2] = dviInOpSet1234;
@@ -151,7 +151,7 @@ int dviInterpretOperator(pplerr_context *ec, dviInterpreterState *interp, DVIOpe
 // ----------------------------------
 
 // Typeset a special character
-int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, char move) {
+int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, const char move) {
     char s[64];
     int err;
     dviStackState *postPos, *dviPos; // Current positions in dvi and postscript code
@@ -600,7 +600,7 @@ int dviInOpPostPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator
 // ----------------------------------------------------------
 
 // Accumulate characters output in special mode into a string
-int dviSpecialChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
+int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, DVIOperator *op) {
     char *s;
     s = interp->spString + strlen(interp->spString);
     snprintf(s, SSTR_LENGTH, "%c", op->op);
@@ -831,7 +831,7 @@ int dviDeleteInterpreter(pplerr_context *ec, dviInterpreterState *interp) {
 
 // Clone an interpreter state, returning a pointer to the new version
 // XXX Make the name of this function consistent with usage elsewhere or vice versa
-dviStackState *dviCloneInterpState(pplerr_context *ec, dviStackState *orig) {
+dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *orig) {
     void *clone;
     clone = ppl_memAlloc(sizeof(dviStackState));
     if (clone != NULL) memcpy(clone, (void *) orig, sizeof(dviStackState));
@@ -864,7 +864,7 @@ postscriptPage *dviNewPostscriptPage(pplerr_context *ec) {
 }
 
 // Delete a page of postscript output. If we didn't have lt_memory, we'd need to free things at this point.
-int dviDeletePostscriptPage(pplerr_context *ec, postscriptPage *page) {
+int dviDeletePostscriptPage(const pplerr_context *ec, postscriptPage *page) {
     if (page->boundingBox != NULL) {
         //free(page->boundingBox);
         page->boundingBox = NULL;
@@ -877,7 +877,7 @@ int dviDeletePostscriptPage(pplerr_context *ec, postscriptPage *page) {
 }
 
 // Clear a set of postscript pages and state
-int dviDeletePostscriptState(pplerr_context *ec, postscriptState *state) {
+int dviDeletePostscriptState(const pplerr_context *ec, postscriptState *state) {
     // free state->pages
     state->Npages = 0;
     state->currentPage = NULL;
@@ -890,7 +890,7 @@ int dviDeletePostscriptState(pplerr_context *ec, postscriptState *state) {
 // -------------------------------------------
 
 // Append a string to the set of postscript strings
-int dviPostscriptAppend(pplerr_context *ec, dviInterpreterState *interp, char *new) {
+int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, const char *new) {
     char *s; // A temporary string pointer
     int len;
 
@@ -1038,7 +1038,7 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
 }
 
 // Change to a new font
-int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, int fn) {
+int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
     listIterator *listIter;
     int len, err = 0;
     char *s;
@@ -1123,7 +1123,8 @@ int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned cha
 }
 
 // Update a bounding box with the position and size of the current object to be typeset
-int dviUpdateBoundingBox(pplerr_context *ec, dviInterpreterState *interp, double width, double height, double depth) {
+int dviUpdateBoundingBox(pplerr_context *ec, dviInterpreterState *interp, const double width, const double height,
+                         const double depth) {
     double *bb;
     double bbObj[4]; // Bounding box of the object that we are typeseting
 

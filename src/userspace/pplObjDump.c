@@ -74,7 +74,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
         } break;
         case PPLOBJ_COL: {
             int n;
-            int ct = floor(o->exponent[0] + 0.01);
+            const int ct = floor(o->exponent[0] + 0.01);
             if (ct == SW_COLSPACE_CMYK) {
                 fprintf(output, "cmyk(");
                 n = 4;

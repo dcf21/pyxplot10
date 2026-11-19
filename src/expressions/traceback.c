@@ -42,8 +42,8 @@ void ppl_tbClear(ppl_context *c) {
     return;
 }
 
-void ppl_tbAdd(ppl_context *c, int srcLineN, long srcId, char *srcFname, int cmdOrExpr, int errType, int errPos,
-               char *linetext, char *context) {
+void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char *srcFname, const int cmdOrExpr,
+               const int errType, const int errPos, const char *linetext, const char *context) {
     int i = c->errStat.tracebackDepth;
 
     if ((!cmdOrExpr) || (i == 0)) {

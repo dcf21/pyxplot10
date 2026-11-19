@@ -49,7 +49,7 @@ typedef struct Lcdm_comm {
     double OmegaM, OmegaL, H, t;
 } Lcdm_comm;
 
-double __Lcdm_DA_integrand(double z, void *params) {
+double __Lcdm_DA_integrand(const double z, void *params) {
     // All equations below are from
     // Distance Measured in Cosmology
     // David W. Hogg
@@ -60,7 +60,7 @@ double __Lcdm_DA_integrand(double z, void *params) {
                  p->OmegaL); // Eq (14), as substituted into eq (15) and (16). Assume omega_k is zero
 }
 
-double __Lcdm_t_integrand(double z, void *params) {
+double __Lcdm_t_integrand(const double z, void *params) {
     // The equations for the following are taken from:
     // THE COSMOLOGICAL CONSTANT
     // Sean M. Carroll and William H. Press
@@ -70,13 +70,13 @@ double __Lcdm_t_integrand(double z, void *params) {
 }
 
 
-double Lcdm_age(double H, double OmegaM, double OmegaL) {
-    double OmegaA = OmegaM - 0.3 * (OmegaM + OmegaL) + 0.3;
+double Lcdm_age(const double H, const double OmegaM, const double OmegaL) {
+    const double OmegaA = OmegaM - 0.3 * (OmegaM + OmegaL) + 0.3;
     if (OmegaA <= 1.0) return 2.0 / 3.0 / H * gsl_asinh(sqrt(fabs(1.0 - OmegaA) / OmegaA)) / sqrt(fabs(1.0 - OmegaA));
     else return 2.0 / 3.0 / H * asin(sqrt(fabs(1.0 - OmegaA) / OmegaA)) / sqrt(fabs(1.0 - OmegaA));
 }
 
-double Lcdm_DA(double z, double H, double OmegaM, double OmegaL) {
+double Lcdm_DA(const double z, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
     gsl_integration_workspace *ws;
     gsl_function fn;
@@ -96,7 +96,7 @@ double Lcdm_DA(double z, double H, double OmegaM, double OmegaL) {
     return (GSL_CONST_MKSA_SPEED_OF_LIGHT / H) * result / (1 + z);
 }
 
-double Lcdm_t_from_z(double z, double H, double OmegaM, double OmegaL) {
+double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
     gsl_integration_workspace *ws;
     gsl_function fn;
@@ -116,12 +116,12 @@ double Lcdm_t_from_z(double z, double H, double OmegaM, double OmegaL) {
     return (1 / H) * result;
 }
 
-double __Lcdm_z_from_t_slave(double z, void *params) {
+double __Lcdm_z_from_t_slave(const double z, void *params) {
     Lcdm_comm *p = (Lcdm_comm *) params;
     return fabs(Lcdm_t_from_z(pow(10.0, z), p->H, p->OmegaM, p->OmegaL) - p->t);
 }
 
-double Lcdm_z_from_t(double t, double H, double OmegaM, double OmegaL) {
+double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
     int iter = 0, max_iter = 100, status;
     double m, a, b;
@@ -180,7 +180,7 @@ double Lcdm_z_from_t(double t, double H, double OmegaM, double OmegaL) {
         return; \
     }
 
-void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(H0,w_m,w_l)";
     int i;
     CHECK_LCDM_INPUTS(0, "first");
@@ -189,7 +189,7 @@ void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, int nArgs, int *status, int *e
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(z,H0,w_m,w_l)";
     int i;
     CHECK_LCDM_INPUTS(1, "second");
@@ -200,7 +200,7 @@ void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DA(z,H0,w_m,w_l)";
     int i;
     CHECK_LCDM_INPUTS(1, "second");
@@ -210,7 +210,7 @@ void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DL(z,H0,w_m,w_l)";
     int i;
     CHECK_LCDM_INPUTS(1, "second");
@@ -220,7 +220,7 @@ void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DM(z,H0,w_m,w_l)";
     int i;
     CHECK_LCDM_INPUTS(1, "second");
@@ -230,7 +230,7 @@ void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, int nArgs, int *status, int *er
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_t(z,H0,w_m,w_l)";
     int i;
     CHECK_LCDM_INPUTS(1, "second");
@@ -240,7 +240,7 @@ void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_z(t,H0,w_m,w_l)";
     int i;
     CHECK_LCDM_INPUTS(1, "second");
@@ -249,7 +249,7 @@ void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_sidereal_time(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "siderealTime(d)";
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
@@ -262,8 +262,8 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, int nArgs, int *status, i
     CHECK_1NOTNAN;
     CHECK_1INPUT_DIMLESS;
     IF_1COMPLEX{QUERY_MUST_BE_REAL} ELSE_REAL {
-        double JD = in->real / 86400.0 + 40587.5;
-        double T = (JD - 51545.0) / 36525.0; // See pages 87-88 of Astronomical Algorithms, by Jean Meeus
+        const double JD = in->real / 86400.0 + 40587.5;
+        const double T = (JD - 51545.0) / 36525.0; // See pages 87-88 of Astronomical Algorithms, by Jean Meeus
         OUTPUT.real = fmod(M_PI / 180 *
                                    (280.46061837 + 360.98564736629 * (JD - 51545.0) + 0.000387933 * T * T +
                                     T * T * T / 38710000.0),
@@ -274,7 +274,7 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, int nArgs, int *status, i
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_moonphase(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "moonPhase(d)";
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
@@ -287,20 +287,21 @@ void pplfunc_moonphase(ppl_context *c, pplObj *in, int nArgs, int *status, int *
     CHECK_1NOTNAN;
     CHECK_1INPUT_DIMLESS;
     IF_1COMPLEX{QUERY_MUST_BE_REAL} ELSE_REAL {
-        double JD = in->real / 86400.0 + 40587.5;
-        double t = (JD - 51545) / 36525; // Time in Julian Centuries since 2000.0
-        double Msun = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
-        double Lsun = 2 * M_PI *
+        const double JD = in->real / 86400.0 + 40587.5;
+        const double t = (JD - 51545) / 36525; // Time in Julian Centuries since 2000.0
+        const double Msun = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
+        const double Lsun = 2 * M_PI *
                 fmod(0.7859453 + Msun / (2 * M_PI) + (6893.0 * sin(Msun) + 72.0 * sin(2 * Msun) + 6191.2 * t) / 1296e3,
                      1);
-        double L0 = 2 * M_PI * fmod(0.606433 + 1336.855225 * t, 1);
-        double l = 2 * M_PI * fmod(0.374897 + 1325.552410 * t, 1);
-        double ls = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
-        double D = 2 * M_PI * fmod(0.827361 + 1236.853086 * t, 1);
-        double F = 2 * M_PI * fmod(0.259086 + 1342.227825 * t, 1);
-        double dL = 22640 * sin(l) - 4586 * sin(l - 2 * D) + 2370 * sin(2 * D) + 769 * sin(2 * l) - 668 * sin(ls) -
-                412 * sin(2 * F) - 212 * sin(2 * l - 2 * D) - 206 * sin(l + ls - 2 * D) + 192 * sin(l + 2 * D) -
-                165 * sin(ls - 2 * D) - 125 * sin(D) - 110 * sin(l + ls) + 148 * sin(l - ls) - 55 * sin(2 * F - 2 * D);
+        const double L0 = 2 * M_PI * fmod(0.606433 + 1336.855225 * t, 1);
+        const double l = 2 * M_PI * fmod(0.374897 + 1325.552410 * t, 1);
+        const double ls = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
+        const double D = 2 * M_PI * fmod(0.827361 + 1236.853086 * t, 1);
+        const double F = 2 * M_PI * fmod(0.259086 + 1342.227825 * t, 1);
+        const double dL = 22640 * sin(l) - 4586 * sin(l - 2 * D) + 2370 * sin(2 * D) + 769 * sin(2 * l) -
+                668 * sin(ls) - 412 * sin(2 * F) - 212 * sin(2 * l - 2 * D) - 206 * sin(l + ls - 2 * D) +
+                192 * sin(l + 2 * D) - 165 * sin(ls - 2 * D) - 125 * sin(D) - 110 * sin(l + ls) + 148 * sin(l - ls) -
+                55 * sin(2 * F - 2 * D);
         OUTPUT.real = fmod(L0 + dL / 1296e3 * 2 * M_PI - Lsun, 2 * M_PI);
         while (OUTPUT.real < 0) OUTPUT.real += 2 * M_PI;
     }

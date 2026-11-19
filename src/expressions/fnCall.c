@@ -71,7 +71,8 @@
         } \
     }
 
-void ppl_fnCall(ppl_context *context, pplExpr *inExpr, int inExprCharPos, int nArgs, int dollarAllowed, int iterDepth) {
+void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, int nArgs, const int dollarAllowed,
+                const int iterDepth) {
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];
     pplObj *args = context->stack + context->stackPtr - nArgs;
     pplObj called;
@@ -101,7 +102,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, int inExprCharPos, int nA
 
     // Attempt to call a type object as a constructor?
     else if (t == PPLOBJ_TYPE) {
-        int id = ((pplType *) (out->auxil))->id;
+        const int id = ((pplType *) (out->auxil))->id;
         switch (id) {
             case PPLOBJ_NUM:
                 if (nArgs == 0) {
@@ -1129,7 +1130,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, int inExprCharPos, int nA
                     }
                 } else {
                     int k, lastOpAssign = 0, stkp = context->stackPtr, ns_ptr = context->ns_ptr;
-                    int setSelf = (called.self_this != NULL) &&
+                    const int setSelf = (called.self_this != NULL) &&
                             ((called.self_this->objType == PPLOBJ_USER) || (called.self_this->objType == PPLOBJ_MOD));
                     pplObj *output;
 
@@ -1215,7 +1216,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, int inExprCharPos, int nA
             case PPL_FUNC_SUBROUTINE: {
                 dict *d;
                 int j, k, ns_ptr = context->ns_ptr;
-                int shellReturnableOld = context->shellReturnable;
+                const int shellReturnableOld = context->shellReturnable;
                 const int stkLevelOld = context->stackPtr;
 
                 // Check that there's enough space on the stack

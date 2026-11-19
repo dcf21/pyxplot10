@@ -186,7 +186,8 @@ char *SW_PIEKEYPOS_STR[] = {"auto", "inside", "key", "outside"};
 int SW_PIEKEYPOS_INT[] = {SW_PIEKEYPOS_AUTO, SW_PIEKEYPOS_INSIDE, SW_PIEKEYPOS_KEY, SW_PIEKEYPOS_OUTSIDE, -1};
 int SW_PIEKEYPOS_ACL[] = {1, 1, 1, 1, -1};
 
-void *ppl_fetchSettingName(pplerr_context *context, int id, int *id_list, void *name_list, const int name_list_size) {
+void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, void *name_list,
+                           const int name_list_size) {
     int first;
     static int latch = 0;
     static char *dummyout = "";
@@ -210,7 +211,7 @@ void *ppl_fetchSettingName(pplerr_context *context, int id, int *id_list, void *
     return NULL;
 }
 
-int ppl_fetchSettingByName(pplerr_context *context, char *name, int *id_list, char **name_list) {
+int ppl_fetchSettingByName(const pplerr_context *context, const char *name, const int *id_list, char **name_list) {
     while (1) {
         if (*id_list == -1) return -1;
         if (ppl_strCmpNoCase(name, *name_list) == 0) return *id_list;

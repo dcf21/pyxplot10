@@ -66,7 +66,7 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     return;
 }
 
-int main(int argc, char **argv) {
+int main(const int argc, char **argv) {
     struct timespec waitperiod, waitedperiod; // A time.h timespec specifier; used for sleeping
     char init_string[LSTR_LENGTH], help_string[LSTR_LENGTH], version_string[FNAME_LENGTH],
             version_string_underline[FNAME_LENGTH];

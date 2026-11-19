@@ -212,7 +212,7 @@ static double fitResidual(fitComm *p) {
 
 // Slave routines called by the differentiation operation when working out the Hessian matrix
 
-static double GetHessian_diff2(double x, void *p_void) {
+static double GetHessian_diff2(const double x, void *p_void) {
     double tmp, output;
     fitComm *p = (fitComm *) p_void;
     tmp = gsl_vector_get(p->paramValsHessian, p->diff2); // Replace old parameter with x
@@ -222,7 +222,7 @@ static double GetHessian_diff2(double x, void *p_void) {
     return output;
 }
 
-static double GetHessian_diff1(double x, void *p_void) {
+static double GetHessian_diff1(const double x, void *p_void) {
     double tmp, output, output_error;
     gsl_function fn;
     fitComm *p = (fitComm *) p_void;
@@ -310,7 +310,7 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
 // Top-level routine for managing the GSL minimiser
 
 static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vector *, void *),
-                              unsigned char FittingsigmaData) {
+                              const unsigned char FittingsigmaData) {
     ppl_context *c = commlink->c;
     size_t iter = 0, iter2 = 0;
     int i, status = 0, NParams;
@@ -403,7 +403,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
 }
 
 // Main entry point for the implementation of the fit command
-void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     int status = 0, Nargs, Nvars, NExpect, Nusing;
     char *fnName, *scratchPad;
@@ -492,7 +492,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, int int
 
     // Count length of using list
     {
-        int hadNonNullUsingItem = 0;
+        const int hadNonNullUsingItem = 0;
         int pos = PARSE_fit_using_list;
         const int o = PARSE_fit_using_item_using_list;
 

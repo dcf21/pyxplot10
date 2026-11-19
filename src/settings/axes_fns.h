@@ -25,14 +25,14 @@
 #include "settings/settings.h"
 #include "userspace/context.h"
 
-void pplaxis_destroy(ppl_context *context, pplset_axis *in);
+void pplaxis_destroy(const ppl_context *context, pplset_axis *in);
 void pplaxis_copy(ppl_context *context, pplset_axis *out, const pplset_axis *in);
 void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis *in);
 void pplaxis_copyMTics(ppl_context *context, pplset_axis *out, const pplset_axis *in);
-unsigned char pplaxis_cmpTics(ppl_context *context, const pplset_tics *ta, const pplset_tics *tb, const pplObj *ua,
-                              const pplObj *ub, const int la, const int lb);
+unsigned char pplaxis_cmpTics(const ppl_context *context, const pplset_tics *ta, const pplset_tics *tb,
+                              const pplObj *ua, const pplObj *ub, const int la, const int lb);
 
-double pplaxis_GetPosition(double xin, pplset_axis *xa, int xrn, unsigned char AllowOffBounds);
-double pplaxis_InvGetPosition(double xin, pplset_axis *xa);
+double pplaxis_GetPosition(double xin, const pplset_axis *xa, int xrn, unsigned char AllowOffBounds);
+double pplaxis_InvGetPosition(double xin, const pplset_axis *xa);
 
 #endif

@@ -334,14 +334,14 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
         } \
     }
 
-void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive) {
     pplset_graph *sg;
     pplarrow_object **al;
     ppllabel_object **ll;
     pplset_axis *xa, *ya, *za;
     pplObj *command = in->stk;
     int i, strcmp_set, strcmp_unset;
-    int gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
+    const int gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
     char *directive, *setoption;
 
     if (!gotEditNo) {
@@ -420,9 +420,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     }
 
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
-            unsigned char set = strcmp_set;
+            const unsigned char set = strcmp_set;
             int pos = PARSE_set_autoscale_0axes;
-            unsigned char SetAll = (command[pos].objType != PPLOBJ_NUM);
+            const unsigned char SetAll = (command[pos].objType != PPLOBJ_NUM);
             if (!SetAll)
                 while (command[pos].objType == PPLOBJ_NUM) {
                     int i, j;
@@ -490,7 +490,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
                 a->ArrowType = ppl_fetchSettingByName(&c->errcontext, (char *) command[PARSE_set_axis_axisdisp].auxil,
                                                       SW_AXISDISP_INT, SW_AXISDISP_STR);
             if (command[PARSE_set_axis_linkaxis].objType == PPLOBJ_NUM) {
-                int j = (int) round(command[PARSE_set_axis_linkaxis].real);
+                const int j = (int) round(command[PARSE_set_axis_linkaxis].real);
                 if (a->linkusing != NULL) {
                     pplExpr_free((pplExpr *) a->linkusing);
                     a->linkusing = ad->linkusing;
@@ -560,10 +560,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         c->set->term_current.backup = c->set->term_default.backup;
     } else if (strcmp_set && (strcmp(setoption, "bar") == 0)) /* set bar */
     {
-        double barsize = command[PARSE_set_bar_bar_size].real;
-        int gotbarsize = (command[PARSE_set_bar_bar_size].objType == PPLOBJ_NUM);
-        int gotlarge = (command[PARSE_set_bar_bar_size_large].objType == PPLOBJ_STR);
-        int gotsmall = (command[PARSE_set_bar_bar_size_small].objType == PPLOBJ_STR);
+        const double barsize = command[PARSE_set_bar_bar_size].real;
+        const int gotbarsize = (command[PARSE_set_bar_bar_size].objType == PPLOBJ_NUM);
+        const int gotlarge = (command[PARSE_set_bar_bar_size_large].objType == PPLOBJ_STR);
+        const int gotsmall = (command[PARSE_set_bar_bar_size_small].objType == PPLOBJ_STR);
         if (gotbarsize && !gsl_finite(barsize)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set bar' command was not finite.");
@@ -581,7 +581,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         if (command[PARSE_set_binwidth_auto].objType == PPLOBJ_STR) {
             c->set->term_current.BinOriginAuto = 1;
         } else {
-            double tempdbl = command[PARSE_set_binorigin_bin_origin].real;
+            const double tempdbl = command[PARSE_set_binorigin_bin_origin].real;
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set binorigin' command was not finite.");
@@ -599,7 +599,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         if (command[PARSE_set_binwidth_auto].objType == PPLOBJ_STR) {
             c->set->term_current.BinWidthAuto = 1;
         } else {
-            double tempdbl = command[PARSE_set_binwidth_bin_width].real;
+            const double tempdbl = command[PARSE_set_binwidth_bin_width].real;
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set binwidth' command was not finite.");
@@ -621,7 +621,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         if (command[PARSE_set_boxfrom_auto].objType == PPLOBJ_STR) {
             sg->BoxFromAuto = 1;
         } else {
-            double tempdbl = command[PARSE_set_boxfrom_box_from].real;
+            const double tempdbl = command[PARSE_set_boxfrom_box_from].real;
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set boxfrom' command was not finite.");
@@ -639,7 +639,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         if (command[PARSE_set_boxwidth_auto].objType == PPLOBJ_STR) {
             sg->BoxWidthAuto = 1;
         } else {
-            double tempdbl = command[PARSE_set_boxwidth_box_width].real;
+            const double tempdbl = command[PARSE_set_boxwidth_box_width].real;
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set boxwidth' command was not finite.");
@@ -671,7 +671,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             sg->c1TickLabelRotate = c->set->graph_default.c1TickLabelRotate;
         }
         if (command[PARSE_set_c1format_rotation].objType == PPLOBJ_NUM) {
-            double r = command[PARSE_set_c1format_rotation].real;
+            const double r = command[PARSE_set_c1format_rotation].real;
             if (!gsl_finite(r)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The rotation angle supplied to the 'set c1format' command was not finite.");
@@ -694,7 +694,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             sg->c1label[FNAME_LENGTH - 1] = '\0';
         }
         if (command[PARSE_set_c1label_rotation].objType == PPLOBJ_NUM) {
-            double r = command[PARSE_set_c1label_rotation].real;
+            const double r = command[PARSE_set_c1label_rotation].real;
             if (!gsl_finite(r)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The rotation angle supplied to the 'set c1label' command was not finite.");
@@ -708,7 +708,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         sg->c1LabelRotate = c->set->graph_default.c1LabelRotate;
     } else if (strcmp_set && (strcmp(setoption, "c1tics") == 0)) /* set c1tics */
     {
-        int m = (command[PARSE_set_c1tics_minor].objType == PPLOBJ_STR);
+        const int m = (command[PARSE_set_c1tics_minor].objType == PPLOBJ_STR);
         const int *ptab = PARSE_TABLE_set_c1tics_;
         char *cmd = m ? "mc1tics" : "c1tics";
         if (!m) {
@@ -722,7 +722,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         }
     } else if (strcmp_unset && (strcmp(setoption, "c1tics") == 0)) /* unset c1tics */
     {
-        int m = (command[PARSE_unset_c1tics_minor].objType == PPLOBJ_STR);
+        const int m = (command[PARSE_unset_c1tics_minor].objType == PPLOBJ_STR);
         if (!m) {
             tics_rm(&sg->ticsC);
             if (ppl_unitsDimEqual(&sg->unitC, &c->set->graph_default.unitC))
@@ -763,7 +763,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     } else if (strcmp_set && (strcmp(setoption, "colkey") == 0)) /* set colkey */
     {
         char *tempstr = (char *) command[PARSE_set_colkey_pos].auxil;
-        int got = (command[PARSE_set_colkey_pos].objType == PPLOBJ_STR);
+        const int got = (command[PARSE_set_colkey_pos].objType == PPLOBJ_STR);
 
         sg->ColKey = SW_ONOFF_ON;
         if (got) sg->ColKeyPos = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_COLKEYPOS_INT, SW_COLKEYPOS_STR);
@@ -877,8 +877,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         int C = (int) (cstr[0] - '1');
         pplObj *min = &command[PARSE_set_crange_min];
         pplObj *max = &command[PARSE_set_crange_max];
-        int mina = (command[PARSE_set_crange_minauto].objType == PPLOBJ_STR);
-        int maxa = (command[PARSE_set_crange_maxauto].objType == PPLOBJ_STR);
+        const int mina = (command[PARSE_set_crange_minauto].objType == PPLOBJ_STR);
+        const int maxa = (command[PARSE_set_crange_maxauto].objType == PPLOBJ_STR);
         if (command[PARSE_set_crange_reverse].objType == PPLOBJ_STR) sg->Creverse[C] = SW_BOOL_TRUE;
         if (command[PARSE_set_crange_noreverse].objType == PPLOBJ_STR) sg->Creverse[C] = SW_BOOL_FALSE;
         if (command[PARSE_set_crange_renormalise].objType == PPLOBJ_STR) sg->Crenorm[C] = SW_BOOL_TRUE;
@@ -921,7 +921,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     } else if (strcmp_unset && (strcmp(setoption, "crange") == 0)) /* unset crange */
     {
         char *cstr = (char *) command[PARSE_set_crange_c_number].auxil;
-        int C = (int) (cstr[0] - '1');
+        const int C = (int) (cstr[0] - '1');
         sg->Cmin[C] = c->set->graph_default.Cmin[C];
         sg->Cminauto[C] = c->set->graph_default.Cminauto[C];
         sg->Cmax[C] = c->set->graph_default.Cmax[C];
@@ -968,7 +968,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         ppl_dictRemoveKey(c->set->filters, tempstr);
     } else if (strcmp_set && (strcmp(setoption, "fontsize") == 0)) /* set fontsize */
     {
-        double tempdbl = command[PARSE_set_fontsize_fontsize].real;
+        const double tempdbl = command[PARSE_set_fontsize_fontsize].real;
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set fontsize' command was not finite.");
@@ -1082,7 +1082,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         sg->key = SW_ONOFF_ON; // Turn key on
         if (command[PARSE_set_key_offset].objType == PPLOBJ_NUM) // Horizontal offset
         {
-            double tempdbl = command[PARSE_set_key_offset].real;
+            const double tempdbl = command[PARSE_set_key_offset].real;
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The horizontal offset supplied to the 'set key' command was not finite.");
@@ -1090,7 +1090,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         }
         if (command[PARSE_set_key_offset + 1].objType == PPLOBJ_NUM) // Vertical offset
         {
-            double tempdbl = command[PARSE_set_key_offset + 1].real;
+            const double tempdbl = command[PARSE_set_key_offset + 1].real;
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The vertical offset supplied to the 'set key' command was not finite.");
@@ -1195,7 +1195,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         if (ll != NULL) ppllabel_unset(c, ll, in, pl, PARSE_TABLE_unset_label_);
     } else if (strcmp_set && (strcmp(setoption, "linewidth") == 0)) /* set linewidth */
     {
-        double tempdbl = command[PARSE_set_linewidth_linewidth].real;
+        const double tempdbl = command[PARSE_set_linewidth_linewidth].real;
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set linewidth' command was not finite.");
@@ -1254,7 +1254,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
                 if (command[pos + ap].objType == PPLOBJ_NUM) {
                     int *alog, *adlog;
                     int i = (int) round(command[pos + ap].real);
-                    int j = (int) round(command[pos + ap].exponent[0]);
+                    const int j = (int) round(command[pos + ap].exponent[0]);
                     int newstate;
                     pplset_axis *a, *ad;
                     if (j == 1) {
@@ -1288,7 +1288,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
                     a->ticsM.logBase = b;
                 } else {
                     if (command[pos + c1p].objType == PPLOBJ_STR) {
-                        int newstate = sl ? SW_BOOL_TRUE : (ul ? c->set->graph_default.Clog[0] : SW_BOOL_FALSE);
+                        const int newstate = sl ? SW_BOOL_TRUE : (ul ? c->set->graph_default.Clog[0] : SW_BOOL_FALSE);
                         if (sg->Clog[0] != newstate) {
                             tics_rm(&sg->ticsC);
                             tics_rm(&sg->ticsCM);
@@ -1321,7 +1321,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         {
             int i, *alog;
             pplset_axis *a;
-            int newstate = sl ? SW_BOOL_TRUE : SW_BOOL_FALSE;
+            const int newstate = sl ? SW_BOOL_TRUE : SW_BOOL_FALSE;
             if (sg->Clog[0] != newstate) {
                 tics_rm(&sg->ticsC);
                 tics_rm(&sg->ticsCM);
@@ -1444,7 +1444,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         sg->c1label[0] = '\0';
     } else if (strcmp_set && (strcmp(setoption, "noc1tics") == 0)) /* set noc1tics */
     {
-        int m = (command[PARSE_set_notics_minor].objType == PPLOBJ_STR);
+        const int m = (command[PARSE_set_notics_minor].objType == PPLOBJ_STR);
         if (!m) { SET_NOTICKS(sg->ticsC); }
         SET_NOTICKS(sg->ticsCM);
     } else if (strcmp_set && (strcmp(setoption, "noclip") == 0)) /* set noclip */
@@ -1489,10 +1489,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         c->set->term_current.multiplot = SW_ONOFF_OFF;
     } else if (strcmp_set && (strcmp(setoption, "notics") == 0)) /* set notics */
     {
-        int m = (command[PARSE_set_notics_minor].objType == PPLOBJ_STR);
+        const int m = (command[PARSE_set_notics_minor].objType == PPLOBJ_STR);
         if (command[PARSE_set_notics_axis].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_set_notics_axis].real);
-            int j = (int) round(command[PARSE_set_notics_axis].exponent[0]);
+            const int j = (int) round(command[PARSE_set_notics_axis].exponent[0]);
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
                 if (j == 1) {
                     pplset_axis *a = &ya[i];
@@ -1538,7 +1538,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     } else if (strcmp_set && (strcmp(setoption, "noxformat") == 0)) /* set noxformat */
     {
         int i = (int) round(command[PARSE_set_noxformat_axis].real);
-        int j = (int) round(command[PARSE_set_noxformat_axis].exponent[0]);
+        const int j = (int) round(command[PARSE_set_noxformat_axis].exponent[0]);
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a, *ad;
             if (j == 1) {
@@ -1563,7 +1563,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     } else if (strcmp_set && (strcmp(setoption, "noxlabel") == 0)) /* set noxlabel */
     {
         int i = (int) round(command[PARSE_set_noxlabel_axis].real);
-        int j = (int) round(command[PARSE_set_noxlabel_axis].exponent[0]);
+        const int j = (int) round(command[PARSE_set_noxlabel_axis].exponent[0]);
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a;
             if (j == 1) a = &ya[i];
@@ -1589,7 +1589,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
 
         got = (command[PARSE_set_numerics_number_significant_figures].objType == PPLOBJ_NUM);
         if (got) {
-            int tempint = (int) round(command[PARSE_set_numerics_number_significant_figures].real);
+            const int tempint = (int) round(command[PARSE_set_numerics_number_significant_figures].real);
             if (tempint < 1) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "Numbers cannot be displayed to fewer than one significant figure.");
@@ -1629,8 +1629,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         c->set->term_current.NumDisplay = c->set->term_default.NumDisplay;
     } else if (strcmp_set && (strcmp(setoption, "origin") == 0)) /* set origin */
     {
-        double x = command[PARSE_set_origin_origin].real;
-        double y = command[PARSE_set_origin_origin + 1].real;
+        const double x = command[PARSE_set_origin_origin].real;
+        const double y = command[PARSE_set_origin_origin + 1].real;
         sg->OriginX.real = x;
         sg->OriginY.real = y;
     } else if (strcmp_unset && (strcmp(setoption, "origin") == 0)) /* unset origin */
@@ -1757,7 +1757,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         strcpy(c->set->term_current.PaperName, c->set->term_default.PaperName);
     } else if (strcmp_set && (strcmp(setoption, "pointlinewidth") == 0)) /* set pointlinewidth */
     {
-        double tempdbl = command[PARSE_set_pointlinewidth_pointlinewidth].real;
+        const double tempdbl = command[PARSE_set_pointlinewidth_pointlinewidth].real;
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set pointlinewidth' command was not finite.");
@@ -1774,7 +1774,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         sg->PointLineWidth = c->set->graph_default.PointLineWidth;
     } else if (strcmp_set && (strcmp(setoption, "pointsize") == 0)) /* set pointsize */
     {
-        double tempdbl = command[PARSE_set_pointsize_pointsize].real;
+        const double tempdbl = command[PARSE_set_pointsize_pointsize].real;
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set pointsize' command was not finite.");
@@ -1873,7 +1873,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             sg->width.real = command[PARSE_set_size_width].real;
         }
         if (command[PARSE_set_size_height].objType == PPLOBJ_NUM) {
-            double r = command[PARSE_set_size_height].real / sg->width.real;
+            const double r = command[PARSE_set_size_height].real / sg->width.real;
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested y/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -1883,7 +1883,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             sg->AutoAspect = SW_ONOFF_OFF;
         }
         if (command[PARSE_set_size_depth].objType == PPLOBJ_NUM) {
-            double r = command[PARSE_set_size_depth].real / sg->width.real;
+            const double r = command[PARSE_set_size_depth].real / sg->width.real;
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested z/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -1893,7 +1893,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             sg->AutoZAspect = SW_ONOFF_OFF;
         }
         if (command[PARSE_set_size_ratio].objType == PPLOBJ_NUM) {
-            double r = command[PARSE_set_size_ratio].real;
+            const double r = command[PARSE_set_size_ratio].real;
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested y/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -1903,7 +1903,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             sg->AutoAspect = SW_ONOFF_OFF;
         }
         if (command[PARSE_set_size_zratio].objType == PPLOBJ_NUM) {
-            double r = command[PARSE_set_size_zratio].real;
+            const double r = command[PARSE_set_size_zratio].real;
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested z/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -2164,13 +2164,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         }
     } else if (strcmp_unset && (strcmp(setoption, "tics") == 0)) /* unset tics */
     {
-        int m = (command[PARSE_unset_tics_minor].objType == PPLOBJ_STR);
+        const int m = (command[PARSE_unset_tics_minor].objType == PPLOBJ_STR);
 
 #define IDE if (ppl_unitsDimEqual(&a->unit, &ad->unit))
 
         if (command[PARSE_unset_tics_axis].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_unset_tics_axis].real);
-            int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
+            const int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
                 if (j == 1) {
                     pplset_axis *a = &ya[i], *ad = &c->set->YAxesDefault[i];
@@ -2582,7 +2582,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     } else if (strcmp_set && (strcmp(setoption, "view") == 0)) /* set view */
     {
         if (command[PARSE_set_view_xy_angle].objType == PPLOBJ_NUM) {
-            double d = command[PARSE_set_view_xy_angle].real;
+            const double d = command[PARSE_set_view_xy_angle].real;
             if (!gsl_finite(d)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The viewing angles supplied to the 'set view' command were not finite.");
@@ -2591,7 +2591,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             sg->XYview.real = d;
         }
         if (command[PARSE_set_view_yz_angle].objType == PPLOBJ_NUM) {
-            double d = command[PARSE_set_view_yz_angle].real;
+            const double d = command[PARSE_set_view_yz_angle].real;
             if (!gsl_finite(d)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The viewing angles supplied to the 'set view' command were not finite.");
@@ -2624,7 +2624,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     {
         int changedViewer = 0;
         if (command[PARSE_set_viewer_auto_viewer].objType == PPLOBJ_STR) {
-            int viewerOld = c->set->term_current.viewer;
+            const int viewerOld = c->set->term_current.viewer;
             if (strcmp(GHOSTVIEW_COMMAND, "/bin/false") != 0) c->set->term_current.viewer = SW_VIEWER_GV;
             else if (strcmp(GGV_COMMAND, "/bin/false") != 0) c->set->term_current.viewer = SW_VIEWER_GGV;
             else c->set->term_current.viewer = SW_VIEWER_NULL;
@@ -2644,8 +2644,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
         if (changedViewer) pplcsp_sendCommand(c, "A\n"); // Clear away SingleWindow viewer
     } else if (strcmp_unset && (strcmp(setoption, "viewer") == 0)) /* unset viewer */
     {
-        int changedViewer = ((c->set->term_current.viewer != c->set->term_default.viewer) ||
-                             (strcmp(c->set->term_current.ViewerCmd, c->set->term_default.ViewerCmd) != 0));
+        const int changedViewer = ((c->set->term_current.viewer != c->set->term_default.viewer) ||
+                                   (strcmp(c->set->term_current.ViewerCmd, c->set->term_default.ViewerCmd) != 0));
         c->set->term_current.viewer = c->set->term_default.viewer;
         strcpy(c->set->term_current.ViewerCmd, c->set->term_default.ViewerCmd);
         if (changedViewer) pplcsp_sendCommand(c, "A\n"); // Clear away SingleWindow viewer
@@ -2691,7 +2691,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
                     a->TickLabelRotate = ad->TickLabelRotate;
                 }
                 if (command[PARSE_set_xformat_rotation].objType == PPLOBJ_NUM) {
-                    double r = command[PARSE_set_xformat_rotation].real;
+                    const double r = command[PARSE_set_xformat_rotation].real;
                     if (!gsl_finite(r)) {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                                   "The rotation angle supplied to the 'set format' command was not finite.");
@@ -2713,7 +2713,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
     } else if (strcmp(setoption, "xlabel") == 0) /* set xlabel */
     {
         int i = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].real);
-        int j = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].exponent[0]);
+        const int j = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].exponent[0]);
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a;
             if (j == 1) a = &ya[i];
@@ -2730,7 +2730,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
                     a->label = l;
                 }
                 if (command[PARSE_set_xlabel_rotation].objType == PPLOBJ_NUM) {
-                    double r = command[PARSE_set_xlabel_rotation].real;
+                    const double r = command[PARSE_set_xlabel_rotation].real;
                     if (!gsl_finite(r)) {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                                   "The rotation angle supplied to the set axis label command was not finite.");
@@ -2775,8 +2775,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, int int
             if (strcmp_set) {
                 pplObj *min = &command[PARSE_set_range_min], d1, d2;
                 pplObj *max = &command[PARSE_set_range_max];
-                int mina = (command[PARSE_set_range_minauto].objType == PPLOBJ_STR);
-                int maxa = (command[PARSE_set_range_maxauto].objType == PPLOBJ_STR);
+                const int mina = (command[PARSE_set_range_minauto].objType == PPLOBJ_STR);
+                const int maxa = (command[PARSE_set_range_maxauto].objType == PPLOBJ_STR);
                 if (command[PARSE_set_range_reverse].objType == PPLOBJ_STR) a->RangeReversed = 1;
                 if (command[PARSE_set_range_noreverse].objType == PPLOBJ_STR) a->RangeReversed = 0;
                 if ((!mina) && (min->objType != PPLOBJ_NUM) && (a->MinSet == SW_BOOL_TRUE)) {

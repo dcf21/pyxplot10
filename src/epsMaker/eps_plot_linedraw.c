@@ -33,8 +33,9 @@
 #include "epsMaker/eps_plot_threedimbuff.h"
 #include "epsMaker/eps_settings.h"
 
-void LineDraw_FindCrossingPoints(EPSComm *x, double x1, double y1, double z1, double xap1, double yap1, double zap1,
-                                 double x2, double y2, double z2, double xap2, double yap2, double zap2, int *Inside1,
+void LineDraw_FindCrossingPoints(const EPSComm *x, const double x1, const double y1, const double z1, const double xap1,
+                                 const double yap1, const double zap1, const double x2, const double y2,
+                                 const double z2, const double xap2, const double yap2, const double zap2, int *Inside1,
                                  int *Inside2, double *cx1, double *cy1, double *cz1, double *cx2, double *cy2,
                                  double *cz2, unsigned char *face1, double *AxisPos1, unsigned char *face2,
                                  double *AxisPos2, int *NCrossings) {
@@ -91,9 +92,10 @@ void LineDraw_FindCrossingPoints(EPSComm *x, double x1, double y1, double z1, do
     return;
 }
 
-LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn, int zrn,
-                              pplset_graph *sg, unsigned char ThreeDim, double origin_x, double origin_y, double width,
-                              double height, double zdepth) {
+LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int xrn,
+                              const int yrn, const int zrn, pplset_graph *sg, const unsigned char ThreeDim,
+                              const double origin_x, const double origin_y, const double width, const double height,
+                              const double zdepth) {
     LineDrawHandle *output;
     output = (LineDrawHandle *) ppl_memAlloc(sizeof(LineDrawHandle));
     if (output == NULL) return NULL;
@@ -116,9 +118,10 @@ LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, ppls
     return output;
 }
 
-void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, double x, double y, double z, double x_offset, double y_offset,
-                    double z_offset, double x_perpoffset, double y_perpoffset, double z_perpoffset, int linetype,
-                    double linewidth, char *colstr) {
+void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double y, const double z,
+                    const double x_offset, const double y_offset, const double z_offset, const double x_perpoffset,
+                    const double y_perpoffset, const double z_perpoffset, const int linetype, const double linewidth,
+                    char *colstr) {
     unsigned char f1, f2;
     double ap1, ap2;
     int Inside1, Inside2, NCrossings;
@@ -217,7 +220,7 @@ void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, double x, double y, double z
     return;
 }
 
-void LineDraw_PenUp(EPSComm *x, LineDrawHandle *ld) {
+void LineDraw_PenUp(const EPSComm *x, LineDrawHandle *ld) {
     ThreeDimBuffer_linepenup(ld->x);
     ld->x0set = 0;
     ld->x1set = 0;

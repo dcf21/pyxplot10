@@ -145,12 +145,12 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                 for (l = 0; TLS[l] != NULL; l++) {
                     unsigned char state = 0;
                     double tic_lab_xoff = 0.0;
-                    double tic_x1 = x1 + (x2 - x1) * TLP[l];
-                    double tic_y1 = y1 + (y2 - y1) * TLP[l];
+                    const double tic_x1 = x1 + (x2 - x1) * TLP[l];
+                    const double tic_y1 = y1 + (y2 - y1) * TLP[l];
                     double tic_x2, tic_y2, tic_x3, tic_y3;
 
                     for (m = 0; ((m < 2) && (!state)); m++) {
-                        double theta_ab = m ? theta_a : theta_b;
+                        const double theta_ab = m ? theta_a : theta_b;
                         if (!gsl_finite(theta_ab)) continue;
                         tic_x2 = tic_x1 +
                                 (a->tics.tickDir == SW_TICDIR_IN ? 0.0 : 1.0) * sin(theta_ab) * TLEN *
@@ -167,7 +167,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                         HALIGN_THIS = HALIGN;
                         VALIGN_THIS = VALIGN;
                         if ((a->CrossedAtZero) && (a->atzero)) {
-                            double CP1 = TLP[l];
+                            const double CP1 = TLP[l];
                             double xl = TLP[l] - 1e-3;
                             double xr = TLP[l] + 1e-3;
                             if (xl < 0.0) xl = 0.0;
@@ -188,14 +188,14 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                                 } else // x-axis -- if at edge of graph, put label at zero. If y-axis is labelled at zero, don't put label at zero...
                                 {
                                     if (!(((CP2 < 1e-3) && (!Lr)) || ((CP2 > 0.999) && (Lr)))) {
-                                        int Lr1 = (xyz == 0) ^ (CP1 > 0.999);
+                                        const int Lr1 = (xyz == 0) ^ (CP1 > 0.999);
                                         if (((CP1 < 1e-3) && (Lr1)) || ((CP1 > 0.999) && (!Lr1))) {
                                             if (PrintLabels && (TLS[l][0] != '\0')) x->LaTeXpageno++;
                                             state = 1;
                                             continue;
                                         } else // ... otherwise, displace label at zero to one side
                                         {
-                                            double theta_pinpoint = theta + 1.5 * M_PI / 2 + theta_axis +
+                                            const double theta_pinpoint = theta + 1.5 * M_PI / 2 + theta_axis +
                                                     M_PI * (!Lr); // Angle around textboxes where it is anchored
                                             eps_plot_LabelAlignment(theta_pinpoint, &HALIGN_THIS, &VALIGN_THIS);
                                             tic_lab_xoff = -TLEN; // Move label to the left
@@ -233,7 +233,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
 
                     // Paint the tick label
                     if (PrintLabels && (TLS[l][0] != '\0')) {
-                        int pageno = x->LaTeXpageno++;
+                        const int pageno = x->LaTeXpageno++;
                         double xlab, ylab;
 
                         xlab = tic_x1 / M_TO_PS + (Lr ? -1.0 : 1.0) * sin(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP +
@@ -269,7 +269,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
 
         // Write axis label
         if (PrintLabels && (a->FinalAxisLabel != NULL) && (a->FinalAxisLabel[0] != '\0')) {
-            int pageno = x->LaTeXpageno++;
+            const int pageno = x->LaTeXpageno++;
             double xlab, ylab;
             double width, height;
 
@@ -314,8 +314,8 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
     }
 }
 
-void eps_plot_axespaint(EPSComm *x, double origin_x, double origin_y, double width, double height, double zdepth,
-                        int pass) {
+void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y, const double width,
+                        const double height, const double zdepth, const int pass) {
     int i, j, k;
     double xc, yc, zc, theta[3] = {M_PI / 2, 0, 0}; // Coordinates of centre of graph
     pplset_axis *axes;
@@ -391,8 +391,8 @@ void eps_plot_axespaint(EPSComm *x, double origin_x, double origin_y, double wid
         int xap, yap, zap, Naxes[4], FirstAutoMirror[4];
         unsigned char side_a[4] = {0, 1, 0, 1}, side_b[4] = {0, 0, 1, 1};
         double xpos1[4], ypos1[4], zpos1[4], xpos2[4], ypos2[4], zpos2[4];
-        int NDIRS = x->current->ThreeDim ? 4 : 2;
-        double theta_a = theta[(j == 0) ? 1 : 0];
+        const int NDIRS = x->current->ThreeDim ? 4 : 2;
+        const double theta_a = theta[(j == 0) ? 1 : 0];
         double theta_b = theta[(j == 2) ? 1 : 2];
 
         // Set count of axes to zero
@@ -531,8 +531,9 @@ void eps_plot_axespaint(EPSComm *x, double origin_x, double origin_y, double wid
                                     }
 
                                     if ((pass == 0) && (x->current->ThreeDim)) {
-                                        double b = atan2((xpos2 + xpos1) / 2 - xc, (ypos2 + ypos1) / 2 - yc) - theta[j];
-                                        unsigned char Lr = sin(b) < 0;
+                                        const double b =
+                                                atan2((xpos2 + xpos1) / 2 - xc, (ypos2 + ypos1) / 2 - yc) - theta[j];
+                                        const unsigned char Lr = sin(b) < 0;
                                         eps_plot_axispaint(
                                                 x, &ww, axes + i, j, GSL_NAN, Lr, xpos1, ypos1, &zpos1, xpos2, ypos2,
                                                 &zpos2, theta_a + M_PI * ((j == 0) ? (pos[1] <= 0.5) : (pos[0] <= 0.5)),
@@ -556,11 +557,12 @@ void eps_plot_axespaint(EPSComm *x, double origin_x, double origin_y, double wid
                             if ((k == axes[i].topbottom) || (axes[i].MirrorType == SW_AXISMIRROR_MIRROR) ||
                                 (axes[i].MirrorType == SW_AXISMIRROR_FULLMIRROR))
                                 if ((!x->current->ThreeDim) || (((zpos1[k] + zpos2[k]) > 0.0) == (pass == 0))) {
-                                    double b = atan2((xpos2[k] + xpos1[k]) / 2 - xc, (ypos2[k] + ypos1[k]) / 2 - yc) -
+                                    const double b =
+                                            atan2((xpos2[k] + xpos1[k]) / 2 - xc, (ypos2[k] + ypos1[k]) / 2 - yc) -
                                             theta[j];
-                                    unsigned char Lr = sin(b) < 0;
-                                    unsigned char label = ((k == axes[i].topbottom) ||
-                                                           (axes[i].MirrorType == SW_AXISMIRROR_FULLMIRROR));
+                                    const unsigned char Lr = sin(b) < 0;
+                                    const unsigned char label = ((k == axes[i].topbottom) ||
+                                                                 (axes[i].MirrorType == SW_AXISMIRROR_FULLMIRROR));
                                     double IncGap, ang;
                                     eps_plot_axispaint(x, &ww, axes + i, j, GSL_NAN, Lr, xpos1[k], ypos1[k], NULL,
                                                        xpos2[k], ypos2[k], NULL, theta_a + (side_a[k] ? 0 : M_PI),
@@ -580,8 +582,8 @@ void eps_plot_axespaint(EPSComm *x, double origin_x, double origin_y, double wid
         for (k = 0; k < NDIRS; k++)
             if ((Naxes[k] == 0) && (FirstAutoMirror[k] >= 0))
                 if ((!x->current->ThreeDim) || (((zpos1[k] + zpos2[k]) > 0.0) == (pass == 0))) {
-                    double b = atan2((xpos2[k] + xpos1[k]) / 2 - xc, (ypos2[k] + ypos1[k]) / 2 - yc) - theta[j];
-                    unsigned char Lr = sin(b) < 0;
+                    const double b = atan2((xpos2[k] + xpos1[k]) / 2 - xc, (ypos2[k] + ypos1[k]) / 2 - yc) - theta[j];
+                    const unsigned char Lr = sin(b) < 0;
                     double IncGap, ang;
                     eps_plot_axispaint(x, &ww, axes + FirstAutoMirror[k], j, GSL_NAN, Lr, xpos1[k], ypos1[k], NULL,
                                        xpos2[k], ypos2[k], NULL, theta_a + (side_a[k] ? 0 : M_PI),

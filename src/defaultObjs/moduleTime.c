@@ -44,25 +44,25 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
-void pplfunc_timefromUnix(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timefromUnix(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromUnix(t)";
     pplObjDate(&OUTPUT, 0, in[0].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_timefromJD(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timefromJD(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromJD(t)";
     pplObjDate(&OUTPUT, 0, 86400.0 * (in[0].real - 2440587.5));
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_timefromMJD(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timefromMJD(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromMJD(t)";
     pplObjDate(&OUTPUT, 0, 86400.0 * (in[0].real - 40587.0));
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromCalendar(year,month,day,hour,min,sec)";
     double t, offset;
     CHECK_NEEDSREAL(in[0], "year");
@@ -94,7 +94,7 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, int nArgs, int *status
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_timeInterval(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timeInterval(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "interval(t2,t1)";
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
@@ -114,7 +114,7 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, int nArgs, int *status, in
     CLEANUP_APPLYUNIT(UNIT_TIME);
 }
 
-void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "intervalStr(t2,t1,<s>)";
     char *format = NULL, *out = NULL;
     if (in[0].objType != PPLOBJ_DATE) {
@@ -183,13 +183,13 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, int nArgs, int *status,
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
-void pplfunc_timenow(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timenow(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "now()";
     pplObjDate(&OUTPUT, 0, (double) time(NULL));
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_timestring(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "string(t,<s>,<timezone>)";
     char *format = NULL, *out = NULL, timezone[FNAME_LENGTH];
     double offset;
@@ -237,7 +237,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, int nArgs, int *status, int 
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
-void pplfunc_sleep(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "sleep(t)";
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
@@ -250,9 +250,9 @@ void pplfunc_sleep(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     pplObjNum(&OUTPUT, 0, 0, 0);
 }
 
-void pplfunc_sleepUntil(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_sleepUntil(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
-    double p = in[0].real - time(NULL);
+    const double p = in[0].real - time(NULL);
     char *FunctionDescription = "sleepUntil(d)";
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
     if (in[0].objType != PPLOBJ_DATE) {

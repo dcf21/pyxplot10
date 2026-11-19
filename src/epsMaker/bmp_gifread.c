@@ -371,7 +371,8 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
 
 #define MAXCS 12
 
-unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned char *out, unsigned long len, int cs) {
+unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned char *out, const unsigned long len,
+                             int cs) {
     unsigned char store[256], *start, *end;
     unsigned int off, tpos, eoi, clr;
     struct str {
@@ -452,7 +453,7 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
     return 0;
 }
 
-unsigned int ppl_bmp_de_lzw_bits(pplerr_context *ec, unsigned char *c, int st, int len) {
+unsigned int ppl_bmp_de_lzw_bits(const pplerr_context *ec, unsigned char *c, const int st, const int len) {
     unsigned tmp, mask;
 
     tmp = ((unsigned) (*(c + 2)) << 16) + ((unsigned) (*(c + 1)) << 8) + *(c);

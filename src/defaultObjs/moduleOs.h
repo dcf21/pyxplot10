@@ -27,29 +27,37 @@
 
 void pplfunc_osChdir(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_osGetCwd(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetEgid(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetEuid(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetGid(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetPid(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetPgrp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetPpid(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetUid(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osGetEgid(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                       const char *errText);
+void pplfunc_osGetEuid(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                       const char *errText);
+void pplfunc_osGetGid(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                      const char *errText);
+void pplfunc_osGetPid(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                      const char *errText);
+void pplfunc_osGetPgrp(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                       const char *errText);
+void pplfunc_osGetPpid(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                       const char *errText);
+void pplfunc_osGetUid(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                      const char *errText);
 void pplfunc_osGetHome(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetHost(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGetLogin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osGetHost(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osGetLogin(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_osGetRealName(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osGlob(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osPopen(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osStat(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osSystem(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osTmpfile(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osUname(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osPathExists(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osPathATime(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osPathCTime(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osPathMTime(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osGlob(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osPopen(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osStat(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osSystem(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osTmpfile(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
+                       const char *errText);
+void pplfunc_osUname(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osPathExists(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osPathFilesize(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osPathATime(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osPathCTime(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osPathMTime(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_osPathExpandUser(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_osPathJoin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_osPathJoin(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif

@@ -79,7 +79,7 @@ void fastmalloc_init() {
     _fastmalloc_initialised = 1;
 }
 
-void fastmalloc_freeall(int context) {
+void fastmalloc_freeall(const int context) {
     int i;
     void *ptr, *ptr2;
     for (i = context; i < PPL_MAX_CONTEXTS; i++) {
@@ -96,7 +96,7 @@ void fastmalloc_freeall(int context) {
     return;
 }
 
-void fastmalloc_free(int context) {
+void fastmalloc_free(const int context) {
     void *ptr, *ptr2;
     ptr = _fastmalloc_firstblocklist[context];
     while (ptr != NULL) {
@@ -237,7 +237,7 @@ int ppl_memAlloc_DescendIntoNewContext() {
 // ppl_memAlloc_AscendOutOfContext() -- Call when the current memory allocation context is finished with and can be freed.
 //   [call with the number of the allocation context which is to be freed. Returns the number of the current allocation context after the freeing operation.]
 
-int ppl_memAlloc_AscendOutOfContext(int context) {
+int ppl_memAlloc_AscendOutOfContext(const int context) {
     if (ppl_memAlloc_mem_context < 0) {
         (*mem_error)(errcontext, 100, -1, -1,
                      "Call to ppl_memAlloc_AscendOutOfContext() before call to ppl_memAlloc_MemoryInit().");

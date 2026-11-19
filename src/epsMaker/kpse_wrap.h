@@ -24,9 +24,9 @@
 
 #include "userspace/context.h"
 
-void ppl_kpse_wrap_init(ppl_context *c);
-char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s);
-char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s);
-char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s);
+void ppl_kpse_wrap_init(const ppl_context *c);
+char *ppl_kpse_wrap_find_pfa(const pplerr_context *ec, char *s);
+char *ppl_kpse_wrap_find_pfb(const pplerr_context *ec, char *s);
+char *ppl_kpse_wrap_find_tfm(const pplerr_context *ec, char *s);
 
 #endif

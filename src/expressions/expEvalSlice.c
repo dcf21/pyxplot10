@@ -46,7 +46,7 @@
         } \
     }
 
-void ppl_sliceItem(ppl_context *context, int getPtr, int *status, int *errType, char *errText) {
+void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *errType, char *errText) {
     const int nArgs = 1;
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];
     pplObj *args = context->stack + context->stackPtr - nArgs;
@@ -248,8 +248,8 @@ fail:
     goto cleanup;
 }
 
-void ppl_sliceRange(ppl_context *context, int minset, int min, int maxset, int max, int *status, int *errType,
-                    char *errText) {
+void ppl_sliceRange(ppl_context *context, const int minset, int min, const int maxset, int max, int *status,
+                    int *errType, char *errText) {
     const int nArgs = minset + maxset;
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];
     pplObj called;

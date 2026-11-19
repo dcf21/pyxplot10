@@ -59,7 +59,7 @@ typedef struct pplerr_context_s {
     pplset_session session_default;
 } pplerr_context;
 
-void ppl_error_setstreaminfo(pplerr_context *context, int linenumber, char *filename);
+void ppl_error_setstreaminfo(pplerr_context *context, int linenumber, const char *filename);
 void ppl_error(pplerr_context *context, int ErrType, int HighlightPos1, int HighlightPos2, char *msg);
 void ppl_fatal(pplerr_context *context, char *file, int line, char *msg);
 void ppl_warning(pplerr_context *context, int ErrType, char *msg);

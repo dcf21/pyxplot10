@@ -65,11 +65,11 @@ void eps_arrow_RenderEPS(EPSComm *x) {
 }
 
 // Primitive routine for drawing arrow, suitable for use elsewhere in the EPS library
-void eps_primitive_arrow(EPSComm *x, int ArrowType, double x1, double y1, const double *z1, double x2, double y2,
+void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, const double *z1, double x2, double y2,
                          const double *z2, withWords *with_data) {
     int lt;
     double lw, lw_scale, x3, y3, x4, y4, x5, y5, xstart, ystart, xend, yend, direction;
-    unsigned char ThreeDim = (z1 != NULL) && (z2 != NULL);
+    const unsigned char ThreeDim = (z1 != NULL) && (z2 != NULL);
     char *last_colstr = NULL;
 
     // Set color of arrow

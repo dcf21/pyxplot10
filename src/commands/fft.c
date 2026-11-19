@@ -81,9 +81,9 @@
     }
 
 // Window functions for FFTs
-static void fftwindow_rectangular(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_rectangular(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
 }
-static void fftwindow_hamming(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_hamming(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
     for (i = 0; i < Ndim; i++) { y *= 0.54 - 0.46 * cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1))); }
@@ -94,7 +94,7 @@ static void fftwindow_hamming(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_hann(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_hann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
     for (i = 0; i < Ndim; i++) { y *= 0.5 * (1.0 - cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)))); }
@@ -105,7 +105,7 @@ static void fftwindow_hann(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_cosine(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_cosine(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
     for (i = 0; i < Ndim; i++) { y *= sin(M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1))); }
@@ -116,7 +116,7 @@ static void fftwindow_cosine(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_lanczos(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_lanczos(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0, z;
     int i;
     for (i = 0; i < Ndim; i++) {
@@ -130,7 +130,7 @@ static void fftwindow_lanczos(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_bartlett(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_bartlett(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
     for (i = 0; i < Ndim; i++) {
@@ -143,7 +143,7 @@ static void fftwindow_bartlett(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_triangular(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_triangular(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
     for (i = 0; i < Ndim; i++) { y *= (2.0 / (Nstep[i])) * ((Nstep[i]) / 2.0 - fabs(Npos[i] - (Nstep[i] - 1) / 2.0)); }
@@ -154,7 +154,7 @@ static void fftwindow_triangular(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_gauss(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_gauss(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     const double sigma = 0.5;
     int i;
@@ -168,7 +168,7 @@ static void fftwindow_gauss(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_bartletthann(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_bartletthann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     int i;
     for (i = 0; i < Ndim; i++) {
@@ -182,7 +182,7 @@ static void fftwindow_bartletthann(pplObj *x, int Ndim, int *Npos, int *Nstep) {
         x->flagComplex = 0;
     }
 }
-static void fftwindow_blackman(pplObj *x, int Ndim, int *Npos, int *Nstep) {
+static void fftwindow_blackman(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     const double alpha = 0.16;
     int i;
@@ -199,7 +199,7 @@ static void fftwindow_blackman(pplObj *x, int Ndim, int *Npos, int *Nstep) {
 }
 
 // Main entry point for the FFT command
-void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     dataTable *data;
     dataBlock *blk;
@@ -335,7 +335,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, int int
 
     // Work out what type of window we're going to use
     {
-        int gotWindow = (stk[PARSE_ifft_window].objType == PPLOBJ_STR);
+        const int gotWindow = (stk[PARSE_ifft_window].objType == PPLOBJ_STR);
         char *cptr = (char *) stk[PARSE_ifft_window].auxil;
         WindowType = fftwindow_rectangular;
         if (gotWindow) {

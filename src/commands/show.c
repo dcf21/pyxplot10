@@ -132,8 +132,9 @@
     ppl_directive_show3(c, out + i, itemSet, 1, interactive, temp1, buf, \
                         (T.tickDir == TD.tickDir) && (pplaxis_cmpTics(c, &T, &TD, &U, &UD, amLog, amLogD)), buf2);
 
-static void ppl_directive_show3(ppl_context *c, char *out, char *itemSet, unsigned char itemSetShow, int interactive,
-                                char *setting_name, char *setting_value, int modified, char *description) {
+static void ppl_directive_show3(ppl_context *c, char *out, char *itemSet, unsigned char itemSetShow,
+                                const int interactive, char *setting_name, char *setting_value, const int modified,
+                                char *description) {
     int i = 0, j, k;
 
     SHOW_HIGHLIGHT(modified);
@@ -170,7 +171,7 @@ static void ppl_directive_show3(ppl_context *c, char *out, char *itemSet, unsign
     return;
 }
 
-static int ppl_directive_show2(ppl_context *c, char *word, char *itemSet, int interactive, pplset_graph *sg,
+static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, const int interactive, pplset_graph *sg,
                                pplarrow_object **al, ppllabel_object **ll, pplset_axis *xa, pplset_axis *ya,
                                pplset_axis *za) {
     char *out, *buf, *buf2, *bufp, *bufp2, temp1[32], temp2[32];
@@ -442,7 +443,7 @@ static int ppl_directive_show2(ppl_context *c, char *word, char *itemSet, int in
         pplExpr *maskdefault = (pplExpr *) c->set->graph_default.MaskExpr;
         pplExpr *maskcurrent = (pplExpr *) sg->MaskExpr;
         int k;
-        int unchanged = ((exp_default == NULL) == (exp_current == NULL)) &&
+        const int unchanged = ((exp_default == NULL) == (exp_current == NULL)) &&
                 ((exp_default == NULL) || (strcmp(exp_default->ascii, exp_current->ascii) == 0)) &&
                 ((maskdefault == NULL) == (maskcurrent == NULL)) &&
                 ((maskdefault == NULL) || (strcmp(maskdefault->ascii, maskcurrent->ascii) == 0));
@@ -1760,7 +1761,7 @@ static int ppl_directive_show2(ppl_context *c, char *word, char *itemSet, int in
 
 #define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
-void ppl_directive_show(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive) {
     pplObj *stk = in->stk;
     int pos;
     char itemSet[32];

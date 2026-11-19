@@ -205,7 +205,8 @@ void eps_eps_RenderEPS(EPSComm *x) {
     return;
 }
 
-void eps_eps_ExtractBBox(EPSComm *x, FILE *in, double *bl, double *bb, double *br, double *bt, unsigned char *GotBox) {
+void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, double *br, double *bt,
+                         unsigned char *GotBox) {
     const char BBoxStr[] = "%%BoundingBox:";
     const char HRBBoxStr[] = "%%HiResBoundingBox:";
     int bbox_i = 0, hrbbox_i = 0, j, bbox_len, hrbbox_len, i;

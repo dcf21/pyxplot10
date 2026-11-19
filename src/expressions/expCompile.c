@@ -131,9 +131,9 @@
         scanpos += (L); \
     }
 
-void ppl_expTokenise(ppl_context *context, char *in, int *end, int dollarAllowed, int equalsAllowed,
-                     int allowCommaOperator, int collectCommas, int isDict, int outOffset, int *outlen, int *errPos,
-                     int *errType, char *errText) {
+void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarAllowed, const int equalsAllowed,
+                     const int allowCommaOperator, const int collectCommas, const int isDict, const int outOffset,
+                     int *outlen, int *errPos, int *errType, char *errText) {
     const char *allowed[] = {"BEHILMNOG", "CJKQRU",    "BDHILMNOG", "JKQU",     "FJKQRU", "JKU",   "SFJKPQRU", "EG",
                              "BEHLMNOG",  "BEHILMNOG", "BEHILMNOG", "JKU",      "JKQRU",  "JKQRU", "ELV",      "JKPQRU",
                              "SFJKPQRU",  "T",         "BEHILMNOG", "SFJKPQRU", "",       "JKU"};
@@ -727,7 +727,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, int dollarAllowed
 
 // ppl_tokenPrint() -- a debugging routine to display tokenised data
 
-void ppl_tokenPrint(ppl_context *context, char *in, int len) {
+void ppl_tokenPrint(const ppl_context *context, char *in, const int len) {
     pplTokenCode *tdat = context->tokenBuff;
     int i;
     for (i = 0; i < len; i++) printf("  %c", in[i]);
@@ -841,9 +841,9 @@ void ppl_tokenPrint(ppl_context *context, char *in, int len) {
                 outpos - lastoutpos; /* Write the length of the bytecode instruction we've just written */ \
     }
 
-void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFname, char *in, int *end,
-                    int dollarAllowed, int equalsAllowed, int allowCommaOperator, pplExpr **outExpr, int *errPos,
-                    int *errType, char *errText) {
+void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, char *srcFname, char *in, int *end,
+                    const int dollarAllowed, const int equalsAllowed, const int allowCommaOperator, pplExpr **outExpr,
+                    int *errPos, int *errType, char *errText) {
     pplExprPStack *stack;
     pplTokenCode *tdata;
     int stackpos = 0;
@@ -921,7 +921,7 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
 
     // The stacking-yard algorithm
     for (tpos = 0; tpos < tlen;) {
-        char o = tdata[tpos].state; // Get tokenised markup state code
+        const char o = tdata[tpos].state; // Get tokenised markup state code
 
         // Expand space for bytecode as necessary
         if (outlen - outpos < 256) {
@@ -1087,9 +1087,9 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
         } else if ((o == 'C') || (o == 'H') || (o == 'I') || (o == 'J') || (o == 'K') ||
                    (o == 'S')) // Process an operator
         {
-            unsigned char opcode = tdata[tpos].opcode;
-            int precedence = tdata[tpos].precedence;
-            int rightAssoc =
+            const unsigned char opcode = tdata[tpos].opcode;
+            const int precedence = tdata[tpos].precedence;
+            const int rightAssoc =
                     ((opcode & 0x80) != 0) || (o == 'S'); // All assignment operators (S) are right-left associative
             POP_STACK;
 
@@ -1152,7 +1152,7 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
             stackpos++;
         } else if ((o == 'D') || (o == 'E') || (o == 'P')) // Process ( )
         {
-            char bracketType = in[tpos];
+            const char bracketType = in[tpos];
             if (bracketType == '(') // open (
             {
                 if (stackpos > stacklen - 4) {
@@ -1169,8 +1169,8 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
                 stackpos++;
             } else // close )
             {
-                int rightAssoc = 0;
-                int precedence = 255;
+                const int rightAssoc = 0;
+                const int precedence = 255;
                 int startpos;
                 POP_STACK; // Pop the stack of all operators (fake operator above with very low precedence)
                 if ((stackpos < 1) || (stack[stackpos - 1].opType != '(')) {
@@ -1208,8 +1208,8 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
             }
         } else if (o == 'F') // a postfix ++ or -- operator
         {
-            int rightAssoc = (tdata[tpos].opcode & 0x80) != 0;
-            int precedence = tdata[tpos].precedence;
+            const int rightAssoc = (tdata[tpos].opcode & 0x80) != 0;
+            const int precedence = tdata[tpos].precedence;
             POP_STACK;
             BYTECODE_OP(13);
             out[outpos].auxil.i = tdata[tpos].opcode;
@@ -1236,7 +1236,7 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
             BYTECODE_ENDOP;
         } else if (o == 'M') // list literal
         {
-            char bracketType = in[tpos];
+            const char bracketType = in[tpos];
             if (bracketType == '[') // open [
             {
                 if (stackpos > stacklen - 4) {
@@ -1253,8 +1253,8 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
                 stackpos++;
             } else // close ]
             {
-                unsigned char rightAssoc = 0;
-                unsigned char precedence = 255;
+                const unsigned char rightAssoc = 0;
+                const unsigned char precedence = 255;
                 int startpos;
                 POP_STACK; // Pop the stack of all operators (fake operator above with very low precedence)
                 if ((stackpos < 1) || (stack[stackpos - 1].opType != '[')) {
@@ -1274,7 +1274,7 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
             }
         } else if (o == 'N') // dictionary literal
         {
-            char bracketType = in[tpos];
+            const char bracketType = in[tpos];
             if (bracketType == '{') // open {
             {
                 if (stackpos > stacklen - 64) {
@@ -1291,8 +1291,8 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
                 stackpos++;
             } else // close }
             {
-                int rightAssoc = 0;
-                int precedence = 255;
+                const int rightAssoc = 0;
+                const int precedence = 255;
                 int startpos;
                 POP_STACK; // Pop the stack of all operators (fake operator above with very low precedence)
                 if ((stackpos < 1) || (stack[stackpos - 1].opType != '{')) {
@@ -1329,7 +1329,7 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
             // Nop -- the work is done in the following T-state parameter.
         } else if (o == 'Q') // array dereference or slice
         {
-            char bracketType = in[tpos];
+            const char bracketType = in[tpos];
             if (bracketType == '[') // open dereference brackets
             {
                 if (stackpos > stacklen - 4) {
@@ -1346,8 +1346,8 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
                 stackpos++;
             } else // close ]
             {
-                int rightAssoc = 0;
-                int precedence = 255;
+                const int rightAssoc = 0;
+                const int precedence = 255;
                 int startpos;
                 POP_STACK; // Pop the stack of all operators (fake operator above with very low precedence)
                 if ((stackpos < 1) || (stack[stackpos - 1].opType != '<')) {
@@ -1378,8 +1378,8 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
 
     // Clean up stack
     {
-        int rightAssoc = 0;
-        int precedence = 255;
+        const int rightAssoc = 0;
+        const int precedence = 255;
         POP_STACK;
     }
 
@@ -1403,11 +1403,11 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
         do {
             int i;
             for (optimised = i = 0;; i += *(int *) (out + i)) {
-                int o = out[i].opcode; // Opcode number
+                const int o = out[i].opcode; // Opcode number
                 if ((o == 17) || (o == 18)) {
-                    int o2 = out[i].flag;
-                    int to = out[i].auxil.i;
-                    int to_o = out[to].opcode; // Opcode branching to
+                    const int o2 = out[i].flag;
+                    const int to = out[i].auxil.i;
+                    const int to_o = out[to].opcode; // Opcode branching to
                     int to_o2 = out[to].flag;
                     if ((to_o != 17) && (to_o != 18))
                         to_o2 = -1; // this shouldn't be necessary, but optimisation of the below code makes valgrind unhappy
@@ -1438,14 +1438,14 @@ void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFna
 
 // Debugging routine to produce a textual representation of reverse Polish bytecode
 
-void ppl_reversePolishPrint(ppl_context *context, pplExpr *expIn) {
+void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
     int j = 0;
     char op[32], optype[32], arg[1024];
     pplExprBytecode *in = expIn->bytecode;
 
     while (1) {
         int pos = j; // Position of start of instruction
-        int len = in[j].len; // length of bytecode instruction with data
+        const int len = in[j].len; // length of bytecode instruction with data
         int charpos = in[j].charpos; // character position of token (for error reporting)
         int o = in[j].opcode; // Opcode number
         switch (o) {
@@ -1485,7 +1485,7 @@ void ppl_reversePolishPrint(ppl_context *context, pplExpr *expIn) {
                 sprintf(arg, "\"%s\"", (char *) &(in[j + 1]));
                 break;
             case 7: {
-                int f = in[j].auxil.i;
+                const int f = in[j].auxil.i;
                 strcpy(op, "slice");
                 strcpy(optype, "value");
                 if (f & 1) strcpy(arg, "[--]");
@@ -1516,7 +1516,7 @@ void ppl_reversePolishPrint(ppl_context *context, pplExpr *expIn) {
                 sprintf(arg, "%d args", in[j].auxil.i);
                 break;
             case 11: {
-                int t = in[j].auxil.i;
+                const int t = in[j].auxil.i;
                 strcpy(op, "op");
                 if (((t >> 5) & 3) == 1) strcpy(optype, "unary");
                 else if (((t >> 5) & 3) == 2) strcpy(optype, "binary");
@@ -1553,7 +1553,7 @@ void ppl_reversePolishPrint(ppl_context *context, pplExpr *expIn) {
                 break;
             }
             case 12: {
-                int t = in[j].auxil.i;
+                const int t = in[j].auxil.i;
                 strcpy(op, "op");
                 strcpy(optype, "assign");
                 if (t == 0x40) strcpy(arg, "=");
@@ -1572,7 +1572,7 @@ void ppl_reversePolishPrint(ppl_context *context, pplExpr *expIn) {
                 break;
             }
             case 13: {
-                int t = in[j].auxil.i;
+                const int t = in[j].auxil.i;
                 strcpy(op, "op");
                 strcpy(optype, "unary");
                 if (t == 0x21) {
@@ -1643,7 +1643,7 @@ void pplExpr_free(pplExpr *inExpr) {
     return;
 }
 
-pplExpr *pplExpr_cpy(pplExpr *i) {
+pplExpr *pplExpr_cpy(const pplExpr *i) {
     pplExpr *o;
     if (i == NULL) return NULL;
     o = (pplExpr *) malloc(sizeof(pplExpr));
@@ -1665,7 +1665,7 @@ pplExpr *pplExpr_cpy(pplExpr *i) {
     return o;
 }
 
-pplExpr *pplExpr_tmpcpy(pplExpr *i) {
+pplExpr *pplExpr_tmpcpy(const pplExpr *i) {
     pplExpr *o;
     if (i == NULL) return NULL;
     o = (pplExpr *) ppl_memAlloc(sizeof(pplExpr));

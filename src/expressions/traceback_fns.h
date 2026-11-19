@@ -26,8 +26,8 @@
 #include "userspace/context.h"
 
 void ppl_tbClear(ppl_context *c);
-void ppl_tbAdd(ppl_context *c, int srcLineN, long srcId, char *srcFname, int cmdOrExpr, int errType, int errPos,
-               char *linetext, char *context);
+void ppl_tbAdd(ppl_context *c, int srcLineN, long srcId, const char *srcFname, int cmdOrExpr, int errType, int errPos,
+               const char *linetext, const char *context);
 void ppl_tbWrite(ppl_context *c);
 
 #endif

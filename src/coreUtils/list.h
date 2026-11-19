@@ -43,18 +43,18 @@ typedef listItem listIterator;
 
 list *ppl_listInit(int useMalloc);
 int ppl_listFree(list *in);
-int ppl_listLen(list *in);
+int ppl_listLen(const list *in);
 list *ppl_listCpy(list *in, int useMalloc, int itemSize);
 int ppl_listAppend(list *in, void *item);
-int ppl_listAppendCpy(list *in, void *item, int size);
-int ppl_listInsertCpy(list *in, int N, void *item, int size);
-int ppl_listRemove(list *in, void *item);
+int ppl_listAppendCpy(list *in, const void *item, int size);
+int ppl_listInsertCpy(list *in, int N, const void *item, int size);
+int ppl_listRemove(list *in, const void *item);
 int ppl_listRemoveAll(list *in, void *item);
-void *ppl_listGetItem(list *in, int N);
+void *ppl_listGetItem(const list *in, int N);
 void *ppl_listPop(list *in);
 void *ppl_listPopItem(list *in, int N);
-void *ppl_listLast(list *in);
-listIterator *ppl_listIterateInit(list *in);
+void *ppl_listLast(const list *in);
+listIterator *ppl_listIterateInit(const list *in);
 void *ppl_listIterate(listIterator **in);
 
 #endif

@@ -38,8 +38,8 @@
 
 #include "datafile.h"
 
-void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, const double *in, const long InSize,
-                       const int ColNum, const int NCols, const double x, const double y) {
+void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph *sg, const double *in,
+                       const long InSize, const int ColNum, const int NCols, const double x, const double y) {
     long i;
     const double *inX = in;
     const double *inY = in + InSize;
@@ -54,7 +54,7 @@ void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, c
             unsigned char first = 1;
             *output = 0.0;
             for (i = 0; i < InSize; i++) {
-                double dist = hypot((inX[i] - x) / Xscl, (inY[i] - y) / Yscl);
+                const double dist = hypot((inX[i] - x) / Xscl, (inY[i] - y) / Yscl);
                 if (first || (dist < DistBest)) {
                     DistBest = dist;
                     *output = inZ[i];
@@ -67,7 +67,7 @@ void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, c
             double WeightSum = 0.0;
             *output = 0.0;
             for (i = 0; i < InSize; i++) {
-                double dist = gsl_pow_2((inX[i] - x) / Xscl) + gsl_pow_2((inY[i] - y) / Yscl);
+                const double dist = gsl_pow_2((inX[i] - x) / Xscl) + gsl_pow_2((inY[i] - y) / Yscl);
                 double weight;
                 if (dist < 1e-200) {
                     *output = inZ[i];
@@ -83,11 +83,11 @@ void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, c
         }
         case SW_SAMPLEMETHOD_ML: {
             double WeightSum = 0.0;
-            double h = sqrt(1.0 / InSize);
+            const double h = sqrt(1.0 / InSize);
             *output = 0.0;
             for (i = 0; i < InSize; i++) {
-                double v = hypot((inX[i] - x) / Xscl, (inY[i] - y) / Yscl) / h;
-                double w = (v >= 2)
+                const double v = hypot((inX[i] - x) / Xscl, (inY[i] - y) / Yscl) / h;
+                const double w = (v >= 2)
                         ? 0.0
                         : ((v >= 1) ? (0.25 * gsl_pow_3(2.0 - v)) : (1.0 - 1.5 * gsl_pow_2(v) + 0.75 * gsl_pow_3(v)));
                 if (!gsl_finite(w)) continue;
@@ -106,8 +106,9 @@ void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, c
     return;
 }
 
-void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, dataTable *in, pplset_axis *axis_x,
-                       pplset_axis *axis_y, unsigned char SampleToEdge, int *XSizeOut, int *YSizeOut) {
+void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, const dataTable *in,
+                       pplset_axis *axis_x, pplset_axis *axis_y, const unsigned char SampleToEdge, int *XSizeOut,
+                       int *YSizeOut) {
     int i, imax, j, jmax, ims, jms, ct, k, tempContext;
     double *indata, *MinList, *MaxList, *d[USING_ITEMS_MAX + 4];
     long p, p2, pc, InSize;
@@ -163,7 +164,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
             if ((ims == 0) || (MaxList[jms] < indata[jms * InSize + ims])) MaxList[jms] = indata[jms * InSize + ims];
         }
         if (MaxList[jms] <= MinList[jms]) {
-            double t = MinList[jms];
+            const double t = MinList[jms];
             MinList[jms] = t * 0.999;
             MaxList[jms] = t * 1.001;
         }
@@ -171,11 +172,11 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
 
     // Resample data into new DataTable
     for (j = 0, p = 0; j < jmax; j++) {
-        double y = SampleToEdge ? pplaxis_InvGetPosition((((double) j) / (jmax - 1)), axis_y)
-                                : pplaxis_InvGetPosition((((double) j + 0.5) / (jmax)), axis_y);
+        const double y = SampleToEdge ? pplaxis_InvGetPosition((((double) j) / (jmax - 1)), axis_y)
+                                      : pplaxis_InvGetPosition((((double) j + 0.5) / (jmax)), axis_y);
         for (i = 0; i < imax; i++) {
-            double x = SampleToEdge ? pplaxis_InvGetPosition((((double) i) / (imax - 1)), axis_x)
-                                    : pplaxis_InvGetPosition((((double) i + 0.5) / (imax)), axis_x);
+            const double x = SampleToEdge ? pplaxis_InvGetPosition((((double) i) / (imax - 1)), axis_x)
+                                          : pplaxis_InvGetPosition((((double) i + 0.5) / (imax)), axis_x);
             (*output)->current->data_real[p++] = x;
             (*output)->current->data_real[p++] = y;
 

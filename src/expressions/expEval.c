@@ -56,7 +56,7 @@
 #define TBADD(et) \
     ppl_tbAdd(context, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, et, charpos, inExpr->ascii, "")
 
-static void expEval_stringSubs(ppl_context *context, pplExpr *inExpr, int charpos, int Nsubs) {
+static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, const int charpos, int Nsubs) {
     const char allowedFormats[] = "cdieEfgGosSxX%"; // These tokens are allowed after a % format specifier
     char formatToken[512];
     pplObj *obj = &context->stack[context->stackPtr];
@@ -213,7 +213,8 @@ cast_fail:
         } \
     }
 
-pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, int dollarAllowed, int iterDepth) {
+pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, const int dollarAllowed,
+                    const int iterDepth) {
     int j = 0;
     int initialStackPtr = 0;
     int charpos = 0;
@@ -232,9 +233,9 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, in
 
     while (1) {
         pplObj *stk;
-        int pos = j; // Position of start of instruction
+        const int pos = j; // Position of start of instruction
         int len = in[j].len; // length of bytecode instruction with data
-        int o = in[j].opcode; // Opcode number
+        const int o = in[j].opcode; // Opcode number
         char *charaux = (char *) &(in[j + 1]);
         charpos = in[j].charpos; // character position of token (for error reporting)
 
@@ -400,7 +401,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, in
             case 6: // Dereference value (pointer)
             {
                 char *key = charaux;
-                int t = (stk - 1)->objType;
+                const int t = (stk - 1)->objType;
                 dict *d = (dict *) ((stk - 1)->auxil);
                 *lastOpAssign = 0;
                 if ((stk - 1)->immutable) {
@@ -530,7 +531,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, in
             case 9: // Make list
             {
                 int k;
-                int len = in[j].auxil.i;
+                const int len = in[j].auxil.i;
                 list *l = ppl_listInit(1);
                 *lastOpAssign = 0;
                 if (l == NULL) {
@@ -557,7 +558,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, in
             }
             case 10: // Execute function call
             {
-                int nArgs = in[j].auxil.i;
+                const int nArgs = in[j].auxil.i;
                 *lastOpAssign = 0;
                 ppl_fnCall(context, inExpr, charpos, nArgs, dollarAllowed, iterDepth);
                 if (context->errStat.status) goto cleanup_on_error;
@@ -768,7 +769,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, in
                 pplObj *o = stk - 2;
                 pplObj *in = stk - 1;
                 pplObj *tmp = stk;
-                int t2 = in->objType;
+                const int t2 = in->objType;
                 int status = 0, errType = -1;
                 *lastOpAssign = 1;
                 if (context->stackPtr < 2) {
@@ -961,7 +962,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, in
             }
             case 14: // string substitution
             {
-                int Nsubs = in[j].auxil.i;
+                const int Nsubs = in[j].auxil.i;
                 int i;
                 if (context->stackPtr < Nsubs + 1) {
                     sprintf(context->errStat.errBuff, "Too few items on stack for string substitution operator.");
@@ -1006,7 +1007,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, in
                     if (context->errStat.status) goto cast_fail;
                 } else if (t == PPLOBJ_STR) {
                     char *name = (char *) context->stack[context->stackPtr - 1].auxil;
-                    int malloced = context->stack[context->stackPtr - 1].auxilMalloced;
+                    const int malloced = context->stack[context->stackPtr - 1].auxilMalloced;
                     ppl_dollarOp_fetchColByName(context, inExpr, charpos, name);
                     if (malloced) free(name);
                 } else {

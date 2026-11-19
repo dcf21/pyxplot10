@@ -236,7 +236,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
 // Extract the font name from a PFA file
 // XXX This is an entirely empirical algorithm and may not be general!
 // If the font name is longer than SSTR_LENGTH this will fail (safely)...
-char *psNameFromPFA(pplerr_context *ec, char *PFApath) {
+char *psNameFromPFA(pplerr_context *ec, const char *PFApath) {
     FILE *fp;
     char *s;
     char buf[SSTR_LENGTH], c;

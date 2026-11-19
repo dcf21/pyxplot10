@@ -47,7 +47,7 @@
 // ROUTINES FOR MANIPULATING WITH_WORDS STRUCTURES
 // -----------------------------------------------
 
-void ppl_withWordsZero(ppl_context *context, withWords *a) {
+void ppl_withWordsZero(const ppl_context *context, withWords *a) {
     a->color = a->fillcolor = a->linespoints = a->linetype = a->pointtype = a->style = a->Col1234Space =
             a->FillCol1234Space = 0;
     a->linewidth = a->pointlinewidth = a->pointsize = 1.0;
@@ -60,8 +60,8 @@ void ppl_withWordsZero(ppl_context *context, withWords *a) {
     return;
 }
 
-void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, parserLine *pl, const int *ptab, int stkbase,
-                           withWords *out) {
+void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserLine *pl, const int *ptab,
+                           const int stkbase, withWords *out) {
     pplObj *stk = in->stk + stkbase;
     int tempint, i, pos, got;
     double tempdbl;
@@ -166,7 +166,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, parserLine *p
 }
 
 
-int ppl_withWordsCmp_zero(ppl_context *context, const withWords *a) {
+int ppl_withWordsCmp_zero(const ppl_context *context, const withWords *a) {
     if (a->EXPlinetype != NULL) return 0;
     if (a->EXPlinewidth != NULL) return 0;
     if (a->EXPpointlinewidth != NULL) return 0;
@@ -188,7 +188,7 @@ int ppl_withWordsCmp_zero(ppl_context *context, const withWords *a) {
     return 1;
 }
 
-int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *b) {
+int ppl_withWordsCmp(const ppl_context *context, const withWords *a, const withWords *b) {
     // Check that the range of items which are defined in both structures are the same
     if ((a->EXPcolor == NULL) != (b->EXPcolor == NULL)) return 0;
     if ((a->EXPfillcolor == NULL) != (b->EXPfillcolor == NULL)) return 0;
@@ -488,7 +488,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out) 
     return;
 }
 
-void ppl_withWordsDestroy(ppl_context *context, withWords *a) {
+void ppl_withWordsDestroy(const ppl_context *context, withWords *a) {
     if (a->EXPlinetype != NULL) {
         pplExpr_free(a->EXPlinetype);
         a->EXPlinetype = NULL;
@@ -520,7 +520,7 @@ void ppl_withWordsDestroy(ppl_context *context, withWords *a) {
     return;
 }
 
-void ppl_withWordsCpy(ppl_context *context, withWords *out, const withWords *in) {
+void ppl_withWordsCpy(const ppl_context *context, withWords *out, const withWords *in) {
     *out = *in;
     if (in->EXPlinetype != NULL) {
         out->EXPlinetype = in->EXPlinetype;

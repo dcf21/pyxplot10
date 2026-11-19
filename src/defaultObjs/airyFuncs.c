@@ -99,7 +99,7 @@ gsl_complex airy_series_y2_diff(gsl_complex z) {
     return d;
 }
 
-void airy_lookup_ai(double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
+void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
     int sector;
     if (mod > 6.0) {
         if (mod > 7.4) {
@@ -400,7 +400,7 @@ void airy_lookup_ai(double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_
     return;
 }
 
-void airy_lookup_bi(double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
+void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
     int sector;
     if (mod > 6.0) {
         if (mod > 7.4) {
@@ -686,7 +686,7 @@ void airy_lookup_bi(double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_
     return;
 }
 
-void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_complex z0, double k) {
+void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_complex z0, const double k) {
     // If k=0, compute Ai or Bi; if k=1, compute Ai' or Bi'.
     gsl_complex c, f, g, z2, z3;
     c = GSL_COMPLEX_ONE;

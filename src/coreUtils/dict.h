@@ -54,17 +54,17 @@ dict *ppl_dictInit(int useMalloc);
 int ppl_dictHash(const char *str, const int strLen);
 void ppl_dictFreeTree(dictHash *i);
 int ppl_dictFree(dict *in);
-int ppl_dictLen(dict *in);
+int ppl_dictLen(const dict *in);
 int ppl_dictAppend(dict *in, const char *key, void *item);
-int ppl_dictAppendCpy(dict *in, const char *key, void *item, int size);
+int ppl_dictAppendCpy(dict *in, const char *key, const void *item, int size);
 void *ppl_dictLookup(dict *in, const char *key);
 void *ppl_dictLookupHash(dict *in, const char *key, int hash);
 void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, int SubsMaxLen, dictItem **ptrout);
 int ppl_dictContains(dict *in, const char *key);
 int ppl_dictRemoveKey(dict *in, const char *key);
-int ppl_dictRemove(dict *in, void *item);
+int ppl_dictRemove(dict *in, const void *item);
 int ppl_dictRemoveAll(dict *in, void *item);
-dictIterator *ppl_dictIterateInit(dict *in);
+dictIterator *ppl_dictIterateInit(const dict *in);
 void *ppl_dictIterate(dictIterator **in, char **key);
 
 #endif

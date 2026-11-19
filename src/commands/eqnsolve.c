@@ -51,7 +51,7 @@
 
 // Functions which we use to optimise in a log-log type space to help when
 // solutions are many orders of magnitude different from initial guess
-double ppl_optimise_RealToLog(double in, int iter, double *norm) {
+double ppl_optimise_RealToLog(const double in, const int iter, double *norm) {
     double a = -2;
 
     if ((iter == 1) || (iter >= 4)) {
@@ -64,7 +64,7 @@ double ppl_optimise_RealToLog(double in, int iter, double *norm) {
     else return 2 * a - log(2 * exp(a) - in);
 }
 
-double ppl_optimise_LogToReal(double in, int iter, double *norm) {
+double ppl_optimise_LogToReal(const double in, const int iter, const double *norm) {
     double a = -2;
 
     if ((iter == 1) || (iter >= 4)) return in * (*norm);
@@ -240,7 +240,7 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
     return output;
 }
 
-static void multiMinIterate(MMComm *commlink, parserLine *pl) {
+static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     ppl_context *c = commlink->context;
     size_t iter = 0, iter2 = 0;
     int i, Nparams, status = 0;
@@ -291,8 +291,8 @@ static void multiMinIterate(MMComm *commlink, parserLine *pl) {
         MultiMinSlave(x, (void *) commlink);
         if (c->errStat.status) return;
         if (commlink->warnPos >= 0) {
-            int i = commlink->warnExprId;
-            int j = commlink->warnExprNo;
+            const int i = commlink->warnExprId;
+            const int j = commlink->warnExprNo;
             strcpy(c->errStat.errBuff, commlink->warntext);
             if (j == 1)
                 ppl_tbAdd(c, commlink->expr1[i]->srcLineN, commlink->expr1[i]->srcId, commlink->expr1[i]->srcFname, 1,
@@ -349,7 +349,8 @@ static void multiMinIterate(MMComm *commlink, parserLine *pl) {
     return;
 }
 
-static void minOrMax(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth, double sign) {
+static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive, const int iterDepth,
+                     const double sign) {
     pplObj *stk = in->stk, *pos;
     MMComm commlink;
     char *varName;
@@ -410,7 +411,8 @@ static void minOrMax(ppl_context *c, parserLine *pl, parserOutput *in, int inter
     return;
 }
 
-void ppl_directive_solve(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive,
+                         const int iterDepth) {
     pplObj *stk = in->stk;
     int pos;
     MMComm commlink;
@@ -497,10 +499,12 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, parserOutput *in, int i
     return;
 }
 
-void ppl_directive_minimise(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_minimise(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                            const int iterDepth) {
     minOrMax(c, pl, in, interactive, iterDepth, 1.0);
 }
 
-void ppl_directive_maximise(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_maximise(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                            const int iterDepth) {
     minOrMax(c, pl, in, interactive, iterDepth, -1.0);
 }

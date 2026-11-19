@@ -39,7 +39,7 @@
 
 #include "defaultObjs/zetaRiemann.h"
 
-void riemann_zeta_complex__(double x, double y, gsl_complex *output, int *status, char *errText) {
+void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *status, const char *errText) {
     gsl_complex a, am, b, c, d, e;
     double g, h;
     int j, n, m, sign;

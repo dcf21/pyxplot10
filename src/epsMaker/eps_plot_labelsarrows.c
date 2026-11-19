@@ -106,7 +106,8 @@ void eps_plot_labelsarrows_YieldUpText(EPSComm *x) {
         ypos_ += XIN.real * cos(THETA_X) * M_TO_PS; \
     }
 
-void eps_plot_labelsarrows(EPSComm *x, double origin_x, double origin_y, double width, double height, double zdepth) {
+void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origin_y, const double width,
+                           const double height, const double zdepth) {
     int pageno, hal, val;
     char ItemName[64];
     pplarrow_object *ai;

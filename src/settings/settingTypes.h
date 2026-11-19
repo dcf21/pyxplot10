@@ -388,7 +388,8 @@ extern int SW_PIEKEYPOS_INT[];
 
 #include "coreUtils/errorReport.h"
 
-void *ppl_fetchSettingName(pplerr_context *context, int id, int *id_list, void *name_list, const int name_list_size);
-int ppl_fetchSettingByName(pplerr_context *context, char *name, int *id_list, char **name_list);
+void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, void *name_list,
+                           const int name_list_size);
+int ppl_fetchSettingByName(const pplerr_context *context, const char *name, const int *id_list, char **name_list);
 
 #endif

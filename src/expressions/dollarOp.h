@@ -32,7 +32,7 @@ void ppl_dollarOp_config(ppl_context *c, char **columns_str, pplObj *columns_val
 
 void ppl_dollarOp_deconfig(ppl_context *c);
 
-void ppl_dollarOp_fetchColByNum(ppl_context *c, pplExpr *inExpr, int inExprCharPos, int colNum);
+void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, int inExprCharPos, int colNum);
 
 void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *colName);
 

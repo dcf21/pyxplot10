@@ -330,10 +330,11 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
     return infile;
 }
 
-void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pplObj *columns_val, int Ncols,
-                          char *filename, long file_linenumber, long *file_linenumbers, long linenumber_count,
-                          long block_count, long index_number, int usingRowCol, char **colHeads, int NcolHeads,
-                          pplObj *colUnits, int NcolUnits, int *status, char *errtext, int iterDepth) {
+void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pplObj *columns_val, const int Ncols,
+                          char *filename, long file_linenumber, long *file_linenumbers, const long linenumber_count,
+                          const long block_count, const long index_number, const int usingRowCol, char **colHeads,
+                          const int NcolHeads, pplObj *colUnits, const int NcolUnits, int *status, char *errtext,
+                          const int iterDepth) {
     double dbl = 0;
     int i = -1;
     int l = strlen(input->ascii);
@@ -428,11 +429,12 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
     }
 
 void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs, pplExpr *labelExpr,
-                            pplExpr *selectExpr, int continuity, int *discontinuity, char **columns_str,
-                            pplObj *columns_val, int Ncols, char *filename, long file_linenumber,
-                            long *file_linenumbers, long linenumber_count, long block_count, long index_number,
-                            int usingRowCol, char **colHeads, int NcolHeads, pplObj *colUnits, int NcolUnits,
-                            int *status, char *errtext, int *errCount, int iterDepth) {
+                            pplExpr *selectExpr, const int continuity, int *discontinuity, char **columns_str,
+                            pplObj *columns_val, const int Ncols, char *filename, long file_linenumber,
+                            long *file_linenumbers, const long linenumber_count, const long block_count,
+                            const long index_number, const int usingRowCol, char **colHeads, const int NcolHeads,
+                            pplObj *colUnits, const int NcolUnits, int *status, char *errtext, int *errCount,
+                            const int iterDepth) {
     ppl_context *context = c;
     const int stkLevelOld = c->stackPtr;
     const int nUsing = out->Ncolumns_real + out->Ncolumns_obj;
@@ -563,13 +565,13 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
 }
 
 void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pplExpr **usingExprs, pplExpr *labelExpr,
-                           pplExpr *selectExpr, int continuity, char *filename, long block_count, long index_number,
-                           char **colHeads, int NcolHeads, pplObj *colUnits, int NcolUnits, int *status, char *errtext,
-                           int *errCount, int iterDepth) {
+                           pplExpr *selectExpr, const int continuity, char *filename, const long block_count,
+                           const long index_number, char **colHeads, const int NcolHeads, pplObj *colUnits,
+                           const int NcolUnits, int *status, char *errtext, int *errCount, const int iterDepth) {
     int i;
     long linenumber_count = 0;
     int discontinuity = 1;
-    int contextRaw = (*in)->memContext;
+    const int contextRaw = (*in)->memContext;
     unsigned char hadspace[MAX_DATACOLS];
     unsigned char hadcomma[MAX_DATACOLS];
 
@@ -655,7 +657,7 @@ static int ppldata_sort_cmp(const void *xv, const void *yv) {
     return pplObjCmpQuiet((void *) &x->data_obj[ppldata_sort_sortCol], (void *) &y->data_obj[ppldata_sort_sortCol]);
 }
 
-dataTable *ppldata_sort(ppl_context *c, dataTable *in, int sortCol, int ignoreContinuity) {
+dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sortCol, const int ignoreContinuity) {
     int i, io, Nc, Nd, Nr;
     long ji, jo;
     dataBlock *blk;
@@ -732,7 +734,7 @@ static char *ppldata_fetchFromSpool(parserLine **dataSpool) {
     return out;
 }
 
-int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, int Ncols, char *errtext) {
+int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols, char *errtext) {
     int i;
     for (i = 0; i < Ncols; i++) {
         int end = 0, ep = 0, es = 0;
@@ -757,11 +759,11 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, int Ncols, char 
     return 0;
 }
 
-void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, int wildcardMatchNumber, char *filenameOut,
-                      parserLine **dataSpool, int indexNo, pplExpr **usingExprs, int autoUsingExprs, int Ncols,
-                      int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, int usingRowCol,
-                      long *everyList, int continuity, int persistent, int *status, char *errtext, int *errCount,
-                      int iterDepth) {
+void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int wildcardMatchNumber, char *filenameOut,
+                      parserLine **dataSpool, const int indexNo, pplExpr **usingExprs, int autoUsingExprs, int Ncols,
+                      int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, const int usingRowCol,
+                      const long *everyList, const int continuity, const int persistent, int *status, char *errtext,
+                      int *errCount, const int iterDepth) {
     int readFromCommandLine = 0, discontinuity = 0, hadwhitespace, hadcomma, oneColumnInput = 1;
     int contextOutput, contextRough, contextRaw;
     char lineNumberStr[32];
@@ -1238,11 +1240,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, int wildc
     return;
 }
 
-void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, int fnlist_len, double *rasterX,
-                       int rasterXlen, int parametric, pplObj *unitX, double *rasterY, int rasterYlen, pplObj *unitY,
-                       pplExpr **usingExprs, int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr,
-                       pplExpr *selectExpr, pplExpr *sortBy, int continuity, int *status, char *errtext, int *errCount,
-                       int iterDepth) {
+void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const int fnlist_len, const double *rasterX,
+                       const int rasterXlen, int parametric, pplObj *unitX, const double *rasterY, const int rasterYlen,
+                       pplObj *unitY, pplExpr **usingExprs, int autoUsingExprs, int Ncols, int NusingObjs,
+                       pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, const int continuity, int *status,
+                       char *errtext, int *errCount, const int iterDepth) {
     int discontinuity2 = 0, *discontinuity = &discontinuity2;
     const int sampleGrid = (rasterY != NULL);
     int a, j, k, contextOutput;
@@ -1412,9 +1414,10 @@ CANCEL:
     return;
 }
 
-void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, int objListLen, pplExpr **usingExprs,
+void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const int objListLen, pplExpr **usingExprs,
                          int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr,
-                         pplExpr *sortBy, int continuity, int *status, char *errtext, int *errCount, int iterDepth) {
+                         pplExpr *sortBy, const int continuity, int *status, char *errtext, int *errCount,
+                         const int iterDepth) {
     int contextOutput, discontinuity = 0, i, j;
     const int vlen = ((pplVector *) objList[0].auxil)->v->size;
     pplObj colData[USING_ITEMS_MAX + 2];
@@ -1477,10 +1480,11 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, int o
     return;
 }
 
-void ppldata_fromCmd(ppl_context *c, dataTable **out, parserLine *pl, parserOutput *in, int wildcardMatchNumber,
-                     char *filenameOut, parserLine **dataSpool, const int *ptab, const int stkbase, int Ncols,
-                     int NusingObjs, double *min, int *minSet, double *max, int *maxSet, pplObj *unitRange,
-                     int persistent, int *status, char *errtext, int *errCount, int iterDepth) {
+void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, const parserOutput *in,
+                     const int wildcardMatchNumber, char *filenameOut, parserLine **dataSpool, const int *ptab,
+                     const int stkbase, int Ncols, const int NusingObjs, const double *min, const int *minSet,
+                     const double *max, const int *maxSet, pplObj *unitRange, const int persistent, int *status,
+                     char *errtext, int *errCount, const int iterDepth) {
     pplObj *stk = in->stk;
     pplObj *stko = stk + stkbase;
     pplExpr *usingExprs[USING_ITEMS_MAX], *selectExpr = NULL, *labelExpr = NULL, *sortBy = NULL;
@@ -2030,7 +2034,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, parserLine *pl, parserOutp
                 double *rX = rasterX;
                 double *rY = rasterY;
                 int rXl = rasterXlen;
-                int rYl = rasterYlen;
+                const int rYl = rasterYlen;
                 pplObj *uX = &unitX;
                 pplObj *uY = &unitY;
                 STACK_CLEAN;

@@ -41,10 +41,11 @@
 #include "userspace/pplObjPrint.h"
 #include "userspace/unitsDisp.h"
 
-void pplObjPrint(ppl_context *c, pplObj *o, char *oname, char *out, int outlen, int internal, int modIterDepth) {
+void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const int outlen, const int internal,
+                 const int modIterDepth) {
     int t;
-    int NSigFigs = c->set->term_current.SignificantFigures;
-    int typeable = c->set->term_current.NumDisplay;
+    const int NSigFigs = c->set->term_current.SignificantFigures;
+    const int typeable = c->set->term_current.NumDisplay;
 
     if (o == NULL) {
         strcpy(out, "<null>");
@@ -84,7 +85,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, char *oname, char *out, int outlen, 
             break;
         case PPLOBJ_COL: {
             int i = 0, n;
-            int ct = floor(o->exponent[0] + 0.01);
+            const int ct = floor(o->exponent[0] + 0.01);
             if (ct == SW_COLSPACE_CMYK) {
                 strncpy(out + i, "cmyk(", outlen - i);
                 n = 4;
@@ -174,7 +175,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, char *oname, char *out, int outlen, 
             else {
                 out[i++] = '\n';
                 while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
-                    int j = i;
+                    const int j = i;
                     if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                         continue; // Hide globals and zombies
                     for (k = 0; k <= modIterDepth; k++) {
@@ -349,7 +350,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, char *oname, char *out, int outlen, 
             const char *fnname = (oname == NULL) ? "function" : oname;
             const pplFunc *f = (pplFunc *) o->auxil;
             int first = 1, i = 0;
-            int indent = 16 * (modIterDepth > 0) + 2 * modIterDepth;
+            const int indent = 16 * (modIterDepth > 0) + 2 * modIterDepth;
             for (; f != NULL; f = f->next, first = 0) {
                 const int t = f->functionType;
                 if (!first) {

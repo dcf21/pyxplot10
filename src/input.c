@@ -62,7 +62,7 @@ int ppl_inputInit(ppl_context *context) {
 sigjmp_buf sigint_destination;
 int sigint_longjmp = 0;
 
-void ppl_interactiveSigInt(int signo) {
+void ppl_interactiveSigInt(const int signo) {
     if (sigint_longjmp) siglongjmp(sigint_destination, 1);
     fprintf(stdout, "\n");
     cancellationFlag = 1;
@@ -173,7 +173,7 @@ void ppl_interactiveSession(ppl_context *context) {
     return;
 }
 
-void ppl_processScript(ppl_context *context, char *input, int iterDepth) {
+void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     int linenumber = 1;
     int status;
     char full_filename[FNAME_LENGTH];
@@ -181,11 +181,11 @@ void ppl_processScript(ppl_context *context, char *input, int iterDepth) {
     FILE *infile;
     parserLine *pl = NULL;
     parserStatus *ps = NULL;
-    int shellBreakableOld = context->shellBreakable;
-    int shellReturnableOld = context->shellReturnable;
+    const int shellBreakableOld = context->shellBreakable;
+    const int shellReturnableOld = context->shellReturnable;
 
     char *oldInputLineBuffer = context->inputLineBuffer;
-    int oldInputLineBufferLen = context->inputLineBufferLen;
+    const int oldInputLineBufferLen = context->inputLineBufferLen;
     char *oldInputLineAddBuffer = context->inputLineAddBuffer;
 
     if (DEBUG) {
@@ -270,7 +270,7 @@ restore:
     return;
 }
 
-int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, int interactive, int iterDepth) {
+int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int interactive, const int iterDepth) {
     int i, status = 0;
     char *inputLineBuffer = NULL;
 
@@ -359,7 +359,8 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, int intera
     return (status != 0);
 }
 
-int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, int interactive, int iterDepth) {
+int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, const int interactive,
+                         const int iterDepth) {
     int stat = 0;
 
     ppl_tbClear(context);

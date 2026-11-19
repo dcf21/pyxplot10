@@ -28,7 +28,7 @@
 #include "coreUtils/list.h"
 #include "coreUtils/memAlloc.h"
 
-list *ppl_listInit(int useMalloc) {
+list *ppl_listInit(const int useMalloc) {
     list *out;
     if (useMalloc) out = (list *) malloc(sizeof(list));
     else out = (list *) ppl_memAlloc(sizeof(list));
@@ -57,14 +57,14 @@ int ppl_listFree(list *in) {
     return 0;
 }
 
-int ppl_listLen(list *in) {
+int ppl_listLen(const list *in) {
     if (in == NULL) return 0;
     return in->length;
 }
 
 #define alloc(X) (in->useMalloc ? malloc(X) : ppl_memAlloc_incontext(X, in->memory_context))
 
-list *ppl_listCpy(list *in, int useMalloc, int itemSize) {
+list *ppl_listCpy(list *in, const int useMalloc, const int itemSize) {
     listItem *i;
     list *out;
     if (in == NULL) return NULL;
@@ -93,7 +93,7 @@ int ppl_listAppend(list *in, void *item) {
     return 0;
 }
 
-int ppl_listAppendCpy(list *in, void *item, int size) {
+int ppl_listAppendCpy(list *in, const void *item, const int size) {
     listItem *ptrnew;
     if (in == NULL) return 1;
     ptrnew = (listItem *) alloc(sizeof(listItem));
@@ -113,7 +113,7 @@ int ppl_listAppendCpy(list *in, void *item, int size) {
     return 0;
 }
 
-int ppl_listInsertCpy(list *in, int N, void *item, int size) {
+int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
     int i;
     listItem **ptr, *ptrnew;
     if (in == NULL) return 1;
@@ -163,7 +163,7 @@ static void ppl_listRemoveEngine(list *in, listItem *ptr) {
     return;
 }
 
-int ppl_listRemove(list *in, void *item) {
+int ppl_listRemove(list *in, const void *item) {
     listItem *ptr;
     if (in == NULL) return 1;
     ptr = in->first;
@@ -182,7 +182,7 @@ int ppl_listRemoveAll(list *in, void *item) {
     return 0;
 }
 
-void *ppl_listGetItem(list *in, int N) {
+void *ppl_listGetItem(const list *in, const int N) {
     listItem *ptr;
     int i;
     if (in == NULL) return NULL;
@@ -206,7 +206,7 @@ void *ppl_listPop(list *in) {
     return out;
 }
 
-void *ppl_listPopItem(list *in, int N) {
+void *ppl_listPopItem(list *in, const int N) {
     listItem *ptr;
     void *out = NULL;
     int i;
@@ -221,12 +221,12 @@ void *ppl_listPopItem(list *in, int N) {
     return out;
 }
 
-void *ppl_listLast(list *in) {
+void *ppl_listLast(const list *in) {
     if (in->last == NULL) return NULL;
     return in->last->data;
 }
 
-listIterator *ppl_listIterateInit(list *in) {
+listIterator *ppl_listIterateInit(const list *in) {
     if (in == NULL) return NULL;
     return in->first;
 }

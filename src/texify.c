@@ -93,7 +93,7 @@ static char *LatexVarNamesTo[] = {
         "\\upsilon", "\\phi",    "\\chi",   "\\psi",     "\\omega",   "\\Gamma", "\\Delta", "\\Theta", "\\Lambda",
         "\\Xi",      "\\Pi",     "\\Sigma", "\\Upsilon", "\\Phi",     "\\Psi",   "\\Omega", "\\aleph", NULL};
 
-static void ppl_texify_MakeGreek(const char *in, char *out, int outlen, int *mathMode, int *textRm) {
+static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, int *mathMode, int *textRm) {
     int i, ji = 0, jg, a, l, m, k = 0, kno_ = 0;
 
     ENTER_MATHMODE;
@@ -153,7 +153,7 @@ static void ppl_texify_MakeGreek(const char *in, char *out, int outlen, int *mat
     return;
 }
 
-void ppl_texify_string(char *in, char *out, int inlen, int outlen) {
+void ppl_texify_string(const char *in, char *out, const int inlen, const int outlen) {
     int i, j, DoubleQuoteLevel = 0, QuoteLevel = 0;
 
     for (i = j = 0; ((in[i] != '\0') && ((inlen < 0) || (i < inlen))); i++) {
@@ -216,7 +216,8 @@ void ppl_texify_string(char *in, char *out, int inlen, int outlen) {
     return;
 }
 
-void ppl_texify_generic(ppl_context *c, char *in, int inlen, int *end, char *out, int outlen, int *mm_in, int *tr_in) {
+void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, char *out, const int outlen, int *mm_in,
+                        int *tr_in) {
     pplTokenCode *tokenBuff;
     const int allowCommaOperator = (inlen < 0);
     const int equalsAllowed = 1;
@@ -382,7 +383,7 @@ void ppl_texify_generic(ppl_context *c, char *in, int inlen, int *end, char *out
     // Produce tex output
     for (i = k = 0; i < tlen;) {
         int opMultDiv = 0;
-        char o = tokenBuff[i].state; // Get tokenised markup state code
+        const char o = tokenBuff[i].state; // Get tokenised markup state code
         ENTER_MATHMODE;
         if (stkpos[i] >= 0) {
             double real = 0, imag = 0;
@@ -402,7 +403,7 @@ void ppl_texify_generic(ppl_context *c, char *in, int inlen, int *end, char *out
         } else if (o == 'B') // Process a string literal
         {
             int ei, l;
-            char quoteType = in[i];
+            const char quoteType = in[i];
             for (ei = i; ((ei < tlen) && (tokenBuff[ei].state == o)); ei++);
             l = ei - i;
             while ((l > 1) && (in[i + l - 1] >= '\0') && (in[i + l - 1] <= ' ')) l--; // Strip trailing spaces
@@ -439,7 +440,7 @@ void ppl_texify_generic(ppl_context *c, char *in, int inlen, int *end, char *out
                 k += strlen(out + k);
                 bracketLevel--;
                 if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) {
-                    int j = (highestBracketLevel - bracketLevel) % 3;
+                    const int j = (highestBracketLevel - bracketLevel) % 3;
                     if (j == 1) {
                         out[k - 2] = ')';
                         out[k - 1] = ' ';
@@ -530,7 +531,7 @@ void ppl_texify_generic(ppl_context *c, char *in, int inlen, int *end, char *out
                         k += strlen(out + k);
                         bracketLevel--;
                         if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) {
-                            int j = (highestBracketLevel - bracketLevel) % 3;
+                            const int j = (highestBracketLevel - bracketLevel) % 3;
                             if (j == 1) {
                                 out[k - 2] = ')';
                                 out[k - 1] = ' ';

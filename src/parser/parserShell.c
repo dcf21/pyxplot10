@@ -82,7 +82,7 @@
         } \
     }
 
-void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     int contextNew;
     pplObj *stk = in->stk;
     char *d = (char *) stk[PARSE_arc_directive].auxil;

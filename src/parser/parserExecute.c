@@ -67,7 +67,7 @@ void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
             i += strlen(t + i);
             sprintf(t + i, ".");
         } else {
-            int i = 0;
+            const int i = 0;
             sprintf(t + i, "Set %4d to expression -- %s.", a->stackOutPos, a->expr->ascii);
         }
         ppl_report(&c->errcontext, NULL);
@@ -101,7 +101,8 @@ void ppl_parserOutFree(parserOutput *in) {
 #define STACK_CLEAN \
     while (c->stackPtr > stkLevelOld) { STACK_POP; }
 
-void ppl_parserExecute(ppl_context *c, parserLine *in, char *dirName, int interactive, int iterDepth) {
+void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, const int interactive,
+                       const int iterDepth) {
     int i;
     const int stkLevelOld = c->stackPtr;
     parserOutput *out = NULL;

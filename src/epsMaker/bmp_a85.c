@@ -38,7 +38,7 @@
 
 #define LINELEN 56
 
-unsigned int ppl_bmp_A85(pplerr_context *ec, FILE *fout, unsigned char *in, int len) {
+unsigned int ppl_bmp_A85(const pplerr_context *ec, FILE *fout, const unsigned char *in, int len) {
     int i, j;
     unsigned int tmp, t, line, length = 0;
     unsigned int pow85[] = {52200625, 614125, 7225, 85, 1}; // powers of 85

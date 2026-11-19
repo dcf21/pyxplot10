@@ -51,7 +51,7 @@
 // Functions for creating and destroying axis descriptors
 // ------------------------------------------------------
 
-void pplaxis_destroy(ppl_context *context, pplset_axis *in) {
+void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
     int i;
     if (in->format != NULL) {
         pplExpr_free(in->format);
@@ -151,8 +151,8 @@ void pplaxis_copyMTics(ppl_context *context, pplset_axis *out, const pplset_axis
     return;
 }
 
-unsigned char pplaxis_cmpTics(ppl_context *context, const pplset_tics *ta, const pplset_tics *tb, const pplObj *ua,
-                              const pplObj *ub, const int la, const int lb) {
+unsigned char pplaxis_cmpTics(const ppl_context *context, const pplset_tics *ta, const pplset_tics *tb,
+                              const pplObj *ua, const pplObj *ub, const int la, const int lb) {
     int i, j;
     if ((ta->tickList == NULL) && (tb->tickList == NULL) && (!ta->tickMinSet) && (!tb->tickMinSet) &&
         (!ta->tickStepSet) && (!tb->tickStepSet) && (!ta->tickMaxSet) && (!tb->tickMaxSet))
@@ -182,7 +182,7 @@ unsigned char pplaxis_cmpTics(ppl_context *context, const pplset_tics *ta, const
 // Where along this axis, in the range 0 (left) to 1 (right) should the value
 // xin go? xrn = Region Number for interpolated axes which do not have
 // monotonically increasing ordinate values.
-double pplaxis_GetPosition(double xin, pplset_axis *xa, int xrn, unsigned char AllowOffBounds) {
+double pplaxis_GetPosition(const double xin, const pplset_axis *xa, const int xrn, const unsigned char AllowOffBounds) {
     int imin, imax, i;
     if (xa == NULL) return xin;
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
@@ -212,11 +212,11 @@ double pplaxis_GetPosition(double xin, pplset_axis *xa, int xrn, unsigned char A
 }
 
 // What is the value of this axis at point xin, in the range 0 (left) to 1 (right)?
-double pplaxis_InvGetPosition(double xin, pplset_axis *xa) {
+double pplaxis_InvGetPosition(const double xin, const pplset_axis *xa) {
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {
-        int i = floor(xin * (AXISLINEARINTERPOLATION_NPOINTS - 1));
-        double x = xin * (AXISLINEARINTERPOLATION_NPOINTS - 1) - i;
+        const int i = floor(xin * (AXISLINEARINTERPOLATION_NPOINTS - 1));
+        const double x = xin * (AXISLINEARINTERPOLATION_NPOINTS - 1) - i;
         if (i >= AXISLINEARINTERPOLATION_NPOINTS - 1)
             return xa->AxisLinearInterpolation[AXISLINEARINTERPOLATION_NPOINTS - 1];
         if (i < 0) return xa->AxisLinearInterpolation[0];

@@ -79,20 +79,20 @@ typedef struct dviInterpreterState {
 } dviInterpreterState;
 
 // Functions allowing dvi interpreters to be manipulated
-dviInterpreterState *ReadDviFile(pplerr_context *ec, char *filename, int *status);
+dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *status);
 dviInterpreterState *dviNewInterpreter(pplerr_context *ec);
 int dviInterpretOperator(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op);
 int dviDeleteInterpreter(pplerr_context *ec, dviInterpreterState *interp);
 int dviTypeset(pplerr_context *ec, dviInterpreterState *interp);
 
-dviStackState *dviCloneInterpState(pplerr_context *ec, dviStackState *state);
+dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *state);
 
 postscriptPage *dviNewPostscriptPage(pplerr_context *ec);
-int dviDeletePostscriptPage(pplerr_context *ec, postscriptPage *page);
-int dviDeletePostscriptState(pplerr_context *ec, postscriptState *state);
+int dviDeletePostscriptPage(const pplerr_context *ec, postscriptPage *page);
+int dviDeletePostscriptState(const pplerr_context *ec, postscriptState *state);
 
 int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp);
-int dviPostscriptAppend(pplerr_context *ec, dviInterpreterState *interp, char *s);
+int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, const char *s);
 
 int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned char s, double *size);
 

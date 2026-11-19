@@ -24,6 +24,6 @@
 
 #include "userspace/pplObj.h"
 
-void pplObjPrint(ppl_context *c, pplObj *o, char *oname, char *out, int outlen, int internal, int modIterDepth);
+void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, int outlen, int internal, int modIterDepth);
 
 #endif

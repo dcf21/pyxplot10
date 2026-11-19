@@ -82,18 +82,18 @@
         } \
     }
 
-void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {
-    int t1 = a->objType;
-    int t2 = b->objType;
+    const int t1 = a->objType;
+    const int t2 = b->objType;
 
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
     } else if ((t1 == PPLOBJ_STR) && (t2 == PPLOBJ_STR)) // adding strings: concatenate
     {
         char *tmp;
-        int l1 = strlen((char *) a->auxil);
-        int l2 = strlen((char *) b->auxil);
+        const int l1 = strlen((char *) a->auxil);
+        const int l2 = strlen((char *) b->auxil);
         int l = l1 + l2 + 1;
         tmp = (char *) malloc(l);
         if (tmp == NULL) {
@@ -340,10 +340,10 @@ cast_fail:
     return;
 }
 
-void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {
-    int t1 = a->objType;
-    int t2 = b->objType;
+    const int t1 = a->objType;
+    const int t2 = b->objType;
 
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
@@ -489,10 +489,10 @@ cast_fail:
     return;
 }
 
-void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {
-    int t1 = a->objType;
-    int t2 = b->objType;
+    const int t1 = a->objType;
+    const int t2 = b->objType;
 
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
@@ -502,7 +502,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invert
         double r1, g1, b1;
         pplObj *c = (t1 == PPLOBJ_COL) ? a : b;
         pplObj *n = (t1 == PPLOBJ_COL) ? b : a;
-        double m = n->real;
+        const double m = n->real;
         if ((!n->dimensionless) || (n->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
             sprintf(errText, "Can only multiply colors by dimensionless, real, positive numbers.");
             *errType = ERR_RANGE;
@@ -677,17 +677,17 @@ cast_fail:
     return;
 }
 
-void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {
-    int t1 = a->objType;
-    int t2 = b->objType;
+    const int t1 = a->objType;
+    const int t2 = b->objType;
 
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
     } else if ((t1 == PPLOBJ_COL) && (t2 == PPLOBJ_NUM)) // dividing colors by numbers
     {
         double r1, g1, b1;
-        double m = b->real;
+        const double m = b->real;
         if ((!b->dimensionless) || (b->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
             sprintf(errText, "Can only divide colors by dimensionless, real, positive numbers.");
             *errType = ERR_RANGE;

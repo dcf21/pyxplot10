@@ -50,8 +50,9 @@ const char *SIprefixes_latex[] = {"y", "z", "a", "f", "p", "n", "\\upmu ", "m", 
 // NB: The LaTeX upmu character is defined by the {upgreek} package
 
 // Display a value with units and format string
-char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, pplObj *in, int N, char *formatString, char formatChar,
-                                        int maxLen, int requiredArgs, int arg1i, int arg2i) {
+char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const int N, const char *formatString,
+                                        const char formatChar, const int maxLen, const int requiredArgs, int arg1i,
+                                        int arg2i) {
     double numberOutReal, numberOutImag;
     char *output, *unitstr;
     int i = 0, done = 0, intArg = 0;
@@ -136,7 +137,7 @@ char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, pplObj *in, int N, char 
 }
 
 // Display a value with units
-char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, int N, int typeable, int NSigFigs) {
+char *ppl_unitsNumericDisplay(ppl_context *c, const pplObj *in, const int N, int typeable, int NSigFigs) {
     double numberOutReal, numberOutImag, OoM;
     char *output, *unitstr;
     int i = 0;
@@ -223,7 +224,7 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, int N, int typeable, i
      ((X).planck && (c->set->term_current.UnitScheme == SW_UNITSCH_PLK)) || \
      ((X).ancient && (c->set->term_current.UnitScheme == SW_UNITSCH_ANC)))
 
-void ppl_udFindOptimalNextUnit(ppl_context *c, pplObj *in, unsigned char first, unit **best, double *pow) {
+void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned char first, unit **best, double *pow) {
     int i, j, k, score, found = 0, BestScore = 0;
     double power;
 
@@ -294,7 +295,8 @@ void ppl_udFindOptimalNextUnit(ppl_context *c, pplObj *in, unsigned char first, 
     return;
 }
 
-void ppl_udPrefixFix(ppl_context *c, pplObj *in, unit **UnitList, double *UnitPow, int *UnitPref, int Nunits) {
+void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const double *UnitPow, int *UnitPref,
+                     const int Nunits) {
     int i, j;
     double NewValueReal, NewValueImag, PrefixBestVal, NewMagnitude, OldMagnitude;
     int PrefixBestPos, BestPrefix = 0;
@@ -377,7 +379,7 @@ void ppl_udPrefixFix(ppl_context *c, pplObj *in, unit **UnitList, double *UnitPo
 
 // Main entry point for printing units
 char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, double *numberOutImag, int N,
-                    int DivAllowed, int typeable) {
+                    const int DivAllowed, int typeable) {
     char *output, *temp;
     pplObj residual = *in;
     unit *UnitList[UNITS_MAX_BASEUNITS];
@@ -557,7 +559,7 @@ int ppl_unitNameCmp(const char *in, const char *unit, const unsigned char caseSe
     return 0;
 }
 
-void ppl_unitsStringEvaluate(ppl_context *c, char *in, pplObj *out, int *end, int *errpos, char *errText) {
+void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, int *end, int *errpos, char *errText) {
     int i = 0, j = 0, k, l, m, p;
     double power = 1.0, powerneg = 1.0, multiplier;
     pplObjNum(out, out->amMalloced, 0.0, 0.0);
@@ -706,7 +708,7 @@ void ppl_unitsStringEvaluate(ppl_context *c, char *in, pplObj *out, int *end, in
 }
 
 // Function for making preferred unit structures
-void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, int OutputContext, int *errpos,
+void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, const int OutputContext, int *errpos,
                           char *errText) {
     int end, outpos, PrefixOut, i, j, k, l, m, p;
     double power = 1.0, powerneg = 1.0;

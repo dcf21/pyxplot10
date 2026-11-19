@@ -139,8 +139,8 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
 }
 
 // Add a new multiplot canvas item to the list above
-static int canvas_itemlist_add(ppl_context *c, pplObj *command, int type, canvas_item **output, int *id,
-                               unsigned char includeAxes) {
+static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, canvas_item **output, int *id,
+                               const unsigned char includeAxes) {
     canvas_itemlist *canvas_items;
     canvas_item *ptr, *next, *prev, **insertpointA, **insertpointB;
     int i, editNo, gotEditNo;
@@ -247,7 +247,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, int type, canvas
 }
 
 // Implementation of the clear command. Also called whenever the canvas is to be cleared.
-int ppl_directive_clear(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     canvas_itemlist *canvas_items = c->canvas_items;
     canvas_item *ptr, *next;
 
@@ -811,7 +811,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output) {
 }
 
 // Implementation of the list command
-int ppl_directive_list(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     canvas_itemlist *canvas_items = c->canvas_items;
     int i;
     canvas_item *ptr;
@@ -844,7 +844,8 @@ static int canvas_delete(ppl_context *c, const int id) {
     return 0;
 }
 
-int ppl_directive_delete(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                         const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
     int pos;
@@ -871,7 +872,8 @@ int ppl_directive_delete(ppl_context *c, parserLine *pl, parserOutput *in, int i
 }
 
 // Implementation of the undelete command
-int ppl_directive_undelete(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                           const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
 
@@ -908,7 +910,8 @@ int ppl_directive_undelete(ppl_context *c, parserLine *pl, parserOutput *in, int
 }
 
 // Implementation of the move command
-int ppl_directive_move(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                       const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
     int moveno, gotRotation;
@@ -944,8 +947,8 @@ int ppl_directive_move(ppl_context *c, parserLine *pl, parserOutput *in, int int
     if (ptr->type == CANVAS_POLYGON) {
         int c;
         if (!gotRotation) {
-            double ox = x - ptr->polygonPoints[0];
-            double oy = y - ptr->polygonPoints[1];
+            const double ox = x - ptr->polygonPoints[0];
+            const double oy = y - ptr->polygonPoints[1];
             for (c = 0; c < ptr->NpolygonPoints; c++) {
                 ptr->polygonPoints[2 * c] += ox;
                 ptr->polygonPoints[2 * c + 1] += oy;
@@ -981,7 +984,8 @@ int ppl_directive_move(ppl_context *c, parserLine *pl, parserOutput *in, int int
 }
 
 // Implementation of the swap command
-int ppl_directive_swap(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                       const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
     int item1, item2;
@@ -1033,7 +1037,7 @@ int ppl_directive_swap(ppl_context *c, parserLine *pl, parserOutput *in, int int
 }
 
 // Implementation of the arrow command
-int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gotTempstr;
@@ -1082,7 +1086,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, int in
 }
 
 // Implementation of the box command
-int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gotx2, gotWidth, gotHeight, gotAng;
@@ -1154,7 +1158,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, int inte
 }
 
 // Implementation of the circle command
-int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gota1, amArc;
@@ -1206,7 +1210,8 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, int i
 }
 
 // Implementation of the ellipse command
-int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                          const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int e = 0, r = 0, p = 0, id;
@@ -1499,7 +1504,8 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, int 
 }
 
 // Implementation of the eps command
-int ppl_directive_eps(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                      const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id;
@@ -1583,7 +1589,7 @@ int ppl_directive_eps(ppl_context *c, parserLine *pl, parserOutput *in, int inte
 }
 
 // Implementation of the point command
-int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id;
@@ -1633,7 +1639,8 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, int in
 }
 
 // Implementation of the polygon command
-int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                          const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, Npts, i;
@@ -1770,7 +1777,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, int 
 }
 
 // Implementation of the text command
-int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gotX, gotY, gotAng, gotGap, gotTempstr;
@@ -1852,7 +1859,8 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, int int
 }
 
 // Implementation of the image command
-int ppl_directive_image(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                        const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, transR = 0, transG = 0, transB = 0, smooth, noTrans, cTrans;
@@ -1976,7 +1984,7 @@ int ppl_directive_image(ppl_context *c, parserLine *pl, parserOutput *in, int in
 #define STACK_CLEANP \
     while (c->stackPtr > stkLevelOld) { STACK_POPP; }
 
-static int ppl_getPlotFname(ppl_context *c, char *in, int wildcardMatchNumber, canvas_plotdesc *out) {
+static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNumber, canvas_plotdesc *out) {
     int i, C;
     char escaped[FNAME_LENGTH];
     wordexp_t wordExp;
@@ -2043,7 +2051,8 @@ static int ppl_getPlotFname(ppl_context *c, char *in, int wildcardMatchNumber, c
 }
 
 static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, canvas_item *ci, const int *ptab,
-                           int stkbase, int wildcardMatchNumber, int iterDepth, parserLine **dataSpool, int NExpectIn) {
+                           int stkbase, const int wildcardMatchNumber, const int iterDepth, parserLine **dataSpool,
+                           const int NExpectIn) {
     pplObj *stk = in->stk;
     canvas_plotdesc **plotItemPtr = &ci->plotitems;
     canvas_plotdesc *new = NULL;
@@ -2100,7 +2109,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 (Nexprs == 1)) // If we have a single expression that evaluates to a string, it's a filename
             {
                 char *datafile = (char *) first->auxil;
-                int status = ppl_getPlotFname(c, datafile, wildcardMatchNumber, new);
+                const int status = ppl_getPlotFname(c, datafile, wildcardMatchNumber, new);
                 STACK_CLEANP;
                 if (status) return 1;
             } else if ((!c->errStat.status) && (first->objType == PPLOBJ_VEC)) {
@@ -2193,7 +2202,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         } else if ((pos2 > 0) && (stk[pos2].objType == PPLOBJ_STR)) // we have been passed a filename
         {
             char *filename = (char *) stk[pos2].auxil;
-            int status = ppl_getPlotFname(c, filename, wildcardMatchNumber, new);
+            const int status = ppl_getPlotFname(c, filename, wildcardMatchNumber, new);
             if (status) return 1;
         } else {
             sprintf(c->errcontext.tempErrStr, "Could not find any expressions to evaluate.");
@@ -2261,15 +2270,15 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     new->axis3xyz = 2;
 
     if (ptab[PARSE_INDEX_axis_1] > 0) {
-        int got1 = (stk[stkbase + ptab[PARSE_INDEX_axis_1]].objType == PPLOBJ_NUM);
-        int xyz1 = got1 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_1]].exponent[0])) : -1;
-        int n1 = got1 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_1]].real)) : -1;
-        int got2 = (stk[stkbase + ptab[PARSE_INDEX_axis_2]].objType == PPLOBJ_NUM);
-        int xyz2 = got2 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_2]].exponent[0])) : -1;
-        int n2 = got2 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_2]].real)) : -1;
-        int got3 = (stk[stkbase + ptab[PARSE_INDEX_axis_3]].objType == PPLOBJ_NUM);
-        int xyz3 = got3 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_3]].exponent[0])) : -1;
-        int n3 = got3 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_3]].real)) : -1;
+        const int got1 = (stk[stkbase + ptab[PARSE_INDEX_axis_1]].objType == PPLOBJ_NUM);
+        const int xyz1 = got1 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_1]].exponent[0])) : -1;
+        const int n1 = got1 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_1]].real)) : -1;
+        const int got2 = (stk[stkbase + ptab[PARSE_INDEX_axis_2]].objType == PPLOBJ_NUM);
+        const int xyz2 = got2 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_2]].exponent[0])) : -1;
+        const int n2 = got2 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_2]].real)) : -1;
+        const int got3 = (stk[stkbase + ptab[PARSE_INDEX_axis_3]].objType == PPLOBJ_NUM);
+        const int xyz3 = got3 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_3]].exponent[0])) : -1;
+        const int n3 = got3 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_3]].real)) : -1;
         if (got1) {
             new->axis1set = 1;
             new->axis1xyz = xyz1;
@@ -2460,7 +2469,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
 
         // Color maps can take 3,4,5 or 6 columns of data
         if (linespoints == SW_STYLE_COLORMAP) {
-            int listlen = NUsing;
+            const int listlen = NUsing;
             if ((listlen >= 3) && (listlen <= 6)) NExpect = listlen;
         }
 
@@ -2495,7 +2504,8 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
 }
 
 // Implementation of the piechart command
-int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+                           const int iterDepth) {
     pplObj *stk = in->stk;
     parserLine *spool = NULL, **dataSpool = &spool;
     canvas_item *ptr;
@@ -2548,7 +2558,8 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, int
 }
 
 // Implementation of the plot command
-int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth, int replot) {
+int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth,
+                       const int replot) {
     pplObj *stk = in->stk;
     canvas_item *ptr = NULL;
     parserLine *spool = NULL, **dataSpool = &spool;
@@ -2557,8 +2568,8 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, int int
 
     // If replotting, find a plot item to append plot items onto
     if (replot) {
-        int gotEditNo = (stk[PARSE_replot_editno].objType == PPLOBJ_NUM);
-        int editNo = gotEditNo ? ((int) round(stk[PARSE_replot_editno].real)) : c->replotFocus;
+        const int gotEditNo = (stk[PARSE_replot_editno].objType == PPLOBJ_NUM);
+        const int editNo = gotEditNo ? ((int) round(stk[PARSE_replot_editno].real)) : c->replotFocus;
         if (canvas_items != NULL) {
             ptr = canvas_items->first;
             while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
@@ -2671,13 +2682,13 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, int int
             }
             {
                 pplObj *min = &stk[pos + o1];
-                int gotMin =
+                const int gotMin =
                         (min->objType == PPLOBJ_NUM) || (min->objType == PPLOBJ_DATE) || (min->objType == PPLOBJ_BOOL);
                 pplObj *max = &stk[pos + o2];
-                int gotMax =
+                const int gotMax =
                         (max->objType == PPLOBJ_NUM) || (max->objType == PPLOBJ_DATE) || (max->objType == PPLOBJ_BOOL);
-                int minAuto = (stk[pos + o3].objType == PPLOBJ_STR);
-                int maxAuto = (stk[pos + o4].objType == PPLOBJ_STR);
+                const int minAuto = (stk[pos + o3].objType == PPLOBJ_STR);
+                const int maxAuto = (stk[pos + o4].objType == PPLOBJ_STR);
                 if (gotMin && gotMax && (min->objType != max->objType)) {
                     sprintf(c->errStat.errBuff,
                             "Minimum and maximum limits specified in range %d have conflicting types of <%s> and <%s>.",
@@ -2782,14 +2793,14 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, int int
 
             // Check that axes are correctly specified
             {
-                int got1 = (stk[pos + PARSE_replot_axis_1_0plot_list].objType == PPLOBJ_NUM);
-                int xyz1 = got1 ? ((int) round(stk[pos + PARSE_replot_axis_1_0plot_list].exponent[0])) : -1;
+                const int got1 = (stk[pos + PARSE_replot_axis_1_0plot_list].objType == PPLOBJ_NUM);
+                const int xyz1 = got1 ? ((int) round(stk[pos + PARSE_replot_axis_1_0plot_list].exponent[0])) : -1;
                 //int n1 = got1?((int)round(stk[pos+PARSE_replot_axis_1_0plot_list].real       )):-1;
-                int got2 = (stk[pos + PARSE_replot_axis_2_0plot_list].objType == PPLOBJ_NUM);
-                int xyz2 = got2 ? ((int) round(stk[pos + PARSE_replot_axis_2_0plot_list].exponent[0])) : -1;
+                const int got2 = (stk[pos + PARSE_replot_axis_2_0plot_list].objType == PPLOBJ_NUM);
+                const int xyz2 = got2 ? ((int) round(stk[pos + PARSE_replot_axis_2_0plot_list].exponent[0])) : -1;
                 //int n2 = got2?((int)round(stk[pos+PARSE_replot_axis_2_0plot_list].real       )):-1;
-                int got3 = (stk[pos + PARSE_replot_axis_3_0plot_list].objType == PPLOBJ_NUM);
-                int xyz3 = got3 ? ((int) round(stk[pos + PARSE_replot_axis_3_0plot_list].exponent[0])) : -1;
+                const int got3 = (stk[pos + PARSE_replot_axis_3_0plot_list].objType == PPLOBJ_NUM);
+                const int xyz3 = got3 ? ((int) round(stk[pos + PARSE_replot_axis_3_0plot_list].exponent[0])) : -1;
                 //int n3 = got3?((int)round(stk[pos+PARSE_replot_axis_3_0plot_list].real       )):-1;
                 if (got1 || got2 || got3) {
                     c->errcontext.tempErrStr[0] = '\0';
@@ -2813,7 +2824,8 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, int int
 
             // Loop over wildcard matches
             for (w = 0;; w++) {
-                int status = ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_replot_, pos, w, iterDepth, dataSpool, -1);
+                const int status =
+                        ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_replot_, pos, w, iterDepth, dataSpool, -1);
                 if (status) {
                     if (w == 0) {
                         canvas_delete(c, id);

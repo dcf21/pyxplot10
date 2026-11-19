@@ -35,7 +35,7 @@
 static char temp_stringA[BLEN + 1], temp_stringB[BLEN + 1], temp_stringC[BLEN + 1], temp_stringD[BLEN + 1],
         temp_stringE[BLEN + 1];
 
-void ppl_error_setstreaminfo(pplerr_context *context, int linenumber, char *filename) {
+void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, const char *filename) {
     static long sourceId = 0;
     context->error_input_sourceId = sourceId++;
     context->error_input_linenumber = linenumber;
@@ -46,7 +46,7 @@ void ppl_error_setstreaminfo(pplerr_context *context, int linenumber, char *file
     return;
 }
 
-void ppl_error(pplerr_context *context, int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
+void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
     unsigned char ApplyHighlighting, reverse = 0;
     int i = 0, j;
 
@@ -188,7 +188,7 @@ void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
     exit(1);
 }
 
-void ppl_warning(pplerr_context *context, int ErrType, char *msg) {
+void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
     int i = 0;
 
     if (msg == NULL) msg = context->tempErrStr;

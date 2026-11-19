@@ -44,7 +44,7 @@ void pplObjFuncDestroyChain(pplFunc *f) {
 }
 
 void pplObjFuncDestroy(pplFunc *f) {
-    int type = f->functionType;
+    const int type = f->functionType;
     if ((type == PPL_FUNC_SYSTEM) || (type == PPL_FUNC_MAGIC)) return; // Never garbage collect system functions
 
     switch (type) {

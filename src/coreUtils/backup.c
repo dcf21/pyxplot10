@@ -31,7 +31,7 @@
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
 
-void ppl_createBackupIfRequired(ppl_context *c, const char *filename) {
+void ppl_createBackupIfRequired(const ppl_context *c, const char *filename) {
     char newname[FNAME_LENGTH];
     int i, j;
 

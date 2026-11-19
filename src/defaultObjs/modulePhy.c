@@ -45,7 +45,7 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
-void pplfunc_planck_Bv(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Bv(nu,T)";
     int i;
     pplObj kelvin;
@@ -66,7 +66,7 @@ void pplfunc_planck_Bv(ppl_context *c, pplObj *in, int nArgs, int *status, int *
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Bvmax(T)";
     int i;
     pplObj kelvin;

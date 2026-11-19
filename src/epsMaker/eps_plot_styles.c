@@ -53,8 +53,8 @@
 #include "epsMaker/eps_style.h"
 
 // Work out the default set of with words for a plot item
-void eps_withwords_default(EPSComm *x, withWords *output, pplset_graph *sg, unsigned char functions, int Ccounter,
-                           int LTcounter, int PTcounter, unsigned char color) {
+void eps_withwords_default(const EPSComm *x, withWords *output, const pplset_graph *sg, const unsigned char functions,
+                           const int Ccounter, const int LTcounter, const int PTcounter, const unsigned char color) {
     int i, j;
 
     ppl_withWordsZero(x->c, output);
@@ -95,9 +95,9 @@ void eps_withwords_default(EPSComm *x, withWords *output, pplset_graph *sg, unsi
     return;
 }
 
-void eps_withwords_default_counterinc(EPSComm *x, int *Ccounter, int *LTcounter, int *PTcounter, unsigned char color,
-                                      withWords *ww_final, pplset_graph *sg) {
-    int style = ww_final->linespoints;
+void eps_withwords_default_counterinc(const EPSComm *x, int *Ccounter, int *LTcounter, int *PTcounter,
+                                      const unsigned char color, const withWords *ww_final, const pplset_graph *sg) {
+    const int style = ww_final->linespoints;
 
     if (ww_final->AUTOcolor && (style != SW_STYLE_COLORMAP) && (style != SW_STYLE_CONTOURMAP)) { (*Ccounter)++; }
 
@@ -120,7 +120,7 @@ void eps_withwords_default_counterinc(EPSComm *x, int *Ccounter, int *LTcounter,
     }
 
     if (style == SW_STYLE_CONTOURMAP) {
-        int Ncontours = (sg->ContoursListLen >= 0) ? sg->ContoursListLen : sg->ContoursN;
+        const int Ncontours = (sg->ContoursListLen >= 0) ? sg->ContoursListLen : sg->ContoursN;
         if (ww_final->AUTOcolor) { (*Ccounter) += Ncontours; }
         if (ww_final->AUTOlinetype) { (*LTcounter) += Ncontours; }
     }
@@ -129,7 +129,7 @@ void eps_withwords_default_counterinc(EPSComm *x, int *Ccounter, int *LTcounter,
 }
 
 // Return the number of columns of data which are required to plot in any given plot style
-int eps_plot_styles_NDataColumns(pplerr_context *ec, int style, unsigned char ThreeDim) {
+int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsigned char ThreeDim) {
     if (style == SW_STYLE_POINTS) return 2 + (ThreeDim != 0);
     else if (style == SW_STYLE_LINES) return 2 + (ThreeDim != 0);
     else if (style == SW_STYLE_LINESPOINTS) return 2 + (ThreeDim != 0);
@@ -256,7 +256,7 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, int style, unsigned char Th
     }
 
 // Update the usage of axes to include data from a particular data table, plotted in a particular style
-int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, int style, unsigned char ThreeDim, pplset_axis *a1,
+int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, unsigned char ThreeDim, pplset_axis *a1,
                                 pplset_axis *a2, pplset_axis *a3, pplset_graph *sg, int xyz1, int xyz2, int xyz3,
                                 int n1, int n2, int n3, int id) {
     int i, j, Ncolumns;
@@ -866,7 +866,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, int style, unsigned
         } \
     }
 
-                unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE);
+                const unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE);
                 if (blk->split[j]) { FINISH_FACTORING_BOXES; }
                 UUC(a2, UUR(1)); // y-coordinates are easy
                 ptAx = ptBx;
@@ -930,9 +930,10 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, int style, unsigned
 }
 
 // Render a dataset to postscript
-int eps_plot_dataset(EPSComm *x, dataTable *data, int style, unsigned char ThreeDim, pplset_axis *a1, pplset_axis *a2,
-                     pplset_axis *a3, int xn, int yn, int zn, pplset_graph *sg, canvas_plotdesc *pd, double origin_x,
-                     double origin_y, double width, double height, double zdepth) {
+int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const unsigned char ThreeDim, pplset_axis *a1,
+                     pplset_axis *a2, pplset_axis *a3, int xn, int yn, const int zn, pplset_graph *sg,
+                     canvas_plotdesc *pd, const double origin_x, const double origin_y, const double width,
+                     const double height, const double zdepth) {
     int i, j, Ncolumns, Ncol_obj, pt = 0, xrn, yrn, zrn;
     double xpos, ypos, depth, xap, yap, zap, scale_x, scale_y, scale_z;
     char epsbuff[FNAME_LENGTH], *last_colstr = NULL;
@@ -1614,7 +1615,7 @@ int eps_plot_dataset(EPSComm *x, dataTable *data, int style, unsigned char Three
                                 ppl_printUnit(x->c, &sg->BoxWidth, NULL, NULL, 1, 1, 0));
                         ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL);
                     } else {
-                        unsigned char logaxis = (a[xn]->LogFinal == SW_BOOL_TRUE);
+                        const unsigned char logaxis = (a[xn]->LogFinal == SW_BOOL_TRUE);
                         while (blk != NULL) {
                             for (j = 0; j < blk->blockPosition; j++) {
                                 if (blk->split[j]) { FINISH_ROW_OF_BOXES; }
@@ -1854,7 +1855,7 @@ int eps_plot_dataset(EPSComm *x, dataTable *data, int style, unsigned char Three
                 {
                     int fill;
                     int XSize = pd->GridXSize;
-                    int YSize = pd->GridYSize;
+                    const int YSize = pd->GridYSize;
                     long X, Y;
                     long j;
                     double xap, yap, zap, theta_x, theta_y, theta_z, depth;
@@ -1932,9 +1933,9 @@ int eps_plot_dataset(EPSComm *x, dataTable *data, int style, unsigned char Three
 }
 
 // Produce an icon representing a dataset on the graph's legend
-void eps_plot_LegendIcon(EPSComm *x, int i, canvas_plotdesc *pd, double xpos, double ypos, double scale,
-                         pplset_axis *a1, pplset_axis *a2, pplset_axis *a3, int xn, int yn, int zn) {
-    int style = pd->ww_final.linespoints;
+void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xpos, double ypos, double scale,
+                         pplset_axis *a1, pplset_axis *a2, pplset_axis *a3, const int xn, const int yn, const int zn) {
+    const int style = pd->ww_final.linespoints;
     dataTable *data = x->current->plotdata[i];
     pplset_axis *a[3] = {a1, a2, a3};
 

@@ -183,7 +183,7 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
     return;
 }
 
-void pplcsp_sendCommand(ppl_context *context, char *cmd) {
+void pplcsp_sendCommand(ppl_context *context, const char *cmd) {
     if (PipeMAIN2CSP[1] == 0) return; // Pipe has not yet been opened (Ooops).
     if (write(PipeMAIN2CSP[1], cmd, strlen(cmd)) != strlen(cmd))
         ppl_error(&context->errcontext, ERR_INTERNAL, -1, -1, "Attempt to send a message to the CSP failed.");
@@ -222,7 +222,7 @@ void pplcsp_main(ppl_context *context) {
     return;
 }
 
-void pplcsp_checkForChildExits(int signo) {
+void pplcsp_checkForChildExits(const int signo) {
     int i;
     char errtext[FNAME_LENGTH];
     ppl_context *context = static_context;
@@ -459,7 +459,7 @@ void pplcsp_killLatestSinglewindow(ppl_context *context) {
 
 // Facilities for forking helper processes with pipes from the main Pyxplot process
 
-void pplcsp_checkForHelperExits(int signo) {
+void pplcsp_checkForHelperExits(const int signo) {
     int i;
     char errtext[256];
     ppl_context *context = static_context;
@@ -478,7 +478,7 @@ void pplcsp_checkForHelperExits(int signo) {
     return;
 }
 
-void pplcsp_killAllHelpers(ppl_context *context) {
+void pplcsp_killAllHelpers(const ppl_context *context) {
     int i;
     sigset_t sigs;
 

@@ -38,7 +38,7 @@
 
 list *pplParserCmdList[27];
 
-static void ppl_parserStartNode(pplerr_context *c, parserNode **stk, int *i, int type) {
+static void ppl_parserStartNode(pplerr_context *c, parserNode **stk, int *i, const int type) {
     parserNode *newNode = (parserNode *) malloc(sizeof(parserNode));
     if (newNode == NULL) {
         ppl_fatal(c, __FILE__, __LINE__, "Out of memory.");

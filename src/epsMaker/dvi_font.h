@@ -106,6 +106,6 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font);
 dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err);
 int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font);
 int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out);
-char *psNameFromPFA(pplerr_context *ec, char *PFApath);
+char *psNameFromPFA(pplerr_context *ec, const char *PFApath);
 
 #endif

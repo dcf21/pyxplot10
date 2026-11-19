@@ -49,7 +49,7 @@ char *ppl_kpse_PathList[3][MAX_PATHS];
 unsigned char ppl_kpse_PathRecursive[3][MAX_PATHS];
 #endif
 
-void ppl_kpse_wrap_init(ppl_context *c) {
+void ppl_kpse_wrap_init(const ppl_context *c) {
 #ifdef HAVE_KPATHSEA
     kpse_set_program_name("dvips", "dvips");
 #else
@@ -197,7 +197,7 @@ char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigne
 }
 #endif
 
-char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_pfa(const pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
 #else
@@ -205,7 +205,7 @@ char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s) {
 #endif
 }
 
-char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_pfb(const pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
 #else
@@ -213,7 +213,7 @@ char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s) {
 #endif
 }
 
-char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_tfm(const pplerr_context *ec, char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_tfm(s);
 #else

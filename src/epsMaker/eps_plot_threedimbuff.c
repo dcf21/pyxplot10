@@ -48,7 +48,7 @@ static double pointsize_old;
 static int pointsize_old_SET;
 static char *colstr_old;
 
-void ThreeDimBuffer_Reset(EPSComm *x) {
+void ThreeDimBuffer_Reset(const EPSComm *x) {
     ThreeDimBuffer_ACTIVE = 0;
     ThreeDimBuffer_LineSegmentID = 0;
     ThreeDimBuffer_LineLength = 0.0;
@@ -130,8 +130,8 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
     return 0;
 }
 
-int ThreeDimBuffer_writeps(EPSComm *x, double z, int linetype, double linewidth, double offset, double pointsize,
-                           char *colstr, char *psfrag) {
+int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const double linewidth, const double offset,
+                           double pointsize, char *colstr, char *psfrag) {
     ThreeDimBufferItem *item;
     char *tempstr;
 
@@ -164,9 +164,10 @@ int ThreeDimBuffer_writeps(EPSComm *x, double z, int linetype, double linewidth,
     return 0;
 }
 
-int ThreeDimBuffer_linesegment(EPSComm *x, double z, int linetype, double linewidth, char *colstr, double x0, double y0,
-                               double x1, double y1, double x2, double y2, unsigned char FirstSegment,
-                               unsigned char broken, double LengthOffset) {
+int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, const double linewidth, char *colstr,
+                               double x0, double y0, double x1, double y1, double x2, double y2,
+                               const unsigned char FirstSegment, const unsigned char broken,
+                               const double LengthOffset) {
     ThreeDimBufferItem *item;
 
     if (!ThreeDimBuffer_ACTIVE) {
@@ -176,7 +177,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, double z, int linetype, double linewi
             (linewidth_old != linewidth) || (colstr_old == NULL) || (strcmp(colstr_old, colstr) != 0)) {
             // Start line 0.1 linewidths along in the direction of x0 to get correct linecap
             if ((!FirstSegment) && ((x0 != x1) || (y0 != y1))) {
-                double theta = atan2(x0 - x1, y0 - y1);
+                const double theta = atan2(x0 - x1, y0 - y1);
                 x0 = x1 + 0.1 * sin(theta) * linewidth * EPS_DEFAULT_LINEWIDTH;
                 y0 = y1 + 0.1 * cos(theta) * linewidth * EPS_DEFAULT_LINEWIDTH;
             } else {
@@ -239,7 +240,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, double z, int linetype, double linewi
     return 0;
 }
 
-int ThreeDimBuffer_linepenup(EPSComm *x) {
+int ThreeDimBuffer_linepenup(const EPSComm *x) {
     if (!ThreeDimBuffer_ACTIVE) {
         if (ThreeDimBuffer_LineSegmentID >= 0) fprintf(x->epsbuffer, "stroke\n");
         ThreeDimBuffer_LineSegmentID = -5;

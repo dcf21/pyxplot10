@@ -29,8 +29,8 @@
 #include "userspace/unitsDisp.h"
 
 void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
-void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab,
-                     int quiet);
+void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutput *in, const parserLine *pl,
+                     const int *ptab, int quiet);
 void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
 unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarrow_object *b);
 void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_object **in);

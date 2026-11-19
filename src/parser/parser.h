@@ -96,7 +96,8 @@ extern list *pplParserCmdList[];
 #endif
 
 int ppl_parserInit(ppl_context *c);
-void ppl_parserAtomAdd(parserLine *in, int stackOutPos, int linePos, char *options, pplExpr *expr, pplObj *literal);
+void ppl_parserAtomAdd(parserLine *in, int stackOutPos, int linePos, const char *options, pplExpr *expr,
+                       const pplObj *literal);
 void ppl_parserAtomFree(parserAtom **in);
 void ppl_parserLineFree(parserLine *in);
 void ppl_parserStatInit(parserStatus **in, parserLine **pl);
@@ -107,7 +108,7 @@ void ppl_parserLineInit(parserLine **in, int srcLineN, long srcId, char *srcFnam
 int ppl_parserCompile(ppl_context *c, parserStatus *s, int srcLineN, long srcId, char *srcFname, char *line,
                       int expandMacros, int blockDepth);
 void ppl_parserLinePrint(ppl_context *c, parserLine *in);
-void ppl_parserExecute(ppl_context *c, parserLine *in, char *dirName, int interactive, int iterDepth);
+void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, int interactive, int iterDepth);
 void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 
 #ifdef HAVE_READLINE

@@ -71,7 +71,7 @@
 
 #define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
-void ppl_directive_assert(ppl_context *c, parserLine *pl, parserOutput *in) {
+void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     pplObj *stk = in->stk;
     int lt;
     char *txt, *version;
@@ -152,7 +152,7 @@ void ppl_directive_assert(ppl_context *c, parserLine *pl, parserOutput *in) {
     return;
 }
 
-void ppl_directive_cd(ppl_context *c, parserLine *pl, parserOutput *in) {
+void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     pplObj *stk = in->stk;
     int pos = PARSE_cd_path;
     wordexp_t wordExp;
@@ -198,7 +198,8 @@ void ppl_directive_cd(ppl_context *c, parserLine *pl, parserOutput *in) {
     return;
 }
 
-void ppl_directive_exec(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                        const int iterDepth) {
     pplObj *stk = in->stk;
     char *cmd = (char *) stk[PARSE_exec_command].auxil;
     parserLine *pl2 = NULL;
@@ -226,7 +227,8 @@ void ppl_directive_exec(ppl_context *c, parserLine *pl, parserOutput *in, int in
     return;
 }
 
-void ppl_directive_global(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                          const int iterDepth) {
     pplObj *stk = in->stk;
     int pos;
 
@@ -274,7 +276,7 @@ void ppl_directive_global(ppl_context *c, parserLine *pl, parserOutput *in, int 
     return;
 }
 
-void ppl_directive_history(ppl_context *c, parserLine *pl, parserOutput *in) {
+void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOutput *in) {
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
     int start = 0, endpos, k;
@@ -299,7 +301,8 @@ void ppl_directive_history(ppl_context *c, parserLine *pl, parserOutput *in) {
 #endif
 }
 
-void ppl_directive_load(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                        const int iterDepth) {
     int i = 0;
     int j = 0;
     pplObj *stk = in->stk;
@@ -347,7 +350,8 @@ void ppl_directive_load(ppl_context *c, parserLine *pl, parserOutput *in, int in
     return;
 }
 
-void ppl_directive_local(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                         const int iterDepth) {
     pplObj *stk = in->stk;
     int pos;
 
@@ -380,7 +384,7 @@ void ppl_directive_local(ppl_context *c, parserLine *pl, parserOutput *in, int i
     return;
 }
 
-void ppl_directive_print(ppl_context *c, parserLine *pl, parserOutput *in) {
+void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     pplObj *stk = in->stk;
     int pos = PARSE_print_0print_list;
     int i = 0;
@@ -418,7 +422,7 @@ void ppl_directive_print(ppl_context *c, parserLine *pl, parserOutput *in) {
     return;
 }
 
-void ppl_directive_save(ppl_context *c, parserLine *pl, parserOutput *in) {
+void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput *in) {
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
     int pos = PARSE_save_filename;
@@ -462,7 +466,7 @@ void ppl_directive_save(ppl_context *c, parserLine *pl, parserOutput *in) {
 #endif
 }
 
-void ppl_directive_seterror(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplObj *o = &in->stk[PARSE_set_error_set_option];
     char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
     if (tempstr != NULL) {
@@ -485,7 +489,7 @@ void ppl_directive_seterror(ppl_context *c, parserLine *pl, parserOutput *in, in
     return;
 }
 
-void ppl_directive_unseterror(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplObj *o = &in->stk[PARSE_set_error_set_option];
     char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
     if (tempstr != NULL) {
@@ -508,7 +512,8 @@ void ppl_directive_unseterror(ppl_context *c, parserLine *pl, parserOutput *in, 
     return;
 }
 
-void ppl_directive_varset(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth) {
+void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
+                          const int iterDepth) {
     pplObj *stk = in->stk;
     pplObj *val = &stk[PARSE_var_set_value];
     pplObj *rgx = &stk[PARSE_var_set_regex];
@@ -525,8 +530,8 @@ void ppl_directive_varset(ppl_context *c, parserLine *pl, parserOutput *in, int 
 
     if (rgx->objType != PPLOBJ_STR) // variable assignment. not regular expression
     {
-        int om = obj->amMalloced;
-        int rc = obj->refCount;
+        const int om = obj->amMalloced;
+        const int rc = obj->refCount;
         obj->amMalloced = 0;
         obj->refCount = 1;
         ppl_garbageObject(obj);

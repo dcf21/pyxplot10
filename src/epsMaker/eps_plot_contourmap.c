@@ -85,12 +85,12 @@ static int ContourCmp(const void *xv, const void *yv) {
 }
 
 // Yield up text items which label contours on a contourmap
-void eps_plot_contourmap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg, canvas_plotdesc *pd) {
+void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const pplset_graph *sg, canvas_plotdesc *pd) {
     dataBlock *blk;
-    int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
-                                                                    : x->current->settings.SamplesX;
-    int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
-                                                                    : x->current->settings.SamplesY;
+    const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                                                                          : x->current->settings.SamplesX;
+    const int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                                                                          : x->current->settings.SamplesY;
     int i, j, k, Ncol;
     double CMin, CMax, min_prelim, max_prelim, OoM, UnitMultiplier;
     unsigned char CMinAuto, CMinSet, CMaxAuto, CMaxSet, CLog;
@@ -114,7 +114,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg
     if (CMinAuto || CMaxAuto)
         for (j = 0; j < YSize; j++)
             for (i = 0; i < XSize; i++) {
-                double val = blk->data_real[2 + Ncol * (i + XSize * j)];
+                const double val = blk->data_real[2 + Ncol * (i + XSize * j)];
                 if (!gsl_finite(val)) continue;
                 if ((CMinAuto) && ((!CMinSet) || (CMin > val)) && ((!CLog) || (val > 0.0))) {
                     CMin = val;
@@ -136,7 +136,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg
     // If there's no spread of data, make a spread up
     if ((fabs(CMax) <= fabs(CMin)) || (fabs(CMin - CMax) <= fabs(1e-14 * CMax))) {
         if (!CLog) {
-            double step = ppl_max(1.0, 1e-3 * fabs(CMin));
+            const double step = ppl_max(1.0, 1e-3 * fabs(CMin));
             CMin -= step;
             CMax += step;
         } else {
@@ -220,7 +220,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg
 // -----+-----+-----+-----+
 
 
-static int IsBetween(double x, double a, double b, double *f) {
+static int IsBetween(const double x, const double a, const double b, double *f) {
     *f = 0.5;
     if (a == b) { return x == a; }
     if ((a < b) && (x >= a) && (x <= b)) {
@@ -235,10 +235,11 @@ static int IsBetween(double x, double a, double b, double *f) {
 }
 
 // See whether cell X contains any unused starting points for contours
-static int GetStartPoint(double c1, dataTable *data, unsigned char **flags, int XSize, int YSize, int x0, int y0,
-                         int EntryFace, int *ExitFace, int *xcell, int *ycell, double *Xout, double *Yout) {
+static int GetStartPoint(const double c1, const dataTable *data, unsigned char **flags, int XSize, const int YSize,
+                         int x0, int y0, const int EntryFace, int *ExitFace, int *xcell, int *ycell, double *Xout,
+                         double *Yout) {
     dataBlock *blk = data->first;
-    int Ncol = data->Ncolumns_real;
+    const int Ncol = data->Ncolumns_real;
     const int pass = 0;
     double f;
 
@@ -292,10 +293,11 @@ static int GetStartPoint(double c1, dataTable *data, unsigned char **flags, int 
 }
 
 // Given a contour already tracking through cell X from a given face, where to go next?
-static int GetNextPoint(double c1, dataTable *data, int pass, int XSize, int YSize, int x0, int y0, int EntryFace,
-                        int *ExitFace, int *xcell, int *ycell, double *Xout, double *Yout) {
+static int GetNextPoint(const double c1, const dataTable *data, const int pass, const int XSize, const int YSize,
+                        const int x0, const int y0, const int EntryFace, int *ExitFace, int *xcell, int *ycell,
+                        double *Xout, double *Yout) {
     dataBlock *blk = data->first;
-    int Ncol = data->Ncolumns_real;
+    const int Ncol = data->Ncolumns_real;
     int j;
     double f;
 
@@ -355,13 +357,13 @@ static int GetNextPoint(double c1, dataTable *data, int pass, int XSize, int YSi
     return 0;
 }
 
-static void FollowContour(EPSComm *x, dataTable *data, ContourDesc *cd, pplObj *v, unsigned char *flags, int XSize,
-                          int YSize, int xcell, int ycell, int face, double xpos, double ypos, double Lx, double ThetaX,
-                          double Ly, double ThetaY) {
+static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, const pplObj *v, unsigned char *flags,
+                          const int XSize, const int YSize, int xcell, int ycell, int face, double xpos, double ypos,
+                          const double Lx, const double ThetaX, const double Ly, const double ThetaY) {
     long i, j, i_flatest = 0;
     int xcelli = xcell, ycelli = ycell;
     double xposi = xpos, yposi = ypos, grad_flatest = 1e100;
-    int facei = face;
+    const int facei = face;
     double xold = xpos, yold = ypos;
 
     // Starting point has been used on pass zero
@@ -417,15 +419,15 @@ static void FollowContour(EPSComm *x, dataTable *data, ContourDesc *cd, pplObj *
 }
 
 // Render a contourmap to postscript
-int eps_plot_contourmap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int xn, int yn, int zn, pplset_graph *sg,
-                        canvas_plotdesc *pd, int pdn, double origin_x, double origin_y, double width, double height,
-                        double zdepth) {
+int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDim, const int xn, const int yn,
+                        const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
+                        const double origin_y, const double width, const double height, const double zdepth) {
     double scale_x, scale_y, scale_z;
     dataBlock *blk;
-    int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
-                                                                    : x->current->settings.SamplesX;
-    int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
-                                                                    : x->current->settings.SamplesY;
+    const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                                                                          : x->current->settings.SamplesX;
+    const int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                                                                          : x->current->settings.SamplesY;
     int i, j, k, cn, pass, face, xcell, ycell;
     double xo, yo, Lx, Ly, ThetaX, ThetaY, CMin, CMax, xpos, ypos;
     double col = GSL_NAN, col1 = -1, col2 = -1, col3 = -1, col4 = -1, fc = GSL_NAN, fc1 = -1, fc2 = -1, fc3 = -1,
@@ -649,7 +651,7 @@ GOT_CONTOURS:
     for (cn = 0; cn < cpos; cn++)
         if (!clist[cn].closepath) {
             int faceA, faceB;
-            int n = clist[cn].Nvertices_min;
+            const int n = clist[cn].Nvertices_min;
             if (clist[cn].posdata == NULL) continue;
 
             if (clist[cn].posdata[0] < 0.0001) faceA = FACE_L;
@@ -916,14 +918,14 @@ GOT_CONTOURS:
 
             // PASS 2: Set clip path before stroking
             else if (pass == 2) {
-                long n = clist[cn].Nvertices_max;
+                const long n = clist[cn].Nvertices_max;
                 if (n < 1) continue;
                 if (sg->ContoursLabel == SW_ONOFF_ON) {
                     int page = x->current->DatasetTextID[pdn] + clist[cn].i;
-                    long i = clist[cn].segment_flatest;
-                    double xlab0 =
+                    const long i = clist[cn].segment_flatest;
+                    const double xlab0 =
                             (clist[cn].posdata[2 * ((i) % n) + 0] + clist[cn].posdata[2 * ((i + 1) % n) + 0]) / 2;
-                    double ylab0 =
+                    const double ylab0 =
                             (clist[cn].posdata[2 * ((i) % n) + 1] + clist[cn].posdata[2 * ((i + 1) % n) + 1]) / 2;
                     double xlab, ylab, wlab, hlab;
                     double bb_top, bb_bottom, ab_left, ab_right;
@@ -959,7 +961,7 @@ GOT_CONTOURS:
                 IF_NOT_INVISIBLE {
                     double xps, yps;
                     long c = 0;
-                    long n = clist[cn].Nvertices_max;
+                    const long n = clist[cn].Nvertices_max;
                     if (n < 1) continue;
                     xpos = clist[cn].posdata[c++];
                     ypos = clist[cn].posdata[c++];
@@ -977,8 +979,8 @@ GOT_CONTOURS:
 
             // PASS 4: Label contours
             else if ((pass == 4) && (sg->ContoursLabel == SW_ONOFF_ON)) {
-                long i = clist[cn].segment_flatest;
-                long n = clist[cn].Nvertices_max;
+                const long i = clist[cn].segment_flatest;
+                const long n = clist[cn].Nvertices_max;
                 withWords ww;
 
                 if (n < 1) continue;
@@ -997,8 +999,10 @@ GOT_CONTOURS:
                 eps_core_SetColor(x, &ww, 1);
 
                 IF_NOT_INVISIBLE {
-                    double xlab = (clist[cn].posdata[2 * ((i) % n) + 0] + clist[cn].posdata[2 * ((i + 1) % n) + 0]) / 2;
-                    double ylab = (clist[cn].posdata[2 * ((i) % n) + 1] + clist[cn].posdata[2 * ((i + 1) % n) + 1]) / 2;
+                    const double xlab =
+                            (clist[cn].posdata[2 * ((i) % n) + 0] + clist[cn].posdata[2 * ((i + 1) % n) + 0]) / 2;
+                    const double ylab =
+                            (clist[cn].posdata[2 * ((i) % n) + 1] + clist[cn].posdata[2 * ((i + 1) % n) + 1]) / 2;
                     canvas_EPSRenderTextItem(
                             x, NULL, x->current->DatasetTextID[pdn] + clist[cn].i,
                             (xo + Lx * xlab / (XSize - 1) * sin(ThetaX) + Ly * ylab / (YSize - 1) * sin(ThetaY)) /

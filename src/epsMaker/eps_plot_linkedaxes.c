@@ -334,8 +334,8 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
 
         // Set value of x (or y/z)
         {
-            int om = VarVal->amMalloced;
-            int rc = VarVal->refCount;
+            const int om = VarVal->amMalloced;
+            const int rc = VarVal->refCount;
             *VarVal = in->DataUnit;
             VarVal->amMalloced = om;
             VarVal->refCount = rc;
@@ -575,7 +575,7 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
     return;
 }
 
-void eps_plot_LinkUsingBackPropagate(EPSComm *x, double val, pplset_axis *target, pplset_axis *source) {
+void eps_plot_LinkUsingBackPropagate(EPSComm *x, const double val, pplset_axis *target, pplset_axis *source) {
     LAUComm commlink;
     char *VarName;
     pplObj DummyTemp, *VarVal;

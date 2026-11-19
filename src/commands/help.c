@@ -46,7 +46,7 @@
 #define MAX_HELP_DEPTH 16 // The maximum possible depth of a help hierarchy
 #define MAX_HELP_HITS  12 // The maximum possible number of help topics which match the same autocomplete strings
 
-static void help_PagerDisplay(pplerr_context *c, char *PageName, xmlNode *node, int interactive) {
+static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *node, const int interactive) {
     xmlNode *cur_node;
     char textBuffer[LSTR_LENGTH];
     char textBuffer2[LSTR_LENGTH];
@@ -129,7 +129,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, xmlNode *node, 
     return;
 }
 
-static void help_TopicPrint(char *out, char **words, int Nwords) {
+static void help_TopicPrint(char *out, char **words, const int Nwords) {
     int i, j;
     for (i = 0, j = 0; i <= Nwords; i++) {
         strcpy(out + j, words[i]);
@@ -184,7 +184,7 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
 }
 
 void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *topicWords, int *matchTextPos,
-                  int *Nmatches, int *ambiguous, char **helpPosition, char **helpTexts, int depth) {
+                  int *Nmatches, int *ambiguous, char **helpPosition, char **helpTexts, const int depth) {
     xmlNode *cur_node = NULL;
     int match, i;
 
@@ -215,7 +215,7 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
     return;
 }
 
-void ppl_directive_help(ppl_context *c, parserLine *pl, parserOutput *in, int interactive) {
+void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplerr_context *e = &c->errcontext;
     list *topicWords = NULL; // A list of the help topic words supplied by the user
     char *topicString = NULL; // The string of help topic words supplied by the user

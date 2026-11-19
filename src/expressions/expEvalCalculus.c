@@ -54,7 +54,7 @@ typedef struct calculusComm {
     int iterDepth;
 } calculusComm;
 
-double ppl_expEvalCalculusSlave(double x, void *params) {
+double ppl_expEvalCalculusSlave(const double x, void *params) {
     int lastOpAssign;
     double r, i;
     pplObj *output;
@@ -112,8 +112,9 @@ double ppl_expEvalCalculusSlave(double x, void *params) {
     else return i;
 }
 
-void ppl_expIntegrate(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *expr, int exprPos, char *dummy,
-                      pplObj *min, pplObj *max, pplObj *out, int dollarAllowed, int iterDepth) {
+void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, char *expr, const int exprPos,
+                      char *dummy, const pplObj *min, const pplObj *max, pplObj *out, const int dollarAllowed,
+                      const int iterDepth) {
     calculusComm commlink;
     pplObj *dummyVar;
     pplObj dummyTemp;
@@ -228,8 +229,9 @@ void ppl_expIntegrate(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *
     return;
 }
 
-void ppl_expDifferentiate(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *expr, int exprPos, char *dummy,
-                          pplObj *point, pplObj *step, pplObj *out, int dollarAllowed, int iterDepth) {
+void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, char *expr, const int exprPos,
+                          char *dummy, pplObj *point, const pplObj *step, pplObj *out, const int dollarAllowed,
+                          const int iterDepth) {
     calculusComm commlink;
     pplObj *dummyVar;
     pplObj dummyTemp;
