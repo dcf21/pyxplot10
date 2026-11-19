@@ -207,7 +207,10 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
     // Ensure that multiplot canvas list is initialised before trying to use it
     if (canvas_items == NULL) {
         canvas_items = (canvas_itemlist *) malloc(sizeof(canvas_itemlist));
-        if (canvas_items == NULL) return 1;
+        if (canvas_items == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         c->canvas_items = (void *) canvas_items;
         canvas_items->first = NULL;
         canvas_items->last = NULL;
@@ -222,8 +225,21 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
         insertpointB = (*insertpointA == NULL) ? &(canvas_items->first) : &(canvas_items->last->next);
         prevId = (*insertpointA == NULL) ? 0 : canvas_items->last->id;
         editNo = prevId + 1;
+        if (editNo >= MULTIPLOT_MAXINDEX) {
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "The multiplot canvas is full.");
+            return 1;
+        }
     } else {
-        editNo = (int) round(command[PARSE_arc_editno].real);
+        // Item numbers index arrays of MULTIPLOT_MAXINDEX entries, so must be within range
+        const double editNoReal = command[PARSE_arc_editno].real;
+        if (!(editNoReal > -0.5) || !(editNoReal < MULTIPLOT_MAXINDEX - 0.5)) {
+            char msg[PPL_MSG_LENGTH];
+            ppl_snprintfTrunc(msg, sizeof(msg), "Multiplot item numbers must be in the range 0 to %d.",
+                              MULTIPLOT_MAXINDEX - 1);
+            ppl_error(&c->errcontext, ERR_RANGE, -1, -1, msg);
+            return 1;
+        }
+        editNo = (int) round(editNoReal);
         insertpointB = &(canvas_items->first);
         prev = NULL;
         while ((*insertpointB != NULL) && ((*insertpointB)->id < editNo)) {
@@ -243,7 +259,10 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
         }
     }
     ptr = (canvas_item *) malloc(sizeof(canvas_item));
-    if (ptr == NULL) return 1;
+    if (ptr == NULL) {
+        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+        return 1;
+    }
     *insertpointA = *insertpointB = ptr;
     ptr->next = next; // Link doubly-linked list
     ptr->prev = prev;
@@ -283,6 +302,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
             }
             free(ptr);
             ptr = NULL;
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
         } else {
             for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->XAxes[i]), &(c->set->XAxes[i]));
@@ -1163,10 +1183,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
     y2 = stk[PARSE_arrow_p2 + 1].real;
 
     // Add this arrow to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_ARROW, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (B).");
-        return 1;
-    }
+    if (canvas_itemlist_add(c, stk, CANVAS_ARROW, &ptr, &id, 0)) { return 1; }
     ptr->xpos = x1;
     ptr->ypos = y1;
     ptr->xpos2 = x2 - x1;
@@ -1244,10 +1261,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
     }
 
     // Add this box to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_BOX, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (C).");
-        return 1;
-    }
+    if (canvas_itemlist_add(c, stk, CANVAS_BOX, &ptr, &id, 0)) { return 1; }
     ptr->xpos = gotx2 ? x1 : x3;
     ptr->ypos = gotx2 ? y1 : y3;
     if (gotx2) // Box is specified by two corners
@@ -1320,10 +1334,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
     a2 = stk[PARSE_arc_angle2].real;
 
     // Add this circle to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_CIRC, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (D).");
-        return 1;
-    }
+    if (canvas_itemlist_add(c, stk, CANVAS_CIRC, &ptr, &id, 0)) { return 1; }
     ptr->xpos = x;
     ptr->ypos = y;
     ptr->xpos2 = r;
@@ -1594,10 +1605,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     }
 
     // Add this ellipse to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_ELLPS, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (E).");
-        return 1;
-    }
+    if (canvas_itemlist_add(c, stk, CANVAS_ELLPS, &ptr, &id, 0)) { return 1; }
     ptr->xpos = xc;
     ptr->ypos = yc;
     ptr->xpos2 = a;
@@ -1711,7 +1719,6 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
 
     // Add this eps image to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_EPS, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (G).");
         free(text);
         text = NULL;
         return 1;
@@ -1792,10 +1799,7 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
     y = stk[PARSE_point_p + 1].real;
 
     // Add this point to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_POINT, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (H).");
-        return 1;
-    }
+    if (canvas_itemlist_add(c, stk, CANVAS_POINT, &ptr, &id, 0)) { return 1; }
     ptr->xpos = x;
     ptr->ypos = y;
 
@@ -1962,10 +1966,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     }
 
     // Add this polygon to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_POLYGON, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (K).");
-        return 1;
-    }
+    if (canvas_itemlist_add(c, stk, CANVAS_POLYGON, &ptr, &id, 0)) { return 1; }
     ptr->NpolygonPoints = Npts;
     ptr->polygonPoints = ptList;
 
@@ -2029,7 +2030,6 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     strcpy(text, tempstr);
 
     if (canvas_itemlist_add(c, stk, CANVAS_TEXT, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (M).");
         free(text);
         text = NULL;
         return 1;
@@ -2140,7 +2140,6 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
 
     // Add this eps image to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_IMAGE, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (O).");
         free(text);
         text = NULL;
         return 1;
@@ -2823,10 +2822,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
     int id, status;
 
     // Add this piechart to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_PIE, &ptr, &id, 0)) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (Y).");
-        return 1;
-    }
+    if (canvas_itemlist_add(c, stk, CANVAS_PIE, &ptr, &id, 0)) { return 1; }
 
     // Look up format string
     if (stk[PARSE_piechart_format_string].objType == PPLOBJ_EXP)
@@ -2911,10 +2907,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
         id = editNo;
     } else {
         // Add this plot to the linked list which decribes the canvas
-        if (canvas_itemlist_add(c, stk, CANVAS_PLOT, &ptr, &id, 0)) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (Z).");
-            return 1;
-        }
+        if (canvas_itemlist_add(c, stk, CANVAS_PLOT, &ptr, &id, 0)) { return 1; }
     }
     c->replotFocus = id;
 
