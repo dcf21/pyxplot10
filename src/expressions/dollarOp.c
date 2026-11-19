@@ -55,6 +55,26 @@
         } \
     }
 
+//! ppl_dollarOp_config - Make a row of data from a data file available to the $ operator, which expressions in
+//! "using" modifiers use to refer to columns of data
+//! \param [in] c - The Pyxplot context
+//! \param [in] columns_str - Array of the textual contents of each column
+//! \param [in] columns_val - Array of the numerical values of each column
+//! \param [in] Ncols - The number of columns
+//! \param [in] filename - The name of the data file, used in warning messages
+//! \param [in] file_linenumber - The line number in the data file of the current row
+//! \param [in] file_linenumbers - Array of the line numbers in the data file from which each column was read, when
+//! reading data in rows rather than columns
+//! \param [in] linenumber_count - The number of the current data point within the current block
+//! \param [in] block_count - The number of the current block of data within the current index
+//! \param [in] index_number - The number of the current index within the data file
+//! \param [in] usingRowCol - DATAFILE_COL if data is being read in columns, or DATAFILE_ROW if in rows
+//! \param [in] usingExpr - The text of the "using" expression being evaluated, used in warning messages
+//! \param [in] colHeads - Array of the names of each column, taken from the file's header
+//! \param [in] NcolHeads - The number of entries in <colHeads>
+//! \param [in] colUnits - Array of the physical units of each column, taken from the file's header
+//! \param [in] NcolUnits - The number of entries in <colUnits>
+
 void ppl_dollarOp_config(ppl_context *c, char **columns_str, pplObj *columns_val, const int Ncols, char *filename,
                          const long file_linenumber, long *file_linenumbers, const long linenumber_count,
                          const long block_count, const long index_number, const int usingRowCol, char *usingExpr,
@@ -78,6 +98,9 @@ void ppl_dollarOp_config(ppl_context *c, char **columns_str, pplObj *columns_val
     return;
 }
 
+//! ppl_dollarOp_deconfig - Clear the row of data made available to the $ operator by ppl_dollarOp_config()
+//! \param [in] c - The Pyxplot context
+
 void ppl_dollarOp_deconfig(ppl_context *c) {
     c->dollarStat.columns_str = NULL;
     c->dollarStat.columns_val = NULL;
@@ -97,6 +120,14 @@ void ppl_dollarOp_deconfig(ppl_context *c) {
     c->dollarStat.warntxt[0] = '\0';
     return;
 }
+
+//! ppl_dollarOp_fetchColByNum - Evaluate $N, placing the value of column N of the current row of data onto the top
+//! of the stack. If the column does not exist, a warning is stored and NaN is returned.
+//! \param [in] c - The Pyxplot context
+//! \param [in] inExpr - The expression being evaluated
+//! \param [in] inExprCharPos - The position of the $ operator within the expression
+//! \param [in] colNum - The number of the column to fetch. Column 0 is the data point number within the current
+//! block, -1 the block number, -2 the index number, and -3 the line number in the file.
 
 void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, int colNum) {
     pplObj *out = &c->stack[c->stackPtr - 1];
@@ -144,6 +175,13 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
     }
     return;
 }
+
+//! ppl_dollarOp_fetchColByName - Evaluate $name, placing the value of the column with a given name onto the top of
+//! the stack
+//! \param [in] c - The Pyxplot context
+//! \param [in] inExpr - The expression being evaluated
+//! \param [in] inExprCharPos - The position of the $ operator within the expression
+//! \param [in] colName - The name of the column to fetch, as given in the file's header
 
 void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, const int inExprCharPos, char *colName) {
     int i;

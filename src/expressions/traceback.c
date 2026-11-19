@@ -26,6 +26,9 @@
 #include "stringTools/strConstants.h"
 #include "userspace/context.h"
 
+//! ppl_tbClear - Clear any error which has been recorded, together with its traceback
+//! \param [in] c - The Pyxplot context
+
 void ppl_tbClear(ppl_context *c) {
     int i;
     for (i = c->errStat.tracebackDepth - 1; i >= 0; i--) {
@@ -41,6 +44,19 @@ void ppl_tbClear(ppl_context *c) {
     c->errStat.sourceIdExpr = c->errStat.sourceIdCmd = -1;
     return;
 }
+
+//! ppl_tbAdd - Record an error, or add a level to the traceback of an error which has already been recorded. The
+//! error message is taken from <c->errStat.errBuff>.
+//! \param [in] c - The Pyxplot context
+//! \param [in] srcLineN - The line number of the source of the command or expression where the error occurred
+//! \param [in] srcId - The ID of the source of the command or expression
+//! \param [in] srcFname - The filename of the source of the command or expression
+//! \param [in] cmdOrExpr - One if the error occurred in a command, zero if it occurred in an expression
+//! \param [in] errType - The type of error, one of the ERR_* constants
+//! \param [in] errPos - The position of the error within <linetext>, or -1 if unknown
+//! \param [in] linetext - The text of the command or expression where the error occurred
+//! \param [in] context - A description of the context in which the error occurred, e.g. the name of the function
+//! being called
 
 void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char *srcFname, const int cmdOrExpr,
                const int errType, const int errPos, const char *linetext, const char *context) {
@@ -88,6 +104,9 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
     }
     return;
 }
+
+//! ppl_tbWrite - Report the error which has been recorded to the user, together with its traceback
+//! \param [in] c - The Pyxplot context
 
 void ppl_tbWrite(ppl_context *c) {
     int i = 0, j, k;

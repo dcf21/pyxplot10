@@ -56,6 +56,14 @@
 #define TBADD(et) \
     ppl_tbAdd(context, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, et, charpos, inExpr->ascii, "")
 
+//! expEval_stringSubs - Evaluate the % operator applied to a string, substituting values into printf-style format
+//! tokens. The format string and the values to substitute are taken from the top of the stack, and replaced by the
+//! resulting string.
+//! \param [in] context - The Pyxplot context
+//! \param [in] inExpr - The expression being evaluated
+//! \param [in] charpos - The position of the % operator within the expression, used to report errors
+//! \param [in] Nsubs - The number of values to substitute into the format string
+
 static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, const int charpos, int Nsubs) {
     const char allowedFormats[] = "cdieEfgGosSxX%"; // These tokens are allowed after a % format specifier
     char formatToken[512];
@@ -212,6 +220,16 @@ cast_fail:
             goto cleanup_on_error; \
         } \
     }
+
+//! ppl_expEval - Evaluate a compiled expression
+//! \param [in] context - The Pyxplot context
+//! \param [in] inExpr - The compiled expression to evaluate
+//! \param [out] lastOpAssign - Set to true if the last operation in the expression was an assignment, in which case
+//! its value is not normally displayed
+//! \param [in] dollarAllowed - If true, the $ operator may be used
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Pointer to the result on the stack, or NULL if an error occurred, in which case <context->errStat>
+//! describes the error
 
 pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, const int dollarAllowed,
                     const int iterDepth) {

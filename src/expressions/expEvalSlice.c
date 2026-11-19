@@ -46,6 +46,15 @@
         } \
     }
 
+//! ppl_sliceItem - Evaluate the [] operator with a single index, e.g. a[3], which looks up an item in a list,
+//! vector, matrix row, dictionary or string. The object and index are taken from the top of the stack, and replaced
+//! by the item.
+//! \param [in] context - The Pyxplot context
+//! \param [in] getPtr - If true, return a pointer to the item so that it can be assigned to, rather than a copy
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *errType, char *errText) {
     const int nArgs = 1;
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];
@@ -247,6 +256,19 @@ fail:
     *status = 1;
     goto cleanup;
 }
+
+//! ppl_sliceRange - Evaluate the [] operator with a range of indices, e.g. a[3:5], which takes a slice of a list,
+//! vector or string. The object is taken from the top of the stack, and replaced by the slice.
+//! \param [in] context - The Pyxplot context
+//! \param [in] minset - If true, a lower limit was given
+//! \param [in] min - The index of the first item in the slice, if <minset> is true. Negative values count back
+//! from the end.
+//! \param [in] maxset - If true, an upper limit was given
+//! \param [in] max - The index after the last item in the slice, if <maxset> is true. Negative values count back
+//! from the end.
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_sliceRange(ppl_context *context, const int minset, int min, const int maxset, int max, int *status,
                     int *errType, char *errText) {

@@ -54,6 +54,12 @@ typedef struct calculusComm {
     int iterDepth;
 } calculusComm;
 
+//! ppl_expEvalCalculusSlave - Evaluate the expression being integrated or differentiated at one value of the dummy
+//! variable. This is passed to the GSL integration and differentiation routines.
+//! \param [in] x - The value of the real or imaginary part of the dummy variable, as selected by <params>
+//! \param [in] params - Pointer to the calculusComm structure describing the calculation
+//! \return The real or imaginary part of the expression, as selected by <params>, or NaN if an error occurred
+
 double ppl_expEvalCalculusSlave(const double x, void *params) {
     int lastOpAssign;
     double r, i;
@@ -111,6 +117,20 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
     if (data->testingReal) return r;
     else return i;
 }
+
+//! ppl_expIntegrate - Evaluate the int_d<x>() function, which numerically integrates an expression with respect to
+//! a dummy variable
+//! \param [in] c - The Pyxplot context
+//! \param [in] inExpr - The expression which called int_d<x>(), used to report errors
+//! \param [in] inExprCharPos - The position of the call within <inExpr>, used to report errors
+//! \param [in] expr - The text of the integrand
+//! \param [in] exprPos - The position of the integrand within <inExpr>, used to report errors
+//! \param [in] dummy - The name of the dummy variable
+//! \param [in] min - The lower limit of integration
+//! \param [in] max - The upper limit of integration
+//! \param [out] out - The value of the integral
+//! \param [in] dollarAllowed - If true, the integrand may use the $ operator
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, char *expr, const int exprPos,
                       char *dummy, const pplObj *min, const pplObj *max, pplObj *out, const int dollarAllowed,
@@ -228,6 +248,20 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
     }
     return;
 }
+
+//! ppl_expDifferentiate - Evaluate the diff_d<x>() function, which numerically differentiates an expression with
+//! respect to a dummy variable
+//! \param [in] c - The Pyxplot context
+//! \param [in] inExpr - The expression which called diff_d<x>(), used to report errors
+//! \param [in] inExprCharPos - The position of the call within <inExpr>, used to report errors
+//! \param [in] expr - The text of the expression to differentiate
+//! \param [in] exprPos - The position of the expression within <inExpr>, used to report errors
+//! \param [in] dummy - The name of the dummy variable
+//! \param [in] point - The value of the dummy variable at which to evaluate the derivative
+//! \param [in] step - The step size to use in the numerical differentiation
+//! \param [out] out - The value of the derivative
+//! \param [in] dollarAllowed - If true, the expression may use the $ operator
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, char *expr, const int exprPos,
                           char *dummy, pplObj *point, const pplObj *step, pplObj *out, const int dollarAllowed,

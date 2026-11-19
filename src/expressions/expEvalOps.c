@@ -82,6 +82,18 @@
         } \
     }
 
+//! ppl_opAdd - Evaluate the + operator, which adds numbers, vectors and matrices, concatenates strings and lists,
+//! merges dictionaries, and adds time intervals to dates
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The first operand
+//! \param [in] b - The second operand
+//! \param [out] o - The result (may be the same object as <a>)
+//! \param [in] invertible - Unused. Callers pass one for binary operators, and zero for in-place assignment
+//! operators such as +=
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {
     const int t1 = a->objType;
@@ -340,6 +352,18 @@ cast_fail:
     return;
 }
 
+//! ppl_opSub - Evaluate the - operator, which subtracts numbers, vectors and matrices, and computes the interval
+//! between dates or subtracts time intervals from dates
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The first operand
+//! \param [in] b - The second operand
+//! \param [out] o - The result (may be the same object as <a>)
+//! \param [in] invertible - Unused. Callers pass one for binary operators, and zero for in-place assignment
+//! operators such as +=
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {
     const int t1 = a->objType;
@@ -488,6 +512,17 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
 cast_fail:
     return;
 }
+
+//! ppl_opMul - Evaluate the * operator, which multiplies numbers, vectors and matrices, and scales colors
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The first operand
+//! \param [in] b - The second operand
+//! \param [out] o - The result (may be the same object as <a>)
+//! \param [in] invertible - Unused. Callers pass one for binary operators, and zero for in-place assignment
+//! operators such as +=
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {
@@ -676,6 +711,17 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
 cast_fail:
     return;
 }
+
+//! ppl_opDiv - Evaluate the / operator, which divides numbers, vectors and matrices by numbers, and scales colors
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The numerator
+//! \param [in] b - The denominator
+//! \param [out] o - The result (may be the same object as <a>)
+//! \param [in] invertible - Unused. Callers pass one for binary operators, and zero for in-place assignment
+//! operators such as +=
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int invertible, int *status, int *errType,
                char *errText) {

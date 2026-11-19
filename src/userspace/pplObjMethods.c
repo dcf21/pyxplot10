@@ -87,12 +87,33 @@ dict **pplObjMethods;
 
 // Universal methods of all objects
 
+//! pplmethod_class - Implement the class() method of all objects, which returns the class prototype of an object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     if (t == NULL) pplObjNull(&OUTPUT, 0);
     else pplObjCpy(&OUTPUT, t->objPrototype, 0, 0, 1);
     OUTPUT.self_lval = NULL;
 }
+
+//! pplmethod_data - Implement the data() method of all objects, which returns a list of all the internal variables (not
+//! methods) of an object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int count = 0;
@@ -148,6 +169,17 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
     }
 }
 
+//! pplmethod_contents - Implement the contents() method of all objects, which returns a list of all the methods and
+//! internal variables of an object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int count = 0;
     char *keys[4096], *key, *tmp;
@@ -199,6 +231,16 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
         if (count > 4094) break;
     }
 }
+
+//! pplmethod_methods - Implement the methods() method of all objects, which returns a list of the methods of an object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int count = 0;
@@ -254,6 +296,16 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
     }
 }
 
+//! pplmethod_str - Implement the str() method of all objects, which returns a string representation of an object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_str(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *tmp = (char *) malloc(LSTR_LENGTH);
@@ -266,6 +318,16 @@ static void pplmethod_str(ppl_context *c, pplObj *in, const int nArgs, int *stat
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
+//! pplmethod_type - Implement the type() method of all objects, which returns the type of an object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_type(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     if (t == NULL) pplObjNull(&OUTPUT, 0);
@@ -274,6 +336,16 @@ static void pplmethod_type(ppl_context *c, pplObj *in, const int nArgs, int *sta
 }
 
 // String methods
+
+//! pplmethod_strUpper - Implement the upper() method of strings, which converts a string to uppercase
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strUpper(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0;
@@ -287,6 +359,16 @@ static void pplmethod_strUpper(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
+//! pplmethod_strLower - Implement the lower() method of strings, which converts a string to lowercase
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strLower(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0;
     pplObj *t = in[-1].self_this;
@@ -298,6 +380,17 @@ static void pplmethod_strLower(ppl_context *c, pplObj *in, const int nArgs, int 
     }
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
+
+//! pplmethod_strSplit - Implement the split() method of strings, which returns a list of all the whitespace-separated
+//! words in a string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
@@ -327,6 +420,17 @@ static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int 
             if (instr[i] == '\0') break;
         }
 }
+
+//! pplmethod_strSplitOn - Implement the splitOn(x,...) method of strings, which splits a string whenever it encounters
+//! any of the substrings supplied as arguments, and returns a list of the split string segments
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -378,6 +482,17 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
     }
 }
 
+//! pplmethod_strStrip - Implement the strip() method of strings, which strips whitespace off the beginning and end of a
+//! string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i, j;
     pplObj *t = in[-1].self_this;
@@ -391,6 +506,17 @@ static void pplmethod_strStrip(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
+//! pplmethod_strLStrip - Implement the lstrip() method of strings, which strips whitespace off the beginning of a
+//! string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strLStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0, j = 0;
     pplObj *t = in[-1].self_this;
@@ -401,6 +527,16 @@ static void pplmethod_strLStrip(ppl_context *c, pplObj *in, const int nArgs, int
     tmp[j] = '\0';
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
+
+//! pplmethod_strRStrip - Implement the rstrip() method of strings, which strips whitespace off the end of a string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strRStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0, j = 0;
@@ -413,6 +549,17 @@ static void pplmethod_strRStrip(ppl_context *c, pplObj *in, const int nArgs, int
     tmp[j + 1] = '\0';
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
+
+//! pplmethod_strisalpha - Implement the isalpha() method of strings, which returns a boolean indicating whether all of
+//! the characters of a string are alphabetic
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strisalpha(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -427,6 +574,17 @@ static void pplmethod_strisalpha(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjBool(&OUTPUT, 0, out);
 }
 
+//! pplmethod_strisdigit - Implement the isdigit() method of strings, which returns a boolean indicating whether all of
+//! the characters of a string are numeric
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strisdigit(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *t = in[-1].self_this;
@@ -440,6 +598,17 @@ static void pplmethod_strisdigit(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjBool(&OUTPUT, 0, out);
 }
 
+//! pplmethod_strisalnum - Implement the isalnum() method of strings, which returns a boolean indicating whether all of
+//! the characters of a string are alphanumeric
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strisalnum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *t = in[-1].self_this;
@@ -452,6 +621,16 @@ static void pplmethod_strisalnum(ppl_context *c, pplObj *in, const int nArgs, in
         }
     pplObjBool(&OUTPUT, 0, out);
 }
+
+//! pplmethod_strAppend - Implement the append(x) method of strings, which appends the string x to the end of a string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
@@ -508,6 +687,17 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
     pplObjCpy(&OUTPUT, t, 0, 0, 1);
 }
 
+//! pplmethod_strBeginsWith - Implement the beginsWith(x) method of strings, which returns a boolean indicating whether
+//! a string begins with the substring x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strBeginsWith(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                     char *errText) {
     pplObj *t = in[-1].self_this;
@@ -521,6 +711,17 @@ static void pplmethod_strBeginsWith(ppl_context *c, pplObj *in, const int nArgs,
     cmpstr = (char *) in[0].auxil;
     pplObjBool(&OUTPUT, 0, strncmp(instr, cmpstr, strlen(cmpstr)) == 0);
 }
+
+//! pplmethod_strEndsWith - Implement the endsWith(x) method of strings, which returns a boolean indicating whether a
+//! string ends with the substring x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
@@ -544,6 +745,17 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
     }
 }
 
+//! pplmethod_strFind - Implement the find(x) method of strings, which returns the position of the first occurrence of x
+//! in a string, or -1 if it is not found
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
@@ -565,6 +777,17 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
         }
     pplObjNum(&OUTPUT, 0, -1, 0);
 }
+
+//! pplmethod_strFindAll - Implement the findAll(x) method of strings, which returns a list of the positions where the
+//! substring x occurs in a string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -598,6 +821,16 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
         }
 }
 
+//! pplmethod_strLen - Implement the len() method of strings, which returns the length of a string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
@@ -623,6 +856,17 @@ static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *s
         ppl_calendarTimezoneUnset(c); \
     }
 
+//! pplmethod_dateToDayOfMonth - Implement the toDayOfMonth(<timezone>) method of dates, which returns the day of the
+//! month of a date object in the current calendar
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
     char *FunctionDescription = "toDayOfMonth(<timezone>)";
@@ -638,6 +882,17 @@ static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nAr
     pplObjNum(&OUTPUT, 0, day, 0);
 }
 
+//! pplmethod_dateToDayWeekName - Implement the toDayWeekName(<timezone>) method of dates, which returns the name of the
+//! day of the week of a date object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToDayWeekName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
     char *FunctionDescription = "toDayWeekName(<timezone>)";
@@ -648,6 +903,17 @@ static void pplmethod_dateToDayWeekName(ppl_context *c, pplObj *in, const int nA
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
+//! pplmethod_dateToDayWeekNum - Implement the toDayWeekNum(<timezone>) method of dates, which returns the day of the
+//! week (1-7) of a date object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
     char *FunctionDescription = "toDayWeekNum(<timezone>)";
@@ -655,6 +921,17 @@ static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nAr
     TZ_INIT;
     pplObjNum(&OUTPUT, 0, floor(fmod((t->real + offset) / 3600 / 24 + 4, 7)) + 1, 0);
 }
+
+//! pplmethod_dateToHour - Implement the toHour(<timezone>) method of dates, which returns the integer hour component
+//! (0-23) of a date object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToHour(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -671,10 +948,31 @@ static void pplmethod_dateToHour(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjNum(&OUTPUT, 0, hour, 0);
 }
 
+//! pplmethod_dateToJD - Implement the toJD() method of dates, which converts a date object to a numerical Julian date
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     pplObjNum(&OUTPUT, 0, t->real / 86400.0 + 2440587.5, 0);
 }
+
+//! pplmethod_dateToMinute - Implement the toMinute(<timezone>) method of dates, which returns the integer minute
+//! component (0-59) of a date object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToMinute(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
@@ -691,10 +989,31 @@ static void pplmethod_dateToMinute(ppl_context *c, pplObj *in, const int nArgs, 
     pplObjNum(&OUTPUT, 0, day, 0);
 }
 
+//! pplmethod_dateToMJD - Implement the toMJD() method of dates, which converts a date object to a modified Julian date
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToMJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     pplObjNum(&OUTPUT, 0, t->real / 86400.0 + 40587.0, 0);
 }
+
+//! pplmethod_dateToMonthName - Implement the toMonthName(<timezone>) method of dates, which returns the name of the
+//! month in which a date object falls
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToMonthName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                       char *errText) {
@@ -713,6 +1032,17 @@ static void pplmethod_dateToMonthName(ppl_context *c, pplObj *in, const int nArg
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
+//! pplmethod_dateToMonthNum - Implement the toMonthNum(<timezone>) method of dates, which returns the number (1-12) of
+//! the month in which a date object falls
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToMonthNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                      char *errText) {
     char *FunctionDescription = "toMonthNum(<timezone>)";
@@ -728,6 +1058,17 @@ static void pplmethod_dateToMonthNum(ppl_context *c, pplObj *in, const int nArgs
     pplObjNum(&OUTPUT, 0, month, 0);
 }
 
+//! pplmethod_dateToSecond - Implement the toSecond(<timezone>) method of dates, which returns the seconds component
+//! (0.0-60.0) of a date object
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToSecond(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
     char *FunctionDescription = "toSecond(<timezone>)";
@@ -742,6 +1083,17 @@ static void pplmethod_dateToSecond(ppl_context *c, pplObj *in, const int nArgs, 
     }
     pplObjNum(&OUTPUT, 0, second, 0);
 }
+
+//! pplmethod_dateToStr - Implement the str(<s>,<timezone>) method of dates, which converts a date object to a string
+//! with an optional format string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "str(<s>,<timezone>)";
@@ -784,11 +1136,32 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
+//! pplmethod_dateToUnix - Implement the toUnix() method of dates, which converts a date object to a Unix time
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dateToUnix(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *t = in[-1].self_this;
     pplObjNum(&OUTPUT, 0, t->real, 0);
 }
+
+//! pplmethod_dateToYear - Implement the toYear(<timezone>) method of dates, which returns the year in which a date
+//! object falls in the current calendar
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToYear(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -806,6 +1179,17 @@ static void pplmethod_dateToYear(ppl_context *c, pplObj *in, const int nArgs, in
 }
 
 // Color methods
+
+//! pplmethod_colCompRGB - Implement the componentsRGB() method of colors, which returns a vector RGB representation of
+//! a color
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -825,6 +1209,17 @@ static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, in
     gsl_vector_set(v, 1, g);
     gsl_vector_set(v, 2, b);
 }
+
+//! pplmethod_colCompCMYK - Implement the componentsCMYK() method of colors, which returns a vector CMYK representation
+//! of a color
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
@@ -847,6 +1242,17 @@ static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArg
     gsl_vector_set(v, 2, k);
 }
 
+//! pplmethod_colCompHSB - Implement the componentsHSB() method of colors, which returns a vector HSB representation of
+//! a color
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *a = in[-1].self_this;
@@ -868,6 +1274,16 @@ static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, in
     gsl_vector_set(v, 2, b);
 }
 
+//! pplmethod_colToRGB - Implement the toRGB() method of colors, which returns an RGB representation of a color
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *a = in[-1].self_this;
     double r, g, b;
@@ -880,6 +1296,16 @@ static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int 
     else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r, &g, &b);
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, r, g, b, 0);
 }
+
+//! pplmethod_colToCMYK - Implement the toCMYK() method of colors, which returns a CMYK representation of a color
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs, int *status, int *errType,
                                 char *errText) {
@@ -895,6 +1321,16 @@ static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs,
     } else pplcol_HSBtoCMYK(a->exponent[8], a->exponent[9], a->exponent[10], &c, &m, &y, &k);
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_CMYK, c, m, y, k);
 }
+
+//! pplmethod_colToHSB - Implement the toHSB() method of colors, which returns an HSB representation of a color
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_colToHSB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *a = in[-1].self_this;
@@ -912,6 +1348,16 @@ static void pplmethod_colToHSB(ppl_context *c, pplObj *in, const int nArgs, int 
 }
 
 // Vector methods
+
+//! pplmethod_vectorAppend - Implement the append(x) method of vectors, which appends the object x to a vector
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
@@ -958,6 +1404,17 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
         pplObjCpy(o, &OUTPUT, 0, om, 1);
     }
 }
+
+//! pplmethod_vectorExtend - Implement the extend(x) method of vectors, which appends the members of the list x to the
+//! end of a vector
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
@@ -1063,6 +1520,18 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     }
 }
 
+//! pplmethod_vectorFilter - Implement the filter(f) method of vectors, which takes a pointer to a function of one
+//! argument, f(a). It calls the function for every element of the vector, and returns a new vector of those elements
+//! for which f(a) tests true
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
     ppl_context *context = c;
@@ -1166,6 +1635,17 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     return;
 }
 
+//! pplmethod_vectorInsert - Implement the insert(n,x) method of vectors, which inserts the object x into a vector at
+//! position n
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
     long p, i;
@@ -1240,10 +1720,30 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     }
 }
 
+//! pplmethod_vectorLen - Implement the len() method of vectors, which returns the number of dimensions of a vector
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_vectorLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     gsl_vector *v = ((pplVector *) in[-1].self_this->auxil)->v;
     pplObjNum(&OUTPUT, 0, v->size, 0);
 }
+
+//! pplmethod_vectorList - Implement the list() method of vectors, which returns a list representation of a vector
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -1268,6 +1768,17 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
         ppl_listAppendCpy(lo, &v, sizeof(pplObj));
     }
 }
+
+//! pplmethod_vectorMap - Implement the map(f) method of vectors, which takes a pointer to a function of one argument,
+//! f(a). It calls the function for every element of the vector, and returns a vector of the results
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "map(f)";
@@ -1385,6 +1896,17 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     return;
 }
 
+//! pplmethod_vectorNorm - Implement the norm() method of vectors, which returns the norm (quadrature sum) of a vector's
+//! elements
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_vectorNorm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *st = in[-1].self_this;
@@ -1392,6 +1914,18 @@ static void pplmethod_vectorNorm(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjNum(&OUTPUT, 0, gsl_blas_dnrm2(v), 0);
     ppl_unitsDimCpy(&OUTPUT, st);
 }
+
+//! pplmethod_vectorReduce - Implement the reduce(f) method of vectors, which takes a pointer to a function of two
+//! arguments. It first calls f(a,b) on the first two elements of the vector, and then continues through the vector
+//! calling f(a,b) on the result and the next item in the vector. The final result is returned
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
@@ -1492,6 +2026,17 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     return;
 }
 
+//! pplmethod_vectorReverse - Implement the reverse() method of vectors, which reverses the order of the elements of a
+//! vector
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_vectorReverse(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                     char *errText) {
     pplObj *st = in[-1].self_this;
@@ -1507,6 +2052,16 @@ static void pplmethod_vectorReverse(ppl_context *c, pplObj *in, const int nArgs,
     }
 }
 
+//! pplmethod_vectorSort - Implement the sort() method of vectors, which sorts the members of a vector
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_vectorSort(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *st = in[-1].self_this;
@@ -1518,6 +2073,16 @@ static void pplmethod_vectorSort(ppl_context *c, pplObj *in, const int nArgs, in
 
 // List methods
 
+//! pplmethod_listAppend - Implement the append(x) method of lists, which appends the object x to a list
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_listAppend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj v;
@@ -1528,6 +2093,17 @@ static void pplmethod_listAppend(ppl_context *c, pplObj *in, const int nArgs, in
     ppl_listAppendCpy(l, &v, sizeof(pplObj));
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
 }
+
+//! pplmethod_listCount - Implement the count(x) method of lists, which returns the number of items in a list that equal
+//! x
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listCount(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
@@ -1543,6 +2119,17 @@ static void pplmethod_listCount(ppl_context *c, pplObj *in, const int nArgs, int
     OUTPUT.real = count;
     return;
 }
+
+//! pplmethod_listExtend - Implement the extend(x) method of lists, which appends the members of the list x to the end
+//! of a list
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -1579,6 +2166,18 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
     }
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
 }
+
+//! pplmethod_listFilter - Implement the filter(f) method of lists, which takes a pointer to a function of one argument,
+//! f(a). It calls the function for every element of the list, and returns a new list of those elements for which f(a)
+//! tests true
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -1670,6 +2269,17 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     return;
 }
 
+//! pplmethod_listIndex - Implement the index(x) method of lists, which returns the index of the first element of a list
+//! that equals x, or -1 if no elements match
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_listIndex(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -1688,6 +2298,17 @@ static void pplmethod_listIndex(ppl_context *c, pplObj *in, const int nArgs, int
     OUTPUT.real = -1;
     return;
 }
+
+//! pplmethod_listInsert - Implement the insert(n,x) method of lists, which inserts the object x into a list at position
+//! n
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -1729,10 +2350,31 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
 }
 
+//! pplmethod_listLen - Implement the len() method of lists, which returns the length of a list
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_listLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     list *l = (list *) in[-1].self_this->auxil;
     pplObjNum(&OUTPUT, 0, l->length, 0);
 }
+
+//! pplmethod_listMap - Implement the map(f) method of lists, which takes a pointer to a function of one argument, f(a).
+//! It calls the function for every element of the list, and returns a list of the results
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "map(f)";
@@ -1821,6 +2463,16 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     return;
 }
 
+//! pplmethod_listMax - Implement the max() method of lists, which returns the highest-valued item in a list
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_listMax(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -1833,6 +2485,16 @@ static void pplmethod_listMax(ppl_context *c, pplObj *in, const int nArgs, int *
     else pplObjCpy(&OUTPUT, best, 0, 0, 1);
 }
 
+//! pplmethod_listMin - Implement the min() method of lists, which returns the lowest-valued item in a list
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_listMin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -1844,6 +2506,17 @@ static void pplmethod_listMin(ppl_context *c, pplObj *in, const int nArgs, int *
     if (best == NULL) pplObjNull(&OUTPUT, 0);
     else pplObjCpy(&OUTPUT, best, 0, 0, 1);
 }
+
+//! pplmethod_listPop - Implement the pop() method of lists, which pop(n) removes the nth item from a list and returns
+//! it. If n is not specified, the last list item is popped
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *obj;
@@ -1887,6 +2560,18 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
     pplObjCpy(&OUTPUT, obj, 0, 0, 1);
     ppl_garbageObject(obj);
 }
+
+//! pplmethod_listReduce - Implement the reduce(f) method of lists, which takes a pointer to a function of two
+//! arguments. It first calls f(a,b) on the first two elements of the list, and then continues through the list calling
+//! f(a,b) on the result and the next item in the list. The final result is returned
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -1985,6 +2670,16 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     return;
 }
 
+//! pplmethod_listReverse - Implement the reverse() method of lists, which reverses the order of the members of a list
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_listReverse(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
     long i;
@@ -2004,6 +2699,16 @@ static void pplmethod_listReverse(ppl_context *c, pplObj *in, const int nArgs, i
         l2 = l2->prev;
     }
 }
+
+//! pplmethod_listSort - Implement the sort() method of lists, which sorts the members of a list
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     long i;
@@ -2039,6 +2744,13 @@ static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int 
 static pplObj *pplmethod_listSortOnCustom_fn = NULL;
 static ppl_context *pplmethod_listSortOnCustom_context = NULL;
 static int pplmethod_listSortOnCustom_errFlag = 0;
+
+//! pplmethod_listSortOnCustom_slave - Comparison function for qsort(), used by the sortOn() method of lists. It calls
+//! the user-supplied comparison function stored in <pplmethod_listSortOnCustom_fn>. If an error occurs, it sets
+//! <pplmethod_listSortOnCustom_errFlag>, after which all comparisons return zero.
+//! \param [in] a - Pointer to a pointer to the first object to compare
+//! \param [in] b - Pointer to a pointer to the second object to compare
+//! \return The value returned by the user-supplied comparison function: -1, 0 or 1
 
 static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
     ppl_context *c = pplmethod_listSortOnCustom_context;
@@ -2100,6 +2812,18 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
 
     return out;
 }
+
+//! pplmethod_listSortOnCustom - Implement the sortOn(f) method of lists, which sorts the members of a list using the
+//! user-supplied function f(a,b) to determine the sort order. f should return 1, 0 or -1 depending whether a>b, a==b or
+//! a<b
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
@@ -2175,6 +2899,17 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     free(items);
 }
 
+//! pplmethod_listSortOnElement - Implement the sortOnElement(n) method of lists, which sorts a list of lists on the nth
+//! element of each sublist
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
     long i;
@@ -2241,6 +2976,17 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     }
     free(items);
 }
+
+//! pplmethod_listVector - Implement the vector() method of lists, which turns a list into a vector, providing all the
+//! list elements are numbers with the same physical dimensions
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -2323,6 +3069,17 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
 
 // Dictionary methods
 
+//! pplmethod_dictDelete - Implement the delete(x) method of pplobj, which deletes the key x from the dictionary, if it
+//! exists
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *item;
@@ -2358,6 +3115,17 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     return;
 }
 
+//! pplmethod_dictHasKey - Implement the hasKey(x) method of pplobj, which returns a boolean indicating whether the key
+//! x exists in the dictionary
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *st = in[-1].self_this;
@@ -2374,6 +3142,17 @@ static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjBool(&OUTPUT, 0, ppl_dictContains(di, instr));
     return;
 }
+
+//! pplmethod_dictItems - Implement the items() method of pplobj, which returns a list of the [key,value] pairs in a
+//! dictionary
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *key, *tmp;
@@ -2412,6 +3191,16 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
     }
 }
 
+//! pplmethod_dictKeys - Implement the keys() method of pplobj, which returns a list of the keys defined in a dictionary
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *key, *tmp;
     pplObj v, *item;
@@ -2432,10 +3221,30 @@ static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int 
     }
 }
 
+//! pplmethod_dictLen - Implement the len() method of pplobj, which returns the number of entries in a dictionary
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_dictLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     dict *d = (dict *) in[-1].self_this->auxil;
     pplObjNum(&OUTPUT, 0, d->length, 0);
 }
+
+//! pplmethod_dictValues - Implement the values() method of pplobj, which returns a list of the values in a dictionary
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -2459,6 +3268,16 @@ static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, in
 }
 
 // Matrix methods
+
+//! pplmethod_matrixDet - Implement the det() method of matrices, which returns the determinant of a square matrix
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
@@ -2501,6 +3320,17 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] *= n;
 }
 
+//! pplmethod_matrixDiagonal - Implement the diagonal() method of matrices, which returns a boolean indicating whether a
+//! matrix is diagonal
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_matrixDiagonal(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                      char *errText) {
     int i, j;
@@ -2517,6 +3347,17 @@ static void pplmethod_matrixDiagonal(ppl_context *c, pplObj *in, const int nArgs
             }
     pplObjBool(&OUTPUT, 0, 1);
 }
+
+//! pplmethod_matrixEigenvalues - Implement the eigenvalues() method of matrices, which returns a vector containing the
+//! eigenvalues of a square symmetric matrix
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
@@ -2572,6 +3413,17 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
     gsl_eigen_symm_free(w);
     ppl_unitsDimCpy(&OUTPUT, st);
 }
+
+//! pplmethod_matrixEigenvectors - Implement the eigenvectors() method of matrices, which returns a list of the
+//! eigenvectors of a square symmetric matrix
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                          char *errText) {
@@ -2655,6 +3507,16 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     gsl_matrix_free(tmp2);
 }
 
+//! pplmethod_matrixInv - Implement the inv() method of matrices, which returns the inverse of a square matrix
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
@@ -2706,6 +3568,16 @@ static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int
     ppl_unitsDimInverse(&OUTPUT, st);
 }
 
+//! pplmethod_matrixSize - Implement the size() method of matrices, which returns the dimensions of a matrix
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_matrixSize(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
@@ -2720,6 +3592,17 @@ static void pplmethod_matrixSize(ppl_context *c, pplObj *in, const int nArgs, in
     gsl_vector_set(vo, 0, m->size1);
     gsl_vector_set(vo, 1, m->size2);
 }
+
+//! pplmethod_matrixSymmetric - Implement the symmetric() method of matrices, which returns a boolean indicating whether
+//! a matrix is symmetric
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_matrixSymmetric(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                       char *errText) {
@@ -2737,6 +3620,16 @@ static void pplmethod_matrixSymmetric(ppl_context *c, pplObj *in, const int nArg
             }
     pplObjBool(&OUTPUT, 0, 1);
 }
+
+//! pplmethod_matrixTrans - Implement the transpose() method of matrices, which returns the transpose of a matrix
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
@@ -2764,6 +3657,16 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
 
 // File methods
 
+//! pplmethod_fileClose - Implement the close() method of file handles, which closes a file handle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_fileClose(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     if (f->open) {
@@ -2780,11 +3683,33 @@ static void pplmethod_fileClose(ppl_context *c, pplObj *in, const int nArgs, int
     }
 }
 
+//! pplmethod_fileDump - Implement the dump() method of file handles, which dump(x) writes a typeable ASCII
+//! representation of the object x to the file handle
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_fileDump(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     pplObjDump(c, &in[0], f->file);
     return;
 }
+
+//! pplmethod_fileEof - Implement the eof() method of file handles, which returns a boolean flag to indicate whether the
+//! end of a file has been reached
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_fileEof(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
@@ -2794,6 +3719,17 @@ static void pplmethod_fileEof(ppl_context *c, pplObj *in, const int nArgs, int *
     }
     pplObjBool(&OUTPUT, 0, feof(f->file) != 0);
 }
+
+//! pplmethod_fileFlush - Implement the flush() method of file handles, which flushes any buffered data which has not
+//! yet physically been written to a file
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_fileFlush(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
@@ -2808,6 +3744,17 @@ static void pplmethod_fileFlush(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
 }
+
+//! pplmethod_fileGetpos - Implement the getPos() method of file handles, which returns a file handle's current position
+//! in a file
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_fileGetpos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
@@ -2827,11 +3774,32 @@ static void pplmethod_fileGetpos(ppl_context *c, pplObj *in, const int nArgs, in
     CLEANUP_APPLYUNIT(UNIT_BIT);
 }
 
+//! pplmethod_fileIsOpen - Implement the isOpen() method of file handles, which returns a boolean flag indicating
+//! whether a file is open
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_fileIsOpen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     pplObjBool(&OUTPUT, 0, f->open != 0);
 }
+
+//! pplmethod_fileRead - Implement the read() method of file handles, which returns the contents of a file as a string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *out = NULL, *new;
@@ -2863,6 +3831,17 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
     out[pos] = '\0';
     pplObjStr(&OUTPUT, 0, 1, out);
 }
+
+//! pplmethod_fileReadline - Implement the readline() method of file handles, which returns a single line of a file as a
+//! string
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
@@ -2905,6 +3884,17 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
+//! pplmethod_fileReadlines - Implement the readlines() method of file handles, which returns the lines of a file as a
+//! list of strings
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_fileReadlines(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                     char *errText) {
     pplObj *st = in[-1].self_this;
@@ -2937,6 +3927,17 @@ static void pplmethod_fileReadlines(ppl_context *c, pplObj *in, const int nArgs,
     memcpy(&OUTPUT, &v, sizeof(pplObj));
 }
 
+//! pplmethod_fileSetpos - Implement the setPos(x) method of file handles, which sets a file handle's current position
+//! in a file
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     char FunctionDescription[] = "setPos(x)";
@@ -2966,6 +3967,16 @@ static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, in
     CLEANUP_APPLYUNIT(UNIT_BIT);
 }
 
+//! pplmethod_fileWrite - Implement the write(x) method of file handles, which writes the string x to a file
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     char *s = (char *) in[0].auxil;
@@ -2993,6 +4004,16 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
 
 // Exception methods
 
+//! pplmethod_excRaise - Implement the raise(s) method of exceptions, which raises an exception with error string s
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
@@ -3009,6 +4030,10 @@ static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int 
 }
 
 // Build dictionaries of the above methods
+
+//! pplObjMethodsInit - Build the dictionaries of methods available on each of Pyxplot's object types, including the
+//! universal methods common to all objects
+//! \param [in] c - The Pyxplot context
 
 void pplObjMethodsInit(ppl_context *c) {
     int i;

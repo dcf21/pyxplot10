@@ -71,6 +71,16 @@
         } \
     }
 
+//! ppl_fnCall - Evaluate a function call. The function object and its arguments are taken from the top of the
+//! stack, and replaced by the result. Calling a module or class creates an instance of it, and calling a type
+//! object constructs an object of that type.
+//! \param [in] context - The Pyxplot context
+//! \param [in] inExpr - The expression containing the function call, used to report errors
+//! \param [in] inExprCharPos - The position of the call within <inExpr>, used to report errors
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [in] dollarAllowed - If true, the function may use the $ operator
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, int nArgs, const int dollarAllowed,
                 const int iterDepth) {
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];

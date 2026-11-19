@@ -131,6 +131,23 @@
         scanpos += (L); \
     }
 
+//! ppl_expTokenise - Tokenise an algebraic expression, labelling each character with the type of token it belongs
+//! to and the operator it represents. The result is written into <context->tokenBuff>.
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The expression to tokenise
+//! \param [out] end - Set to the number of characters of <in> which form part of the expression
+//! \param [in] dollarAllowed - If true, the $ operator may be used
+//! \param [in] equalsAllowed - If true, assignment operators may be used
+//! \param [in] allowCommaOperator - If true, the comma operator may be used
+//! \param [in] collectCommas - If true, commas separate items in a list, rather than ending the expression
+//! \param [in] isDict - If true, the expression is the contents of a dictionary literal, so colons separate keys
+//! from values
+//! \param [in] outOffset - Position in <context->tokenBuff> at which to start writing, for recursive calls
+//! \param [out] outlen - Set to the number of tokens written
+//! \param [out] errPos - Set to the position of any syntax error in <in>, or -1 if there was none
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarAllowed, const int equalsAllowed,
                      const int allowCommaOperator, const int collectCommas, const int isDict, const int outOffset,
                      int *outlen, int *errPos, int *errType, char *errText) {
@@ -725,7 +742,10 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
     }
 }
 
-// ppl_tokenPrint() -- a debugging routine to display tokenised data
+//! ppl_tokenPrint - Print the tokenised form of an expression to stdout, for debugging
+//! \param [in] context - The Pyxplot context, whose <tokenBuff> holds the tokens
+//! \param [in] in - The expression which was tokenised
+//! \param [in] len - The number of characters in the expression
 
 void ppl_tokenPrint(const ppl_context *context, char *in, const int len) {
     pplTokenCode *tdat = context->tokenBuff;
@@ -840,6 +860,21 @@ void ppl_tokenPrint(const ppl_context *context, char *in, const int len) {
         out[lastoutpos].len = \
                 outpos - lastoutpos; /* Write the length of the bytecode instruction we've just written */ \
     }
+
+//! ppl_expCompile - Compile an algebraic expression into bytecode, using the shunting-yard algorithm
+//! \param [in] context - The Pyxplot context
+//! \param [in] srcLineN - The line number of the source of the expression, used to report errors
+//! \param [in] srcId - The ID of the source of the expression, used to report errors
+//! \param [in] srcFname - The filename of the source of the expression, used to report errors
+//! \param [in] in - The expression to compile
+//! \param [out] end - Set to the number of characters of <in> which form part of the expression, or -1 on error
+//! \param [in] dollarAllowed - If true, the $ operator may be used
+//! \param [in] equalsAllowed - If true, assignment operators may be used
+//! \param [in] allowCommaOperator - If true, the comma operator may be used
+//! \param [out] outExpr - Set to point to the compiled expression, which is allocated with malloc()
+//! \param [out] errPos - Set to the position of any syntax error in <in>, or -1 if there was none
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, char *srcFname, char *in, int *end,
                     const int dollarAllowed, const int equalsAllowed, const int allowCommaOperator, pplExpr **outExpr,
@@ -1438,6 +1473,11 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
 
 // Debugging routine to produce a textual representation of reverse Polish bytecode
 
+//! ppl_reversePolishPrint - Print a textual representation of the reverse-Polish bytecode of a compiled expression,
+//! for debugging
+//! \param [in] context - The Pyxplot context
+//! \param [in] expIn - The compiled expression to print
+
 void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
     int j = 0;
     char op[32], optype[32], arg[1024];
@@ -1633,6 +1673,9 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
     return;
 }
 
+//! pplExpr_free - Release a reference to a compiled expression, freeing it when its reference count reaches zero
+//! \param [in] inExpr - The compiled expression (may be NULL)
+
 void pplExpr_free(pplExpr *inExpr) {
     if (inExpr == NULL) return;
     if (__sync_sub_and_fetch(&inExpr->refCount, 1) > 0) return;
@@ -1642,6 +1685,10 @@ void pplExpr_free(pplExpr *inExpr) {
     free(inExpr);
     return;
 }
+
+//! pplExpr_cpy - Make a deep copy of a compiled expression, allocated with malloc()
+//! \param [in] i - The compiled expression to copy (may be NULL)
+//! \return The copy, or NULL if <i> is NULL or memory allocation failed
 
 pplExpr *pplExpr_cpy(const pplExpr *i) {
     pplExpr *o;
@@ -1664,6 +1711,11 @@ pplExpr *pplExpr_cpy(const pplExpr *i) {
     }
     return o;
 }
+
+//! pplExpr_tmpcpy - Make a temporary deep copy of a compiled expression, allocated in the current ppl_memAlloc
+//! context. It is freed when that context is freed, and must not be passed to pplExpr_free().
+//! \param [in] i - The compiled expression to copy (may be NULL)
+//! \return The copy, or NULL if <i> is NULL or memory allocation failed
 
 pplExpr *pplExpr_tmpcpy(const pplExpr *i) {
     pplExpr *o;
