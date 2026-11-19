@@ -691,13 +691,36 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
             return;
         }
 
-        // Read data back from sed process
-        if ((i = read(fstdout, re, rel)) < 0) {
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "Could not read from pipe to sed.");
-            sigprocmask(SIG_UNBLOCK, &sigs, NULL);
-            free(re);
-            re = NULL;
-            return;
+        // Read data back from sed process, until it closes the pipe. The output may be longer than the regular
+        // expression buffer, and may arrive in several pieces, so grow the buffer as needed.
+        i = 0;
+        while (1) {
+            ssize_t n;
+            if (i >= rel - 1) {
+                char *grown = (char *) realloc(re, rel * 2);
+                if (grown == NULL) {
+                    ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+                    close(fstdout);
+                    sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+                    free(re);
+                    re = NULL;
+                    return;
+                }
+                re = grown;
+                rel *= 2;
+            }
+            n = read(fstdout, re + i, rel - 1 - i);
+            if ((n < 0) && (errno == EINTR)) continue;
+            if (n < 0) {
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "Could not read from pipe to sed.");
+                close(fstdout);
+                sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+                free(re);
+                re = NULL;
+                return;
+            }
+            if (n == 0) break; // End of output
+            i += (int) n;
         }
         re[i] = '\0';
         close(fstdout);

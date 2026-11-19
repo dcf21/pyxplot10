@@ -230,7 +230,8 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (!in[1].dimensionless) {
         *status = 1;
         *errType = ERR_UNIT;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s function requires a dimensionless renormalisation constant as its second argument. Supplied value has dimensions of <%s>.",
                 FunctionDescription, ppl_printUnit(c, &in[1], NULL, NULL, 0, 1, 0));
         return;
@@ -316,7 +317,8 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s function requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -325,7 +327,8 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s function requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -333,7 +336,8 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     if (!in[1].dimensionless) {
         *status = 1;
         *errType = ERR_UNIT;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s function requires a dimensionless renormalisation constant as its second argument. Supplied value has dimensions of <%s>.",
                 FunctionDescription, ppl_printUnit(c, &in[1], NULL, NULL, 0, 1, 0));
         return;
@@ -347,7 +351,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "stack overflow in the colors.spectrum function.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "stack overflow in the colors.spectrum function.");
         return;
     }
 
@@ -391,7 +395,8 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         if (c->stack[c->stackPtr - 1].objType != PPLOBJ_NUM) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "The %s function requires a spectrum function that returns a number. Supplied function returned an object of type <%s>.",
                     FunctionDescription, pplObjTypeNames[c->stack[c->stackPtr - 1].objType]);
             return;

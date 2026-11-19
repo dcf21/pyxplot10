@@ -41,10 +41,10 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, int day, int hour, i
                       char *errText);
 void ppl_fromUnixTime(ppl_context *ct, double UT, int *year, int *month, int *day, int *hour, int *min, double *sec,
                       int *status, char *errText);
-void ppl_dateString(ppl_context *ct, char *out, double UT, const char *format, const char *timezone, int *status,
-                    char *errText);
-void ppl_timeDiffStr(const ppl_context *ct, char *out, double UT1, double UT2, const char *format, int *status,
-                     char *errText);
+void ppl_dateString(ppl_context *ct, char *out, size_t outLen, double UT, const char *format, const char *timezone,
+                    int *status, char *errText);
+void ppl_timeDiffStr(const ppl_context *ct, char *out, size_t outLen, double UT1, double UT2, const char *format,
+                     int *status, char *errText);
 
 void ppl_calendarTimezoneSet(const ppl_context *ct, int specified, const char *tz);
 void ppl_calendarTimezoneUnset(const ppl_context *ct);

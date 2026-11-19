@@ -26,6 +26,7 @@
 #include <gsl/gsl_math.h>
 
 #include "mathsTools/dcfmath.h"
+#include "stringTools/asciidouble.h"
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
@@ -249,8 +250,9 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     if ((c != NULL) && (t1o != t2o)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "Attempt to compare an object of type <%s> with an object of type <%s>.", pplObjTypeNames[t1],
-                pplObjTypeNames[t2]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Attempt to compare an object of type <%s> with an object of type <%s>.", pplObjTypeNames[t1],
+                          pplObjTypeNames[t2]);
         return -2;
     }
     if (t1o < t2o) return -1;
@@ -269,15 +271,18 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
                 *status = 1;
                 *errType = ERR_UNIT;
                 if (a->dimensionless)
-                    sprintf(errText,
+                    ppl_snprintfTrunc(
+                            errText, LSTR_LENGTH,
                             "Attempt to compare a quantity which is dimensionless with one with dimensions of <%s>.",
                             ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
                 else if (b->dimensionless)
-                    sprintf(errText,
+                    ppl_snprintfTrunc(
+                            errText, LSTR_LENGTH,
                             "Attempt to compare a quantity with dimensions of <%s> with one which is dimensionless.",
                             ppl_printUnit(c, a, NULL, NULL, 0, 1, 0));
                 else
-                    sprintf(errText,
+                    ppl_snprintfTrunc(
+                            errText, LSTR_LENGTH,
                             "Attempt to compare a quantity with dimensions of <%s> with one with dimensions of <%s>.",
                             ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
                 return -2;

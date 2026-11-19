@@ -62,7 +62,8 @@
                     if ((len < 0) || (c[len] != '\0')) { \
                         *status = 1; \
                         *errType = ERR_TYPE; \
-                        sprintf(errText, \
+                        ppl_snprintfTrunc( \
+                                errText, LSTR_LENGTH, \
                                 "Attempt to implicitly cast string to number failed: string is not a valid number."); \
                         goto cast_fail; \
                     } \
@@ -71,8 +72,9 @@
                 default: { \
                     *status = 1; \
                     *errType = ERR_TYPE; \
-                    sprintf(errText, "Cannot implicitly cast an object of type <%s> to a number.", \
-                            pplObjTypeNames[t]); \
+                    ppl_snprintfTrunc(errText, LSTR_LENGTH, \
+                                      "Cannot implicitly cast an object of type <%s> to a number.", \
+                                      pplObjTypeNames[t]); \
                     goto cast_fail; \
                 } \
             } \
@@ -111,7 +113,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (tmp == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         strcpy(tmp, (char *) a->auxil);
@@ -147,7 +149,8 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             if (num->exponent[i] != (i == UNIT_TIME)) {
                 *status = 1;
                 *errType = ERR_UNIT;
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Can only add quantities with units of time to dates. Attempt to add a quantity with units of <%s>.",
                         ppl_printUnit(context, num, NULL, NULL, 1, 1, 0));
                 return;
@@ -161,15 +164,18 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *vo;
         if (!ppl_unitsDimEqual(a, b)) {
             if (a->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to add quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
                         ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             } else if (b->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
             } else {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             }
@@ -178,7 +184,8 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             return;
         }
         if (v1->size != v2->size) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Can only add vectors of a common size. Left operand has length of %ld, while right operand has length of %ld.",
                     (long) v1->size, (long) v2->size);
             *errType = ERR_RANGE;
@@ -188,7 +195,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjVector(o, 0, 1, v1->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         vo = ((pplVector *) (o->auxil))->v;
@@ -202,7 +209,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         l = (list *) o->auxil;
@@ -226,7 +233,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         l = (list *) o->auxil;
@@ -251,7 +258,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         l = (list *) o->auxil;
@@ -276,7 +283,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (((t1 == PPLOBJ_DICT) ? pplObjDict(o, 0, 1, NULL) : pplObjModule(o, 0, 1, 0)) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         d = (dict *) o->auxil;
@@ -298,15 +305,18 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *mo;
         if (!ppl_unitsDimEqual(a, b)) {
             if (a->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to add quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
                         ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             } else if (b->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
             } else {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             }
@@ -315,7 +325,8 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             return;
         }
         if ((m1->size1 != m2->size1) || (m1->size2 != m2->size2)) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Can only add matrices of a common size. Left operand has size of %ldx%ld, while right operand has size of %ldx%ld.",
                     (long) m1->size1, (long) m1->size2, (long) m2->size1, (long) m2->size2);
             *errType = ERR_RANGE;
@@ -325,7 +336,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         mo = ((pplMatrix *) (o->auxil))->m;
@@ -383,7 +394,8 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             if (b->exponent[i] != (i == UNIT_TIME)) {
                 *status = 1;
                 *errType = ERR_UNIT;
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Can only subtract quantities with units of time from dates. Attempt to subtract a quantity with units of <%s>.",
                         ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
                 return;
@@ -418,15 +430,18 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *vo;
         if (ppl_unitsDimEqual(a, b) == 0) {
             if (a->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to subtract quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
                         ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             } else if (b->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
             } else {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             }
@@ -435,7 +450,8 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             return;
         }
         if (v1->size != v2->size) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Can only subtract vectors of a common size. Left operand has length of %ld, while right operand has length of %ld.",
                     (long) v1->size, (long) v2->size);
             *errType = ERR_RANGE;
@@ -445,7 +461,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjVector(o, 0, 1, v1->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         vo = ((pplVector *) (o->auxil))->v;
@@ -459,15 +475,18 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *mo;
         if (ppl_unitsDimEqual(a, b) == 0) {
             if (a->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to subtract quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
                         ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             } else if (b->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
             } else {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
                         ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
             }
@@ -476,7 +495,8 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             return;
         }
         if ((m1->size1 != m2->size1) || (m1->size2 != m2->size2)) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Can only subtract matrices of a common size. Left operand has size of %ldx%ld, while right operand has size of %ldx%ld.",
                     (long) m1->size1, (long) m1->size2, (long) m2->size1, (long) m2->size2);
             *errType = ERR_RANGE;
@@ -486,7 +506,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         mo = ((pplMatrix *) (o->auxil))->m;
@@ -539,7 +559,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObj *n = (t1 == PPLOBJ_COL) ? b : a;
         const double m = n->real;
         if ((!n->dimensionless) || (n->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
-            sprintf(errText, "Can only multiply colors by dimensionless, real, positive numbers.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Can only multiply colors by dimensionless, real, positive numbers.");
             *errType = ERR_RANGE;
             *status = 1;
             return;
@@ -562,7 +583,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         int i;
         double acc = 0;
         if (v1->size != v2->size) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Can only form dot-product of vectors of a common size. Left operand has length of %ld, while right operand has length of %ld.",
                     (long) v1->size, (long) v2->size);
             *errType = ERR_RANGE;
@@ -585,7 +607,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *v = ((pplVector *) (vec->auxil))->v;
         gsl_vector *vo = NULL;
         if (num->flagComplex) {
-            sprintf(errText, "Vectors can only contain real numbers, and cannot be multiplied by complex numbers.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Vectors can only contain real numbers, and cannot be multiplied by complex numbers.");
             *errType = ERR_NUMERICAL;
             *status = 1;
             return;
@@ -596,7 +619,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjVector(o, 0, 1, v->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         ppl_uaMul(context, a, b, o, status, errType, errText);
@@ -612,7 +635,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *m = ((pplMatrix *) (mat->auxil))->m;
         gsl_matrix *mo = NULL;
         if (num->flagComplex) {
-            sprintf(errText, "Matrices can only contain real numbers, and cannot be multiplied by complex numbers.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Matrices can only contain real numbers, and cannot be multiplied by complex numbers.");
             *errType = ERR_NUMERICAL;
             *status = 1;
             return;
@@ -623,7 +647,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjMatrix(o, 0, 1, m->size1, m->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         ppl_uaMul(context, a, b, o, status, errType, errText);
@@ -638,7 +662,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *v = ((pplVector *) (b->auxil))->v;
         gsl_vector *vo = NULL;
         if (m->size2 != v->size) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Matrices can only be multiplied by vectors when the number of matrix columns (%ld) equals the number of vector rows (%ld).",
                     (long) m->size2, (long) v->size);
             *errType = ERR_NUMERICAL;
@@ -648,7 +673,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjVector(o, 0, 1, m->size1) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         a->real = b->real = 1;
@@ -659,7 +684,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if ((gslerr = gsl_blas_dgemv(CblasNoTrans, 1, m, v, 0, vo)) != 0) {
             *status = 1;
             *errType = ERR_NUMERICAL;
-            strcpy(errText, gsl_strerror(gslerr));
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", gsl_strerror(gslerr));
             return;
         }
     } else if ((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_MAT)) // matrix-matrix multiplication
@@ -669,7 +694,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *m2 = ((pplMatrix *) (b->auxil))->m;
         gsl_matrix *mo = NULL;
         if (m1->size2 != m2->size1) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Matrices can only be multiplied when the number of matrix columns (%ld) in the left matrix equals the number of rows (%ld) in the right matrix.",
                     (long) m1->size2, (long) m2->size1);
             *errType = ERR_NUMERICAL;
@@ -679,7 +705,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         a->real = b->real = 1;
@@ -690,7 +716,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if ((gslerr = gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1, m1, m2, 0, mo)) != 0) {
             *status = 1;
             *errType = ERR_NUMERICAL;
-            strcpy(errText, gsl_strerror(gslerr));
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", gsl_strerror(gslerr));
             return;
         }
     } else // multiplying numbers
@@ -735,7 +761,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         double r1, g1, b1;
         const double m = b->real;
         if ((!b->dimensionless) || (b->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
-            sprintf(errText, "Can only divide colors by dimensionless, real, positive numbers.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Can only divide colors by dimensionless, real, positive numbers.");
             *errType = ERR_RANGE;
             *status = 1;
             return;
@@ -757,7 +783,8 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *v = ((pplVector *) (a->auxil))->v;
         gsl_vector *vo = NULL;
         if (b->flagComplex) {
-            sprintf(errText, "Vectors can only contain real numbers, and cannot be divided by complex numbers.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Vectors can only contain real numbers, and cannot be divided by complex numbers.");
             *errType = ERR_NUMERICAL;
             *status = 1;
             return;
@@ -768,7 +795,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjVector(o, 0, 1, v->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         ppl_uaDiv(context, a, b, o, status, errType, errText);
@@ -781,7 +808,8 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *m = ((pplMatrix *) (a->auxil))->m;
         gsl_matrix *mo = NULL;
         if (b->flagComplex) {
-            sprintf(errText, "Matrices can only contain real numbers, and cannot be divided by complex numbers.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Matrices can only contain real numbers, and cannot be divided by complex numbers.");
             *errType = ERR_NUMERICAL;
             *status = 1;
             return;
@@ -792,7 +820,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         if (pplObjMatrix(o, 0, 1, m->size1, m->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         ppl_uaDiv(context, a, b, o, status, errType, errText);

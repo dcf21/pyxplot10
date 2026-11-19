@@ -610,11 +610,10 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
-            if (fnlen != 0) scratchpad[fnlen++] = '.';
-            sprintf(scratchpad + fnlen, "%s", (char *) stk[pos + PARSE_ifft_fnname_fnnames].auxil);
-            fnlen += strlen(scratchpad + fnlen);
+            if (fnlen != 0) ppl_strAppendChar(scratchpad, LSTR_LENGTH, &fnlen, '.');
+            ppl_strAppendf(scratchpad, LSTR_LENGTH, &fnlen, "%s", (char *) stk[pos + PARSE_ifft_fnname_fnnames].auxil);
         }
-        scratchpad[fnlen++] = '(';
+        ppl_strAppendChar(scratchpad, LSTR_LENGTH, &fnlen, '(');
 
         for (i = 0; i < Nsamples; i++) {
             const int stkLevelOld = c->stackPtr;
@@ -632,12 +631,14 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             for (l = 0; l < Ndims; l++) {
                 pplObj x = unit[l];
                 x.real = pos[l];
-                sprintf(scratchpad + j, "%s,", ppl_unitsNumericDisplay(c, &x, 0, 1, 20));
-                j += strlen(scratchpad + j);
+                ppl_strAppendf(scratchpad, LSTR_LENGTH, &j, "%s,", ppl_unitsNumericDisplay(c, &x, 0, 1, 20));
             }
-            sprintf(scratchpad + j - (Ndims > 0), ")");
+            // Replace the final comma with a closing bracket
+            j -= (Ndims > 0);
+            scratchpad[j] = '\0';
+            ppl_strAppendChar(scratchpad, LSTR_LENGTH, &j, ')');
 
-            explen1 = explen2 = j - (Ndims > 0) + 1;
+            explen1 = explen2 = j; // The length of the expression, up to and including the closing bracket
             ppl_error_setstreaminfo(&c->errcontext, 1, "fitting expression");
             ppl_expCompile(c, pl->srcLineN, pl->srcId, pl->srcFname, scratchpad, &explen2, 1, 1, 1, &e, &errPos,
                            &errType, c->errStat.errBuff);
@@ -684,17 +685,15 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             if ((!gsl_finite(out->real)) || (!gsl_finite(out->imag))) {
                 int j = 0;
-                sprintf(c->errStat.errBuff + j, "Could not evaluate input function at position ");
-                j += strlen(c->errStat.errBuff + j);
-                strncpy(c->errStat.errBuff + j, scratchpad, fnlen);
-                j += fnlen;
+                ppl_strAppendf(c->errStat.errBuff, sizeof(c->errStat.errBuff), &j,
+                               "Could not evaluate input function at position %.*s", fnlen, scratchpad);
                 for (l = 0; l < Ndims; l++) {
                     pplObj x = unit[l];
                     x.real = pos[l];
-                    sprintf(c->errStat.errBuff + j, "%s,", ppl_unitsNumericDisplay(c, &x, 0, 1, -1));
-                    j += strlen(c->errStat.errBuff + j);
+                    ppl_strAppendf(c->errStat.errBuff, sizeof(c->errStat.errBuff), &j, "%s,",
+                                   ppl_unitsNumericDisplay(c, &x, 0, 1, -1));
                 }
-                sprintf(c->errStat.errBuff + j, ")");
+                ppl_strAppendf(c->errStat.errBuff, sizeof(c->errStat.errBuff), &j, ")");
                 TBADD2(ERR_NUMERICAL, 0);
                 STACK_CLEAN;
                 fftw_free(datagrid);
@@ -908,7 +907,8 @@ void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplOb
     for (i = 0; i < desc->Ndims; i++) {
         if (!ppl_unitsDimEqual(in + i, &desc->invRange[i])) {
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                sprintf(errout,
+                ppl_snprintfTrunc(
+                        errout, LSTR_LENGTH,
                         "The %s(x) function expects argument %d to have dimensions of <%s>, but has instead received an argument with dimensions of <%s>.",
                         FuncName, i + 1, ppl_printUnit(c, &desc->invRange[i], NULL, NULL, 0, 1, 0),
                         ppl_printUnit(c, in + i, NULL, NULL, 1, 1, 0));
@@ -922,7 +922,8 @@ void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplOb
         }
         if ((in + i)->flagComplex) {
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                sprintf(errout,
+                ppl_snprintfTrunc(
+                        errout, LSTR_LENGTH,
                         "The %s(x) function expects argument %d to be real, but the supplied argument has an imaginary component.",
                         FuncName, i + 1);
             } else {

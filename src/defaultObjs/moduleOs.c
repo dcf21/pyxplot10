@@ -52,7 +52,7 @@
         if (X == NULL) { \
             *status = 1; \
             *errType = ERR_MEMORY; \
-            sprintf(errText, "Out of memory."); \
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory."); \
             return; \
         } \
         strcpy(X, Y); \
@@ -71,13 +71,13 @@ void pplfunc_osChdir(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.chdir() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.chdir() function requires a single string argument.");
         return;
     }
     if (chdir((char *) in[0].auxil) != 0) {
         *status = 1;
         *errType = ERR_FILE;
-        sprintf(errText, "The os.chdir() encountered an error: %s", strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.chdir() encountered an error: %s", strerror(errno));
         return;
     }
     strncpy(c->errcontext.session_default.cwd, (char *) in[0].auxil, FNAME_LENGTH);
@@ -215,7 +215,7 @@ void pplfunc_osGetHome(ppl_context *c, pplObj *in, const int nArgs, int *status,
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     strcpy(out, tmp);
@@ -239,7 +239,7 @@ void pplfunc_osGetHost(ppl_context *c, pplObj *in, const int nArgs, int *status,
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     gethostname(out, outlen);
@@ -265,7 +265,7 @@ void pplfunc_osGetLogin(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     strcpy(out, tmp);
@@ -289,7 +289,7 @@ void pplfunc_osGetRealName(ppl_context *c, pplObj *in, const int nArgs, int *sta
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     strcpy(out, tmp);
@@ -318,13 +318,13 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.glob() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.glob() function requires a single string argument.");
         return;
     }
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -367,13 +367,13 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The open() function requires string arguments.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
         return;
     }
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The open() function requires string arguments.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
         return;
     }
     if (nArgs > 1) mode = (char *) in[1].auxil;
@@ -382,7 +382,7 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if (f == NULL) {
         *status = 1;
         *errType = ERR_FILE;
-        strcpy(errText, strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
         return;
     }
     pplObjFile(&OUTPUT, 0, 1, f, 1);
@@ -406,7 +406,7 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.stat() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.stat() function requires a single string argument.");
         return;
     }
     if (stat((char *) in[0].auxil, &s) != 0) {
@@ -418,7 +418,7 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     if (pplObjDict(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     d = (dict *) OUTPUT.auxil;
@@ -489,7 +489,7 @@ void pplfunc_osSystem(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.system() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.system() function requires a single string argument.");
         return;
     }
     pplObjNum(&OUTPUT, 0, system((char *) in[0].auxil), 0);
@@ -527,7 +527,7 @@ void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if (uname(&u)) {
         *status = 1;
         *errType = ERR_INTERNAL;
-        sprintf(errText, "The uname() function failed.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The uname() function failed.");
         return;
     }
     v.refCount = 1;
@@ -535,7 +535,7 @@ void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if (pplObjDict(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     d = (dict *) OUTPUT.auxil;
@@ -573,7 +573,7 @@ void pplfunc_osPathExists(ppl_context *c, pplObj *in, const int nArgs, int *stat
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.path.exists() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.exists() function requires a single string argument.");
         return;
     }
     pplObjBool(&OUTPUT, 0, !access((char *) in[0].auxil, F_OK));
@@ -596,7 +596,7 @@ void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *st
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.path.filesize() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.filesize() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -625,7 +625,7 @@ void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *statu
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.path.atime() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.atime() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -653,7 +653,7 @@ void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.path.ctime() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.ctime() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -681,7 +681,7 @@ void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.path.mtime() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.mtime() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -708,19 +708,55 @@ void pplfunc_osPathExpandUser(ppl_context *c, pplObj *in, const int nArgs, int *
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The os.path.expanduser() function requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.expanduser() function requires a single string argument.");
         return;
     }
     out = (char *) malloc(outlen);
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        return;
     }
-    ppl_unixExpandUserHomeDir(&c->errcontext, (char *) in[0].auxil, c->errcontext.session_default.cwd, out);
-    out[outlen - 1] = '\0';
+    ppl_unixExpandUserHomeDir(&c->errcontext, (char *) in[0].auxil, c->errcontext.session_default.cwd, out, outlen);
     pplObjStr(&OUTPUT, 0, 1, out);
     return;
+}
+
+//! osPathJoinAppend - Append one component to a pathname being built by os.path.join(), enlarging the buffer as needed
+//! \param [in,out] out - Pointer to the malloced buffer holding the pathname
+//! \param [in,out] outLen - The size of the buffer <*out>
+//! \param [in,out] j - The length of the pathname so far
+//! \param [in] item - The component to append
+//! \param [in] first - True if this is the first component, which is not preceded by a separator
+//! \return Zero on success, or nonzero if memory ran out (in which case <*out> is freed)
+
+static int osPathJoinAppend(char **out, int *outLen, int *j, const char *item, const int first) {
+    const int itemLen = (int) strlen(item);
+    const int sepLen = (int) strlen(PATHLINK);
+    if (!first) {
+        // Absolute paths replace whatever came before them
+        if (strncmp(item, PATHLINK, sepLen) == 0) *j = 0;
+        else {
+            memcpy(*out + *j, PATHLINK, sepLen + 1);
+            *j += sepLen;
+        }
+    }
+    if (*j + itemLen + sepLen + 1 > *outLen) {
+        const int newLen = *j + itemLen + sepLen + FNAME_LENGTH;
+        char *newOut = (char *) realloc(*out, newLen);
+        if (newOut == NULL) {
+            free(*out);
+            *out = NULL;
+            return 1;
+        }
+        *out = newOut;
+        *outLen = newLen;
+    }
+    memcpy(*out + *j, item, itemLen + 1);
+    *j += itemLen;
+    while ((*j > 0) && ((*out)[*j - 1] == PATHLINK[0])) (*out)[--(*j)] = '\0'; // Remove trailing separators
+    return 0;
 }
 
 //! pplfunc_osPathJoin - Implement the function os.path.join(...) in the os.path module, which joins a series of strings
@@ -734,89 +770,66 @@ void pplfunc_osPathExpandUser(ppl_context *c, pplObj *in, const int nArgs, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    const int outstep = FNAME_LENGTH;
-    int outlen = outstep, newlen, j = 0;
+    int outLen = FNAME_LENGTH, j = 0, i = 0;
     char *out;
     if (nArgs < 1) return;
-    out = (char *) malloc(outlen);
+    if ((in[0].objType == PPLOBJ_LIST) && (nArgs > 1)) {
+        *status = 1;
+        *errType = ERR_TYPE;
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The os.path.join() function must be called with a single list of strings.");
+        return;
+    }
+    out = (char *) malloc(outLen);
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        return;
     }
+    out[0] = '\0';
+
     if (in[0].objType == PPLOBJ_LIST) {
+        // A single list of strings
         listIterator *iter = ppl_listIterateInit((list *) in[0].auxil);
         pplObj *item;
-        int i = 0;
-        if (nArgs > 1) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            sprintf(errText, "The os.path.join() function must be called with a single list of strings.");
-            return;
-        }
-        out[0] = '\0';
         while ((item = (pplObj *) ppl_listIterate(&iter)) != NULL) {
             if (item->objType != PPLOBJ_STR) {
                 *status = 1;
                 *errType = ERR_TYPE;
-                sprintf(errText, "The os.path.join() function must be passed a list of string; input %d has type <%s>.",
-                        i + 1, pplObjTypeNames[item->objType]);
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
+                        "The os.path.join() function must be passed a list of string; input %d has type <%s>.", i + 1,
+                        pplObjTypeNames[item->objType]);
+                free(out);
+                out = NULL;
                 return;
             }
-            if (i > 0) {
-                strcpy(out + j, PATHLINK);
-                j += strlen(out + j);
-            }
-            if (strncmp((char *) item->auxil, PATHLINK, strlen(PATHLINK)) == 0) j = 0;
-            newlen = j + item->auxilLen;
-            if (newlen > outlen - 10) {
-                char *newout = (char *) realloc((void *) out, outlen += outstep);
-                if (newout == NULL) {
-                    free(out);
-                    out = NULL;
-                    *status = 1;
-                    *errType = ERR_MEMORY;
-                    sprintf(errText, "Out of memory.");
-                }
-                out = newout;
-            }
-            strcpy(out + j, (char *) item->auxil);
-            j += strlen(out + j);
-            while ((j > 0) && (out[j - 1] == PATHLINK[0])) out[--j] = '\0';
+            if (osPathJoinAppend(&out, &outLen, &j, (char *) item->auxil, i == 0)) break;
             i++;
         }
     } else {
-        int i;
+        // A series of string arguments
         for (i = 0; i < nArgs; i++) {
             if (in[i].objType != PPLOBJ_STR) {
                 *status = 1;
                 *errType = ERR_TYPE;
-                sprintf(errText, "The os.path.join() function must be passed a list of string; input %d has type <%s>.",
-                        i + 1, pplObjTypeNames[in[i].objType]);
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
+                        "The os.path.join() function must be passed a list of string; input %d has type <%s>.", i + 1,
+                        pplObjTypeNames[in[i].objType]);
+                free(out);
+                out = NULL;
                 return;
             }
-            if (i > 0) {
-                strcpy(out + j, PATHLINK);
-                j += strlen(out + j);
-            }
-            if (strncmp((char *) in[i].auxil, PATHLINK, strlen(PATHLINK)) == 0) j = 0;
-            newlen = j + in[i].auxilLen;
-            if (newlen > outlen - 10) {
-                char *newout = (char *) realloc((void *) out, outlen += outstep);
-                if (newout == NULL) {
-                    free(out);
-                    out = NULL;
-                    *status = 1;
-                    *errType = ERR_MEMORY;
-                    sprintf(errText, "Out of memory.");
-                }
-                out = newout;
-            }
-            strcpy(out + j, (char *) in[i].auxil);
-            j += strlen(out + j);
-            while ((j > 0) && (out[j - 1] == PATHLINK[0])) out[--j] = '\0';
+            if (osPathJoinAppend(&out, &outLen, &j, (char *) in[i].auxil, i == 0)) break;
         }
     }
+    if (out == NULL) {
+        *status = 1;
+        *errType = ERR_MEMORY;
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        return;
+    }
     pplObjStr(&OUTPUT, 0, 1, out);
-    return;
 }

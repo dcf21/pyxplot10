@@ -178,7 +178,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
     if (context->tokenBuff == NULL) {
         *errPos = 0;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory");
+        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Out of memory");
         *end = -1;
         return;
     }
@@ -228,7 +228,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     } else {
                         *errPos = scanpos;
                         *errType = ERR_SYNTAX;
-                        strcpy(errText, "Mismatched quote.");
+                        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched quote.");
                         *end = -1;
                         *outlen = 0;
                         return;
@@ -247,7 +247,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     if (j <= 0) {
                         *errPos = scanpos;
                         *errType = ERR_SYNTAX;
-                        strcpy(errText, "Mismatched ( )");
+                        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched ( )");
                         *end = -1;
                         *outlen = 0;
                         return;
@@ -266,7 +266,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (cpl < 1) {
                             *errPos = scanpos;
                             *errType = ERR_INTERNAL;
-                            strcpy(errText, "ppl_strBracketMatch returned fewer than two results.");
+                            ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
+                                              "ppl_strBracketMatch returned fewer than two results.");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -291,7 +292,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (m != j) {
                             *errPos = m + k;
                             *errType = ERR_SYNTAX;
-                            strcpy(errText, "Unexpected trailing matter at end of expression.");
+                            ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
+                                              "Unexpected trailing matter at end of expression.");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -334,8 +336,9 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (!isalpha(in[scanpos + 5])) {
                             *errPos = scanpos;
                             *errType = ERR_SYNTAX;
-                            strcpy(errText,
-                                   "System function int_d should be followed by a variable name to integrate over.");
+                            ppl_snprintfTrunc(
+                                    errText, PPL_MSG_LENGTH, "%s",
+                                    "System function int_d should be followed by a variable name to integrate over.");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -353,8 +356,9 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (!isalpha(in[scanpos + 6])) {
                             *errPos = scanpos;
                             *errType = ERR_SYNTAX;
-                            strcpy(errText,
-                                   "System function diff_d should be followed by a variable name to differentiate with respect to.");
+                            ppl_snprintfTrunc(
+                                    errText, PPL_MSG_LENGTH, "%s",
+                                    "System function diff_d should be followed by a variable name to differentiate with respect to.");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -445,7 +449,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (isDict && (nCommaItems >= 2 - (nDictItems == 0))) {
                             *errPos = scanpos;
                             *errType = ERR_SYNTAX;
-                            strcpy(errText, "Expecting : followed by value for dictionary key");
+                            ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
+                                              "Expecting : followed by value for dictionary key");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -464,7 +469,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (nCommaItems < 2 - (nDictItems == 0)) {
                             *errPos = scanpos;
                             *errType = ERR_SYNTAX;
-                            strcpy(errText, "Expecting , to separate dictionary items");
+                            ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
+                                              "Expecting , to separate dictionary items");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -494,7 +500,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     if (j <= 0) {
                         *errPos = scanpos;
                         *errType = ERR_SYNTAX;
-                        strcpy(errText, "Mismatched [ ]");
+                        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched [ ]");
                         *end = -1;
                         *outlen = 0;
                         return;
@@ -554,7 +560,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (m != j) {
                             *errPos = m + k;
                             *errType = ERR_SYNTAX;
-                            strcpy(errText, "Unexpected trailing matter at end of expression");
+                            ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
+                                              "Unexpected trailing matter at end of expression");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -576,7 +583,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     if (j <= 0) {
                         *errPos = scanpos;
                         *errType = ERR_SYNTAX;
-                        strcpy(errText, "Mismatched { }");
+                        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched { }");
                         *end = -1;
                         *outlen = 0;
                         return;
@@ -599,7 +606,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (m != j) {
                             *errPos = m + k;
                             *errType = ERR_SYNTAX;
-                            strcpy(errText, "Unexpected trailing matter at end of expression");
+                            ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
+                                              "Unexpected trailing matter at end of expression");
                             *end = -1;
                             *outlen = 0;
                             return;
@@ -679,7 +687,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         *outlen = 0;
         // Now we need to construct an error string
         *errType = ERR_SYNTAX;
-        strcpy(errText, "At this point, was expecting ");
+        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "At this point, was expecting ");
         i = strlen(errText);
         for (trialpos = 0; ((trialstate = allowed[(int) (state - 'A')][trialpos]) != '\0'); trialpos++) {
             if ((expOp) && (trialstate != 'P'))

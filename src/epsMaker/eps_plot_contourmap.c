@@ -205,7 +205,8 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
                        (CMax - CMin) * (k + 0.5 * CMinAuto) / (sg->ContoursN - 0.5 * ((!CMinAuto) + (!CMaxAuto))));
         else v.real = sg->ContoursList[k];
 
-        sprintf(UnitString, "%s", ppl_unitsNumericDisplay(x->c, &v, 0, SW_DISPLAY_L, 0));
+        // UnitString points to a buffer of LSTR_LENGTH bytes in the context, returned by ppl_printUnit()
+        ppl_snprintfTrunc(UnitString, LSTR_LENGTH, "%s", ppl_unitsNumericDisplay(x->c, &v, 0, SW_DISPLAY_L, 0));
         YIELD_TEXTITEM_CPY(UnitString);
     }
 

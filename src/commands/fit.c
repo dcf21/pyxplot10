@@ -105,25 +105,23 @@ typedef struct fitComm {
 //! \param [in] m - The matrix to print
 //! \param [in] size - The number of rows and columns in the matrix
 //! \param [out] out - Character buffer into which to write the matrix
+//! \param [in] outLen - The size of the buffer <out>
 //! \return Pointer to <out>
 
-static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size, char *out) {
-    size_t i, j, p = 0;
-    strcpy(out + p, "[ [");
-    p += strlen(out + p);
+static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size, char *out, const size_t outLen) {
+    size_t i, j;
+    int p = 0;
+    out[0] = '\0';
+    ppl_strAppendf(out, outLen, &p, "[ [");
     for (i = 0; i < size; i++) {
         for (j = 0; j < size; j++) {
-            sprintf(out + p, "%s,",
-                    ppl_numericDisplay(gsl_matrix_get(m, i, j), c->numdispBuff[0],
-                                       c->set->term_current.SignificantFigures, 0));
-            p += strlen(out + p);
+            ppl_strAppendf(out, outLen, &p, "%s%s", (j > 0) ? "," : "",
+                           ppl_numericDisplay(gsl_matrix_get(m, i, j), c->numdispBuff[0],
+                                              c->set->term_current.SignificantFigures, 0));
         }
-        if (size > 0) p--; // Delete final comma
-        strcpy(out + p, "] , [");
-        p += strlen(out + p); // New row
+        ppl_strAppendf(out, outLen, &p, (i + 1 < size) ? "] , [" : "] ]"); // Start a new row, or finish
     }
-    if (size > 0) p -= 3; // Delete final comma and open bracket
-    strcpy(out + p, "]");
+    if (size == 0) ppl_strAppendf(out, outLen, &p, "]");
     return out;
 }
 
@@ -134,7 +132,7 @@ static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size,
 
 static double fitResidual(fitComm *p) {
     ppl_context *c = p->c;
-    char *errText = p->errtext;
+    char *errText = p->errtext; // A buffer of LSTR_LENGTH bytes
     const int stkLevelOld = c->stackPtr;
     int i, k;
     long int j;
@@ -188,19 +186,21 @@ static double fitResidual(fitComm *p) {
         out = &c->stack[c->stackPtr - 1];
 
         if (c->errStat.status) {
-            strcpy(errText, c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", c->errStat.errMsgExpr);
             ppl_tbClear(c);
             STACK_CLEAN;
             return GSL_NAN;
         }
         if (out->objType != PPLOBJ_NUM) {
-            sprintf(errText, "The supplied function to fit produces a value which is not a number but has type <%s>.",
-                    pplObjTypeNames[out->objType]);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "The supplied function to fit produces a value which is not a number but has type <%s>.",
+                              pplObjTypeNames[out->objType]);
             STACK_CLEAN;
             return GSL_NAN;
         }
         if (!ppl_unitsDimEqual(out, p->firstVals + p->NArgs)) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "The supplied function to fit produces a value which is dimensionally incompatible with its target value. The function produces a result with dimensions of <%s>, while its target value has dimensions of <%s>.",
                     ppl_printUnit(c, out, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, p->firstVals + p->NArgs, NULL, NULL, 1, 1, 0));
@@ -441,7 +441,8 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
     if (iter2 >= 20) status = 1;
 
     if (status) {
-        sprintf(commlink->errtext, "Failed to converge. GSL returned error: %s", gsl_strerror(status));
+        ppl_snprintfTrunc(commlink->errtext, LSTR_LENGTH, "Failed to converge. GSL returned error: %s",
+                          gsl_strerror(status));
         gsl_vector_free(x);
         x = NULL;
         gsl_vector_free(ss);
@@ -472,6 +473,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     int status = 0, Nargs, Nvars, NExpect, Nusing;
     char *fnName, *scratchPad;
     long int i, j, k, NDataPoints;
+    int sigmaPos; // Position in scratchPad when building the names of fitted variables
     int contextLocalVec, contextDataTab, errCount = DATAFILE_NERRS;
     char *fitVars[USING_ITEMS_MAX];
     pplObj unit[USING_ITEMS_MAX];
@@ -797,7 +799,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Calculate and print the Hessian matrix
     hessian = GetHessian(&dataComm);
-    matrixPrint(c, hessian, dataComm.NParams, scratchPad);
+    matrixPrint(c, hessian, dataComm.NParams, scratchPad, LSTR_LENGTH);
     ppl_snprintfTrunc(
             msg, sizeof(msg),
             "\n# Hessian matrix of log-probability distribution:\n# -----------------------------------------------\n\nhessian = %s",
@@ -821,7 +823,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     perm = gsl_permutation_alloc(dataComm.NParams);
     gsl_linalg_LU_decomp(hessian_lu, perm, &sgn);
     gsl_linalg_LU_invert(hessian_lu, perm, hessian_inv);
-    matrixPrint(c, hessian_inv, dataComm.NParams, scratchPad);
+    matrixPrint(c, hessian_inv, dataComm.NParams, scratchPad, LSTR_LENGTH);
     ppl_snprintfTrunc(
             msg, sizeof(msg),
             "\n# Covariance matrix of probability distribution:\n# ----------------------------------------------\n\ncovariance = %s",
@@ -845,7 +847,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     for (i = 0; i < dataComm.NParams; i++)
         for (j = 0; j < dataComm.NParams; j++)
             gsl_matrix_set(hessian_inv, i, j, gsl_matrix_get(hessian_inv, i, j) / stdDev[i] / stdDev[j]);
-    matrixPrint(c, hessian_inv, dataComm.NParams, scratchPad);
+    matrixPrint(c, hessian_inv, dataComm.NParams, scratchPad, LSTR_LENGTH);
     ppl_snprintfTrunc(
             msg, sizeof(msg),
             "\n# Correlation matrix of probability distribution:\n# ----------------------------------------------\n\ncorrelation = %s",
@@ -862,17 +864,16 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             dummyTemp.imag = 0.0;
             dummyTemp.flagComplex = 0; // Apply appropriate unit to standard deviation, which is currently just a double
             if (c->set->term_current.NumDisplay != SW_DISPLAY_L) {
-                sprintf(scratchPad, "sigma_%s", fitVars[i]);
+                ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "sigma_%s", fitVars[i]);
                 ppl_snprintfTrunc(msg, sizeof(msg), "%22s = %s", scratchPad,
                                   ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
             } else {
-                sprintf(scratchPad, "$\\sigma_\\textrm{");
-                j = strlen(scratchPad);
+                ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "$\\sigma_\\textrm{");
+                sigmaPos = (int) strlen(scratchPad);
                 for (k = 0; fitVars[i][k] != '\0'; k++) {
-                    if (fitVars[i][k] == '_') scratchPad[j++] = '\\';
-                    scratchPad[j++] = fitVars[i][k];
+                    if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
+                    ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
                 }
-                scratchPad[j++] = '\0';
                 ppl_snprintfTrunc(msg, sizeof(msg), "%33s} = %s", scratchPad,
                                   ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
             }
@@ -882,14 +883,14 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 dummyTemp.real = stdDev[2 * i];
                 dummyTemp.imag = 0.0;
                 dummyTemp.flagComplex = 0;
-                sprintf(scratchPad, "sigma_%s_real", fitVars[i]);
+                ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "sigma_%s_real", fitVars[i]);
                 ppl_snprintfTrunc(msg, sizeof(msg), "%27s = %s", scratchPad,
                                   ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
                 ppl_report(&c->errcontext, msg);
                 dummyTemp.real = stdDev[2 * i + 1];
                 dummyTemp.imag = 0.0;
                 dummyTemp.flagComplex = 0;
-                sprintf(scratchPad, "sigma_%s_imag", fitVars[i]);
+                ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "sigma_%s_imag", fitVars[i]);
                 ppl_snprintfTrunc(msg, sizeof(msg), "%27s = %s", scratchPad,
                                   ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
                 ppl_report(&c->errcontext, msg);
@@ -897,13 +898,12 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 dummyTemp.real = stdDev[2 * i];
                 dummyTemp.imag = 0.0;
                 dummyTemp.flagComplex = 0;
-                sprintf(scratchPad, "$\\sigma_\\textrm{");
-                j = strlen(scratchPad);
+                ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "$\\sigma_\\textrm{");
+                sigmaPos = (int) strlen(scratchPad);
                 for (k = 0; fitVars[i][k] != '\0'; k++) {
-                    if (fitVars[i][k] == '_') scratchPad[j++] = '\\';
-                    scratchPad[j++] = fitVars[i][k];
+                    if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
+                    ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
                 }
-                scratchPad[j++] = '\0';
                 ppl_snprintfTrunc(msg, sizeof(msg), "%38s,real} = %s", scratchPad,
                                   ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
                 ppl_report(&c->errcontext, msg);
@@ -948,11 +948,12 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                                   cptr);
             else {
                 scratchPad[0] = '$';
-                for (j = 1, k = 0; fitVars[i][k] != '\0'; k++) {
-                    if (fitVars[i][k] == '_') scratchPad[j++] = '\\';
-                    scratchPad[j++] = fitVars[i][k];
+                scratchPad[1] = '\0';
+                sigmaPos = 1;
+                for (k = 0; fitVars[i][k] != '\0'; k++) {
+                    if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
+                    ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
                 }
-                scratchPad[j++] = '\0';
                 ppl_snprintfTrunc(msg, sizeof(msg), "%17s = (%s", scratchPad,
                                   ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0) + 1);
                 j = strlen(msg) - 1; // Remove final $
@@ -972,11 +973,12 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                                   cptr);
             else if (c->set->term_current.NumDisplay == SW_DISPLAY_L) {
                 scratchPad[0] = '$';
-                for (j = 1, k = 0; fitVars[i][k] != '\0'; k++) {
-                    if (fitVars[i][k] == '_') scratchPad[j++] = '\\';
-                    scratchPad[j++] = fitVars[i][k];
+                scratchPad[1] = '\0';
+                sigmaPos = 1;
+                for (k = 0; fitVars[i][k] != '\0'; k++) {
+                    if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
+                    ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
                 }
-                scratchPad[j++] = '\0';
                 ppl_snprintfTrunc(msg, sizeof(msg), "%17s = (%s", scratchPad,
                                   ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0) + 1);
                 j = strlen(msg) - 1; // Remove final $

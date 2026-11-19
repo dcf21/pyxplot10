@@ -134,25 +134,26 @@ void GraphLegend_YieldUpText(EPSComm *x) {
             if (cptr != NULL) {
                 k = 0;
                 if (pd->parametric) {
-                    sprintf(cptr + k, "parametric");
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, "parametric");
                     k += strlen(cptr + k);
                 }
                 if (pd->TRangeSet) {
-                    sprintf(cptr + k, " [%s:%s]", ppl_unitsNumericDisplay(x->c, &pd->Tmin, 0, SW_DISPLAY_L, 0),
-                            ppl_unitsNumericDisplay(x->c, &pd->Tmax, 1, SW_DISPLAY_L, 0));
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, " [%s:%s]",
+                                   ppl_unitsNumericDisplay(x->c, &pd->Tmin, 0, SW_DISPLAY_L, 0),
+                                   ppl_unitsNumericDisplay(x->c, &pd->Tmax, 1, SW_DISPLAY_L, 0));
                     k += strlen(cptr + k);
                 }
                 if ((pd->function) || (pd->vectors != NULL)) {
                     for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
                     {
-                        cptr[k++] = (j != 0) ? ':' : ' ';
+                        ppl_strAppendChar(cptr, LSTR_LENGTH, &k, (j != 0) ? ':' : ' ');
                         inlen = strlen(pd->functions[j]->ascii);
                         ppl_texify_generic(x->c, pd->functions[j]->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL,
                                            NULL);
                         k += strlen(cptr + k);
                     }
                 } else {
-                    cptr[k++] = ' ';
+                    ppl_strAppendChar(cptr, LSTR_LENGTH, &k, ' ');
                     ppl_strEscapify((pd->filenameFinal == NULL) ? pd->filename : pd->filenameFinal, buffer,
                                     LSTR_LENGTH);
                     inlen = strlen(buffer);
@@ -162,67 +163,67 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                 if (pd->ContinuitySet) // Print continuous / discontinuous flag
                 {
                     if (pd->continuity == DATAFILE_DISCONTINUOUS) {
-                        sprintf(cptr + k, " discontinuous");
+                        ppl_strAppendf(cptr, LSTR_LENGTH, &k, " discontinuous");
                         k += strlen(cptr + k);
                     } else {
-                        sprintf(cptr + k, " continuous");
+                        ppl_strAppendf(cptr, LSTR_LENGTH, &k, " continuous");
                         k += strlen(cptr + k);
                     }
                 }
                 if (pd->axis1set || pd->axis2set || pd->axis3set) // Print axes to use
                 {
-                    strcpy(cptr + k, " axes ");
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, "%s", " axes ");
                     k += strlen(cptr + k);
                     if (pd->axis1set) {
-                        sprintf(cptr + k, "$%c%d$", "xyzc"[pd->axis1xyz], pd->axis1);
+                        ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis1xyz], pd->axis1);
                         k += strlen(cptr + k);
                     }
                     if (pd->axis2set) {
-                        sprintf(cptr + k, "$%c%d$", "xyzc"[pd->axis2xyz], pd->axis2);
+                        ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis2xyz], pd->axis2);
                         k += strlen(cptr + k);
                     }
                     if (pd->axis3set) {
-                        sprintf(cptr + k, "$%c%d$", "xyzc"[pd->axis3xyz], pd->axis3);
+                        ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis3xyz], pd->axis3);
                         k += strlen(cptr + k);
                     }
                 }
                 if (pd->EverySet > 0) {
-                    sprintf(cptr + k, " every $%ld$", pd->EveryList[0]);
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, " every $%ld$", pd->EveryList[0]);
                     k += strlen(cptr + k);
                 } // Print out 'every' clause of plot command
                 if (pd->EverySet > 1) {
-                    sprintf(cptr + k, ":$%ld$", pd->EveryList[1]);
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[1]);
                     k += strlen(cptr + k);
                 }
                 if (pd->EverySet > 2) {
-                    sprintf(cptr + k, ":$%ld$", pd->EveryList[2]);
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[2]);
                     k += strlen(cptr + k);
                 }
                 if (pd->EverySet > 3) {
-                    sprintf(cptr + k, ":$%ld$", pd->EveryList[3]);
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[3]);
                     k += strlen(cptr + k);
                 }
                 if (pd->EverySet > 4) {
-                    sprintf(cptr + k, ":$%ld$", pd->EveryList[4]);
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[4]);
                     k += strlen(cptr + k);
                 }
                 if (pd->EverySet > 5) {
-                    sprintf(cptr + k, ":$%ld$", pd->EveryList[5]);
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[5]);
                     k += strlen(cptr + k);
                 }
                 if (pd->IndexSet) {
-                    sprintf(cptr + k, " index $%d$", pd->index);
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, " index $%d$", pd->index);
                     k += strlen(cptr + k);
                 } // Print index to use
                 if (pd->label != NULL) {
-                    sprintf(cptr + k, " label ");
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, " label ");
                     k += strlen(cptr + k);
                     inlen = strlen(pd->label->ascii);
                     ppl_texify_generic(x->c, pd->label->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL, NULL);
                     k += strlen(cptr + k);
                 } // Print label string
                 if (pd->SelectCriterion != NULL) {
-                    strcpy(cptr + k, " select ");
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, "%s", " select ");
                     k += strlen(cptr + k);
                     inlen = strlen(pd->SelectCriterion->ascii);
                     ppl_texify_generic(x->c, pd->SelectCriterion->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL,
@@ -230,10 +231,11 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                     k += strlen(cptr + k);
                 } // Print select criterion
                 if ((pd->NUsing > 0) || (pd->UsingRowCols != DATAFILE_COL)) {
-                    sprintf(cptr + k, " using %s", (pd->UsingRowCols == DATAFILE_COL) ? "" : "rows");
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, " using %s",
+                                   (pd->UsingRowCols == DATAFILE_COL) ? "" : "rows");
                     k += strlen(cptr + k); // Print using list
                     for (j = 0; j < pd->NUsing; j++) {
-                        cptr[k++] = (j != 0) ? ':' : ' ';
+                        ppl_strAppendChar(cptr, LSTR_LENGTH, &k, (j != 0) ? ':' : ' ');
                         inlen = strlen(pd->UsingList[j]->ascii);
                         ppl_texify_generic(x->c, pd->UsingList[j]->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL,
                                            NULL);

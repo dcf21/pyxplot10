@@ -38,6 +38,8 @@
 #include <gsl/gsl_sf_gamma.h>
 
 #include "defaultObjs/zetaRiemann.h"
+#include "stringTools/asciidouble.h"
+#include "stringTools/strConstants.h"
 
 //! riemann_zeta_complex__ - Evaluate the Riemann zeta function for complex arguments with real part of at least
 //! one half, using Peter Borwein's algorithm (Algorithm 3 of his 2000 Canadian Math. Soc. Proc. paper), or a Laurent
@@ -147,7 +149,8 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
 
     if ((x == 1.0) && (y == 0.0)) {
         *status = 1; /* pole at z=1 */
-        strcpy(errText, "The Riemann zeta function has a pole at z=1 and cannot be evaluated here.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s",
+                          "The Riemann zeta function has a pole at z=1 and cannot be evaluated here.");
         return;
     } else if ((x == 0.0) && (y == 0.0)) {
         *status = 0;
@@ -155,13 +158,15 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
         return;
     } else if (abs(y) > 1000000.0) {
         *status = 1; /* would take too long to evaluate */
-        strcpy(errText,
-               "The Riemann zeta function takes a long time to evaluate for inputs with large complex components; operation cancelled.");
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH, "%s",
+                "The Riemann zeta function takes a long time to evaluate for inputs with large complex components; operation cancelled.");
         return;
     } else if (x < -300.0) {
         *status = 1; /* risk of overflow */
-        strcpy(errText,
-               "The Riemann zeta function cannot be evaluated for inputs with real parts below -300 due to numerical overflows.");
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH, "%s",
+                "The Riemann zeta function cannot be evaluated for inputs with real parts below -300 due to numerical overflows.");
         return;
     } else if ((y == 0.0) && ((x / 2) == ((double) ((int) (x / 2))))) {
         *status = 0;
@@ -194,7 +199,8 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
 
         if (GSL_REAL(b) > 660) {
             *status = 1; /* risk of overflow */
-            sprintf(errText, "The Riemann zeta function could not be evaluated due to a numerical overflow.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "The Riemann zeta function could not be evaluated due to a numerical overflow.");
             return;
         }
         b = gsl_complex_exp(b);

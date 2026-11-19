@@ -90,7 +90,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 double offset;
                 ppl_calendarTimezoneSet(c, 0, NULL);
                 ppl_calendarTimezoneOffset(c, o->real, timezone, &offset);
-                ppl_dateString(c, out, o->real + offset, NULL, timezone, &status, msg);
+                ppl_dateString(c, out, outlen, o->real + offset, NULL, timezone, &status, msg);
                 ppl_calendarTimezoneUnset(c);
             }
             break;

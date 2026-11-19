@@ -32,6 +32,8 @@
 #include <gsl/gsl_complex_math.h>
 
 #include "defaultObjs/airyFuncs.h"
+#include "stringTools/asciidouble.h"
+#include "stringTools/strConstants.h"
 
 #define ADDON \
     *dp = gsl_complex_add(*dp, gsl_complex_mul(f, c)); \
@@ -1080,7 +1082,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     } else {
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
-            sprintf(errText, "Overflow error within Airy function");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
         if (arg < -2.094395102393195492 || arg > 2.094395102393195492) {
@@ -1103,7 +1105,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             dp = gsl_complex_mul(dp, gsl_complex_sin(c));
@@ -1129,7 +1131,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             c = gsl_complex_div_real(zah, -1.5);
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             d = gsl_complex_mul(d, gsl_complex_exp(c));
@@ -1183,7 +1185,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     } else {
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
-            sprintf(errText, "Overflow error within Airy function");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
         if (arg < -1.63 || arg > 1.63) {
@@ -1206,7 +1208,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             dp = gsl_complex_mul(dp, gsl_complex_cos(c));
@@ -1232,7 +1234,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             c = gsl_complex_div_real(zah, 1.5);
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             d = gsl_complex_mul(d, gsl_complex_exp(c));
@@ -1298,7 +1300,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
     } else {
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
-            sprintf(errText, "Overflow error within Airy function");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
         if (arg < -2.094395102393195492 || arg > 2.094395102393195492) {
@@ -1321,7 +1323,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             dp = gsl_complex_mul(dp, gsl_complex_cos(c));
@@ -1347,7 +1349,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             c = gsl_complex_div_real(zah, -1.5);
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             d = gsl_complex_mul(d, gsl_complex_exp(c));
@@ -1401,7 +1403,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
     } else {
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
-            sprintf(errText, "Overflow error within Airy function");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
         if (arg < -1.63 || arg > 1.63) {
@@ -1424,7 +1426,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             dp = gsl_complex_mul(dp, gsl_complex_sin(c));
@@ -1450,7 +1452,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             c = gsl_complex_div_real(zah, 1.5);
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
-                sprintf(errText, "Overflow error within Airy function");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
                 return;
             }
             d = gsl_complex_mul(d, gsl_complex_exp(c));

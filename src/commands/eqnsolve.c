@@ -117,24 +117,23 @@ typedef struct MMComm {
 //! \return Pointer to <output>
 
 static char *printParameterValues(MMComm *data, char *output) {
+    // <output> must be at least LSTR_LENGTH bytes long
     int i = 0, j = 0;
 
-    if (data->Nfitvars > 1) {
-        sprintf(output + j, "( ");
-        j += strlen(output + j);
-    }
+    output[0] = '\0';
+    if (data->Nfitvars > 1) ppl_strAppendf(output, LSTR_LENGTH, &j, "( ");
     for (i = 0; i < data->Nfitvars; i++) {
-        sprintf(output + j, "%s=", data->fitvarname[i]);
-        j += strlen(output + j);
+        ppl_strAppendf(output, LSTR_LENGTH, &j, "%s=", data->fitvarname[i]);
         pplObjPrint(data->context, data->fitvar[i], data->fitvarname[i], output + j, LSTR_LENGTH - j, 0, 1);
         j += strlen(output + j);
-        sprintf(output + j, "; ");
-        j += strlen(output + j);
+        ppl_strAppendf(output, LSTR_LENGTH, &j, "; ");
     }
     if (j > 2) {
-        if (data->Nfitvars > 1) strcpy(output + j - 2, " )");
-        else strcpy(output + j - 2, "");
-    } else strcpy(output, "()");
+        // Replace the final "; " with a closing bracket
+        j -= 2;
+        output[j] = '\0';
+        if (data->Nfitvars > 1) ppl_strAppendf(output, LSTR_LENGTH, &j, " )");
+    } else ppl_snprintfTrunc(output, LSTR_LENGTH, "()");
 
     return output;
 }

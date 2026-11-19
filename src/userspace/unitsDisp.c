@@ -182,58 +182,61 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
 
     if (((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && (in->flagComplex != 0)) ||
         (!gsl_finite(numberOutReal)) || (!gsl_finite(numberOutImag))) {
-        if (typeable == SW_DISPLAY_L) output[i++] = '$';
-        strcpy(output + i, ppl_numericDisplay(GSL_NAN, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
+        if (typeable == SW_DISPLAY_L) ppl_strAppendChar(output, LSTR_LENGTH, &i, '$');
+        ppl_strAppendf(output, LSTR_LENGTH, &i, "%s",
+                       ppl_numericDisplay(GSL_NAN, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
         i += strlen(output + i);
     } else {
         OoM = hypot(numberOutReal, numberOutImag) * pow(10, -NSigFigs);
 
-        if (typeable == SW_DISPLAY_L) output[i++] = '$';
+        if (typeable == SW_DISPLAY_L) ppl_strAppendChar(output, LSTR_LENGTH, &i, '$');
         if ((fabs(numberOutReal) >= OoM) && (fabs(numberOutImag) > OoM))
-            output[i++] = '('; // open brackets on complex number
+            ppl_strAppendChar(output, LSTR_LENGTH, &i, '('); // open brackets on complex number
         if (fabs(numberOutReal) >= OoM) {
-            strcpy(output + i,
-                   ppl_numericDisplay(numberOutReal, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
+            ppl_strAppendf(output, LSTR_LENGTH, &i, "%s",
+                           ppl_numericDisplay(numberOutReal, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
             i += strlen(output + i);
         }
-        if ((fabs(numberOutReal) >= OoM) && (fabs(numberOutImag) > OoM) && (numberOutImag > 0)) output[i++] = '+';
+        if ((fabs(numberOutReal) >= OoM) && (fabs(numberOutImag) > OoM) && (numberOutImag > 0))
+            ppl_strAppendChar(output, LSTR_LENGTH, &i, '+');
         if (fabs(numberOutImag) > OoM) {
             if (fabs(numberOutImag - 1.0) >= OoM) // If this is false, imaginary part is 1, so print +i, not +1i
             {
                 if (fabs(numberOutImag + 1.0) >= OoM) {
-                    strcpy(output + i,
-                           ppl_numericDisplay(numberOutImag, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
+                    ppl_strAppendf(
+                            output, LSTR_LENGTH, &i, "%s",
+                            ppl_numericDisplay(numberOutImag, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
                     i += strlen(output + i);
                 } else {
-                    output[i++] = '-';
+                    ppl_strAppendChar(output, LSTR_LENGTH, &i, '-');
                 } // Just print -i, not -1i
             }
             if (typeable != SW_DISPLAY_T) {
-                output[i++] = 'i';
+                ppl_strAppendChar(output, LSTR_LENGTH, &i, 'i');
             } else if ((fabs(numberOutImag - 1.0) >= OoM) && (fabs(numberOutImag + 1.0) >= OoM)) {
-                strcpy(output + i, "*sqrt(-1)");
+                ppl_strAppendf(output, LSTR_LENGTH, &i, "%s", "*sqrt(-1)");
                 i += strlen(output + i);
             } else {
-                strcpy(output + i, "sqrt(-1)");
+                ppl_strAppendf(output, LSTR_LENGTH, &i, "%s", "sqrt(-1)");
                 i += strlen(output + i);
             } // We've not printed 1 or -1, so nothing to multiply with
         }
         if ((fabs(numberOutReal) >= OoM) && (fabs(numberOutImag) > OoM))
-            output[i++] = ')'; // close brackets on complex number
+            ppl_strAppendChar(output, LSTR_LENGTH, &i, ')'); // close brackets on complex number
     }
 
     if (unitstr[0] != '\0') {
-        if (typeable == SW_DISPLAY_N) output[i++] = ' ';
+        if (typeable == SW_DISPLAY_N) ppl_strAppendChar(output, LSTR_LENGTH, &i, ' ');
         else if (typeable == SW_DISPLAY_L) {
-            output[i++] = '\\';
-            output[i++] = ',';
+            ppl_strAppendChar(output, LSTR_LENGTH, &i, '\\');
+            ppl_strAppendChar(output, LSTR_LENGTH, &i, ',');
         }
-        sprintf(output + i, "%s", unitstr);
+        ppl_strAppendf(output, LSTR_LENGTH, &i, "%s", unitstr);
         i += strlen(output + i); // Add unit string as required
     }
 
-    if (typeable == SW_DISPLAY_L) output[i++] = '$';
-    output[i++] = '\0'; // null terminate string
+    if (typeable == SW_DISPLAY_L) ppl_strAppendChar(output, LSTR_LENGTH, &i, '$');
+    ppl_strAppendChar(output, LSTR_LENGTH, &i, '\0'); // null terminate string
     return output;
 }
 
@@ -512,87 +515,92 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
             }
         if (found == 0) break;
         if ((typeable == SW_DISPLAY_T) && first) {
-            strcpy(output + OutputPos, "*unit(");
+            ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", "*unit(");
             OutputPos += strlen(output + OutputPos);
         }
         if (!first) // Print * or /
         {
             if ((!DivAllowed) || (UnitPow[j] > 0) || (ppl_dblEqual(UnitPow[j], 0))) {
                 if (typeable == SW_DISPLAY_L) {
-                    output[OutputPos++] = '\\';
-                    output[OutputPos++] = ',';
-                } else output[OutputPos++] = '*';
+                    ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '\\');
+                    ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, ',');
+                } else ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '*');
             } else {
-                output[OutputPos++] = '/';
+                ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '/');
             }
         }
         if (typeable == SW_DISPLAY_L) {
-            strcpy(output + OutputPos, "\\mathrm{");
+            ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", "\\mathrm{");
             OutputPos += strlen(output + OutputPos);
         }
         if (UnitPref[j] != 0) // Print SI prefix
         {
             if (c->set->term_current.UnitDisplayAbbrev == SW_ONOFF_ON) {
-                if (typeable != SW_DISPLAY_L) strcpy(output + OutputPos, SIprefixes_abbrev[UnitPref[j] + 8]);
-                else strcpy(output + OutputPos, SIprefixes_latex[UnitPref[j] + 8]);
+                if (typeable != SW_DISPLAY_L)
+                    ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", SIprefixes_abbrev[UnitPref[j] + 8]);
+                else ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", SIprefixes_latex[UnitPref[j] + 8]);
             } else {
-                strcpy(output + OutputPos, SIprefixes_full[UnitPref[j] + 8]);
+                ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", SIprefixes_full[UnitPref[j] + 8]);
             }
             OutputPos += strlen(output + OutputPos);
         }
         if (c->set->term_current.UnitDisplayAbbrev == SW_ONOFF_ON) {
             if (typeable != SW_DISPLAY_L) {
-                if (UnitPow[j] >= 0) strcpy(output + OutputPos, UnitList[j]->nameAp); // Use abbreviated name for unit
-                else strcpy(output + OutputPos, UnitList[j]->nameAs);
+                if (UnitPow[j] >= 0)
+                    ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s",
+                                   UnitList[j]->nameAp); // Use abbreviated name for unit
+                else ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", UnitList[j]->nameAs);
             } else {
                 if (UnitPow[j] >= 0)
-                    strcpy(output + OutputPos, UnitList[j]->nameLp); // Use abbreviated LaTeX name for unit
-                else strcpy(output + OutputPos, UnitList[j]->nameLs);
+                    ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s",
+                                   UnitList[j]->nameLp); // Use abbreviated LaTeX name for unit
+                else ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", UnitList[j]->nameLs);
             }
         } else {
             if (UnitPow[j] >= 0) temp = UnitList[j]->nameFp; // Use full name for unit...
             else temp = UnitList[j]->nameFs;
 
             if (typeable != SW_DISPLAY_L) {
-                strcpy(output + OutputPos, temp);
+                ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", temp);
             } // ... either as it comes
             else {
                 for (k = l = 0; temp[k] != '\0'; k++) {
-                    if (temp[k] == '_') output[OutputPos + (l++)] = '\\'; // ... or with escaped underscores for LaTeX
-                    output[OutputPos + (l++)] = temp[k];
+                    if (temp[k] == '_')
+                        ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos,
+                                          '\\'); // ... or with escaped underscores for LaTeX
+                    ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, temp[k]);
                 }
-                output[OutputPos + (l++)] = '\0';
             }
         }
         OutputPos += strlen(output + OutputPos);
-        if (typeable == SW_DISPLAY_L) { output[OutputPos++] = '}'; }
+        if (typeable == SW_DISPLAY_L) { ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '}'); }
         if (((first || (!DivAllowed)) && (!ppl_dblEqual(UnitPow[j], 1))) ||
             (((!first) || DivAllowed) && (!ppl_dblEqual(fabs(UnitPow[j]), 1)))) // Print power
         {
             if (typeable == SW_DISPLAY_L) {
-                output[OutputPos++] = '^';
-                output[OutputPos++] = '{';
+                ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '^');
+                ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '{');
             } else {
-                output[OutputPos++] = '*';
-                output[OutputPos++] = '*';
+                ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '*');
+                ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '*');
             }
             if ((first) || (!DivAllowed))
-                sprintf(output + OutputPos, "%s",
-                        ppl_numericDisplay(UnitPow[j], c->numdispBuff[N], c->set->term_current.SignificantFigures,
-                                           (typeable == SW_DISPLAY_L)));
+                ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s",
+                               ppl_numericDisplay(UnitPow[j], c->numdispBuff[N],
+                                                  c->set->term_current.SignificantFigures, (typeable == SW_DISPLAY_L)));
             else
-                sprintf(output + OutputPos, "%s",
-                        ppl_numericDisplay(fabs(UnitPow[j]), c->numdispBuff[N], c->set->term_current.SignificantFigures,
-                                           (typeable == SW_DISPLAY_L)));
+                ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s",
+                               ppl_numericDisplay(fabs(UnitPow[j]), c->numdispBuff[N],
+                                                  c->set->term_current.SignificantFigures, (typeable == SW_DISPLAY_L)));
             OutputPos += strlen(output + OutputPos);
-            if (typeable == SW_DISPLAY_L) { output[OutputPos++] = '}'; }
+            if (typeable == SW_DISPLAY_L) { ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, '}'); }
         }
         UnitDisp[j] = 1;
         first = 0;
     }
 
     // Clean up and return
-    if (typeable == SW_DISPLAY_T) output[OutputPos++] = ')';
+    if (typeable == SW_DISPLAY_T) ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos, ')');
     output[OutputPos] = '\0';
     if (numberOutReal != NULL) *numberOutReal = residual.real;
     if (numberOutImag != NULL) *numberOutImag = residual.imag;
@@ -724,7 +732,8 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
                 power = ppl_getFloat(in + i, &k);
                 if (k <= 0) {
                     *errpos = i;
-                    strcpy(errText, "Syntax Error: Was expecting a numerical constant here.");
+                    ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
+                                      "Syntax Error: Was expecting a numerical constant here.");
                     return;
                 }
                 i += k;
@@ -734,8 +743,9 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
             if (c->unit_database[j].tempType != 0) {
                 if ((out->tempType > 0) && (out->tempType != c->unit_database[j].tempType)) {
                     *errpos = i;
-                    strcpy(errText,
-                           "Unit Error: Attempt to mix Kelvin, oC and oF in the units of a single quantity. Try again with all quantities converted into Kelvin. Type 'help units temperatures' for more details.");
+                    ppl_snprintfTrunc(
+                            errText, PPL_MSG_LENGTH, "%s",
+                            "Unit Error: Attempt to mix Kelvin, oC and oF in the units of a single quantity. Try again with all quantities converted into Kelvin. Type 'help units temperatures' for more details.");
                     return;
                 }
                 out->tempType = c->unit_database[j].tempType;
@@ -763,7 +773,7 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
                 powerneg = 0.0;
             } else {
                 *errpos = i;
-                strcpy(errText, "No such unit.");
+                ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "No such unit.");
                 return;
             }
         }
@@ -800,7 +810,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
     *output = (PreferredUnit *) malloc(sizeof(PreferredUnit));
     if (*output == NULL) {
         *errpos = 0;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     (*output)->value = UnitVal;
@@ -884,7 +894,8 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
                 power = ppl_getFloat(instr + i, &k);
                 if (k <= 0) {
                     *errpos = i;
-                    strcpy(errText, "Syntax Error: Was expecting a numerical constant here.");
+                    ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s",
+                                      "Syntax Error: Was expecting a numerical constant here.");
                     return;
                 }
                 i += k;
@@ -911,7 +922,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
                 powerneg = 0.0;
             } else {
                 *errpos = i;
-                strcpy(errText, "No such unit.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "No such unit.");
                 return;
             }
         }

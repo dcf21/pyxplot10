@@ -43,8 +43,9 @@
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) { \
             *status = 1; \
             *errType = ERR_RANGE; \
-            sprintf(errText, "The function %s is not defined at the requested point in parameter space.", \
-                    FunctionDescription); \
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, \
+                              "The function %s is not defined at the requested point in parameter space.", \
+                              FunctionDescription); \
             return; \
         } else { \
             NULL_OUTPUT; \
@@ -56,8 +57,9 @@
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) { \
             *status = 1; \
             *errType = ERR_RANGE; \
-            sprintf(errText, "The function %s only accepts real arguments; the supplied arguments are complex.", \
-                    FunctionDescription); \
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, \
+                              "The function %s only accepts real arguments; the supplied arguments are complex.", \
+                              FunctionDescription); \
             return; \
         } else { \
             NULL_OUTPUT; \
@@ -70,8 +72,8 @@
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) { \
                 *status = 1; \
                 *errType = ERR_RANGE; \
-                sprintf(errText, "The %s %s in the range 0 <= %s < %ld.", FunctionDescription, DESCRIPTION, VAR, \
-                        LONG_MAX); \
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s %s in the range 0 <= %s < %ld.", FunctionDescription, \
+                                  DESCRIPTION, VAR, LONG_MAX); \
                 return; \
             } else { \
                 NULL_OUTPUT; \
@@ -85,8 +87,8 @@
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) { \
                 *status = 1; \
                 *errType = ERR_RANGE; \
-                sprintf(errText, "The %s %s in the range 0 <= %s < %d.", FunctionDescription, DESCRIPTION, VAR, \
-                        INT_MAX); \
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s %s in the range 0 <= %s < %d.", FunctionDescription, \
+                                  DESCRIPTION, VAR, INT_MAX); \
                 return; \
             } else { \
                 NULL_OUTPUT; \
@@ -100,8 +102,8 @@
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) { \
                 *status = 1; \
                 *errType = ERR_RANGE; \
-                sprintf(errText, "The %s %s in the range %d <= %s < %d.", FunctionDescription, DESCRIPTION, INT_MIN, \
-                        VAR, INT_MAX); \
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s %s in the range %d <= %s < %d.", FunctionDescription, \
+                                  DESCRIPTION, INT_MIN, VAR, INT_MAX); \
                 return; \
             } else { \
                 NULL_OUTPUT; \
@@ -127,8 +129,9 @@
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) { \
                 *status = 1; \
                 *errType = ERR_TYPE; \
-                sprintf(errText, "The %s requires dimensionless arguments; argument %s has dimensions of <%s>.", \
-                        FunctionDescription, VAR, ppl_printUnit(c, &(X), NULL, NULL, 1, 1, 0)); \
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, \
+                                  "The %s requires dimensionless arguments; argument %s has dimensions of <%s>.", \
+                                  FunctionDescription, VAR, ppl_printUnit(c, &(X), NULL, NULL, 1, 1, 0)); \
                 return; \
             } else { \
                 NULL_OUTPUT; \
@@ -139,8 +142,9 @@
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) { \
                 *status = 1; \
                 *errType = ERR_TYPE; \
-                sprintf(errText, "The %s requires finite arguments; argument %s is not finite.", FunctionDescription, \
-                        VAR); \
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, \
+                                  "The %s requires finite arguments; argument %s is not finite.", FunctionDescription, \
+                                  VAR); \
                 return; \
             } else { \
                 NULL_OUTPUT; \
@@ -208,7 +212,8 @@
         if (!(in[0].dimensionless)) { \
             *status = 1; \
             *errType = ERR_UNIT; \
-            sprintf(errText, \
+            ppl_snprintfTrunc( \
+                    errText, LSTR_LENGTH, \
                     "The %s function can only act upon dimensionless inputs. Supplied input has dimensions of <%s>.", \
                     FunctionDescription, ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0)); \
             return; \
@@ -233,7 +238,8 @@
         if (!(in[0].dimensionless && in[1].dimensionless && in[2].dimensionless)) { \
             *status = 1; \
             *errType = ERR_UNIT; \
-            sprintf(errText, \
+            ppl_snprintfTrunc( \
+                    errText, LSTR_LENGTH, \
                     "The %s function can only act upon dimensionless inputs. Supplied inputs have dimensions of <%s>, <%s> and <%s>.", \
                     FunctionDescription, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0), \
                     ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0), ppl_printUnit(c, &in[2], NULL, NULL, 2, 1, 0)); \
@@ -277,7 +283,8 @@
         if ((!(in[0].dimensionless && in[1].dimensionless)) && (!(ppl_unitsDimEqual(&in[0], &in[1])))) { \
             *status = 1; \
             *errType = ERR_UNIT; \
-            sprintf(errText, \
+            ppl_snprintfTrunc( \
+                    errText, LSTR_LENGTH, \
                     "The %s function can only act upon inputs with matching dimensions. Supplied inputs have dimensions of <%s> and <%s>.", \
                     FunctionDescription, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0), \
                     ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0)); \
@@ -292,7 +299,8 @@
                 if ((X).exponent[i] != UNITN * (i == UNIT)) { \
                     *status = 1; \
                     *errType = ERR_UNIT; \
-                    sprintf(errText, \
+                    ppl_snprintfTrunc( \
+                            errText, LSTR_LENGTH, \
                             "The %s argument to the %s function must be %s. Supplied input has dimensions of <%s>.", \
                             DESCRIPTION, FunctionDescription, UNITNAME, ppl_printUnit(c, &X, NULL, NULL, 1, 1, 0)); \
                     return; \

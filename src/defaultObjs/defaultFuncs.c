@@ -762,7 +762,8 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s function requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -771,7 +772,8 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s function requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -780,7 +782,8 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (in[1].objType != PPLOBJ_LIST) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s function requires a list object as its second argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
@@ -792,7 +795,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
@@ -864,7 +867,7 @@ void pplfunc_chr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     out = (char *) malloc(2);
     if (out == NULL) {
         *status = 1;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     out[0] = ((int) in[0].real) & 255;
@@ -1061,15 +1064,17 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     if (t1 != PPLOBJ_VEC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "First argument to %s must be a vector. Supplied argument had type <%s>.", FunctionDescription,
-                pplObjTypeNames[t1]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "First argument to %s must be a vector. Supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[t1]);
         return;
     }
     if (t2 != PPLOBJ_VEC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "Second argument to %s must be a vector. Supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[t2]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Second argument to %s must be a vector. Supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[t2]);
         return;
     }
     va = ((pplVector *) in[0].auxil)->v;
@@ -1077,21 +1082,23 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     if (va->size != 3) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "%s can only act on three-component vectors. Supplied vector has %ld components.",
-                FunctionDescription, (long) va->size);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "%s can only act on three-component vectors. Supplied vector has %ld components.",
+                          FunctionDescription, (long) va->size);
         return;
     }
     if (vb->size != 3) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "%s can only act on three-component vectors. Supplied vector has %ld components.",
-                FunctionDescription, (long) vb->size);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "%s can only act on three-component vectors. Supplied vector has %ld components.",
+                          FunctionDescription, (long) vb->size);
         return;
     }
     if (pplObjVector(&OUTPUT, 0, 1, 3) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1279,7 +1286,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (in[0].objType != PPLOBJ_STR) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The eval() function requires a string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The eval() function requires a string argument.");
         return;
     }
     exp = (char *) in[0].auxil;
@@ -1294,7 +1301,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
         return;
     }
     if (explen < strlen(exp)) {
-        strcpy(errText, "Unexpected trailing matter at the end of expression.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Unexpected trailing matter at the end of expression.");
         *status = 1;
         *errType = ERR_SYNTAX;
         pplExpr_free(e);
@@ -1307,7 +1314,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (c->errStat.status) {
         *status = 1;
         *errType = ERR_GENERIC;
-        strcpy(errText, "Error in evaluated expression");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Error in evaluated expression");
         return;
     }
     pplObjCpy(&OUTPUT, output, 0, 0, 1);
@@ -1404,7 +1411,7 @@ void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -1651,7 +1658,8 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
         if (!ppl_unitsDimEqual(&in[0], &in[i])) {
             *status = 1;
             *errType = ERR_UNIT;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "The %s function can only act upon inputs with matching dimensions. Input 1 has dimensions of <%s>, but input %d has dimensions of <%s>.",
                     FunctionDescription, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0), i + 1,
                     ppl_printUnit(c, &in[i], NULL, NULL, 1, 1, 0));
@@ -1661,7 +1669,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     if (buffer == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     for (i = 0; i < nArgs; i++) buffer[i] = hypot(in[i].real, in[i].imag);
@@ -1690,7 +1698,8 @@ void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             *errText = ERR_NUMERICAL;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "The function %s can only be used when complex arithmetic is enabled; type 'set numerics complex' first.",
                     FunctionDescription);
             return;
@@ -1832,7 +1841,7 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             *errType = ERR_OVERFLOW;
-            sprintf(errText, "Integer overflow in the %s function.", FunctionDescription);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Integer overflow in the %s function.", FunctionDescription);
             return;
         } else {
             NULL_OUTPUT;
@@ -1846,7 +1855,7 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                 *status = 1;
                 *errType = ERR_OVERFLOW;
-                sprintf(errText, "Integer overflow in the %s function.", FunctionDescription);
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Integer overflow in the %s function.", FunctionDescription);
                 return;
             } else {
                 NULL_OUTPUT;
@@ -1929,8 +1938,9 @@ void pplfunc_len(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     else {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "Object of type <%s> is not a compound object and has no property of length",
-                pplObjTypeNames[t]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Object of type <%s> is not a compound object and has no property of length",
+                          pplObjTypeNames[t]);
         return;
     }
     return;
@@ -2050,14 +2060,14 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     if ((!gsl_finite(n)) || (n > INT_MAX)) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "Invalid step size.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Invalid step size.");
         return;
     }
     if (n < 0) n = 0;
     if (pplObjVector(&OUTPUT, 0, 1, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
     for (i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start * pow(step, i));
@@ -2206,7 +2216,8 @@ void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             *errType = ERR_NUMERICAL;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Loss of accuracy in the function %s; the remainder of this division is lost in floating-point rounding.",
                     FunctionDescription);
             return;
@@ -2235,13 +2246,13 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The open() function requires string arguments.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
         return;
     }
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The open() function requires string arguments.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
         return;
     }
     if (nArgs > 1) mode = (char *) in[1].auxil;
@@ -2250,7 +2261,7 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (f == NULL) {
         *status = 1;
         *errType = ERR_FILE;
-        strcpy(errText, strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
         return;
     }
     pplObjFile(&OUTPUT, 0, 1, f, 0);
@@ -2272,8 +2283,8 @@ void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     if (t != PPLOBJ_STR) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "Argument to %s must be a string. Supplied argument had type <%s>.", FunctionDescription,
-                pplObjTypeNames[t]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Argument to %s must be a string. Supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[t]);
         return;
     }
     OUTPUT.real = (double) ((char *) in[0].auxil)[0];
@@ -2302,7 +2313,7 @@ void pplfunc_ordinal(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     if (((i % 100) < 21) && ((i % 100) > 3)) sprintf(out, "%dth", i);
@@ -2381,8 +2392,8 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             *errType = ERR_RANGE;
-            sprintf(errText, "The %s function's argument must be in the range 1 <= x < %d.", FunctionDescription,
-                    INT_MAX);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function's argument must be in the range 1 <= x < %d.",
+                              FunctionDescription, INT_MAX);
             return;
         } else {
             NULL_OUTPUT;
@@ -2391,7 +2402,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -2461,13 +2472,14 @@ void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     if (nArgs != 2) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The %s function expects two input arguments.", FunctionDescription);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function expects two input arguments.", FunctionDescription);
         return;
     }
     if (in[0].objType != PPLOBJ_EXC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The first argument to the %s function should be an exception object; supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2475,7 +2487,8 @@ void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     if (in[1].objType != PPLOBJ_STR) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The second argument to the %s function should be a string object; supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
@@ -2525,14 +2538,14 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     if ((!gsl_finite(n)) || (n > INT_MAX)) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "Invalid step size.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Invalid step size.");
         return;
     }
     if (n < 0) n = 0;
     if (pplObjVector(&OUTPUT, 0, 1, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
     for (i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start + i * step);
@@ -2591,14 +2604,14 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     if ((in[0].real < 1) || (in[0].real > 10000)) {
         *status = 1;
         *errType = ERR_RANGE;
-        sprintf(errText, "Argument to %s must be in the range 0<n<=10000.", FunctionDescription);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Argument to %s must be in the range 0<n<=10000.", FunctionDescription);
         return;
     }
     out = (char *) malloc(32);
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     n = (int) in[0].real;
@@ -2638,8 +2651,8 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if ((in[1].flagComplex) || (in[1].real < 2) || (in[1].real >= INT_MAX)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errText, "The %s %s in the range 2 <= n < %d.", FunctionDescription,
-                    "function's second argument must be an integer in the range", INT_MAX);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s %s in the range 2 <= n < %d.", FunctionDescription,
+                              "function's second argument must be an integer in the range", INT_MAX);
             return;
         } else {
             NULL_OUTPUT;
@@ -3016,21 +3029,23 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     char *outstr;
     int inlen = 0;
     if (nArgs != 1) {
-        sprintf(errText, "The %s function takes exactly one argument; %d supplied.", FunctionDescription, nArgs);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function takes exactly one argument; %d supplied.",
+                          FunctionDescription, nArgs);
         *errType = ERR_TYPE;
         *status = 1;
         return;
     }
     if (in[0].objType != PPLOBJ_STR) {
-        sprintf(errText, "The %s requires a single string argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The %s requires a single string argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         *errType = ERR_TYPE;
         *status = 1;
         return;
     }
     outstr = (char *) malloc(LSTR_LENGTH);
     if (outstr == NULL) {
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         *errType = ERR_MEMORY;
         *status = 1;
         return;
@@ -3038,8 +3053,9 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     ppl_texify_generic(c, instr, -1, &inlen, outstr, LSTR_LENGTH, NULL, NULL);
     pplObjStr(&OUTPUT, 0, 1, outstr);
     if (inlen < strlen(instr)) {
-        sprintf(errText, "Unexpected trailing matter at the end of texified expression (character position %d).",
-                inlen);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Unexpected trailing matter at the end of texified expression (character position %d).",
+                          inlen);
         *errType = ERR_SYNTAX;
         *status = 1;
         return;
@@ -3062,21 +3078,23 @@ void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int 
     char *instr = (char *) in[0].auxil;
     char *outstr;
     if (nArgs != 1) {
-        sprintf(errText, "The %s function takes exactly one argument; %d supplied.", FunctionDescription, nArgs);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function takes exactly one argument; %d supplied.",
+                          FunctionDescription, nArgs);
         *errType = ERR_TYPE;
         *status = 1;
         return;
     }
     if (in[0].objType != PPLOBJ_STR) {
-        sprintf(errText, "The %s requires a single string argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The %s requires a single string argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         *errType = ERR_TYPE;
         *status = 1;
         return;
     }
     outstr = (char *) malloc(LSTR_LENGTH);
     if (outstr == NULL) {
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         *errType = ERR_MEMORY;
         *status = 1;
         return;
@@ -3144,7 +3162,8 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, i
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "The function %s is only defined for -n<=m<=n.", FunctionDescription);
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "The function %s is only defined for -n<=m<=n.",
+                                  FunctionDescription);
                 return;
             } else {
                 NULL_OUTPUT;
@@ -3193,7 +3212,8 @@ void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, 
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "The function %s is only defined for -n<=m<=n.", FunctionDescription);
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "The function %s is only defined for -n<=m<=n.",
+                                  FunctionDescription);
                 return;
             } else {
                 NULL_OUTPUT;

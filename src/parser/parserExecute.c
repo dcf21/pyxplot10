@@ -59,21 +59,21 @@ void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
     char *t = msg;
     parserAtom *a = in->firstAtom;
 
-    sprintf(t, "Parser line -- stack length %d\nOriginal line was: %s", in->stackLen, in->linetxt);
+    ppl_snprintfTrunc(t, sizeof(msg), "Parser line -- stack length %d\nOriginal line was: %s", in->stackLen,
+                      in->linetxt);
     ppl_report(&c->errcontext, msg);
     if (in->containsMacros) ppl_report(&c->errcontext, "Contains macros.");
 
     for (a = in->firstAtom; a != NULL; a = a->next) {
         if (a->literal != NULL) {
             int i = 0;
-            sprintf(t + i, "Set %4d to literal of type %2d -- ", a->stackOutPos, a->literal->objType);
-            i = strlen(t + i);
+            ppl_strAppendf(t, sizeof(msg), &i, "Set %4d to literal of type %2d -- ", a->stackOutPos,
+                           a->literal->objType);
             pplObjPrint(c, a->literal, NULL, t + i, sizeof(msg) - i, 0, 0);
             i += strlen(t + i);
-            sprintf(t + i, ".");
+            ppl_strAppendf(t, sizeof(msg), &i, ".");
         } else {
-            const int i = 0;
-            sprintf(t + i, "Set %4d to expression -- %s.", a->stackOutPos, a->expr->ascii);
+            ppl_snprintfTrunc(t, sizeof(msg), "Set %4d to expression -- %s.", a->stackOutPos, a->expr->ascii);
         }
         ppl_report(&c->errcontext, msg);
     }

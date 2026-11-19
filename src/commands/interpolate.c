@@ -719,7 +719,8 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     if (!ppl_unitsDimEqual(in, &desc->unitX)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x) function expects an argument with dimensions of <%s>, but has instead received an argument with dimensions of <%s>.",
                     FuncName, ppl_printUnit(c, &desc->unitX, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, in, NULL, NULL, 1, 1, 0));
@@ -733,7 +734,8 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     if (in->flagComplex) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x) function expects a real argument, but the supplied argument has an imaginary component.",
                     FuncName);
         } else {
@@ -770,7 +772,8 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     if (*status != 0) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout, "Error whilst evaluating the %s(x) function: %s", FuncName, gsl_strerror(*status));
+            ppl_snprintfTrunc(errout, LSTR_LENGTH, "Error whilst evaluating the %s(x) function: %s", FuncName,
+                              gsl_strerror(*status));
         } else {
             *status = 0;
             pplObjNum(out, 0, 0, 0);
@@ -786,7 +789,8 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     if (!gsl_finite(dblout)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout, "Error whilst evaluating the %s(x) function: result was not a finite number.", FuncName);
+            ppl_snprintfTrunc(errout, LSTR_LENGTH,
+                              "Error whilst evaluating the %s(x) function: result was not a finite number.", FuncName);
         } else {
             pplObjNum(out, 0, 0, 0);
             out->real = GSL_NAN;
@@ -823,7 +827,8 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
     if (!ppl_unitsDimEqual(in1, &desc->unitX)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x,y) function expects its first argument to have dimensions of <%s>, but has instead received an argument with dimensions of <%s>.",
                     FuncName, ppl_printUnit(c, &desc->unitX, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, in1, NULL, NULL, 1, 1, 0));
@@ -837,7 +842,8 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
     if (in1->flagComplex) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x,y) function expects real arguments, but first supplied argument has an imaginary component.",
                     FuncName);
         } else {
@@ -851,7 +857,8 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
     if (!ppl_unitsDimEqual(in2, &desc->unitY)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x,y) function expects its second argument to have dimensions of <%s>, but has instead received an argument with dimensions of <%s>.",
                     FuncName, ppl_printUnit(c, &desc->unitY, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, in2, NULL, NULL, 1, 1, 0));
@@ -865,7 +872,8 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
     if (in2->flagComplex) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x,y) function expects real arguments, but second supplied argument has an imaginary component.",
                     FuncName);
         } else {
@@ -892,7 +900,9 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
     if (!gsl_finite(dblout)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            sprintf(errout, "Error whilst evaluating the %s(x,y) function: result was not a finite number.", FuncName);
+            ppl_snprintfTrunc(errout, LSTR_LENGTH,
+                              "Error whilst evaluating the %s(x,y) function: result was not a finite number.",
+                              FuncName);
         } else {
             pplObjNum(out, 0, 0, 0);
             out->real = GSL_NAN;

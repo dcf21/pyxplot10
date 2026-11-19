@@ -26,6 +26,7 @@
 #include <gsl/gsl_math.h>
 
 #include "expressions/expEvalSlice.h"
+#include "stringTools/asciidouble.h"
 #include "userspace/context.h"
 #include "userspace/garbageCollector.h"
 #include "userspace/pplObj_fns.h"
@@ -65,7 +66,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
     if (context->stackPtr < nArgs + 1) {
         *status = 1;
         *errType = ERR_INTERNAL;
-        sprintf(errText, "Attempt to slice object with few items on the stack.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to slice object with few items on the stack.");
         return;
     }
     memcpy(&called, out, sizeof(pplObj));
@@ -78,8 +79,8 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
         pplObj *obj;
         if (args->objType != PPLOBJ_STR) {
             *errType = ERR_TYPE;
-            sprintf(errText, "Dictionary keys must be strings; supplied key has type <%s>.",
-                    pplObjTypeNames[args->objType]);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Dictionary keys must be strings; supplied key has type <%s>.",
+                              pplObjTypeNames[args->objType]);
             goto fail;
         }
         key = (char *) args[0].auxil;
@@ -92,7 +93,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             } else {
                 *status = 1;
                 *errType = ERR_DICTKEY;
-                sprintf(errText, "Undefined dictionary key '%s'.", key);
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Undefined dictionary key '%s'.", key);
                 goto fail;
             }
         }
@@ -104,24 +105,28 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
 
     if (args->objType != PPLOBJ_NUM) {
         *errType = ERR_TYPE;
-        sprintf(errText, "Item numbers when slicing must be numerical values; supplied index has type <%s>.",
-                pplObjTypeNames[args->objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Item numbers when slicing must be numerical values; supplied index has type <%s>.",
+                          pplObjTypeNames[args->objType]);
         goto fail;
     }
     if (!args->dimensionless) {
         *errType = ERR_NUMERICAL;
-        sprintf(errText, "Item numbers when slicing must be dimensionless numbers; supplied index has units of <%s>.",
-                ppl_printUnit(context, args, NULL, NULL, 0, 1, 0));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Item numbers when slicing must be dimensionless numbers; supplied index has units of <%s>.",
+                          ppl_printUnit(context, args, NULL, NULL, 0, 1, 0));
         goto fail;
     }
     if (args->flagComplex) {
         *errType = ERR_NUMERICAL;
-        sprintf(errText, "Item numbers when slicing must be real numbers; supplied index is complex.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Item numbers when slicing must be real numbers; supplied index is complex.");
         goto fail;
     }
     if ((!gsl_finite(args->real)) || (args->real < INT_MIN) || (args->real > INT_MAX)) {
         *errType = ERR_NUMERICAL;
-        sprintf(errText, "Item numbers when slicing must be in the range %d to %d.", INT_MIN, INT_MAX);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Item numbers when slicing must be in the range %d to %d.", INT_MIN,
+                          INT_MAX);
         goto fail;
     }
 
@@ -135,19 +140,19 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             if ((p < 0) || (p >= inl)) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "String index out of range.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "String index out of range.");
                 goto fail;
             }
             if (getPtr) {
                 *status = 1;
                 *errType = ERR_TYPE;
-                sprintf(errText, "Cannot assign to a character in a string.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Cannot assign to a character in a string.");
                 goto fail;
             }
             if ((outstr = (char *) malloc(2)) == NULL) {
                 *status = 1;
                 *errType = ERR_MEMORY;
-                sprintf(errText, "Out of memory.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
             outstr[0] = in[p];
@@ -170,7 +175,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
                 if ((p < 0) || (p >= linl)) {
                     *status = 1;
                     *errType = ERR_RANGE;
-                    sprintf(errText, "List index out of range.");
+                    ppl_snprintfTrunc(errText, LSTR_LENGTH, "List index out of range.");
                     goto fail;
                 }
             }
@@ -188,7 +193,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             if ((p < 0) || (p >= vinl)) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "Vector index out of range.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Vector index out of range.");
                 goto fail;
             }
             obj = gsl_vector_ptr(vin, p);
@@ -209,14 +214,14 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             if ((p < 0) || (p >= minl)) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "Matrix index out of range.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Matrix index out of range.");
                 goto fail;
             }
             vo = (pplVector *) malloc(sizeof(pplVector));
             if (vo == NULL) {
                 *status = 1;
                 *errType = ERR_MEMORY;
-                sprintf(errText, "Out of memory.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
             vo->refCount = 1;
@@ -244,7 +249,8 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
         default:
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Attempt to slice an object of type <%s>, which cannot be sliced.", pplObjTypeNames[t]);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to slice an object of type <%s>, which cannot be sliced.",
+                              pplObjTypeNames[t]);
             goto fail;
     }
 
@@ -280,7 +286,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
     if (context->stackPtr < nArgs + 1) {
         *status = 1;
         *errType = ERR_INTERNAL;
-        sprintf(errText, "Attempt to slice object with few items on the stack.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to slice object with few items on the stack.");
         return;
     }
     memcpy(&called, out, sizeof(pplObj));
@@ -300,7 +306,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             if ((min < 0) || (min > inl) || (max < 0) || (max > inl)) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "String index out of range.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "String index out of range.");
                 goto fail;
             }
             outlen = max - min;
@@ -308,7 +314,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             if ((outstr = (char *) malloc(outlen + 1)) == NULL) {
                 *status = 1;
                 *errType = ERR_MEMORY;
-                sprintf(errText, "Out of memory.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
             strncpy(outstr, in + min, outlen);
@@ -330,13 +336,13 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             if ((min < 0) || (min > inl) || (max < 0) || (max > inl)) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "List index out of range.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "List index out of range.");
                 goto fail;
             }
             if (pplObjList(out, 0, 1, NULL) == NULL) {
                 *status = 1;
                 *errType = ERR_MEMORY;
-                sprintf(errText, "Out of memory.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
             lout = (list *) out->auxil;
@@ -361,20 +367,20 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             if ((min < 0) || (min > vinl) || (max < 0) || (max > vinl)) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "Vector index out of range.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Vector index out of range.");
                 goto fail;
             }
             if (max < min + 1) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "Cannot create a vector of zero size.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Cannot create a vector of zero size.");
                 goto fail;
             }
             vo = (pplVector *) malloc(sizeof(pplVector));
             if (vo == NULL) {
                 *status = 1;
                 *errType = ERR_MEMORY;
-                sprintf(errText, "Out of memory.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
             vo->refCount = 1;
@@ -409,20 +415,20 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             if ((min < 0) || (min > minl) || (max < 0) || (max > minl)) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "Matrix index out of range.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Matrix index out of range.");
                 goto fail;
             }
             if (max < min + 1) {
                 *status = 1;
                 *errType = ERR_RANGE;
-                sprintf(errText, "Cannot create a matrix of zero size.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Cannot create a matrix of zero size.");
                 goto fail;
             }
             mo = (pplMatrix *) malloc(sizeof(pplMatrix));
             if (mo == NULL) {
                 *status = 1;
                 *errType = ERR_MEMORY;
-                sprintf(errText, "Out of memory.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
             mo->refCount = 1;
@@ -450,7 +456,8 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
         default:
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Attempt to slice an object of type <%s>, which cannot be sliced.", pplObjTypeNames[t]);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to slice an object of type <%s>, which cannot be sliced.",
+                              pplObjTypeNames[t]);
             goto fail;
     }
 

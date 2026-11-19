@@ -645,7 +645,8 @@ void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor 
 
     if (!ppl_unitsDimEqual(in, &desc->unit)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x) function expects an argument with dimensions of <%s>, but has instead received an argument with dimensions of <%s>.",
                     FuncName, ppl_printUnit(c, &desc->unit, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, in, NULL, NULL, 1, 1, 0));
@@ -659,7 +660,8 @@ void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor 
     }
     if (in->flagComplex) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            sprintf(errout,
+            ppl_snprintfTrunc(
+                    errout, LSTR_LENGTH,
                     "The %s(x) function expects a real argument, but the supplied argument has an imaginary component.",
                     FuncName);
         } else {

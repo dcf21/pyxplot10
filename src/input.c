@@ -218,7 +218,8 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Processing input from the script file '%s'.", input);
         ppl_log(&context->errcontext, msg);
     }
-    ppl_unixExpandUserHomeDir(&context->errcontext, input, context->errcontext.session_default.cwd, full_filename);
+    ppl_unixExpandUserHomeDir(&context->errcontext, input, context->errcontext.session_default.cwd, full_filename,
+                              sizeof(full_filename));
     ppl_snprintfTrunc(filename_description, sizeof(filename_description), "file '%s'", input);
     if ((infile = fopen(full_filename, "r")) == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not find command file '%s'. Skipping on to next command file.",

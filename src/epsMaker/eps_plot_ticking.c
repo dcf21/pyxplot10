@@ -236,7 +236,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
             axis->FinalAxisLabel = axis->label;
         } // No units to append
         else {
-            i = 1024;
+            i = strlen(UnitString) + 16; // Room for the unit, and the brackets around it
             if (axis->label != NULL) i += strlen(axis->label);
             axis->FinalAxisLabel = (char *) ppl_memAlloc(i);
             if (axis->FinalAxisLabel == NULL) {
@@ -244,10 +244,14 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                 return;
             }
             if (AxisUnitStyle == SW_AXISUNITSTY_BRACKET)
-                sprintf(axis->FinalAxisLabel, "%s ($%s$)", (axis->label != NULL) ? axis->label : "", UnitString);
+                ppl_snprintfTrunc(axis->FinalAxisLabel, i, "%s ($%s$)", (axis->label != NULL) ? axis->label : "",
+                                  UnitString);
             else if (AxisUnitStyle == SW_AXISUNITSTY_RATIO)
-                sprintf(axis->FinalAxisLabel, "%s / $%s$", (axis->label != NULL) ? axis->label : "", UnitString);
-            else sprintf(axis->FinalAxisLabel, "%s [$%s$]", (axis->label != NULL) ? axis->label : "", UnitString);
+                ppl_snprintfTrunc(axis->FinalAxisLabel, i, "%s / $%s$", (axis->label != NULL) ? axis->label : "",
+                                  UnitString);
+            else
+                ppl_snprintfTrunc(axis->FinalAxisLabel, i, "%s [$%s$]", (axis->label != NULL) ? axis->label : "",
+                                  UnitString);
         }
 
         // Minor ticks. Then major ticks.
@@ -479,7 +483,7 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
     }
     *output = (char *) ppl_memAlloc_incontext(strlen(msg) + 3, OutContext);
     if ((*output) == NULL) return;
-    sprintf(*output, "$%s$", msg);
+    ppl_snprintfTrunc(*output, strlen(msg) + 3, "$%s$", msg);
     return;
 }
 
@@ -536,7 +540,7 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     }
     *output = (char *) ppl_memAlloc_incontext(strlen(tmp_string) + 3, OutContext);
     if ((*output) == NULL) return;
-    sprintf(*output, "%s", tmp_string);
+    ppl_snprintfTrunc(*output, strlen(tmp_string) + 3, "%s", tmp_string);
     {
         EPSComm *x = X;
         EPS_STACK_POP;

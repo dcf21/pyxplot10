@@ -287,14 +287,15 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
         if (wildcardMatchNumber < 0) wildcardMatchNumber = 0;
         C = wildcardMatchNumber;
         if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
-            sprintf(errtext, "Could not open file '%s'.", fName);
+            ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open file '%s'.", fName);
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return NULL;
         };
         for (i = 0; i < wordExp.we_wordc; i++) {
             if ((glob(wordExp.we_wordv[i], 0, NULL, &globData) != 0) || ((i == 0) && (globData.gl_pathc == 0))) {
-                if (wildcardMatchNumber == 0) sprintf(errtext, "Could not open file '%s'.", fName);
-                else sprintf(errtext, "glob produced zero hits.");
+                if (wildcardMatchNumber == 0)
+                    ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open file '%s'.", fName);
+                else ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "glob produced zero hits.");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return NULL;
             }
@@ -305,7 +306,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
             }
             filename = (char *) ppl_memAlloc(strlen(globData.gl_pathv[C]) + 1);
             if (filename == NULL) {
-                sprintf(errtext, "Out of memory (00).");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (00).");
                 globfree(&globData);
                 wordfree(&wordExp);
                 return NULL;
@@ -317,8 +318,9 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
         }
         wordfree(&wordExp);
         if (!done) {
-            if (wildcardMatchNumber == 0) sprintf(errtext, "Could not open file '%s'.", fName);
-            else sprintf(errtext, "glob produced too few hits.");
+            if (wildcardMatchNumber == 0)
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open file '%s'.", fName);
+            else ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "glob produced too few hits.");
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return NULL;
         }
@@ -341,7 +343,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
             filterArgs = (char *) malloc(strlen(filter) + 1);
             argList = (char **) malloc((strlen(filter) / 2 + 3) * sizeof(char *));
             if ((filterArgs == NULL) || (argList == NULL)) {
-                sprintf(errtext, "Out of memory (01).");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (01).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 free(filterArgs);
                 filterArgs = NULL;
@@ -366,7 +368,8 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                     &i); // Fork process for input filter, and runned piped output through the standard IO library using fdopen()
             sigprocmask(SIG_UNBLOCK, &sigs, NULL);
             if ((infile = fdopen(i, "r")) == NULL) {
-                sprintf(errtext, "Could not open connection to input filter '%s'.", argList[0]);
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open connection to input filter '%s'.",
+                                  argList[0]);
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 free(filterArgs);
                 filterArgs = NULL;
@@ -385,7 +388,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
 
     // If not, then we just open the file and return a file-handle to it
     if ((infile = fopen(filename, "r")) == NULL) {
-        sprintf(errtext, "Could not open input file '%s'.", filename);
+        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open input file '%s'.", filename);
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         return NULL;
     };
@@ -465,10 +468,11 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
         else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
         else errt = "Fail occured.";
         if (prefix)
-            sprintf(errtext,
+            ppl_snprintfTrunc(
+                    errtext, PPL_MSG_LENGTH,
                     "%s:%ld: Could not evaluate expression <%s>. The error, encountered at character position %d, was: '%s'",
                     filename, file_linenumber, input->ascii, errp, errt);
-        else strcpy(errtext, errt);
+        else ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", errt);
         ppl_tbClear(c);
         *status = 1;
     }
@@ -600,8 +604,9 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
             FAIL;
         }
         if (stkObj->objType != PPLOBJ_STR) {
-            sprintf(errtext, "%s:%ld: Label expression '%s' did not evaluate to a string, but to type <%s>.", filename,
-                    file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
+            ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
+                              "%s:%ld: Label expression '%s' did not evaluate to a string, but to type <%s>.", filename,
+                              file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
             STACK_CLEAN;
             FAIL;
         }
@@ -627,15 +632,17 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
         if (!outObj) {
             if ((stkObj->objType != PPLOBJ_NUM) && (stkObj->objType != PPLOBJ_BOOL) &&
                 (stkObj->objType != PPLOBJ_DATE)) {
-                sprintf(errtext,
+                ppl_snprintfTrunc(
+                        errtext, PPL_MSG_LENGTH,
                         "%s:%ld: Data item calculated from expression '%s' was not a number, but had type <%s>.",
                         filename, file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
                 STACK_CLEAN;
                 FAIL;
             }
             if ((stkObj->objType == PPLOBJ_NUM) && (stkObj->flagComplex)) {
-                sprintf(errtext, "%s:%ld: Data item calculated from expression '%s' was a complex number.", filename,
-                        file_linenumber, ex->ascii);
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
+                                  "%s:%ld: Data item calculated from expression '%s' was a complex number.", filename,
+                                  file_linenumber, ex->ascii);
                 STACK_CLEAN;
                 FAIL;
             }
@@ -645,7 +652,8 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                 out->firstEntries[i].amMalloced = 0;
             } else {
                 if (out->firstEntries[i].objType != stkObj->objType) {
-                    sprintf(errtext,
+                    ppl_snprintfTrunc(
+                            errtext, PPL_MSG_LENGTH,
                             "%s:%ld: Data item calculated from expression '%s' has inconsistent types, including <%s> and <%s>.",
                             filename, file_linenumber, ex->ascii, pplObjTypeNames[out->firstEntries[i].objType],
                             pplObjTypeNames[stkObj->objType]);
@@ -654,7 +662,8 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                 }
                 if ((out->firstEntries[i].objType == PPLOBJ_NUM) &&
                     (!ppl_unitsDimEqual(&out->firstEntries[i], stkObj))) {
-                    sprintf(errtext,
+                    ppl_snprintfTrunc(
+                            errtext, PPL_MSG_LENGTH,
                             "%s:%ld: Data item calculated from expression '%s' has inconsistent physical units, including <%s> and <%s>.",
                             filename, file_linenumber, ex->ascii,
                             ppl_printUnit(c, &out->firstEntries[i], NULL, NULL, 0, 1, 0),
@@ -675,7 +684,8 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
     out->current->split[out->current->blockPosition] = *discontinuity;
     i = ppldata_DataTable_AddRow(out);
     if (i) {
-        sprintf(errtext, "%s:%ld: Out of memory storing data table.", filename, file_linenumber);
+        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s:%ld: Out of memory storing data table.", filename,
+                          file_linenumber);
         *errCount = -1;
         FAIL;
     }
@@ -913,7 +923,7 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
         ppl_expCompile(c, 0, 0, "", ascii, &end, 0, 0, 0, &exptmp, &ep, &es, errtext);
         if (es || c->errStat.status) {
             ppl_tbClear(c);
-            sprintf(errtext, "Out of memory (03).");
+            ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (03).");
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return 1;
         }
@@ -921,7 +931,7 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
         pplExpr_free(exptmp);
         exptmp = NULL;
         if (usingExprs[i] == NULL) {
-            sprintf(errtext, "Out of memory (04).");
+            ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (04).");
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return 1;
         }
@@ -1054,7 +1064,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
 
     *out = ppldata_NewDataTable(Ncols - NusingObjs, NusingObjs, contextOutput, -1);
     if (*out == NULL) {
-        strcpy(errtext, "Out of memory whilst trying to allocate data table to read data from file.");
+        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s",
+                          "Out of memory whilst trying to allocate data table to read data from file.");
         *status = 1;
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         FCLOSE_FI;
@@ -1063,7 +1074,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
     if (usingRowCol == DATAFILE_ROW) {
         rawDataTab = ppldata_NewRawDataTable(contextRaw);
         if (rawDataTab == NULL) {
-            strcpy(errtext, "Out of memory whilst trying to allocate data table to read data from file.");
+            ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s",
+                              "Out of memory whilst trying to allocate data table to read data from file.");
             *status = 1;
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             FCLOSE_FI;
@@ -1140,7 +1152,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 columnHeadings = (char **) ppl_memAlloc_incontext(itemsOnLine * sizeof(char *), contextRough);
                 NcolumnHeadings = itemsOnLine;
                 if ((cptr == NULL) || (columnHeadings == NULL)) {
-                    strcpy(errtext, "Out of memory (05).");
+                    ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (05).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     FCLOSE_FI;
@@ -1191,7 +1203,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 rowHeadings = (char **) ppl_memAlloc_incontext(itemsOnLine * sizeof(char *), contextRough);
                 NrowHeadings = itemsOnLine;
                 if ((cptr == NULL) || (rowHeadings == NULL)) {
-                    strcpy(errtext, "Out of memory (06).");
+                    ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (06).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     FCLOSE_FI;
@@ -1242,7 +1254,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 columnUnits = (pplObj *) ppl_memAlloc_incontext(itemsOnLine * sizeof(pplObj), contextRough);
                 NcolumnUnits = itemsOnLine;
                 if ((cptr == NULL) || (columnUnits == NULL)) {
-                    strcpy(errtext, "Out of memory (07).");
+                    ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (07).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     FCLOSE_FI;
@@ -1305,7 +1317,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 rowUnits = (pplObj *) ppl_memAlloc_incontext(itemsOnLine * sizeof(pplObj), contextRough);
                 NrowUnits = itemsOnLine;
                 if ((cptr == NULL) || (rowUnits == NULL)) {
-                    strcpy(errtext, "Out of memory (08).");
+                    ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (08).");
                     *status = 1;
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     FCLOSE_FI;
@@ -1371,7 +1383,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             cptr = rawDataTab->current->text[rawDataTab->current->blockPosition] =
                     (char *) ppl_memAlloc_incontext(strlen(linebuffer) + 1, contextRaw);
             if (cptr == NULL) {
-                strcpy(errtext, "Out of memory whilst placing data into text spool.");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory whilst placing data into text spool.");
                 *status = 1;
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 FCLOSE_FI;
@@ -1380,7 +1392,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             strcpy(cptr, linebuffer);
             rawDataTab->current->fileLine[rawDataTab->current->blockPosition] = file_linenumber;
             if (ppldata_RawDataTable_AddRow(rawDataTab)) {
-                strcpy(errtext, "Out of memory whilst placing data into text spool.");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory whilst placing data into text spool.");
                 *status = 1;
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 FCLOSE_FI;
@@ -1501,7 +1513,8 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
         ppl_log(&c->errcontext, msg);
     }
     if (fnlist_len > USING_ITEMS_MAX) {
-        sprintf(errtext, "Too many functions supplied. A maximum of %d are allowed.", USING_ITEMS_MAX);
+        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Too many functions supplied. A maximum of %d are allowed.",
+                          USING_ITEMS_MAX);
         *status = 1;
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         return;
@@ -1531,7 +1544,8 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     *out = ppldata_NewDataTable(Ncols - NusingObjs, NusingObjs, contextOutput,
                                 sampleGrid ? (rasterXlen * rasterYlen) : rasterXlen);
     if (*out == NULL) {
-        strcpy(errtext, "Out of memory whilst trying to allocate data table to read data from file.");
+        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s",
+                          "Out of memory whilst trying to allocate data table to read data from file.");
         *status = 1;
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         return;
@@ -1697,7 +1711,8 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
         ppl_log(&c->errcontext, msg);
     }
     if (objListLen > USING_ITEMS_MAX) {
-        sprintf(errtext, "Too many functions supplied. A maximum of %d are allowed.", USING_ITEMS_MAX);
+        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Too many functions supplied. A maximum of %d are allowed.",
+                          USING_ITEMS_MAX);
         *status = 1;
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         return;
@@ -1723,7 +1738,8 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
     contextOutput = ppl_memAlloc_GetMemContext();
     *out = ppldata_NewDataTable(Ncols - NusingObjs, NusingObjs, contextOutput, vlen);
     if (*out == NULL) {
-        strcpy(errtext, "Out of memory whilst trying to allocate data table to read data from file.");
+        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s",
+                          "Out of memory whilst trying to allocate data table to read data from file.");
         *status = 1;
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         return;
@@ -1870,14 +1886,16 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             if ((post2 <= 0) || (stko[post2].objType == PPLOBJ_ZOM)) {
                 if (stko[post1].objType != rasterXunits.objType) {
                     *status = 1;
-                    sprintf(errtext,
+                    ppl_snprintfTrunc(
+                            errtext, PPL_MSG_LENGTH,
                             "Mismatched data types between lower and upper limits of first parametric variable.");
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
                 if (!ppl_unitsDimEqual(&stko[post1], &rasterXunits)) {
                     *status = 1;
-                    sprintf(errtext,
+                    ppl_snprintfTrunc(
+                            errtext, PPL_MSG_LENGTH,
                             "Mismatched physical units between lower and upper limits of first parametric variable.");
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
@@ -1889,13 +1907,15 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             rasterXmax = stko[post2].real;
             if (stko[post2].objType != rasterXunits.objType) {
                 *status = 1;
-                sprintf(errtext, "Mismatched data types between lower and upper limits of first parametric variable.");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
+                                  "Mismatched data types between lower and upper limits of first parametric variable.");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
             if (!ppl_unitsDimEqual(&stko[post2], &rasterXunits)) {
                 *status = 1;
-                sprintf(errtext,
+                ppl_snprintfTrunc(
+                        errtext, PPL_MSG_LENGTH,
                         "Mismatched physical units between lower and upper limits of first parametric variable.");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
@@ -1906,14 +1926,16 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             if ((posv2 <= 0) || (stko[posv2].objType == PPLOBJ_ZOM)) {
                 if (stko[posv1].objType != rasterYunits.objType) {
                     *status = 1;
-                    sprintf(errtext,
+                    ppl_snprintfTrunc(
+                            errtext, PPL_MSG_LENGTH,
                             "Mismatched data types between lower and upper limits of second parametric variable.");
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
                 if (!ppl_unitsDimEqual(&stko[posv1], &rasterYunits)) {
                     *status = 1;
-                    sprintf(errtext,
+                    ppl_snprintfTrunc(
+                            errtext, PPL_MSG_LENGTH,
                             "Mismatched physical units between lower and upper limits of second parametric variable.");
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
@@ -1925,13 +1947,16 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             rasterYmax = stko[posv2].real;
             if (stko[posv2].objType != rasterYunits.objType) {
                 *status = 1;
-                sprintf(errtext, "Mismatched data types between lower and upper limits of second parametric variable.");
+                ppl_snprintfTrunc(
+                        errtext, PPL_MSG_LENGTH,
+                        "Mismatched data types between lower and upper limits of second parametric variable.");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
             if (!ppl_unitsDimEqual(&stko[posv2], &rasterYunits)) {
                 *status = 1;
-                sprintf(errtext,
+                ppl_snprintfTrunc(
+                        errtext, PPL_MSG_LENGTH,
                         "Mismatched physical units between lower and upper limits of second parametric variable.");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
@@ -1962,7 +1987,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 if (*rast_log) {
                     if (!spacing->dimensionless) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "Specified spacing has units of <%s>. However, for a logarithmic ordinate axis, the spacing should be a dimensionless multiplicative factor.",
                                 ppl_printUnit(c, spacing, NULL, NULL, 0, 1, 0));
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
@@ -1970,7 +1996,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     }
                     if ((spacing->real < 1e-200) || (spacing->real > 1e100)) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "The spacing specified must be a positive multiplicative factor for logarithmic ordinate axes.");
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
@@ -1981,14 +2008,16 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     NumberOfSamplesDbl = 1.0 + floor(log(*rast_max / *rast_min) / log(SpacingDbl));
                     if (NumberOfSamplesDbl < 2) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "The spacing specified produced fewer than two samples; this does not seem sensible.");
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
                     if (NumberOfSamplesDbl > 1e7) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "The spacing specified produced more than 1e7 samples. If you really want to do this, use 'set samples'.");
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
@@ -1998,7 +2027,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 } else {
                     if (!ppl_unitsDimEqual(rast_unit, spacing)) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "Specified spacing has units of <%s>, for an ordinate axis which has units of <%s>,",
                                 ppl_printUnit(c, spacing, NULL, NULL, 0, 1, 0),
                                 ppl_printUnit(c, rast_unit, NULL, NULL, 1, 1, 0));
@@ -2011,14 +2041,16 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     NumberOfSamplesDbl = 1.0 + (*rast_max - *rast_min) / SpacingDbl;
                     if (NumberOfSamplesDbl < 2) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "The spacing specified produced fewer than two samples; this does not seem sensible.");
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
                     if (NumberOfSamplesDbl > 1e6) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "The spacing specified produced more than 1e6 samples. If you really want to do this, use 'set samples'.");
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
@@ -2045,7 +2077,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         rasterX = (double *) ppl_memAlloc(rasterXlen * sizeof(double));
         if (rasterX == NULL) {
             *status = 1;
-            sprintf(errtext, "Out of memory (09).");
+            ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (09).");
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return;
         }
@@ -2056,7 +2088,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             rasterY = (double *) ppl_memAlloc(rasterYlen * sizeof(double));
             if (rasterY == NULL) {
                 *status = 1;
-                sprintf(errtext, "Out of memory (10).");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (10).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
@@ -2152,7 +2184,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 if (pos <= 0) break;
                 if (Nusing >= USING_ITEMS_MAX) {
                     *status = 1;
-                    sprintf(errtext, "Too many using items; maximum of %d are allowed.", USING_ITEMS_MAX);
+                    ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Too many using items; maximum of %d are allowed.",
+                                      USING_ITEMS_MAX);
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
@@ -2180,7 +2213,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             if (es || c->errStat.status) {
                 ppl_tbClear(c);
                 *status = 1;
-                sprintf(errtext, "Out of memory (11).");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (11).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
@@ -2189,7 +2222,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             exptmp = NULL;
             if (usingExprs[0] == NULL) {
                 *status = 1;
-                sprintf(errtext, "Out of memory (12).");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (12).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
@@ -2214,7 +2247,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         Ncols = Nusing; // If number of columns is specified as -1, any number of columns will do
     if ((Ncols >= 0) && (Nusing != Ncols)) {
         *status = 1;
-        sprintf(errtext,
+        ppl_snprintfTrunc(
+                errtext, PPL_MSG_LENGTH,
                 "The supplied using ... clause contains the wrong number of items. We need %d columns of data, but %d have been supplied.",
                 Ncols, Nusing);
         if (DEBUG) ppl_log(&c->errcontext, errtext);
@@ -2240,14 +2274,14 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             }
             if (Nexprs < 1) {
                 *status = 1;
-                sprintf(errtext, "Fewer than one expression was supplied to evaluate.");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Fewer than one expression was supplied to evaluate.");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
             exprList = (pplExpr **) ppl_memAlloc(Nexprs * sizeof(pplExpr *));
             if (exprList == NULL) {
                 *status = 1;
-                sprintf(errtext, "Out of memory (13).");
+                ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (13).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
@@ -2278,7 +2312,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 vecs = (pplObj *) ppl_memAlloc(Nexprs * sizeof(pplObj));
                 if (vecs == NULL) {
                     *status = 1;
-                    sprintf(errtext, "Out of memory (14).");
+                    ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (14).");
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
@@ -2290,7 +2324,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     pplObj *obj = ppl_expEval(c, exprList[i], &j, 0, iterDepth);
                     if (c->errStat.status) {
                         *status = 1;
-                        sprintf(errtext, "Could not evaluate vector expressions.");
+                        ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not evaluate vector expressions.");
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
                         STACK_CLEAN;
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
@@ -2298,7 +2332,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     }
                     if (obj->objType != PPLOBJ_VEC) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "Vector data supplied to other columns, but columns %d evaluated to an object of type <%s>.",
                                 i + 1, pplObjTypeNames[obj->objType]);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
@@ -2309,7 +2344,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     l2 = ((pplVector *) first->auxil)->v->size;
                     if (l != l2) {
                         *status = 1;
-                        sprintf(errtext,
+                        ppl_snprintfTrunc(
+                                errtext, PPL_MSG_LENGTH,
                                 "Data supplied as a list of vectors, but they have varying lengths, including %d (vector %d) and %d (vector %d).",
                                 l, 1, l2, i + 1);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
@@ -2358,7 +2394,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                              continuity, persistent, status, errtext, errCount, iterDepth);
         } else {
             *status = 1;
-            sprintf(errtext, "Could not find any expressions to evaluate.");
+            ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not find any expressions to evaluate.");
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return;
         }

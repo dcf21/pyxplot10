@@ -30,6 +30,7 @@
 #include <gsl/gsl_math.h>
 
 #include "userspace/calendars.h"
+#include "stringTools/asciidouble.h"
 #include "userspace/context.h"
 #include "settings/settingTypes.h"
 #include "stringTools/strConstants.h"
@@ -325,12 +326,13 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
 
     if ((month < 1) || (month > 13)) {
         *status = 1;
-        sprintf(errText, "Supplied month number should be in the range 1-13.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied month number should be in the range 1-13.");
         return 0.0;
     }
     if ((year < 1)) {
         *status = 1;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "Supplied year number must be positive for the Hebrew calendar; the calendar is undefined prior to 4760 BC, corresponding to Hebrew year AM 1.");
         return 0.0;
     }
@@ -340,8 +342,9 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
     for (i = 0; i < month - 1; i++) JD += hebrewMonthLengths[YearTypes[0]][i];
     if (day > hebrewMonthLengths[YearTypes[0]][i]) {
         *status = 1;
-        sprintf(errText, "Supplied day number in the Hebrew month of %s in the year AM %d must be in the range 1-%d.",
-                ppl_getMonthName(ct, month), year, hebrewMonthLengths[YearTypes[1]][i]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "Supplied day number in the Hebrew month of %s in the year AM %d must be in the range 1-%d.",
+                          ppl_getMonthName(ct, month), year, hebrewMonthLengths[YearTypes[1]][i]);
         return 0.0;
     }
     JD += day - 1;
@@ -412,12 +415,13 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
 
     if ((month < 1) || (month > 12)) {
         *status = 1;
-        sprintf(errText, "Supplied month number should be in the range 1-12.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied month number should be in the range 1-12.");
         return 0.0;
     }
     if ((year < 1)) {
         *status = 1;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "Supplied year number must be positive for the Islamic calendar; the calendar is undefined prior to AD 622 Jul 18, corresponding to AH 1 Muh 1.");
         return 0.0;
     }
@@ -468,7 +472,8 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
 
     if (JD < 1948439.5) {
         *status = 1;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, SSTR_LENGTH,
                 "Supplied year number must be positive for the Islamic calendar; the calendar is undefined prior to AD 622 Jul 18, corresponding to AH 1 Muh 1.");
         return;
     }
@@ -565,27 +570,27 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
 
     if ((year < -1e6) || (year > 1e6) || (!gsl_finite(year))) {
         *status = 1;
-        sprintf(errText, "Supplied year is too big.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied year is too big.");
         return 0.0;
     }
     if ((day < 1) || (day > 31)) {
         *status = 1;
-        sprintf(errText, "Supplied day number should be in the range 1-31.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied day number should be in the range 1-31.");
         return 0.0;
     }
     if ((hour < 0) || (hour > 23)) {
         *status = 1;
-        sprintf(errText, "Supplied hour number should be in the range 0-23.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied hour number should be in the range 0-23.");
         return 0.0;
     }
     if ((min < 0) || (min > 59)) {
         *status = 1;
-        sprintf(errText, "Supplied minute number should be in the range 0-59.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied minute number should be in the range 0-59.");
         return 0.0;
     }
     if ((sec < 0) || (sec > 59)) {
         *status = 1;
-        sprintf(errText, "Supplied second number should be in the range 0-59.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied second number should be in the range 0-59.");
         return 0.0;
     }
 
@@ -596,7 +601,7 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
 
     if ((month < 1) || (month > 12)) {
         *status = 1;
-        sprintf(errText, "Supplied month number should be in the range 1-12.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Supplied month number should be in the range 1-12.");
         return 0.0;
     }
 
@@ -616,7 +621,8 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
     } // Gregorian calendar
     else {
         *status = 1;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The requested date never happened in the %s calendar: it was lost in the transition from the Julian to the Gregorian calendar.",
                 *(char **) ppl_fetchSettingName(&ct->errcontext, ct->set->term_current.CalendarIn, SW_CALENDAR_INT,
                                                 (void *) SW_CALENDAR_STR, sizeof(char *)));
@@ -651,7 +657,7 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
 
     if ((JD < -1e8) || (JD > 1e8) || (!gsl_finite(JD))) {
         *status = 1;
-        sprintf(errText, "Supplied unix time is too big.");
+        ppl_snprintfTrunc(errText, SSTR_LENGTH, "Supplied unix time is too big.");
         return;
     }
 
@@ -691,14 +697,15 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
 //! ppl_dateString - Render a unix time as a string, using a strftime-like format string
 //! \param [in] ct - The Pyxplot context
 //! \param [out] out - Character buffer into which to write the string
+//! \param [in] outLen - The size of the buffer <out>
 //! \param [in] UT - The unix time to render
 //! \param [in] format - The format string, or NULL to use the default format "%a %Y %b %d %H:%M:%S %Z"
 //! \param [in] timezone - The name of the timezone in which to render the time, or NULL to use the default
 //! \param [out] status - Set to one if the time could not be rendered
 //! \param [out] errText - Character buffer into which to write an error message if rendering failed
 
-void ppl_dateString(ppl_context *ct, char *out, double UT, const char *format, const char *timezone, int *status,
-                    char *errText) {
+void ppl_dateString(ppl_context *ct, char *out, const size_t outLen, double UT, const char *format,
+                    const char *timezone, int *status, char *errText) {
     int j = 0, k = 0;
     int year, month, day, hour, min;
     double sec;
@@ -711,69 +718,68 @@ void ppl_dateString(ppl_context *ct, char *out, double UT, const char *format, c
     // Loop through format string making substitutions
     for (j = 0; format[j] != '\0'; j++) {
         if (format[j] != '%') {
-            out[k++] = format[j];
+            ppl_strAppendChar(out, outLen, &k, format[j]);
             continue;
         }
         switch (format[j + 1]) {
             case '%':
-                sprintf(out + k, "%%");
+                ppl_strAppendf(out, outLen, &k, "%%");
                 break;
             case 'a':
-                sprintf(out + k, "%s", ppl_getWeekDayName(ct, floor(fmod(UT / 3600 / 24 + 3, 7))));
-                out[k + 3] = '\0';
+                ppl_strAppendf(out, outLen, &k, "%.3s", ppl_getWeekDayName(ct, floor(fmod(UT / 3600 / 24 + 3, 7))));
                 break;
             case 'A':
-                sprintf(out + k, "%s", ppl_getWeekDayName(ct, floor(fmod(UT / 3600 / 24 + 3, 7))));
+                ppl_strAppendf(out, outLen, &k, "%s", ppl_getWeekDayName(ct, floor(fmod(UT / 3600 / 24 + 3, 7))));
                 break;
             case 'b':
-                sprintf(out + k, "%s", ppl_getMonthName(ct, month));
-                out[k + 3] = '\0';
+                ppl_strAppendf(out, outLen, &k, "%.3s", ppl_getMonthName(ct, month));
                 break;
             case 'B':
-                sprintf(out + k, "%s", ppl_getMonthName(ct, month));
+                ppl_strAppendf(out, outLen, &k, "%s", ppl_getMonthName(ct, month));
                 break;
             case 'C':
-                sprintf(out + k, "%d", (year / 100) + 1);
+                ppl_strAppendf(out, outLen, &k, "%d", (year / 100) + 1);
                 break;
             case 'd':
-                sprintf(out + k, "%d", day);
+                ppl_strAppendf(out, outLen, &k, "%d", day);
                 break;
             case 'H':
-                sprintf(out + k, "%02d", hour);
+                ppl_strAppendf(out, outLen, &k, "%02d", hour);
                 break;
             case 'I':
-                sprintf(out + k, "%02d", ((hour - 1) % 12) + 1);
+                ppl_strAppendf(out, outLen, &k, "%02d", ((hour - 1) % 12) + 1);
                 break;
             case 'k':
-                sprintf(out + k, "%d", hour);
+                ppl_strAppendf(out, outLen, &k, "%d", hour);
                 break;
             case 'l':
-                sprintf(out + k, "%d", ((hour - 1) % 12) + 1);
+                ppl_strAppendf(out, outLen, &k, "%d", ((hour - 1) % 12) + 1);
                 break;
             case 'm':
-                sprintf(out + k, "%02d", month);
+                ppl_strAppendf(out, outLen, &k, "%02d", month);
                 break;
             case 'M':
-                sprintf(out + k, "%02d", min);
+                ppl_strAppendf(out, outLen, &k, "%02d", min);
                 break;
             case 'p':
-                sprintf(out + k, "%s", (hour < 12) ? "am" : "pm");
+                ppl_strAppendf(out, outLen, &k, "%s", (hour < 12) ? "am" : "pm");
                 break;
             case 'S':
-                sprintf(out + k, "%02d", (int) sec);
+                ppl_strAppendf(out, outLen, &k, "%02d", (int) sec);
                 break;
             case 'y':
-                sprintf(out + k, "%d", year % 100);
+                ppl_strAppendf(out, outLen, &k, "%d", year % 100);
                 break;
             case 'Y':
-                sprintf(out + k, "%d", year);
+                ppl_strAppendf(out, outLen, &k, "%d", year);
                 break;
             case 'Z':
-                sprintf(out + k, "%s", timezone);
+                ppl_strAppendf(out, outLen, &k, "%s", timezone);
                 break;
             default: {
                 *status = 1;
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, SSTR_LENGTH,
                         "Format string supplied to convert date to string contains unrecognised substitution token '%%%c'.",
                         format[j + 1]);
                 return;
@@ -789,14 +795,15 @@ void ppl_dateString(ppl_context *ct, char *out, double UT, const char *format, c
 //! tokens such as %d and %H are replaced by the number of days and hours in the interval
 //! \param [in] ct - The Pyxplot context
 //! \param [out] out - Character buffer into which to write the string
+//! \param [in] outLen - The size of the buffer <out>
 //! \param [in] UT1 - The unix time at the start of the interval
 //! \param [in] UT2 - The unix time at the end of the interval
 //! \param [in] format - The format string
 //! \param [out] status - Set to one if the format string was invalid
 //! \param [out] errText - Character buffer into which to write an error message
 
-void ppl_timeDiffStr(const ppl_context *ct, char *out, const double UT1, const double UT2, const char *format,
-                     int *status, char *errText) {
+void ppl_timeDiffStr(const ppl_context *ct, char *out, const size_t outLen, const double UT1, const double UT2,
+                     const char *format, int *status, char *errText) {
     int j = 0, k = 0;
     long gapYears, gapDays, gapHours, gapMinutes, gapSeconds;
 
@@ -809,43 +816,44 @@ void ppl_timeDiffStr(const ppl_context *ct, char *out, const double UT1, const d
     // Loop through format string making substitutions
     for (j = 0; format[j] != '\0'; j++) {
         if (format[j] != '%') {
-            out[k++] = format[j];
+            ppl_strAppendChar(out, outLen, &k, format[j]);
             continue;
         }
         switch (format[j + 1]) {
             case '%':
-                sprintf(out + k, "%%");
+                ppl_strAppendf(out, outLen, &k, "%%");
                 break;
             case 'Y':
-                sprintf(out + k, "%ld", gapYears);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapYears);
                 break;
             case 'D':
-                sprintf(out + k, "%ld", gapDays);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapDays);
                 break;
             case 'd':
-                sprintf(out + k, "%ld", gapDays % 365);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapDays % 365);
                 break;
             case 'H':
-                sprintf(out + k, "%ld", gapHours);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapHours);
                 break;
             case 'h':
-                sprintf(out + k, "%ld", gapHours % 24);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapHours % 24);
                 break;
             case 'M':
-                sprintf(out + k, "%ld", gapMinutes);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapMinutes);
                 break;
             case 'm':
-                sprintf(out + k, "%ld", gapMinutes % 60);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapMinutes % 60);
                 break;
             case 'S':
-                sprintf(out + k, "%ld", gapSeconds);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapSeconds);
                 break;
             case 's':
-                sprintf(out + k, "%ld", gapSeconds % 60);
+                ppl_strAppendf(out, outLen, &k, "%ld", gapSeconds % 60);
                 break;
             default: {
                 *status = 1;
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Format string supplied to convert time interval to string contains unrecognised substitution token '%%%c'.",
                         format[j + 1]);
                 return;

@@ -213,7 +213,8 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
     if (!(in[XN + 1].dimensionless && in[XN + 2].dimensionless)) { \
         *status = 1; \
         *errType = ERR_UNIT; \
-        sprintf(errText, \
+        ppl_snprintfTrunc( \
+                errText, LSTR_LENGTH, \
                 "The %s function can only act upon dimensionless values for w_m and w_l. Supplied values have dimensions of <%s> and <%s>.", \
                 FunctionDescription, ppl_printUnit(c, &in[XN + 1], NULL, NULL, 0, 1, 0), \
                 ppl_printUnit(c, &in[XN + 2], NULL, NULL, 1, 1, 0)); \
@@ -224,7 +225,8 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
     if (!(in[0].dimensionless)) { \
         *status = 1; \
         *errType = ERR_UNIT; \
-        sprintf(errText, \
+        ppl_snprintfTrunc( \
+                errText, LSTR_LENGTH, \
                 "The %s function can only act upon dimensionless values for redshift. Supplied value has dimensions of <%s>.", \
                 FunctionDescription, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0)); \
         return; \
@@ -384,7 +386,8 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The function %s requires a date object or numeric Unix time as its first argument; supplied argument had type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -419,7 +422,8 @@ void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status,
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The function %s requires a date object or numeric Unix time as its first argument; supplied argument had type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;

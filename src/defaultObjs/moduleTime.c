@@ -120,8 +120,9 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
     if ((nArgs > 6) && (in[6].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a string as its seventh argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[6].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a string as its seventh argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[6].objType]);
         return;
     }
     if (nArgs > 6) ppl_calendarTimezoneSet(c, 1, (char *) in[6].auxil);
@@ -149,15 +150,17 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *stat
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a date as its first argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a date as its first argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     if (in[1].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a date as its second argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a date as its second argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     pplObjNum(&OUTPUT, 0, in[0].real - in[1].real, 0);
@@ -181,22 +184,25 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a date as its first argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a date as its first argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     if (in[1].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a date as its second argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[1].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a date as its second argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
     if ((nArgs > 2) && (in[2].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a string as its third argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[2].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a string as its third argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[2].objType]);
         return;
     }
 
@@ -204,14 +210,14 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
 
     if (nArgs > 2) // Format specified
     {
         format = (char *) in[2].auxil;
-        ppl_timeDiffStr(c, out, in[0].real, in[1].real, format, status, errText);
+        ppl_timeDiffStr(c, out, 8192, in[0].real, in[1].real, format, status, errText);
         if (*status) {
             *errType = ERR_NUMERICAL;
             return;
@@ -277,22 +283,25 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a date as its first argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a date as its first argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a string as its second argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[1].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a string as its second argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
     if ((nArgs > 2) && (in[2].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a string as its third argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[2].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a string as its third argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[2].objType]);
         return;
     }
 
@@ -300,7 +309,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
 
@@ -309,7 +318,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (nArgs > 2) ppl_calendarTimezoneSet(c, 1, (char *) in[2].auxil);
     else ppl_calendarTimezoneSet(c, 0, NULL);
     ppl_calendarTimezoneOffset(c, in[0].real, timezone, &offset);
-    ppl_dateString(c, out, in[0].real + offset, format, timezone, status, errText);
+    ppl_dateString(c, out, 8192, in[0].real + offset, format, timezone, status, errText);
     ppl_calendarTimezoneUnset(c);
     if (*status) {
         *errType = ERR_NUMERICAL;
@@ -359,8 +368,9 @@ void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a date as its argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a date as its argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     if (p > 0) {

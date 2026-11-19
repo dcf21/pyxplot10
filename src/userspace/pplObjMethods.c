@@ -71,7 +71,7 @@ dict **pplObjMethods;
         if (X == NULL) { \
             *status = 1; \
             *errType = ERR_MEMORY; \
-            sprintf(errText, "Out of memory."); \
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory."); \
             return; \
         } \
         strcpy(X, Y); \
@@ -130,7 +130,7 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -195,7 +195,7 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -257,7 +257,7 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -313,7 +313,7 @@ static void pplmethod_str(ppl_context *c, pplObj *in, const int nArgs, int *stat
     char *tmp = (char *) malloc(LSTR_LENGTH);
     if (tmp == NULL) {
         *status = 1;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     pplObjPrint(c, t, NULL, tmp, LSTR_LENGTH, 0, 0);
@@ -402,7 +402,7 @@ static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int 
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     lst = (list *) OUTPUT.auxil;
@@ -444,7 +444,8 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
         if (in[i].objType != PPLOBJ_STR) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "The splitOn() method requires all its arguments to be strings; argument %d has type <%s>.", i + 1,
                     pplObjTypeNames[in[i].objType]);
             return;
@@ -452,7 +453,7 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     lst = (list *) OUTPUT.auxil;
@@ -641,19 +642,19 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The append() method requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method requires a single string argument.");
         return;
     }
     if ((t == NULL) || (t->self_lval == NULL)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The append() method can only be called on a string lvalue.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method can only be called on a string lvalue.");
         return;
     }
     if ((t->immutable) || (t->self_lval->immutable)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The append() method cannot act on immutable strings.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method cannot act on immutable strings.");
         return;
     }
     t = t->self_lval;
@@ -666,7 +667,7 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
         if (instr == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         t->auxilLen = newlen;
@@ -678,7 +679,7 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
         if (ns == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         t->auxilLen = newlen;
@@ -707,7 +708,7 @@ static void pplmethod_strBeginsWith(ppl_context *c, pplObj *in, const int nArgs,
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The beginsWith() method requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The beginsWith() method requires a single string argument.");
         return;
     }
     cmpstr = (char *) in[0].auxil;
@@ -733,7 +734,7 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The endsWith() method requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The endsWith() method requires a single string argument.");
         return;
     }
     cmpstr = (char *) in[0].auxil;
@@ -765,7 +766,7 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The find() method requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The find() method requires a single string argument.");
         return;
     }
     cmpstr = (char *) in[0].auxil;
@@ -801,13 +802,13 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The findAll() method requires a single string argument.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The findAll() method requires a single string argument.");
         return;
     }
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -847,7 +848,8 @@ static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *s
         if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) { \
             *status = 1; \
             *errType = ERR_TYPE; \
-            sprintf(errText, \
+            ppl_snprintfTrunc( \
+                    errText, LSTR_LENGTH, \
                     "The function %s requires a string as its first argument; supplied argument had type <%s>.", \
                     FunctionDescription, pplObjTypeNames[in[0].objType]); \
             return; \
@@ -1105,22 +1107,24 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
     if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a string as its first argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a string as its first argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function %s requires a string as its second argument; supplied argument had type <%s>.",
-                FunctionDescription, pplObjTypeNames[in[1].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function %s requires a string as its second argument; supplied argument had type <%s>.",
+                          FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
     out = (char *) malloc(8192);
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
 
@@ -1129,7 +1133,7 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
     if (nArgs > 1) ppl_calendarTimezoneSet(c, 1, (char *) in[1].auxil);
     else ppl_calendarTimezoneSet(c, 0, NULL);
     ppl_calendarTimezoneOffset(c, t->real, timezone, &offset);
-    ppl_dateString(c, out, t->real + offset, format, timezone, status, errText);
+    ppl_dateString(c, out, 8192, t->real + offset, format, timezone, status, errText);
     ppl_calendarTimezoneUnset(c);
     if (*status) {
         *errType = ERR_NUMERICAL;
@@ -1369,15 +1373,18 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
     gsl_vector *vo;
     if (!ppl_unitsDimEqual(st, &in[0])) {
         if (st->dimensionless) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
                     ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
         } else if (in[0].dimensionless) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
                     ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
         } else {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
                     ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
         }
@@ -1388,7 +1395,7 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
     if (pplObjVector(&OUTPUT, 0, 1, v->size + 1) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1429,15 +1436,18 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     if (t == PPLOBJ_VEC) {
         if (!ppl_unitsDimEqual(st, &in[0])) {
             if (st->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
                         ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
             } else if (in[0].dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
                         ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
             } else {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
                         ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
             }
@@ -1451,7 +1461,8 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     } else {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "Argument to the extend(x) method must be either a list or a vector. Supplied argument had type <%s>.",
                 pplObjTypeNames[t]);
         return;
@@ -1460,7 +1471,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     if (pplObjVector(&OUTPUT, 0, 1, va->size + l) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1479,21 +1490,25 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
             if (item->objType != PPLOBJ_NUM) {
                 *status = 1;
                 *errType = ERR_TYPE;
-                sprintf(errText, "Can only append numbers to vectors; supplied object has type <%s>.",
-                        pplObjTypeNames[item->objType]);
+                ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                                  "Can only append numbers to vectors; supplied object has type <%s>.",
+                                  pplObjTypeNames[item->objType]);
                 return;
             }
             if (!ppl_unitsDimEqual(st, item)) {
                 if (st->dimensionless) {
-                    sprintf(errText,
+                    ppl_snprintfTrunc(
+                            errText, LSTR_LENGTH,
                             "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
                             ppl_printUnit(c, item, NULL, NULL, 1, 1, 0));
                 } else if (item->dimensionless) {
-                    sprintf(errText,
+                    ppl_snprintfTrunc(
+                            errText, LSTR_LENGTH,
                             "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
                             ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
                 } else {
-                    sprintf(errText,
+                    ppl_snprintfTrunc(
+                            errText, LSTR_LENGTH,
                             "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
                             ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, item, NULL, NULL, 1, 1, 0));
                 }
@@ -1504,7 +1519,8 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
             if (item->flagComplex) {
                 *status = 1;
                 *errType = ERR_TYPE;
-                sprintf(errText, "Can only append real numbers to vectors; supplied value is complex.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                                  "Can only append real numbers to vectors; supplied value is complex.");
                 return;
             }
             gsl_vector_set(vo, i++, item->real);
@@ -1551,14 +1567,15 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -1567,7 +1584,8 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -1577,7 +1595,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     if (ovec == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
 
@@ -1628,7 +1646,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     if (pplObjVector(&OUTPUT, 0, 1, ovlen) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         free(ovec);
         ovec = NULL;
         return;
@@ -1659,14 +1677,16 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     if (in[0].objType != PPLOBJ_NUM) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
-                pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
+                          pplObjTypeNames[in[0].objType]);
         return;
     }
     if (in[0].flagComplex) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "First argument to the insert(n,x) method must be a real number. Supplied argument is complex.");
         return;
     }
@@ -1675,26 +1695,29 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     if (p < 0) {
         *status = 1;
         *errType = ERR_RANGE;
-        sprintf(errText, "Attempt to insert a vector item before the beginning of a vector.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to insert a vector item before the beginning of a vector.");
         return;
     }
     if (p > v->size) {
         *status = 1;
         *errType = ERR_RANGE;
-        sprintf(errText, "Vector index out of range.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Vector index out of range.");
         return;
     }
     if (!ppl_unitsDimEqual(st, &in[1])) {
         if (st->dimensionless) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
                     ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0));
         } else if (in[1].dimensionless) {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
                     ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
         } else {
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
                     ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0));
         }
@@ -1705,7 +1728,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     if (pplObjVector(&OUTPUT, 0, 1, v->size + 1) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1758,7 +1781,7 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj v;
     list *lo;
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         *status = 1;
         *errType = ERR_MEMORY;
         return;
@@ -1798,14 +1821,15 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -1814,7 +1838,8 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -1822,7 +1847,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     if (pplObjVector(&OUTPUT, 0, 1, vec->size) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     ovec = ((pplVector *) OUTPUT.auxil)->v;
@@ -1867,7 +1892,8 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         if (c->stack[c->stackPtr - 1].objType != PPLOBJ_NUM) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Error inside function supplied to the %s function: function should have returned number, but returned object of type <%s> for element %d.",
                     FunctionDescription, pplObjTypeNames[c->stack[c->stackPtr - 1].objType], i);
             return;
@@ -1877,7 +1903,8 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         else if (!ppl_unitsDimEqual(&val2, &c->stack[c->stackPtr - 1])) {
             *status = 1;
             *errType = ERR_UNIT;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Error inside function supplied to the %s function: function returned values with inconsistent units of <%s> and <%s>. All of the elements of a vector must have matching dimensions.",
                     FunctionDescription, ppl_printUnit(c, &val2, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &c->stack[c->stackPtr - 1], NULL, NULL, 1, 1, 0));
@@ -1887,7 +1914,8 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         if (c->stack[c->stackPtr - 1].flagComplex) {
             *status = 1;
             *errType = ERR_NUMERICAL;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Error inside function supplied to the %s function: function returned a complex number for element %d; vectors can only hold real numbers.",
                     FunctionDescription, i);
             return;
@@ -1946,14 +1974,15 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -1962,7 +1991,8 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -1970,7 +2000,8 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     if (v->size < 2) {
         *status = 1;
         *errType = ERR_RANGE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method cannot be called on vectors containing fewer than two elements. Supplied vector has %d element.",
                 FunctionDescription, (int) v->size);
         return;
@@ -2163,7 +2194,8 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
     } else {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "Argument to the extend(x) method must be either a list or a vector. Supplied argument had type <%s>.",
                 pplObjTypeNames[t]);
         return;
@@ -2199,14 +2231,15 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2215,7 +2248,8 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -2223,7 +2257,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     ol = (list *) OUTPUT.auxil;
@@ -2323,14 +2357,16 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
     if (in[0].objType != PPLOBJ_NUM) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
-                pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
+                          pplObjTypeNames[in[0].objType]);
         return;
     }
     if (in[0].flagComplex) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "First argument to the insert(n,x) method must be a real number. Supplied argument is complex.");
         return;
     }
@@ -2339,13 +2375,13 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
     if (p < 0) {
         *status = 1;
         *errType = ERR_RANGE;
-        sprintf(errText, "Attempt to insert a list item before the beginning of a list.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to insert a list item before the beginning of a list.");
         return;
     }
     if (p > l->length) {
         *status = 1;
         *errType = ERR_RANGE;
-        sprintf(errText, "List index out of range.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "List index out of range.");
         return;
     }
     v.refCount = 1;
@@ -2394,14 +2430,15 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2410,7 +2447,8 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -2418,7 +2456,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     ol = (list *) OUTPUT.auxil;
@@ -2533,7 +2571,8 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
         if (in[0].objType != PPLOBJ_NUM) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Optional argument to the pop(n) method must be a number. Supplied argument had type <%s>.",
                     pplObjTypeNames[in[0].objType]);
             return;
@@ -2541,7 +2580,8 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
         if (in[0].flagComplex) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "Optional argument to the pop(n) method must be a real number. Supplied argument is complex.");
             return;
         }
@@ -2550,13 +2590,13 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
         if (p < 0) {
             *status = 1;
             *errType = ERR_RANGE;
-            sprintf(errText, "Attempt to pop a list item before the beginning of a list.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to pop a list item before the beginning of a list.");
             return;
         }
         if (p >= l->length) {
             *status = 1;
             *errType = ERR_RANGE;
-            sprintf(errText, "List index out of range.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "List index out of range.");
             return;
         }
         obj = ppl_listPopItem(l, p);
@@ -2592,14 +2632,15 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2608,7 +2649,8 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -2616,7 +2658,8 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     if (l->length < 2) {
         *status = 1;
         *errType = ERR_RANGE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method cannot be called on lists containing fewer than two items. Supplied list has length %d.",
                 FunctionDescription, l->length);
         return;
@@ -2727,7 +2770,7 @@ static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int 
     if (items == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
     i = 0;
@@ -2847,14 +2890,15 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
-        strcpy(errText, "Stack overflow.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
         return;
     }
 
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2863,7 +2907,8 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText,
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -2874,7 +2919,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     if (items == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
     i = 0;
@@ -2893,7 +2938,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     if (fail) {
         *status = 1;
         *errType = ERR_GENERIC;
-        strcpy(errText, "Failure of user-supplied comparison function.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Failure of user-supplied comparison function.");
         return;
     }
     li = ppl_listIterateInit(l);
@@ -2934,7 +2979,8 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
         if (o->objType != PPLOBJ_LIST) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "The sortOnElement() method expects to be sorting a list of lists. Element %ld of list is not a list, but has type <%s>.",
                     i, pplObjTypeNames[o->objType]);
             return;
@@ -2949,7 +2995,8 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
         if ((eNum >= o->length) || (eNum < -o->length)) {
             *status = 1;
             *errType = ERR_RANGE;
-            sprintf(errText,
+            ppl_snprintfTrunc(
+                    errText, LSTR_LENGTH,
                     "The sortOnElement() method is sorting on element number %d of each sublist. However, sublist %ld only has elements 0-%d.",
                     eNum, i, o->length - 1);
             return;
@@ -2961,7 +3008,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     if (items == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
     li = ppl_listIterateInit(l);
@@ -3006,13 +3053,13 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
     gsl_vector *v;
     if (len == 0) {
         *errType = ERR_MEMORY;
-        sprintf(errText, "Cannot create a vector of length zero.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Cannot create a vector of length zero.");
         *status = 1;
         return;
     }
     if (pplObjVector(&OUTPUT, 0, 1, len) == NULL) {
         *status = 1;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         *errType = ERR_MEMORY;
         return;
     }
@@ -3021,14 +3068,16 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
         pplObj *item = (pplObj *) ppl_listIterate(&li);
         if (item->objType != PPLOBJ_NUM) {
             *status = 1;
-            sprintf(errText, "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
-                    pplObjTypeNames[item->objType]);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
+                              pplObjTypeNames[item->objType]);
             *errType = ERR_TYPE;
             return;
         }
         if (item->flagComplex) {
             *status = 1;
-            sprintf(errText, "Vectors can only hold real numeric values. Attempt to add a complex number.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Vectors can only hold real numeric values. Attempt to add a complex number.");
             *errType = ERR_TYPE;
             return;
         }
@@ -3039,28 +3088,33 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
         pplObj *item = (pplObj *) ppl_listIterate(&li);
         if (item->objType != PPLOBJ_NUM) {
             *status = 1;
-            sprintf(errText, "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
-                    pplObjTypeNames[item->objType]);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
+                              pplObjTypeNames[item->objType]);
             *errType = ERR_TYPE;
             return;
         }
         if (item->flagComplex) {
             *status = 1;
-            sprintf(errText, "Vectors can only hold real numeric values. Attempt to add a complex number.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                              "Vectors can only hold real numeric values. Attempt to add a complex number.");
             *errType = ERR_TYPE;
             return;
         }
         if (!ppl_unitsDimEqual(item, &OUTPUT)) {
             if (OUTPUT.dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
                         i + 1, ppl_printUnit(c, item, NULL, NULL, 1, 1, 0));
             } else if (item->dimensionless) {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
                         i + 1, ppl_printUnit(c, &OUTPUT, NULL, NULL, 0, 1, 0));
             } else {
-                sprintf(errText,
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH,
                         "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
                         i + 1, ppl_printUnit(c, &OUTPUT, NULL, NULL, 0, 1, 0),
                         ppl_printUnit(c, item, NULL, NULL, 1, 1, 0));
@@ -3097,14 +3151,15 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The method delete(x) requires a string as its argument; supplied argument had type <%s>.",
-                pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The method delete(x) requires a string as its argument; supplied argument had type <%s>.",
+                          pplObjTypeNames[in[0].objType]);
         return;
     }
     if (in[-1].self_this->immutable) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The method delete(x) cannot be called on an immutable object.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The method delete(x) cannot be called on an immutable object.");
         return;
     }
     instr = (char *) in[0].auxil;
@@ -3113,7 +3168,7 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     if (item->immutable) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The method delete(x) cannot be called on an immutable object.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The method delete(x) cannot be called on an immutable object.");
         return;
     }
     item->amMalloced = 0;
@@ -3142,8 +3197,9 @@ static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, in
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The method hasKey() requires a string as its argument; supplied argument had type <%s>.",
-                pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The method hasKey() requires a string as its argument; supplied argument had type <%s>.",
+                          pplObjTypeNames[in[0].objType]);
         return;
     }
     instr = (char *) in[0].auxil;
@@ -3170,7 +3226,7 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     l = (list *) OUTPUT.auxil;
@@ -3182,14 +3238,14 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
         if (pplObjStr(&va, 1, 1, tmp) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         pplObjCpy(&vb, item, 0, 1, 1);
         if (pplObjList(&v, 1, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         l2 = (list *) v.auxil;
@@ -3217,7 +3273,7 @@ static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int 
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -3263,7 +3319,7 @@ static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, in
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -3298,26 +3354,26 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "The determinant is only defined for square matrices.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The determinant is only defined for square matrices.");
         return;
     }
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp, m);
     if ((p = gsl_permutation_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     if (gsl_linalg_LU_decomp(tmp, p, &s) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "LU decomposition failed whilst computing matrix determinant.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "LU decomposition failed whilst computing matrix determinant.");
         return;
     }
     d = gsl_linalg_LU_det(tmp, s);
@@ -3381,7 +3437,7 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "Eigenvalues are only defined for square matrices.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Eigenvalues are only defined for square matrices.");
         return;
     }
     for (i = 0; i < m->size1; i++)
@@ -3389,34 +3445,35 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 *status = 1;
                 *errType = ERR_NUMERICAL;
-                strcpy(errText,
-                       "Eigenvalues can only be computed for symmetric matrices; supplied matrix is not symmetric.");
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH, "%s",
+                        "Eigenvalues can only be computed for symmetric matrices; supplied matrix is not symmetric.");
                 return;
             }
     if ((w = gsl_eigen_symm_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp, m);
     if (pplObjVector(&OUTPUT, 0, 1, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     vo = ((pplVector *) OUTPUT.auxil)->v;
     if (gsl_eigen_symm(tmp, vo, w) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "Numerical failure whilst trying to compute eigenvalues.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Numerical failure whilst trying to compute eigenvalues.");
         return;
     }
     gsl_matrix_free(tmp);
@@ -3453,7 +3510,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "Eigenvectors are only defined for square matrices.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Eigenvectors are only defined for square matrices.");
         return;
     }
     for (i = 0; i < m->size1; i++)
@@ -3461,39 +3518,40 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 *status = 1;
                 *errType = ERR_NUMERICAL;
-                strcpy(errText,
-                       "Eigenvectors can only be computed for symmetric matrices; supplied matrix is not symmetric.");
+                ppl_snprintfTrunc(
+                        errText, LSTR_LENGTH, "%s",
+                        "Eigenvectors can only be computed for symmetric matrices; supplied matrix is not symmetric.");
                 return;
             }
     if ((w = gsl_eigen_symmv_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     if ((tmp1 = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     if ((tmp2 = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     if ((vtmp = gsl_vector_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp1, m);
     if (gsl_eigen_symmv(tmp1, vtmp, tmp2, w) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "Numerical failure whilst trying to compute eigenvectors.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Numerical failure whilst trying to compute eigenvectors.");
         return;
     }
     gsl_matrix_free(tmp1);
@@ -3503,7 +3561,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     lo = (list *) OUTPUT.auxil;
@@ -3511,7 +3569,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
         if (pplObjVector(&v, 1, 1, n) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         vo = ((pplVector *) v.auxil)->v;
@@ -3543,39 +3601,39 @@ static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "The inverse is only defined for square matrices.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The inverse is only defined for square matrices.");
         return;
     }
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp, m);
     if ((p = gsl_permutation_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     if (gsl_linalg_LU_decomp(tmp, p, &s) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "LU decomposition failed whilst computing matrix determinant.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "LU decomposition failed whilst computing matrix determinant.");
         return;
     }
     if (pplObjMatrix(&OUTPUT, 0, 1, n, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     mo = ((pplMatrix *) OUTPUT.auxil)->m;
     if (gsl_linalg_LU_invert(tmp, p, mo)) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "Numerical failure while computing matrix inverse.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Numerical failure while computing matrix inverse.");
         return;
     }
     gsl_permutation_free(p);
@@ -3602,7 +3660,7 @@ static void pplmethod_matrixSize(ppl_context *c, pplObj *in, const int nArgs, in
     if (pplObjVector(&OUTPUT, 0, 1, 2) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        strcpy(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         return;
     }
     vo = ((pplVector *) OUTPUT.auxil)->v;
@@ -3657,13 +3715,13 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
-        strcpy(errText, "The transpose is only defined for square matrices.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The transpose is only defined for square matrices.");
         return;
     }
     if (pplObjMatrix(&OUTPUT, 0, 1, n, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     vo = ((pplMatrix *) OUTPUT.auxil)->m;
@@ -3690,7 +3748,7 @@ static void pplmethod_fileClose(ppl_context *c, pplObj *in, const int nArgs, int
         if (f->pipe == 2) {
             *status = 1;
             *errType = ERR_TYPE;
-            strcpy(errText, "It is not permitted to close this file handle.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "It is not permitted to close this file handle.");
             return;
         }
         f->open = 0;
@@ -3757,7 +3815,7 @@ static void pplmethod_fileFlush(ppl_context *c, pplObj *in, const int nArgs, int
     if (fflush(f->file) < 0) {
         *status = 1;
         *errType = ERR_FILE;
-        strcpy(errText, strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
         return;
     }
 }
@@ -3784,7 +3842,7 @@ static void pplmethod_fileGetpos(ppl_context *c, pplObj *in, const int nArgs, in
     if ((fp = ftell(f->file)) < 0) {
         *status = 1;
         *errType = ERR_FILE;
-        strcpy(errText, strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
         return;
     }
     pplObjNum(&OUTPUT, 0, fp * 8, 0);
@@ -3838,7 +3896,7 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
             }
             *status = 1;
             *errType = ERR_MEMORY;
-            sprintf(errText, "Out of memory.");
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
             return;
         }
         out = new;
@@ -3878,7 +3936,7 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     while (!feof(f->file)) {
@@ -3897,7 +3955,7 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
                 }
                 *status = 1;
                 *errType = ERR_MEMORY;
-                sprintf(errText, "Out of memory.");
+                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 return;
             }
             out = new;
@@ -3932,7 +3990,7 @@ static void pplmethod_fileReadlines(ppl_context *c, pplObj *in, const int nArgs,
     if (pplObjList(&v, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
-        sprintf(errText, "Out of memory.");
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
     l = (list *) v.auxil;
@@ -3976,14 +4034,14 @@ static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, in
     if (fseek(f->file, fp, SEEK_SET) != 0) {
         *status = 1;
         *errType = ERR_FILE;
-        strcpy(errText, strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
         return;
     }
 
     if ((fp = ftell(f->file)) < 0) {
         *status = 1;
         *errType = ERR_FILE;
-        strcpy(errText, strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
         return;
     }
     pplObjNum(&OUTPUT, 0, fp * 8, 0);
@@ -4007,8 +4065,9 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function write() requires a string as its argument; supplied argument had type <%s>.",
-                pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function write() requires a string as its argument; supplied argument had type <%s>.",
+                          pplObjTypeNames[in[0].objType]);
         return;
     }
     if (!f->open) {
@@ -4020,7 +4079,7 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
     if (o != l) {
         *status = 1;
         *errType = ERR_FILE;
-        strcpy(errText, strerror(errno));
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
         return;
     }
 }
@@ -4041,8 +4100,9 @@ static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int 
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "The function raise() requires a string as its argument; supplied argument had type <%s>.",
-                pplObjTypeNames[in[0].objType]);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The function raise() requires a string as its argument; supplied argument had type <%s>.",
+                          pplObjTypeNames[in[0].objType]);
         return;
     }
     *status = 1;

@@ -63,7 +63,7 @@ char *ppl_unixGetHomeDir(pplerr_context *context) {
         failover = malloc(FNAME_LENGTH);
         if (failover == NULL)
             ppl_fatal(context, __FILE__, __LINE__, "Could not find user's entry in output of getpwent()");
-        sprintf(failover, "/home/%s", getlogin());
+        ppl_snprintfTrunc(failover, FNAME_LENGTH, "/home/%s", getlogin());
         ppl_snprintfTrunc(msg, sizeof(msg),
                           "Could not find user's entry in output of getpwent(). Guessing that home directory is <%s>.",
                           failover);
@@ -112,22 +112,25 @@ char *ppl_unixGetIRLName(pplerr_context *context) {
 //! \param [in] context - The error-reporting context
 //! \param [in] in - The filename to expand, e.g. ~dcf21/script.ppl
 //! \param [in] cwd - The current working directory
-//! \param [out] out - Character buffer into which to write the expanded path (at least FNAME_LENGTH bytes)
+//! \param [out] out - Character buffer into which to write the expanded path, which is truncated if necessary
+//! \param [in] outLen - The size of the buffer <out>
 //! \return Pointer to <out>
 
-char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, char *out) {
-    char UserName[1024];
-    char *scan_in, *scan_out;
-    if (in[0] == '/') strcpy(out, in);
-    else if (in[0] != '~') sprintf(out, "%s%s%s", cwd, PATHLINK, in);
-    else if (in[1] == '/') sprintf(out, "%s%s%s", ppl_unixGetHomeDir(context), PATHLINK, in + 2);
+char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, char *out, const size_t outLen) {
+    char userName[1024];
+    char *scanIn, *homeDir;
+    int i;
+    if (in[0] == '/') ppl_snprintfTrunc(out, outLen, "%s", in);
+    else if (in[0] != '~') ppl_snprintfTrunc(out, outLen, "%s%s%s", cwd, PATHLINK, in);
+    else if (in[1] == '/') ppl_snprintfTrunc(out, outLen, "%s%s%s", ppl_unixGetHomeDir(context), PATHLINK, in + 2);
     else {
-        for (scan_in = in + 1, scan_out = UserName; ((*scan_in != '/') && (*scan_in != '\0'));
-             *(scan_out++) = *(scan_in++));
-        *scan_out = '\0';
-        scan_out = ppl_unixGetUserHomeDir(context, UserName);
-        if (scan_out != NULL) sprintf(out, "%s%s", scan_out, scan_in);
-        else strcpy(out, in);
+        // ~user/path: look up the home directory of the named user. Names too long to be valid are left unexpanded.
+        for (scanIn = in + 1, i = 0; ((*scanIn != '/') && (*scanIn != '\0') && (i < (int) sizeof(userName) - 1));
+             userName[i++] = *(scanIn++));
+        userName[i] = '\0';
+        homeDir = ((*scanIn == '/') || (*scanIn == '\0')) ? ppl_unixGetUserHomeDir(context, userName) : NULL;
+        if (homeDir != NULL) ppl_snprintfTrunc(out, outLen, "%s%s", homeDir, scanIn);
+        else ppl_snprintfTrunc(out, outLen, "%s", in);
     }
     return out;
 }

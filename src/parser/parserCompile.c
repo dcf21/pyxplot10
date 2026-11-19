@@ -543,8 +543,11 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                     goto item_cleanup;
                 }
                 status = 2;
-                for (i = 0; i < ((*linepos) - tabCompStart); i++) tabCompTxt[i] = line[tabCompStart + i];
-                strcpy(tabCompTxt + i, node->matchString); // Matchstring should match itself
+                // tabCompTxt is FNAME_LENGTH bytes long; the word being completed may be longer
+                for (i = 0; (i < ((*linepos) - tabCompStart)) && (i < FNAME_LENGTH - 1); i++)
+                    tabCompTxt[i] = line[tabCompStart + i];
+                ppl_snprintfTrunc(tabCompTxt + i, FNAME_LENGTH - i, "%s",
+                                  node->matchString); // Matchstring should match itself
                 (*tabCompNo)--;
                 goto item_cleanup;
             }
