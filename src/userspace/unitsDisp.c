@@ -795,7 +795,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
     if (*errpos >= 0) return; // Error in parsing unit expression
     *output = (PreferredUnit *) malloc(sizeof(PreferredUnit));
     if (*output == NULL) {
-        errpos = 0;
+        *errpos = 0;
         sprintf(errText, "Out of memory.");
         return;
     }

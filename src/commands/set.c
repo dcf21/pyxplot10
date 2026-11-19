@@ -2514,6 +2514,17 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         for (i = 0; i < c->unit_pos; i++) c->unit_database[i].userSel = 0;
         ppl_listFree(c->unit_PreferredUnits);
         c->unit_PreferredUnits = ppl_listCpy(c->unit_PreferredUnits_default, 1, sizeof(PreferredUnit));
+    } else if (strcmp_unset && (strcmp(setoption, "unit_of") == 0)) /* unset unit of */
+    {
+        const char *quantity = (char *) command[PARSE_unset_unit_preferred_quantity].auxil;
+        for (i = 0; i < c->unit_pos; i++)
+            if ((c->unit_database[i].quantity != NULL) &&
+                (ppl_strCmpNoCase(c->unit_database[i].quantity, quantity) == 0))
+                c->unit_database[i].userSel = 0;
+    } else if (strcmp_unset && (strcmp(setoption, "unit_preferred") == 0)) /* unset unit preferred */
+    {
+        ppl_listFree(c->unit_PreferredUnits);
+        c->unit_PreferredUnits = ppl_listCpy(c->unit_PreferredUnits_default, 1, sizeof(PreferredUnit));
     } else if (strcmp_unset && (strcmp(setoption, "unit_angle") == 0)) /* unset unit angle */
     {
         c->set->term_current.UnitAngleDimless = c->set->term_default.UnitAngleDimless;

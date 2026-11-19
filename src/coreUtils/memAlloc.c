@@ -318,6 +318,7 @@ void ppl_memAlloc_FreeAll(int context) {
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
         sprintf(temp_merr_string, "ppl_memAlloc_FreeAll() passed unrecognised context %d.", context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
+        latch = 0;
         return;
     }
 
@@ -343,6 +344,7 @@ void ppl_memAlloc_Free(int context) {
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
         sprintf(temp_merr_string, "ppl_memAlloc_Free() passed unrecognised context %d.", context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
+        latch = 0;
         return;
     }
 

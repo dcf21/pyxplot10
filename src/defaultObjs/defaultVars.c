@@ -285,7 +285,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         ppl_addSystemFunc(d2, "getpgrp", 0, 0, 1, 1, 1, 1, (void *) &pplfunc_osGetPgrp, "getpgrp()",
                           "\\mathrm{getpgrp}@<@>", "getpgrp() returns the process group id of the Pyxplot process");
         ppl_addSystemFunc(d2, "getppid", 0, 0, 1, 1, 1, 1, (void *) &pplfunc_osGetPpid, "getppid()",
-                          "\\mathrm{getppid}@<@>", "getpid() returns the parent process id of the Pyxplot process");
+                          "\\mathrm{getppid}@<@>", "getppid() returns the parent process id of the Pyxplot process");
         ppl_addSystemFunc(d2, "getuid", 0, 0, 1, 1, 1, 1, (void *) &pplfunc_osGetUid, "getuid()",
                           "\\mathrm{getuid}@<@>", "getuid() returns the user id of the Pyxplot process");
         ppl_addSystemFunc(d2, "gethomedir", 0, 0, 1, 1, 1, 1, (void *) &pplfunc_osGetHome, "gethomedir()",
@@ -606,9 +606,9 @@ void ppl_makeDefaultVars(ppl_context *out) {
                           "Re(z) returns the magnitude of the real part of z");
         ppl_addSystemFunc(d, "rgb", 3, 3, 1, 1, 1, 1, (void *) &pplfunc_rgb, "rgb(r,g,b)", "\\mathrm{rgb}@<@1,@2,@3@>",
                           "rgb(r,g,b) returns a color with specified RGB components in the range 0-1");
-        ppl_addSystemFunc(d, "romanNumeral", 1, 1, 1, 1, 1, 1, (void *) &pplfunc_romanNum, "romanNum(n)",
-                          "\\mathrm{romanNum}@<@1@>",
-                          "romanNum(n) returns the Roman numeral representing the number n");
+        ppl_addSystemFunc(d, "romanNumeral", 1, 1, 1, 1, 1, 1, (void *) &pplfunc_romanNum, "romanNumeral(n)",
+                          "\\mathrm{romanNumeral}@<@1@>",
+                          "romanNumeral(n) returns the Roman numeral representing the number n");
         ppl_addSystemFunc(d, "root", 2, 2, 1, 1, 0, 1, (void *) &pplfunc_root, "root(z,n)", "\\mathrm{root}@<@1,@2@>",
                           "root(z,n) returns the nth root of z");
         ppl_addSystemFunc(
@@ -652,7 +652,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
                           "\\mathrm{tophat}@<@1,@2@>",
                           "tophat(x,sigma) returns one if |x| <= |sigma|, and zero otherwise");
         ppl_addSystemFunc(d, "typeOf", 1, 1, 0, 0, 0, 0, (void *) &pplfunc_typeOf, "typeOf(x)",
-                          "\\mathrm{typeOf}@<@1@>", "typeof(x) returns the type of the object x");
+                          "\\mathrm{typeOf}@<@1@>", "typeOf(x) returns the type of the object x");
         ppl_addMagicFunction(d, "unit", 1, "unit(...)", "\\mathrm{unit}@<@0@>",
                              "unit(...) multiplies a number by a physical unit");
         ppl_addSystemFunc(
@@ -680,7 +680,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
                           "\\mathrm{\\Lambda_{CDM}\\_age}@<@1,@2,@3@>",
                           "Lcdm_age(H0,w_m,w_l) returns the current age of the Universe in an L_CDM cosmology");
         ppl_addSystemFunc(
-                d2, "Lcdm_angscale", 4, 4, 1, 1, 1, 0, (void *) &pplfunc_Lcdm_angscale, "Lcdm_age(z,H0,w_m,w_l)",
+                d2, "Lcdm_angscale", 4, 4, 1, 1, 1, 0, (void *) &pplfunc_Lcdm_angscale, "Lcdm_angscale(z,H0,w_m,w_l)",
                 "\\mathrm{\\Lambda_{CDM}\\_angscale}@<@1,@2,@3,@4@>",
                 "Lcdm_angscale(z,H0,w_m,w_l) returns the angular scale of the sky in distance per unit angle for an L_CDM cosmology");
         ppl_addSystemFunc(
@@ -837,7 +837,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
                           "\\mathrm{interval}@<@1,@2@>",
                           "interval(t2,t1) returns the numerical time interval between date objects t1 and t2");
         ppl_addSystemFunc(
-                d2, "intervalStr", 2, 3, 0, 0, 0, 0, (void *) &pplfunc_timeIntervalStr, "interval(t2,t1,<s>)",
+                d2, "intervalStr", 2, 3, 0, 0, 0, 0, (void *) &pplfunc_timeIntervalStr, "intervalStr(t2,t1,<s>)",
                 "\\mathrm{intervalStr}@<@0@>",
                 "intervalStr(t2,t1,<s>) returns a string representation of the time interval between date objects t1 and t2; a format string may optionally be supplied");
         ppl_addSystemFunc(d2, "now", 0, 0, 1, 1, 1, 1, (void *) &pplfunc_timenow, "now()", "\\mathrm{now}@<@>",

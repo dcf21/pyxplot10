@@ -93,7 +93,7 @@ list *ppl_listCpy(list *in, const int useMalloc, const int itemSize) {
     if (out == NULL) return NULL;
     i = in->first;
     while (i != NULL) {
-        ppl_listAppendCpy(in, i->data, itemSize);
+        ppl_listAppendCpy(out, i->data, itemSize);
         i = i->next;
     }
     return out;

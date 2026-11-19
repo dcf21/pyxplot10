@@ -488,7 +488,7 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
     // Check hash table
     hash = ppl_dictHash(key, -1);
     ptr = ppl_dictHashRemove(in, key, hash, &clash);
-    if (ptr == NULL) return 1;
+    if ((ptr == NULL) && (!clash)) return 1; // Key not present
     if (!clash) {
         _ppl_dictRemoveEngine(in, ptr);
         return 0;

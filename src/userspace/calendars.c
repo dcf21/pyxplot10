@@ -346,7 +346,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
     }
     JD += day - 1;
     JD = 86400.0 * (JD - 2440587.5);
-    DayFraction = fabs(hour) * 24 * 60 + fabs(min) * 60 + fabs(sec);
+    DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
     return JD + DayFraction;
 }
 
@@ -407,7 +407,7 @@ void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *mo
 
 double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, const int day, const int hour,
                              const int min, const int sec, int *status, char *errText) {
-    long N, Q, R, A, W, Q1, Q2, G, K, E, J, X, JD;
+    long N, Q, R, A, W, Q1, Q2, G, K, E, J, X;
     double DayFraction;
 
     if ((month < 1) || (month > 12)) {
@@ -443,10 +443,10 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
         X++;
     }
 
-    JD = 365.25 * (X - 1) + 1721423 + J - 0.5;
-    JD = 86400.0 * (JD - 2440587.5);
-    DayFraction = fabs(hour) * 24 * 60 + fabs(min) * 60 + fabs(sec);
-    return JD + DayFraction;
+    // Julian day number of midnight at the start of the requested day, computed in double precision
+    const double JDmidnight = floor(365.25 * (X - 1)) + 1721423 + J - 0.5;
+    DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
+    return 86400.0 * (JDmidnight - 2440587.5) + DayFraction;
 }
 
 //! ppl_islamicFromUnixTime - Convert a unix time into a date in the Islamic calendar
@@ -663,9 +663,9 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
 
     // Now work out calendar date
     if (ct->set->term_current.CalendarOut == SW_CALENDAR_HEBREW)
-        return ppl_hebrewFromUnixTime(ct, JD, year, month, day, status, errText);
+        return ppl_hebrewFromUnixTime(ct, UT, year, month, day, status, errText);
     else if (ct->set->term_current.CalendarOut == SW_CALENDAR_ISLAMIC)
-        return ppl_islamicFromUnixTime(ct, JD, year, month, day, status, errText);
+        return ppl_islamicFromUnixTime(ct, UT, year, month, day, status, errText);
 
     a = JD +
             0.5; // Number of whole Julian days. b = Number of centuries since the Council of Nicaea. c = Julian Day number as if century leap years happened.
