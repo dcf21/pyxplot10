@@ -35,6 +35,7 @@
 #endif
 
 #include "commands/fft.h"
+#include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/expCompile_fns.h"
@@ -55,21 +56,6 @@
 
 #include "datafile.h"
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            ppl_snprintfTrunc(msg, sizeof(msg), "Stack forward reference detected."); \
-            TBADD2(ERR_INTERNAL, 0); \
-            return; \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
-
-#define TBADD2(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 #define COUNTEDERR1 \
     if (errCount > 0) { \
@@ -278,7 +264,6 @@ static void fftwindow_blackman(pplObj *x, const int Ndim, int *Npos, int *Nstep)
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
-    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     dataTable *data;
     dataBlock *blk;
@@ -320,7 +305,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (nr >= USING_ITEMS_MAX) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
-                TBADD2(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 return;
             }
             if ((stk[pos + o1].objType == PPLOBJ_NUM) || (stk[pos + o1].objType == PPLOBJ_DATE) ||
@@ -336,7 +321,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_ifft_min_range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_ifft_min_range_list], "");
                     return;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
@@ -345,7 +330,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_ifft_min_range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_ifft_min_range_list], "");
                     return;
                 }
                 unit[nr] = stk[pos + o2];
@@ -360,7 +345,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o3].objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_ifft_step_range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_ifft_step_range_list], "");
                     return;
                 }
                 if (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o3])) {
@@ -369,7 +354,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o3], NULL, NULL, 1, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_ifft_step_range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_ifft_step_range_list], "");
                     return;
                 }
                 step[nr] = stk[pos + o3].real;
@@ -380,7 +365,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "The number of samples produced by the range and step size specified for dimension %d to the fft command is fewer than two; a single data sample cannot be FFTed.",
                             nr + 1);
-                    TBADD2(ERR_RANGE, in->stkCharPos[pos + PARSE_ifft_step_range_list]);
+                    ppl_tbAddLine(c, pl, ERR_RANGE, in->stkCharPos[pos + PARSE_ifft_step_range_list], "");
                     return;
                 }
                 if ((!gsl_finite(tempDbl) || (tempDbl > 1e8))) {
@@ -388,7 +373,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "The number of samples produced by the range and step size specified for dimension %d to the fft command is in excess of 1e8; Pyxplot is not the right tool to do this FFT in.",
                             nr + 1);
-                    TBADD2(ERR_RANGE, in->stkCharPos[pos + PARSE_ifft_step_range_list]);
+                    ppl_tbAddLine(c, pl, ERR_RANGE, in->stkCharPos[pos + PARSE_ifft_step_range_list], "");
                     return;
                 }
                 Nsteps[nr] = (int) tempDbl;
@@ -410,7 +395,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The total number of samples in the requested %d-dimensional FFT is in excess of 1e8; Pyxplot is not the right tool to do this FFT in.",
                     Ndims);
-            TBADD2(ERR_NUMERICAL, 0);
+            ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
             return;
         }
         Nsamples = (int) tempDbl;
@@ -447,7 +432,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
         // Exit on error
         if ((status) || (data == NULL)) {
-            TBADD2(ERR_GENERIC, 0);
+            ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
             ppl_memAlloc_AscendOutOfContext(contextLocalVec);
             return;
         }
@@ -461,7 +446,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "The minimum and maximum limits specified in range %d in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                             j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
-                    TBADD2(ERR_NUMERICAL, 0);
+                    ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                     return;
                 }
             }
@@ -477,7 +462,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     "Data in columns %d and %d of the data table supplied to the fft command have conflicting units of <%s> and <%s> respectively. These represent the real and imaginary components of an input sample, and must have the same units.",
                     Ndims + 1, Ndims + 2, ppl_printUnit(c, &data->firstEntries[Ndims], NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &data->firstEntries[Ndims + 1], NULL, NULL, 1, 1, 0));
-            TBADD2(ERR_NUMERICAL, 0);
+            ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
             return;
         }
 
@@ -487,7 +472,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             ppl_snprintfTrunc(
                     c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "FFT construction is only possible on data sets with members at at least two values of x.");
-            TBADD2(ERR_NUMERICAL, 0);
+            ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
             return;
         }
 
@@ -495,7 +480,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         datagrid = (fftw_complex *) fftw_malloc(Nsamples * sizeof(fftw_complex));
         if (datagrid == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-            TBADD2(ERR_MEMORY, 0);
+            ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
             return;
         }
 
@@ -516,7 +501,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 k -= (Ndims > 0);
                 sprintf(c->errStat.errBuff + k,
                         " Fourier transform, need a grid of %d samples. Only received %ld samples.", Nsamples, i);
-                TBADD2(ERR_FILE, 0);
+                ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
                 return;
             }
 
@@ -554,7 +539,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     m -= (Ndims > 0);
                     sprintf(c->errStat.errBuff + m, ").");
                     j = strlen(c->errStat.errBuff);
-                    TBADD2(ERR_NUMERICAL, 0);
+                    ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                     return;
                 }
 
@@ -601,7 +586,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             free(scratchpad);
             scratchpad = NULL;
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-            TBADD2(ERR_MEMORY, 0);
+            ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
             return;
         }
 
@@ -657,7 +642,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 strcpy(c->errStat.errBuff, "Unexpected trailing matter at the end of expression.");
                 pplExpr_free(e);
                 e = NULL;
-                TBADD2(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 return;
             }
             out = ppl_expEval(c, e, &lastOpAssign, 1, 1);
@@ -679,8 +664,8 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         c->errStat.errBuff, sizeof(c->errStat.errBuff),
                         "The supplied function to fit produces a value which is not a number but has type <%s>.",
                         pplObjTypeNames[out->objType]);
-                TBADD2(ERR_TYPE, 0);
-                STACK_CLEAN;
+                ppl_tbAddLine(c, pl, ERR_TYPE, 0, "");
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                 return;
             }
             if ((!gsl_finite(out->real)) || (!gsl_finite(out->imag))) {
@@ -694,8 +679,8 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                                    ppl_unitsNumericDisplay(c, &x, 0, 1, -1));
                 }
                 ppl_strAppendf(c->errStat.errBuff, sizeof(c->errStat.errBuff), &j, ")");
-                TBADD2(ERR_NUMERICAL, 0);
-                STACK_CLEAN;
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
                 fftw_free(datagrid);
                 datagrid = NULL;
                 free(scratchpad);
@@ -713,8 +698,8 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         c->errStat.errBuff, sizeof(c->errStat.errBuff),
                         "The supplied function to FFT does not produce values with consistent units; has produced values with units of <%s> and of <%s>.",
                         ppl_printUnit(c, &firstEntry, NULL, NULL, 0, 1, 0), ppl_printUnit(c, out, NULL, NULL, 1, 1, 0));
-                TBADD2(ERR_NUMERICAL, 0);
-                STACK_CLEAN;
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
                 fftw_free(datagrid);
                 datagrid = NULL;
                 free(scratchpad);
@@ -729,7 +714,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             datagrid[i].re = out->real;
             datagrid[i].im = out->imag;
 #endif
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
         }
         free(scratchpad);
         scratchpad = NULL;
@@ -754,7 +739,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
     output = (FFTDescriptor *) malloc(sizeof(FFTDescriptor));
     if (output == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-        TBADD2(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         fftw_free(datagrid);
         datagrid = NULL;
         return;
@@ -813,7 +798,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (status >= 0) break;
         }
         if (status) {
-            TBADD2(ERR_INTERNAL, 0);
+            ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
             fftw_free(datagrid);
             datagrid = NULL;
             free(output);
@@ -829,7 +814,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
     if (funcPtr == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Out of memory whilst adding FFT object to function dictionary.");
-        TBADD2(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         return;
     }
     funcPtr->functionType = PPL_FUNC_FFT;
@@ -860,7 +845,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (obj->objType == PPLOBJ_GLOB) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Variable declared global in global namespace.");
-            TBADD2(ERR_NAMESPACE, 0);
+            ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
             return;
         }
 

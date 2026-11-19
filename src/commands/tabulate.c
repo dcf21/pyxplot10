@@ -235,7 +235,6 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
     return 0;
 }
 
-#define TBADD2(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 //! ppl_directive_tabulate - Implement the tabulate command, which writes data from files or functions to a text
 //! file
@@ -272,7 +271,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
             if (nr >= USING_ITEMS_MAX) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
-                TBADD2(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 return;
             }
             if ((stk[pos + o1].objType == PPLOBJ_NUM) || (stk[pos + o1].objType == PPLOBJ_DATE) ||
@@ -288,7 +287,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_tabulate_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_tabulate_min_0range_list], "");
                     return;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
@@ -297,7 +296,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_tabulate_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_tabulate_min_0range_list], "");
                     return;
                 }
                 unit[nr] = stk[pos + o2];

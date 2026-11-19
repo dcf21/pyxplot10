@@ -336,17 +336,6 @@ static void TriSwap(double *a, double *b) {
     } \
     }
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            ppl_warning(&c->errcontext, ERR_STACKED, "Stack forward reference detected."); \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
 
 // Loop through all of the datasets plotted in a single plot command.
 // Initialise the datastructures for the plot command which we will fill in the

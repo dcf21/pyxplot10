@@ -29,6 +29,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/errorReport.h"
+#include "userspace/stack.h"
 #include "coreUtils/list.h"
 #include "coreUtils/memAlloc.h"
 #include "stringTools/asciidouble.h"
@@ -71,17 +72,6 @@
     } \
     }
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            ppl_warning(&c->errcontext, ERR_STACKED, "Stack forward reference detected."); \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
 
 //! eps_pie_ReadAccessibleData - Read the data for a piechart canvas item from its data file or functions
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -322,7 +312,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
             ppl_contextRestoreVarPointer(c, "label", &DummyTemp_l);
             ppl_contextRestoreVarPointer(c, "percentage", &DummyTemp_p);
             ppl_contextRestoreVarPointer(c, "wedgesize", &DummyTemp_w);
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
         }
         blk = blk->next;
     }

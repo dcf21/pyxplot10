@@ -47,7 +47,6 @@
 // ROUTINES FOR MANIPULATING LABELS STRUCTURES
 // -------------------------------------------
 
-#define TBADD(et, pos) ppl_tbAdd(context, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 #define CMPVAL(X, Y) (ppl_unitsDimEqual(&X, &Y) && ppl_dblEqual(X.real, Y.real))
 

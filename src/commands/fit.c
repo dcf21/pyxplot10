@@ -35,6 +35,7 @@
 #include <gsl/gsl_vector.h>
 
 #include "commands/fit.h"
+#include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/expCompile_fns.h"
@@ -85,20 +86,6 @@ typedef struct fitComm {
             diff2step; // The step size which GetHessian() recommends using for each of the parameters being differentiated
 } fitComm;
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            strcpy(errText, "Stack forward reference detected."); \
-            return GSL_NAN; \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
-
-#define TBADD2(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 //! matrixPrint - Write a GSL matrix as a nested list, e.g. [[1,2],[3,4]]
 //! \param [in] c - The Pyxplot context
@@ -159,7 +146,7 @@ static double fitResidual(fitComm *p) {
     accumulator = 0.0; // Add up sum of square residuals
 
     // Check there's enough space on the stack
-    STACK_MUSTHAVE(c, p->NArgs);
+    ppl_stackMustHave(c, p->NArgs);
     if (c->stackFull) {
         strcpy(errText, "stack overflow in the fit command.");
         return GSL_NAN;
@@ -167,10 +154,8 @@ static double fitResidual(fitComm *p) {
 
     for (j = 0; j < p->NDataPoints; j++) // Loop over all of the data points in the file that we're fitting
     {
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], p->functionObj, 1, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its arguments
+        ppl_stackPushCopy(c, p->functionObj, 1);
 
         // Push each argument in turn
         for (k = 0; k < p->NArgs; k++) {
@@ -188,14 +173,14 @@ static double fitResidual(fitComm *p) {
         if (c->errStat.status) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", c->errStat.errMsgExpr);
             ppl_tbClear(c);
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             return GSL_NAN;
         }
         if (out->objType != PPLOBJ_NUM) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
                               "The supplied function to fit produces a value which is not a number but has type <%s>.",
                               pplObjTypeNames[out->objType]);
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             return GSL_NAN;
         }
         if (!ppl_unitsDimEqual(out, p->firstVals + p->NArgs)) {
@@ -204,7 +189,7 @@ static double fitResidual(fitComm *p) {
                     "The supplied function to fit produces a value which is dimensionally incompatible with its target value. The function produces a result with dimensions of <%s>, while its target value has dimensions of <%s>.",
                     ppl_printUnit(c, out, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, p->firstVals + p->NArgs, NULL, NULL, 1, 1, 0));
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             return GSL_NAN;
         }
         residual = pow(out->real - p->dataTable[j * p->NExpect + k], 2) +
@@ -214,7 +199,7 @@ static double fitResidual(fitComm *p) {
         else residual /= 2 * pow(p->sigmaData, 2);
         accumulator += residual; // ... and sum
 
-        STACK_CLEAN;
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     }
 
     return accumulator;
@@ -503,7 +488,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (Nvars >= USING_ITEMS_MAX - 4) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many fitting variables; a maximum of %d may be specified.", USING_ITEMS_MAX - 4);
-                TBADD2(ERR_SYNTAX, in->stkCharPos[pos + PARSE_fit_fit_variable_fit_variables]);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[pos + PARSE_fit_fit_variable_fit_variables], "");
                 return;
             }
             fitVars[Nvars] = (char *) stk[pos + PARSE_fit_fit_variable_fit_variables].auxil;
@@ -512,7 +497,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (Nvars < 1) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Too few fitting variables; a minimum of one must be specified.");
-            TBADD2(ERR_SYNTAX, 0);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
             return;
         }
     }
@@ -538,21 +523,21 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     ppl_contextVarLookup(c, fnName, &funcObj, 0);
     if (funcObj == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such function as '%s()'.", fnName);
-        TBADD2(ERR_NAMESPACE, in->stkCharPos[PARSE_fit_fit_function]);
+        ppl_tbAddLine(c, pl, ERR_NAMESPACE, in->stkCharPos[PARSE_fit_fit_function], "");
         return;
     }
     if (funcObj->objType != PPLOBJ_FUNC) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Object '%s' is not a function, but has type <%s>.", fnName,
                           pplObjTypeNames[funcObj->objType]);
-        TBADD2(ERR_TYPE, in->stkCharPos[PARSE_fit_fit_function]);
+        ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[PARSE_fit_fit_function], "");
         return;
     }
     funcDef = (pplFunc *) funcObj->auxil;
     if (funcDef->functionType == PPL_FUNC_MAGIC) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Function %s() needs wrapping in a user-defined function before it can be fit.", fnName);
-        TBADD2(ERR_TYPE, in->stkCharPos[PARSE_fit_fit_function]);
+        ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[PARSE_fit_fit_function], "");
         return;
     }
     __sync_add_and_fetch(&funcDef->refCount, 1);
@@ -571,7 +556,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (Nusing >= USING_ITEMS_MAX) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many using items; maximum of %d are allowed.", USING_ITEMS_MAX);
-                TBADD2(ERR_RANGE, in->stkCharPos[pos + o]);
+                ppl_tbAddLine(c, pl, ERR_RANGE, in->stkCharPos[pos + o], "");
                 goto cleanup;
             }
             Nusing++;
@@ -596,7 +581,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (pos <= 0) break;
             if (nr >= USING_ITEMS_MAX) {
                 sprintf(c->errStat.errBuff, "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
-                TBADD2(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 goto cleanup;
             }
             if ((stk[pos + o1].objType == PPLOBJ_NUM) || (stk[pos + o1].objType == PPLOBJ_DATE) ||
@@ -612,7 +597,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_fit_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_fit_min_0range_list], "");
                     goto cleanup;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
@@ -621,7 +606,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_fit_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_fit_min_0range_list], "");
                     goto cleanup;
                 }
                 unit[nr] = stk[pos + o2];
@@ -642,7 +627,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Exit on error
     if ((status) || (data == NULL)) {
-        TBADD2(ERR_GENERIC, 0);
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         ppl_memAlloc_AscendOutOfContext(contextLocalVec);
         goto cleanup;
     }
@@ -656,7 +641,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         "The minimum and maximum limits specified in range %ld in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                         j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                         ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 goto cleanup;
             }
         }
@@ -684,7 +669,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     localDataTable = (double *) ppl_memAlloc_incontext(NDataPoints * NExpect * sizeof(double), contextLocalVec);
     if (localDataTable == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-        TBADD2(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         goto cleanup;
     }
     i = 0;
@@ -734,7 +719,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     scratchPad = (char *) ppl_memAlloc_incontext(LSTR_LENGTH, contextLocalVec);
     if ((scratchPad == NULL) || (dataComm.errtext == NULL)) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-        TBADD2(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         goto cleanup;
     }
     dataComm.errtext[0] = '\0';
@@ -743,7 +728,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     status = FitMinimiseIterate(&dataComm, &ResidualMinimiserSlave, 0);
     if (status) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s", dataComm.errtext);
-        TBADD2(ERR_NUMERICAL, 0);
+        ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
         goto cleanup;
     }
 
@@ -783,7 +768,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         status = FitMinimiseIterate(&dataComm, &FitsigmaData, 1);
         if (status) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s", dataComm.errtext);
-            TBADD2(ERR_NUMERICAL, 0);
+            ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
             gsl_vector_free(bestFitParamVals);
             bestFitParamVals = NULL;
             goto cleanup;

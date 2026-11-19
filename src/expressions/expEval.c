@@ -47,14 +47,153 @@
 #include "userspace/pplObjFunc.h"
 #include "userspace/pplObjMethods.h"
 #include "userspace/pplObjPrint.h"
+#include "userspace/stack.h"
 #include "userspace/unitsArithmetic.h"
 #include "userspace/unitsDisp.h"
 
 #include "datafile.h"
 #include "pplConstants.h"
 
-#define TBADD(et) \
-    ppl_tbAdd(context, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, et, charpos, inExpr->ascii, "")
+
+//! ppl_castToNumber - Convert an object into a number, in place, if possible. Booleans become 0 or 1, and strings
+//! are parsed as numbers.
+//! \param [in] context - The Pyxplot context
+//! \param [in,out] x - The object to convert, which is overwritten with the number
+//! \param [out] errText - Character buffer into which to write an error message, if the conversion fails
+//! \param [in] errLen - The size of the buffer <errText>
+//! \return Zero on success, or ERR_TYPE if the object could not be converted
+
+int ppl_castToNumber(ppl_context *context, pplObj *x, char *errText, const size_t errLen) {
+    const int t = x->objType;
+    const int rc = x->refCount; // The reference count is kept, since the object stays where it is (e.g. on the stack)
+    double d = 0;
+    if (t == PPLOBJ_NUM) return 0;
+    switch (t) {
+        case PPLOBJ_BOOL:
+            d = (x->real != 0);
+            break;
+        case PPLOBJ_STR: {
+            int len;
+            const char *str = (char *) x->auxil;
+            d = ppl_getFloat(str, &len);
+            if (len > 0) {
+                while ((str[len] > '\0') && ((unsigned char) str[len] <= ' ')) len++; // Allow trailing whitespace
+            }
+            if ((len < 0) || (str[len] != '\0')) {
+                ppl_snprintfTrunc(errText, errLen,
+                                  "Attempt to implicitly cast string to number failed: string is not a valid number.");
+                return ERR_TYPE;
+            }
+            break;
+        }
+        default:
+            ppl_snprintfTrunc(errText, errLen, "Cannot implicitly cast an object of type <%s> to a number.",
+                              pplObjTypeNames[t]);
+            return ERR_TYPE;
+    }
+    ppl_garbageObject(x);
+    pplObjNum(x, 0, d, 0);
+    x->refCount = rc;
+    return 0;
+}
+
+//! ppl_castToNum - Convert an object on the evaluation stack into a number, in place, if possible, as
+//! ppl_castToNumber() does. If the conversion fails, an error is added to the traceback.
+//! \param [in] context - The Pyxplot context
+//! \param [in,out] x - The object to convert, which is overwritten with the number
+//! \param [in] expr - The expression being evaluated, used to report errors
+//! \param [in] charpos - The position in <expr> of the operator or function being evaluated
+//! \return Zero on success, or nonzero if the object could not be converted
+
+int ppl_castToNum(ppl_context *context, pplObj *x, const pplExpr *expr, const int charpos) {
+    const int errType = ppl_castToNumber(context, x, context->errStat.errBuff, sizeof(context->errStat.errBuff));
+    if (errType == 0) return 0;
+    ppl_tbAddExpr(context, expr, errType, charpos, "");
+    return 1;
+}
+
+//! ppl_castToInt - Convert an object on the evaluation stack into a number, in place, and check that it is a real,
+//! dimensionless value within the range of an int, as required by integer operators such as & and <<. If not, an
+//! error is added to the traceback.
+//! \param [in] context - The Pyxplot context
+//! \param [in,out] x - The object to convert, which is overwritten with the number
+//! \param [in] op - The name of the operator, used in error messages
+//! \param [in] expr - The expression being evaluated, used to report errors
+//! \param [in] charpos - The position in <expr> of the operator being evaluated
+//! \return Zero on success, or nonzero if the object is not a suitable integer
+
+int ppl_castToInt(ppl_context *context, pplObj *x, const char *op, const pplExpr *expr, const int charpos) {
+    if (ppl_castToNum(context, x, expr, charpos)) return 1;
+    if (x->flagComplex) {
+        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                          "The %s operator can only act on real numbers.", op);
+        ppl_tbAddExpr(context, expr, ERR_RANGE, charpos, "");
+        return 1;
+    }
+    if (!x->dimensionless) {
+        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                          "The %s operator is an integer operator which can only act on dimensionless numbers: "
+                          "supplied operand has units of <%s>.",
+                          op, ppl_printUnit(context, x, NULL, NULL, 0, 1, 0));
+        ppl_tbAddExpr(context, expr, ERR_UNIT, charpos, "");
+        return 1;
+    }
+    if ((x->real < INT_MIN) || (x->real > INT_MAX)) {
+        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                          "The %s operator can only act on integers in the range %d to %d.", op, INT_MIN, INT_MAX);
+        ppl_tbAddExpr(context, expr, ERR_RANGE, charpos, "");
+        return 1;
+    }
+    return 0;
+}
+
+//! ppl_castToBool - Convert an object on the evaluation stack into a boolean, in place. Nonzero finite numbers,
+//! non-empty strings, collections and open files are true; null, zombies and exceptions are false; other objects
+//! are true.
+//! \param [in] context - The Pyxplot context
+//! \param [in,out] x - The object to convert, which is overwritten with the boolean
+
+void ppl_castToBool(ppl_context *context, pplObj *x) {
+    const int t = x->objType;
+    const int rc = x->refCount; // The reference count is kept, since the object stays on the stack
+    int s;
+    if (t == PPLOBJ_BOOL) return;
+    switch (t) {
+        case PPLOBJ_NUM:
+            s = ((x->real != 0) || (x->imag != 0)) && gsl_finite(x->real) && gsl_finite(x->imag) &&
+                    ((x->imag == 0) || (context->set->term_current.ComplexNumbers == SW_ONOFF_ON));
+            break;
+        case PPLOBJ_STR:
+            s = ((char *) x->auxil)[0] != '\0';
+            break;
+        case PPLOBJ_ZOM:
+        case PPLOBJ_EXC:
+        case PPLOBJ_NULL:
+            s = 0;
+            break;
+        case PPLOBJ_DICT:
+            s = (((dict *) x->auxil)->length != 0);
+            break;
+        case PPLOBJ_LIST:
+            s = (((list *) x->auxil)->length != 0);
+            break;
+        case PPLOBJ_VEC:
+            s = (((pplVector *) x->auxil)->v->size != 0);
+            break;
+        case PPLOBJ_MAT:
+            s = (((pplMatrix *) x->auxil)->m->size1 != 0) || (((pplMatrix *) x->auxil)->m->size2 != 0);
+            break;
+        case PPLOBJ_FILE:
+            s = (((pplFile *) x->auxil)->open != 0);
+            break;
+        default:
+            s = 1;
+            break;
+    }
+    ppl_garbageObject(x);
+    pplObjBool(x, 0, s);
+    x->refCount = rc;
+}
 
 //! expEval_stringSubs - Evaluate the % operator applied to a string, substituting values into printf-style format
 //! tokens. The format string and the values to substitute are taken from the top of the stack, and replaced by the
@@ -78,7 +217,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
 
     if (out == NULL) {
         strcpy(context->errStat.errBuff, "Out of memory.");
-        TBADD(ERR_MEMORY);
+        ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
         return;
     }
 
@@ -91,7 +230,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                 free(out);
                 out = NULL;
                 strcpy(context->errStat.errBuff, "Out of memory.");
-                TBADD(ERR_MEMORY);
+                ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
                 return;
             }
             out = outnew;
@@ -133,7 +272,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
             free(out);
             out = NULL;
             strcpy(context->errStat.errBuff, "Too few arguments supplied to string substitution operator");
-            TBADD(ERR_RANGE);
+            ppl_tbAddExpr(context, inExpr, ERR_RANGE, charpos, "");
             return;
         } // Have run out of substitution arguments
 
@@ -145,12 +284,12 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
 
             // If token required extra integer arguments, read these now
             if (requiredArgs > 1) {
-                CAST_TO_INT(obj + argP, "%");
+                if (ppl_castToInt(context, obj + argP, "%", inExpr, charpos)) goto cast_fail;
                 arg1i = (int) ((obj + argP)->real);
                 argP++;
             }
             if (requiredArgs > 2) {
-                CAST_TO_INT(obj + argP, "%");
+                if (ppl_castToInt(context, obj + argP, "%", inExpr, charpos)) goto cast_fail;
                 arg2i = (int) ((obj + argP)->real);
                 argP++;
             }
@@ -163,7 +302,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                     free(out);
                     out = NULL;
                     strcpy(context->errStat.errBuff, "Out of memory.");
-                    TBADD(ERR_MEMORY);
+                    ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
                     return;
                 }
                 pplObjPrint(context, obj + argP, NULL, tmpbuff, tmpbufflen, 0, 0);
@@ -177,7 +316,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                 tmpbuff = NULL;
             } else {
                 pplObj *o = obj + argP;
-                CAST_TO_NUM(obj + argP); // Make object into a number
+                if (ppl_castToNum(context, obj + argP, inExpr, charpos)) goto cast_fail; // Make object into a number
                 if ((!gsl_finite(o->real)) ||
                     ((context->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && (o->flagComplex != 0))) {
                     strcpy(out + outP, "nan");
@@ -202,13 +341,13 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                 "Too many arguments supplied to string substitution operator; %d supplied when %d were needed.", Nsubs,
                 Nsubs + argP);
-        TBADD(ERR_RANGE);
+        ppl_tbAddExpr(context, inExpr, ERR_RANGE, charpos, "");
         return;
     }
 
     // Return output string
     pplObjStr(obj, 0, 1, out);
-    context->stackPtr++;
+    context->stackPtr++; // Push the substituted string
     return;
 
 cast_fail:
@@ -219,16 +358,6 @@ cast_fail:
     return;
 }
 
-#define STACK_POP \
-    { \
-        context->stackPtr--; \
-        ppl_garbageObject(&context->stack[context->stackPtr]); \
-        if (context->stack[context->stackPtr].refCount != 0) { \
-            strcpy(context->errStat.errBuff, "Stack forward reference detected."); \
-            TBADD(ERR_INTERNAL); \
-            goto cleanup_on_error; \
-        } \
-    }
 
 //! ppl_expEval - Evaluate a compiled expression
 //! \param [in] context - The Pyxplot context
@@ -249,12 +378,12 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
 
     if (iterDepth > MAX_RECURSION_DEPTH) {
         strcpy(context->errStat.errBuff, "Maximum recursion depth exceeded.");
-        TBADD(ERR_OVERFLOW);
+        ppl_tbAddExpr(context, inExpr, ERR_OVERFLOW, charpos, "");
         return NULL;
     }
 
     // If at bottom iteration depth, clean up stack now if there is any left-over junk
-    if (iterDepth == 0) { STACK_REINIT(context); }
+    if (iterDepth == 0) { ppl_stackReinit(context); }
     initialStackPtr = context->stackPtr;
     *lastOpAssign = 0;
 
@@ -268,19 +397,19 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         if (cancellationFlag) {
             strcpy(context->errStat.errBuff, "Operation cancelled.");
             charpos = 0;
-            TBADD(ERR_INTERRUPT);
+            ppl_tbAddExpr(context, inExpr, ERR_INTERRUPT, charpos, "");
             goto cleanup_on_error;
         }
         if (initialStackPtr == 0) {
-            STACK_REQUEST(context, 4);
+            ppl_stackRequest(context, 4);
         } // allowed to realloc stack
         else {
-            STACK_MUSTHAVE(context, 4);
+            ppl_stackMustHave(context, 4);
         } // not allowed to realloc stack; will change pointers in calling layers
         if (context->stackFull) {
             strcpy(context->errStat.errBuff, "Stack overflow.");
             charpos = 0;
-            TBADD(ERR_MEMORY);
+            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
             goto cleanup_on_error;
         }
         stk = &context->stack[context->stackPtr];
@@ -292,7 +421,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 pplObjNum(stk, 0, instruction->operand.number, 0);
                 stk->refCount = 1;
-                context->stackPtr++;
+                context->stackPtr++; // Push the number
                 break;
             case PPL_BC_PUSH_STRING: {
                 const char *const string = inExpr->strings + instruction->operand.string;
@@ -301,13 +430,13 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 if ((out = (char *) malloc(l + 1)) == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                    TBADD(ERR_MEMORY);
+                    ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
                     goto cleanup_on_error;
                 }
                 strcpy(out, string);
                 pplObjStr(stk, 0, 1, out);
                 stk->refCount = 1;
-                context->stackPtr++;
+                context->stackPtr++; // Push the string
                 break;
             }
             case PPL_BC_LOOKUP: {
@@ -321,14 +450,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     pplObjCpy(stk, obj, 1, 0, 1);
                     stk->immutable = stk->immutable || context->namespaces[i]->immutable;
                     stk->refCount = 1;
-                    context->stackPtr++;
+                    context->stackPtr++; // Push the value of the variable
                     got = 1;
                     break;
                 }
                 if (!got) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "No such variable '%s'.", key);
-                    TBADD(ERR_NAMESPACE);
+                    ppl_tbAddExpr(context, inExpr, ERR_NAMESPACE, charpos, "");
                     goto cleanup_on_error;
                 }
                 break;
@@ -348,28 +477,28 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         if (obj == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
                             goto cleanup_on_error;
                         }
                     }
                     if ((obj == NULL) || ((context->namespaces[i]->immutable) && (obj->objType != PPLOBJ_GLOB))) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Cannot modify variable in immutable namespace.");
-                        TBADD(ERR_NAMESPACE);
+                        ppl_tbAddExpr(context, inExpr, ERR_NAMESPACE, charpos, "");
                         goto cleanup_on_error;
                     }
                     if (obj->objType == PPLOBJ_GLOB) {
                         if (i < 2) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Variable declared global in global namespace.");
-                            TBADD(ERR_NAMESPACE);
+                            ppl_tbAddExpr(context, inExpr, ERR_NAMESPACE, charpos, "");
                             goto cleanup_on_error;
                         }
                         continue;
                     }
                     pplObjCpy(stk, obj, 1, 0, 1);
                     stk->refCount = 1;
-                    context->stackPtr++;
+                    context->stackPtr++; // Push a pointer to the variable
                     break;
                 }
                 break;
@@ -387,7 +516,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 in_cpy = (pplObj *) malloc(sizeof(pplObj));
                 if (in_cpy == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                    TBADD(ERR_MEMORY);
+                    ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
                     goto cleanup_on_error;
                 }
                 memcpy(in_cpy, in, sizeof(pplObj));
@@ -415,7 +544,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     if (obj == NULL) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "No such method '%s'.", key);
-                        TBADD(ERR_NAMESPACE);
+                        ppl_tbAddExpr(context, inExpr, ERR_NAMESPACE, charpos, "");
                         free(in_cpy);
                         in_cpy = NULL;
                         goto cleanup_on_error;
@@ -435,7 +564,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 if ((stk - 1)->immutable) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Cannot modify variable in immutable namespace.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 if ((t == PPLOBJ_MOD) || (t == PPLOBJ_USER)) {
@@ -443,7 +572,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     if (d->immutable) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Cannot modify variable in immutable namespace.");
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                         goto cleanup_on_error;
                     }
                     if (obj == NULL) {
@@ -454,19 +583,20 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         if (obj == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
                             goto cleanup_on_error;
                         }
                     }
-                    STACK_POP;
+                    // Pop the object whose member is being assigned to, and push a pointer to the member in its place
+                    ppl_stackPop(context);
                     pplObjCpy(stk - 1, obj, 1, 0, 1);
                     (stk - 1)->refCount = 1;
-                    context->stackPtr++;
+                    context->stackPtr++; // Push the pointer to the member
                     break;
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Cannot assign methods or variables to this object.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 break;
@@ -490,7 +620,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Range limits when slicing must be numerical values; supplied limit has type <%s>.",
                                     pplObjTypeNames[(stk - 1)->objType]);
-                            TBADD(ERR_TYPE);
+                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                             goto cleanup_on_error;
                         }
                         if (!(stk - i)->dimensionless) {
@@ -498,14 +628,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Range limits when slicing must be dimensionless numbers; supplied limit has units of <%s>.",
                                     ppl_printUnit(context, stk - i, NULL, NULL, 0, 1, 0));
-                            TBADD(ERR_NUMERICAL);
+                            ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, charpos, "");
                             goto cleanup_on_error;
                         }
                         if ((stk - i)->flagComplex) {
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Range limits when slicing must be real numbers; supplied limit is complex.");
-                            TBADD(ERR_NUMERICAL);
+                            ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, charpos, "");
                             goto cleanup_on_error;
                         }
                         if ((!gsl_finite((stk - i)->real)) || ((stk - i)->real < INT_MIN) ||
@@ -513,7 +643,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Range limits when slicing must be in the range %d to %d.", INT_MIN,
                                               INT_MAX);
-                            TBADD(ERR_RANGE);
+                            ppl_tbAddExpr(context, inExpr, ERR_RANGE, charpos, "");
                             goto cleanup_on_error;
                         }
                         *out = (int) (stk - i)->real;
@@ -522,7 +652,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 if (!range) ppl_sliceItem(context, getPtr, &status, &errType, context->errStat.errBuff);
                 else ppl_sliceRange(context, minset, min, maxset, max, &status, &errType, context->errStat.errBuff);
                 if (status) {
-                    TBADD(errType);
+                    ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                     goto cleanup_on_error;
                 }
                 break;
@@ -534,13 +664,13 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 if (d == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 if (context->stackPtr < 2 * len) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Attempt to make dictionary with too few items on the stack.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 for (k = 0; k < len; k++)
@@ -548,7 +678,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Dictionary keys must be strings; supplied key has type <%s>.",
                                           pplObjTypeNames[(stk - 2 * (len - k))->objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                         goto cleanup_on_error;
                     }
                 for (k = 0; k < len; k++) {
@@ -557,10 +687,12 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     v.refCount = 1;
                     ppl_dictAppendCpy(d, (char *) ((stk - 2 * (len - k))->auxil), (void *) &v, sizeof(pplObj));
                 }
-                for (k = 0; k < 2 * len; k++) { STACK_POP; }
+                for (k = 0; k < 2 * len; k++) {
+                    ppl_stackPop(context);
+                } // Pop the keys and values, now copied into the dictionary
                 pplObjDict(&context->stack[context->stackPtr], 0, 1, d);
                 context->stack[context->stackPtr].refCount = 1;
-                context->stackPtr++;
+                context->stackPtr++; // Push the new dictionary
                 break;
             }
             case PPL_BC_MAKE_LIST: {
@@ -570,13 +702,13 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 if (l == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 if (context->stackPtr < len) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Attempt to make list with too few items on the stack.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 for (k = 0; k < len; k++) {
@@ -585,10 +717,10 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     v.refCount = 1;
                     ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
                 }
-                for (k = 0; k < len; k++) { STACK_POP; }
+                for (k = 0; k < len; k++) { ppl_stackPop(context); } // Pop the items, now copied into the list
                 pplObjList(&context->stack[context->stackPtr], 0, 1, l);
                 context->stack[context->stackPtr].refCount = 1;
-                context->stackPtr++;
+                context->stackPtr++; // Push the new list
                 break;
             }
             case PPL_BC_CALL: {
@@ -605,147 +737,153 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 stk->refCount = 1;
                 switch (t) {
                     case PPL_OP_NEGATE: {
-                        CAST_TO_NUM(stk - 1);
+                        if (ppl_castToNum(context, stk - 1, inExpr, charpos)) goto cast_fail;
                         (stk - 1)->real *= -1;
                         if ((stk - 1)->flagComplex) (stk - 1)->imag *= -1;
                         break;
                     }
                     case PPL_OP_UNARY_PLUS: {
-                        CAST_TO_NUM(stk - 1);
+                        if (ppl_castToNum(context, stk - 1, inExpr, charpos)) goto cast_fail;
                         break;
                     }
                     case PPL_OP_BITWISE_NOT: {
-                        CAST_TO_INT(stk - 1, "~");
+                        if (ppl_castToInt(context, stk - 1, "~", inExpr, charpos)) goto cast_fail;
                         (stk - 1)->real = ~(int) ((stk - 1)->real);
                         break;
                     }
                     case PPL_OP_LOGICAL_NOT: {
-                        CAST_TO_BOOL(stk - 1);
+                        ppl_castToBool(context, stk - 1);
                         (stk - 1)->real = !(stk - 1)->real;
                         break;
                     }
                     case PPL_OP_POWER: {
                         int status = 0, errType = -1;
-                        CAST_TO_NUM(stk - 1);
-                        CAST_TO_NUM(stk - 2);
+                        if (ppl_castToNum(context, stk - 1, inExpr, charpos)) goto cast_fail;
+                        if (ppl_castToNum(context, stk - 2, inExpr, charpos)) goto cast_fail;
                         ppl_uaPow(context, stk - 2, stk - 1, stk, &status, &errType, context->errStat.errBuff);
                         if (status) {
-                            TBADD(errType);
+                            ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
                         }
-                        STACK_POP;
-                        STACK_POP;
+                        // Pop both operands, then move the result, which was computed in the free slot above them, into their place
+                        ppl_stackPop(context);
+                        ppl_stackPop(context);
                         memcpy(stk - 2, stk, sizeof(pplObj));
-                        context->stackPtr++;
+                        context->stackPtr++; // ... which is now on top of the stack
                         break;
                     }
                     case PPL_OP_MULTIPLY: {
                         int status = 0, errType = -1;
                         ppl_opMul(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
-                            TBADD(errType);
+                            ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
                         }
-                        STACK_POP;
-                        STACK_POP;
+                        // Pop both operands, then move the result, which was computed in the free slot above them, into their place
+                        ppl_stackPop(context);
+                        ppl_stackPop(context);
                         memcpy(stk - 2, stk, sizeof(pplObj));
-                        context->stackPtr++;
+                        context->stackPtr++; // ... which is now on top of the stack
                         break;
                     }
                     case PPL_OP_DIVIDE: {
                         int status = 0, errType = -1;
                         ppl_opDiv(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
-                            TBADD(errType);
+                            ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
                         }
-                        STACK_POP;
-                        STACK_POP;
+                        // Pop both operands, then move the result, which was computed in the free slot above them, into their place
+                        ppl_stackPop(context);
+                        ppl_stackPop(context);
                         memcpy(stk - 2, stk, sizeof(pplObj));
-                        context->stackPtr++;
+                        context->stackPtr++; // ... which is now on top of the stack
                         break;
                     }
                     case PPL_OP_MODULO: {
                         int status = 0, errType = -1;
-                        CAST_TO_NUM(stk - 1);
-                        CAST_TO_NUM(stk - 2);
+                        if (ppl_castToNum(context, stk - 1, inExpr, charpos)) goto cast_fail;
+                        if (ppl_castToNum(context, stk - 2, inExpr, charpos)) goto cast_fail;
                         ppl_uaMod(context, stk - 2, stk - 1, stk, &status, &errType, context->errStat.errBuff);
                         if (status) {
-                            TBADD(errType);
+                            ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
                         }
-                        STACK_POP;
-                        STACK_POP;
+                        // Pop both operands, then move the result, which was computed in the free slot above them, into their place
+                        ppl_stackPop(context);
+                        ppl_stackPop(context);
                         memcpy(stk - 2, stk, sizeof(pplObj));
-                        context->stackPtr++;
+                        context->stackPtr++; // ... which is now on top of the stack
                         break;
                     }
                     case PPL_OP_ADD: {
                         int status = 0, errType = -1;
                         ppl_opAdd(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
-                            TBADD(errType);
+                            ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
                         }
-                        STACK_POP;
-                        STACK_POP;
+                        // Pop both operands, then move the result, which was computed in the free slot above them, into their place
+                        ppl_stackPop(context);
+                        ppl_stackPop(context);
                         memcpy(stk - 2, stk, sizeof(pplObj));
-                        context->stackPtr++;
+                        context->stackPtr++; // ... which is now on top of the stack
                         break;
                     }
                     case PPL_OP_SUBTRACT: {
                         int status = 0, errType = -1;
                         ppl_opSub(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
-                            TBADD(errType);
+                            ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
                         }
-                        STACK_POP;
-                        STACK_POP;
+                        // Pop both operands, then move the result, which was computed in the free slot above them, into their place
+                        ppl_stackPop(context);
+                        ppl_stackPop(context);
                         memcpy(stk - 2, stk, sizeof(pplObj));
-                        context->stackPtr++;
+                        context->stackPtr++; // ... which is now on top of the stack
                         break;
                     }
                     case PPL_OP_SHIFT_LEFT: {
-                        CAST_TO_INT(stk - 1, "<<");
-                        CAST_TO_INT(stk - 2, "<<");
+                        if (ppl_castToInt(context, stk - 1, "<<", inExpr, charpos)) goto cast_fail;
+                        if (ppl_castToInt(context, stk - 2, "<<", inExpr, charpos)) goto cast_fail;
                         (stk - 2)->real = ((int) (stk - 2)->real) << ((int) (stk - 1)->real);
-                        STACK_POP;
+                        ppl_stackPop(context); // Pop the right-hand operand; the result has replaced the left-hand one
                         break;
                     }
                     case PPL_OP_SHIFT_RIGHT: {
-                        CAST_TO_INT(stk - 1, ">>");
-                        CAST_TO_INT(stk - 2, ">>");
+                        if (ppl_castToInt(context, stk - 1, ">>", inExpr, charpos)) goto cast_fail;
+                        if (ppl_castToInt(context, stk - 2, ">>", inExpr, charpos)) goto cast_fail;
                         (stk - 2)->real = ((int) (stk - 2)->real) >> ((int) (stk - 1)->real);
-                        STACK_POP;
+                        ppl_stackPop(context); // Pop the right-hand operand; the result has replaced the left-hand one
                         break;
                     }
                     case PPL_OP_BITWISE_AND: {
-                        CAST_TO_INT(stk - 1, "&");
-                        CAST_TO_INT(stk - 2, "&");
+                        if (ppl_castToInt(context, stk - 1, "&", inExpr, charpos)) goto cast_fail;
+                        if (ppl_castToInt(context, stk - 2, "&", inExpr, charpos)) goto cast_fail;
                         (stk - 2)->real = ((int) (stk - 2)->real) & ((int) (stk - 1)->real);
-                        STACK_POP;
+                        ppl_stackPop(context); // Pop the right-hand operand; the result has replaced the left-hand one
                         break;
                     }
                     case PPL_OP_BITWISE_XOR: {
-                        CAST_TO_INT(stk - 1, "^");
-                        CAST_TO_INT(stk - 2, "^");
+                        if (ppl_castToInt(context, stk - 1, "^", inExpr, charpos)) goto cast_fail;
+                        if (ppl_castToInt(context, stk - 2, "^", inExpr, charpos)) goto cast_fail;
                         (stk - 2)->real = ((int) (stk - 2)->real) ^ ((int) (stk - 1)->real);
-                        STACK_POP;
+                        ppl_stackPop(context); // Pop the right-hand operand; the result has replaced the left-hand one
                         break;
                     }
                     case PPL_OP_BITWISE_OR: {
-                        CAST_TO_INT(stk - 1, "|");
-                        CAST_TO_INT(stk - 2, "|");
+                        if (ppl_castToInt(context, stk - 1, "|", inExpr, charpos)) goto cast_fail;
+                        if (ppl_castToInt(context, stk - 2, "|", inExpr, charpos)) goto cast_fail;
                         (stk - 2)->real = ((int) (stk - 2)->real) | ((int) (stk - 1)->real);
-                        STACK_POP;
+                        ppl_stackPop(context); // Pop the right-hand operand; the result has replaced the left-hand one
                         break;
                     }
                     case PPL_OP_COMMA: // a, b: discard a and keep b
                     {
                         ppl_garbageObject(stk - 2);
                         memcpy(stk - 2, stk - 1, sizeof(pplObj));
-                        context->stackPtr--;
+                        context->stackPtr--; // Discard the left operand, keeping the right one as the result
                         break;
                     }
                     case PPL_OP_LESS:
@@ -757,7 +895,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         int stat = 0, errType = -1,
                             cmp = pplObjCmp(context, stk - 2, stk - 1, &stat, &errType, context->errStat.errBuff, 0);
                         if (stat) {
-                            TBADD(errType);
+                            ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
                         }
                         if (t == PPL_OP_LESS) stat = (cmp == -1);
@@ -766,17 +904,18 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         else if (t == PPL_OP_GREATER) stat = (cmp == 1);
                         else if (t == PPL_OP_EQUAL) stat = (cmp == 0);
                         else stat = (cmp != 0);
-                        STACK_POP;
-                        STACK_POP;
+                        // Pop both operands, and push the boolean result of the comparison in their place
+                        ppl_stackPop(context);
+                        ppl_stackPop(context);
                         pplObjBool(stk - 2, 0, stat);
                         (stk - 2)->refCount = 1;
-                        context->stackPtr++;
+                        context->stackPtr++; // Push the boolean
                         break;
                     }
                     default:
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Unknown operator with id=%d.", t);
-                        TBADD(ERR_INTERNAL);
+                        ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                         goto cleanup_on_error;
                 }
                 break;
@@ -792,19 +931,19 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 if (context->stackPtr < 2) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Too few items on stack for assignment operator.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 if (o->self_lval == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Assignment operators can only be applied to variables.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 if (o->immutable) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Cannot assign to an immutable object.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
 
@@ -823,7 +962,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         { \
             if ((t2 != PPLOBJ_NUM) || (tmp->flagComplex)) { \
                 sprintf(context->errStat.errBuff, "Vectors and matrices can only contain real numbers."); \
-                TBADD(ERR_TYPE); \
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, ""); \
                 goto cleanup_on_error; \
             } \
             if (!ppl_unitsDimEqual(o, tmp)) { \
@@ -831,14 +970,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         "Cannot insert element with dimensions <%s> into vector with dimensions <%s>.", \
                         ppl_printUnit(context, tmp, NULL, NULL, 0, 1, 0), \
                         ppl_printUnit(context, o, NULL, NULL, 1, 1, 0)); \
-                TBADD(ERR_UNIT); \
+                ppl_tbAddExpr(context, inExpr, ERR_UNIT, charpos, ""); \
                 goto cleanup_on_error; \
             } \
             *o->self_dval = tmp->real; \
         } \
         ppl_garbageObject(o); \
-        memcpy(o, tmp, sizeof(pplObj)); /* swap-pop */ \
-        STACK_POP; \
+        memcpy(o, tmp, sizeof(pplObj)); /* The assigned value is moved into the variable... */ \
+        ppl_stackPop(context); /* ... and popped from the stack, where it remains as the result */ \
     }
 
                 if (t == PPL_ASSIGN) {
@@ -848,28 +987,28 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 } else if (t == PPL_ASSIGN_ADD) {
                     ppl_opAdd(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
-                        TBADD(errType);
+                        ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
                     ASSIGN;
                 } else if (t == PPL_ASSIGN_SUBTRACT) {
                     ppl_opSub(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
-                        TBADD(errType);
+                        ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
                     ASSIGN;
                 } else if (t == PPL_ASSIGN_MULTIPLY) {
                     ppl_opMul(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
-                        TBADD(errType);
+                        ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
                     ASSIGN;
                 } else if (t == PPL_ASSIGN_DIVIDE) {
                     ppl_opDiv(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
-                        TBADD(errType);
+                        ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
                     ASSIGN;
@@ -878,38 +1017,38 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         ppl_snprintfTrunc(
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The fused operator-assignment operators can only be applied to numeric variables.");
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                         goto cleanup_on_error;
                     }
-                    CAST_TO_NUM(in);
+                    if (ppl_castToNum(context, in, inExpr, charpos)) goto cast_fail;
                     pplObjNum(tmp, 0, 0, 0);
                     switch (t) {
                         case PPL_ASSIGN_MODULO:
                             ppl_uaMod(context, o, in, tmp, &status, &errType, context->errStat.errBuff);
                             break;
                         case PPL_ASSIGN_BITWISE_AND:
-                            CAST_TO_INT(in, "&=");
-                            CAST_TO_INT(o, "&=");
+                            if (ppl_castToInt(context, in, "&=", inExpr, charpos)) goto cast_fail;
+                            if (ppl_castToInt(context, o, "&=", inExpr, charpos)) goto cast_fail;
                             tmp->real = ((int) o->real) & ((int) in->real);
                             break;
                         case PPL_ASSIGN_BITWISE_XOR:
-                            CAST_TO_INT(in, "^=");
-                            CAST_TO_INT(o, "^=");
+                            if (ppl_castToInt(context, in, "^=", inExpr, charpos)) goto cast_fail;
+                            if (ppl_castToInt(context, o, "^=", inExpr, charpos)) goto cast_fail;
                             tmp->real = ((int) o->real) ^ ((int) in->real);
                             break;
                         case PPL_ASSIGN_BITWISE_OR:
-                            CAST_TO_INT(in, "|=");
-                            CAST_TO_INT(o, "|=");
+                            if (ppl_castToInt(context, in, "|=", inExpr, charpos)) goto cast_fail;
+                            if (ppl_castToInt(context, o, "|=", inExpr, charpos)) goto cast_fail;
                             tmp->real = ((int) o->real) | ((int) in->real);
                             break;
                         case PPL_ASSIGN_SHIFT_LEFT:
-                            CAST_TO_INT(in, "<<=");
-                            CAST_TO_INT(o, "<<=");
+                            if (ppl_castToInt(context, in, "<<=", inExpr, charpos)) goto cast_fail;
+                            if (ppl_castToInt(context, o, "<<=", inExpr, charpos)) goto cast_fail;
                             tmp->real = ((int) o->real) << ((int) in->real);
                             break;
                         case PPL_ASSIGN_SHIFT_RIGHT:
-                            CAST_TO_INT(in, ">>=");
-                            CAST_TO_INT(o, ">>=");
+                            if (ppl_castToInt(context, in, ">>=", inExpr, charpos)) goto cast_fail;
+                            if (ppl_castToInt(context, o, ">>=", inExpr, charpos)) goto cast_fail;
                             tmp->real = ((int) o->real) >> ((int) in->real);
                             break;
                         case PPL_ASSIGN_POWER:
@@ -918,11 +1057,11 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         default:
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Unknown fused operator-assignment operator with id=%d.", t);
-                            TBADD(ERR_INTERNAL);
+                            ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                             goto cleanup_on_error;
                     }
                     if (status) {
-                        TBADD(errType);
+                        ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
                     ASSIGN;
@@ -937,25 +1076,25 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 if (context->stackPtr < 1) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Too few items on stack for -- or ++ operator.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 if (o->self_lval == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The -- and ++ operators can only be applied to variables.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 if (o->objType != PPLOBJ_NUM) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The -- and ++ operators can only be applied to numeric variables.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 if (o->immutable) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Cannot modify an immutable object.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 switch (t) {
@@ -976,7 +1115,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     default:
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Unknown increment/decrement operator with id=%d.", t);
-                        TBADD(ERR_INTERNAL);
+                        ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                         goto cleanup_on_error;
                 }
                 break;
@@ -987,22 +1126,24 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 if (context->stackPtr < Nsubs + 1) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Too few items on stack for string substitution operator.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 if ((stk - Nsubs - 1)->objType != PPLOBJ_STR) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Attempt to apply string substitution operator to a non-string.");
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 expEval_stringSubs(context, inExpr, charpos, Nsubs);
                 if (context->errStat.status) { goto cast_fail; }
                 stk->refCount = 1;
+                // The result was written to the slot above the top of the stack. Pop the format string and the Nsubs
+                // values substituted into it, then move the result down into their place.
                 context->stackPtr--;
-                for (i = 0; i < Nsubs + 1; i++) { STACK_POP; }
+                for (i = 0; i < Nsubs + 1; i++) { ppl_stackPop(context); }
                 memcpy(&context->stack[context->stackPtr], stk, sizeof(pplObj));
-                context->stackPtr++;
+                context->stackPtr++; // Push the result
                 break;
             }
             case PPL_BC_DOLLAR: {
@@ -1010,7 +1151,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 if (context->stackPtr < 1) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Too few items on stack for dollar operator.");
-                    TBADD(ERR_INTERNAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
                 t = context->stack[context->stackPtr - 1].objType;
@@ -1022,7 +1163,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The $ column reference operator was passed an illegal column number; must be in range -3 to %d.",
                                 MAX_DATACOLS);
-                        TBADD(ERR_RANGE);
+                        ppl_tbAddExpr(context, inExpr, ERR_RANGE, charpos, "");
                         goto cleanup_on_error;
                     }
                     n = (int) round(num);
@@ -1041,7 +1182,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                             "The $ column reference operator can only act on column numbers and (string) names. Object supplied was of type <%s>,",
                             pplObjTypeNames[t]);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
                 break;
@@ -1049,28 +1190,28 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             case PPL_BC_BRANCH_IF_FALSE: {
                 int branch;
                 *lastOpAssign = 0;
-                CAST_TO_BOOL(stk - 1);
+                ppl_castToBool(context, stk - 1);
                 branch = (stk - 1)->real == 0;
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
                     next = instruction->operand.target;
-                    if (instruction->popOnBranch) { STACK_POP; }
+                    if (instruction->popOnBranch) { ppl_stackPop(context); }
                 } else {
-                    STACK_POP;
+                    ppl_stackPop(context); // Not branching: pop the tested value and carry on
                 }
                 break;
             }
             case PPL_BC_BRANCH_IF_TRUE: {
                 int branch;
                 *lastOpAssign = 0;
-                CAST_TO_BOOL(stk - 1);
+                ppl_castToBool(context, stk - 1);
                 branch = (stk - 1)->real != 0;
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
                     next = instruction->operand.target;
-                    if (instruction->popOnBranch) { STACK_POP; }
+                    if (instruction->popOnBranch) { ppl_stackPop(context); }
                 } else {
-                    STACK_POP;
+                    ppl_stackPop(context); // Not branching: pop the tested value and carry on
                 }
                 break;
             }
@@ -1081,14 +1222,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             }
             case PPL_BC_MAKE_BOOLEAN: {
                 *lastOpAssign = 0;
-                CAST_TO_BOOL(stk - 1);
+                ppl_castToBool(context, stk - 1);
                 break;
             }
             default:
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Illegal bytecode opcode passed to expEval.");
                 charpos = 0;
-                TBADD(ERR_INTERNAL);
+                ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                 goto cleanup_on_error;
         }
         if (opcode == PPL_BC_RETURN) break;
@@ -1098,7 +1239,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "Unexpected empty stack at end of evaluation.");
         charpos = 0;
-        TBADD(ERR_INTERNAL);
+        ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
         goto cleanup_on_error;
     }
     if (context->stackPtr != initialStackPtr + 1) {
@@ -1108,6 +1249,6 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
 
 cast_fail:
 cleanup_on_error:
-    for (; context->stackPtr > initialStackPtr;) { STACK_POP; }
+    ppl_stackClean(context, initialStackPtr); // Discard everything which this evaluation pushed onto the stack
     return NULL;
 }

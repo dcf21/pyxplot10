@@ -33,6 +33,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/errorReport.h"
+#include "userspace/stack.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/dollarOp.h"
 #include "expressions/expCompile_fns.h"
@@ -492,19 +493,6 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
     } \
     }
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            strcpy(errtext, "Stack forward reference detected."); \
-            ppl_warning(&c->errcontext, ERR_STACKED, errtext); \
-            FAIL; \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
 
 #define FAIL \
     { \
@@ -558,7 +546,6 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                             pplObj *colUnits, const int NcolUnits, int *status, char *errtext, int *errCount,
                             const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    ppl_context *context = c;
     const int stkLevelOld = c->stackPtr;
     const int nUsing = out->Ncolumns_real + out->Ncolumns_obj;
     char **labOut = &out->current->text[out->current->blockPosition];
@@ -578,17 +565,17 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                              linenumber_count, block_count, index_number, usingRowCol, colHeads, NcolHeads, colUnits,
                              NcolUnits, &fail, errtext, iterDepth);
         if (fail) {
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             FAIL;
         }
-        CAST_TO_BOOL(stkObj);
+        ppl_castToBool(c, stkObj);
         if (stkObj->real == 0) {
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
             *discontinuity = (continuity == DATAFILE_DISCONTINUOUS);
             *status = 0;
             return;
         }
-        STACK_CLEAN;
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
     }
 
     // label
@@ -600,20 +587,20 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                              linenumber_count, block_count, index_number, usingRowCol, colHeads, NcolHeads, colUnits,
                              NcolUnits, &fail, errtext, iterDepth);
         if (fail) {
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             FAIL;
         }
         if (stkObj->objType != PPLOBJ_STR) {
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                               "%s:%ld: Label expression '%s' did not evaluate to a string, but to type <%s>.", filename,
                               file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             FAIL;
         }
         labIn = (char *) stkObj->auxil;
         *labOut = (char *) ppl_memAlloc_incontext(strlen(labIn) + 1, memContext);
         if (*labOut != NULL) strcpy(*labOut, labIn);
-        STACK_CLEAN;
+        ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
     }
 
     // using expressions
@@ -626,7 +613,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                              linenumber_count, block_count, index_number, usingRowCol, colHeads, NcolHeads, colUnits,
                              NcolUnits, &fail, errtext, iterDepth);
         if (fail) {
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             FAIL;
         }
         if (!outObj) {
@@ -636,14 +623,14 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                         errtext, PPL_MSG_LENGTH,
                         "%s:%ld: Data item calculated from expression '%s' was not a number, but had type <%s>.",
                         filename, file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
-                STACK_CLEAN;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                 FAIL;
             }
             if ((stkObj->objType == PPLOBJ_NUM) && (stkObj->flagComplex)) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                                   "%s:%ld: Data item calculated from expression '%s' was a complex number.", filename,
                                   file_linenumber, ex->ascii);
-                STACK_CLEAN;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                 FAIL;
             }
             if (out->Nrows == 0) {
@@ -657,7 +644,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                             "%s:%ld: Data item calculated from expression '%s' has inconsistent types, including <%s> and <%s>.",
                             filename, file_linenumber, ex->ascii, pplObjTypeNames[out->firstEntries[i].objType],
                             pplObjTypeNames[stkObj->objType]);
-                    STACK_CLEAN;
+                    ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                     FAIL;
                 }
                 if ((out->firstEntries[i].objType == PPLOBJ_NUM) &&
@@ -668,7 +655,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                             filename, file_linenumber, ex->ascii,
                             ppl_printUnit(c, &out->firstEntries[i], NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, stkObj, NULL, NULL, 1, 1, 0));
-                    STACK_CLEAN;
+                    ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                     FAIL;
                 }
             }
@@ -678,7 +665,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
             oo->refCount = 1;
             pplObjCpy(oo, stkObj, 0, 0, 1);
         }
-        STACK_CLEAN;
+        ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
     }
 
     out->current->split[out->current->blockPosition] = *discontinuity;
@@ -1499,7 +1486,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                        pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, const int continuity, int *status,
                        char *errtext, int *errCount, const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    int discontinuity2 = 0, *discontinuity = &discontinuity2;
+    int discontinuity2 = 0;
     const int sampleGrid = (rasterY != NULL);
     int a, j, k, contextOutput;
     long expectedNrows;
@@ -1622,13 +1609,13 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                                 buffer, fnlist[j]->ascii, errp, errt);
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         COUNTERR_END;
-                        STACK_CLEAN;
+                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         ppl_tbClear(c);
                         *status = 1;
                         break;
                     }
                     pplObjCpy(&colData[j + offset], ob, 0, 0, 1);
-                    STACK_CLEAN;
+                    ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
                 }
                 expectedNrows = (*out)->Nrows + 1;
                 if (!(*status)) {
@@ -2295,14 +2282,11 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             if ((!c->errStat.status) && (first->objType == PPLOBJ_STR) && (Nexprs == 1) &&
                 (rasterY == NULL)) // If we have a single expression that evaluates to a string, it's a filename
             {
-                long file_linenumber = pl->srcLineN;
-                int tmp = 0, *discontinuity = &tmp;
-                char *filename = pl->srcFname; // Dummy stuff needed for STACK_CLEAN
                 char *datafile = (char *) first->auxil;
                 ppldata_fromFile(c, out, datafile, wildcardMatchNumber, filenameOut, dataSpool, indexNo, usingExprs,
                                  autoUsingList, Ncols, NusingObjs, labelExpr, selectExpr, sortBy, usingRowCol,
                                  everyList, continuity, persistent, status, errtext, errCount, iterDepth);
-                STACK_CLEAN;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
             } else if ((!c->errStat.status) && (first->objType == PPLOBJ_VEC) && (rasterY != NULL)) {
                 const int stkLevelOld = c->stackPtr;
                 pplObj *vecs;
@@ -2317,16 +2301,13 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     return;
                 }
                 for (i = 0; i < Nexprs; i++) {
-                    long file_linenumber = pl->srcLineN;
-                    int tmp = 0, *discontinuity = &tmp;
-                    char *filename = pl->srcFname; // Dummy stuff needed for STACK_CLEAN
                     int l2;
                     pplObj *obj = ppl_expEval(c, exprList[i], &j, 0, iterDepth);
                     if (c->errStat.status) {
                         *status = 1;
                         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not evaluate vector expressions.");
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
-                        STACK_CLEAN;
+                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
@@ -2337,7 +2318,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                                 "Vector data supplied to other columns, but columns %d evaluated to an object of type <%s>.",
                                 i + 1, pplObjTypeNames[obj->objType]);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
-                        STACK_CLEAN;
+                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
@@ -2349,29 +2330,26 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                                 "Data supplied as a list of vectors, but they have varying lengths, including %d (vector %d) and %d (vector %d).",
                                 l, 1, l2, i + 1);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
-                        STACK_CLEAN;
+                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
                     pplObjCpy(vecs + i, obj, 0, 0, 1);
                     vecs[i].refCount = 1;
-                    STACK_CLEAN;
+                    ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
                 }
                 if (wildcardMatchNumber <= 0)
                     ppldata_fromVectors(c, out, vecs, Nexprs, usingExprs, autoUsingList, Ncols, NusingObjs, labelExpr,
                                         selectExpr, sortBy, continuity, status, errtext, errCount, iterDepth);
                 for (i = 0; i < Nexprs; i++) ppl_garbageObject(vecs + i);
             } else {
-                long file_linenumber = pl->srcLineN;
-                int tmp = 0, *discontinuity = &tmp;
-                char *filename = pl->srcFname; // Dummy stuff needed for STACK_CLEAN
                 double *rX = rasterX;
                 double *rY = rasterY;
                 int rXl = rasterXlen;
                 const int rYl = rasterYlen;
                 pplObj *uX = &unitX;
                 pplObj *uY = &unitY;
-                STACK_CLEAN;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
                 ppl_tbClear(c);
 
                 // See if this set of functions want a special raster

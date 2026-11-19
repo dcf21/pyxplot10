@@ -31,7 +31,11 @@
 #include "parser/parser.h"
 #include "userspace/garbageCollector.h"
 #include "userspace/pplObj.h"
+#include "userspace/pplObj_fns.h"
 #include "userspace/pplObjFunc_fns.h"
+#include "userspace/stack.h"
+#include "coreUtils/errorReport.h"
+#include "pplConstants.h"
 
 //! ppl_garbageNamespace - Free a namespace dictionary, releasing a reference to each of the objects in it
 //! \param [in] n - The namespace to free. Has no effect unless it was allocated with malloc().
@@ -214,4 +218,84 @@ void ppl_garbageObject(pplObj *o) {
         o = NULL;
     }
     return;
+}
+
+//! ppl_stackPop - Pop the object on top of the evaluation stack, and free it. If anything still refers to the object,
+//! which should never happen, report an internal error; the object is then left allocated.
+//! \param [in] c - The Pyxplot context
+//! \return Zero on success, or one if the object was still referenced
+
+int ppl_stackPop(ppl_context *c) {
+    c->stackPtr--;
+    ppl_garbageObject(&c->stack[c->stackPtr]);
+    if (c->stack[c->stackPtr].refCount != 0) {
+        ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, "Stack forward reference detected.");
+        return 1;
+    }
+    return 0;
+}
+
+//! ppl_stackPushCopy - Push a copy of an object onto the top of the evaluation stack. The caller must already have
+//! checked that there is room (e.g. with ppl_stackMustHave()).
+//! \param [in] c - The Pyxplot context
+//! \param [in] o - The object to copy onto the stack
+//! \param [in] lval - If true, the copy records that it was derived from <o>, so that assignments to it update <o>
+
+void ppl_stackPushCopy(ppl_context *c, pplObj *o, const int lval) {
+    pplObj *top = &c->stack[c->stackPtr];
+    pplObjCpy(top, o, lval, 0, 1);
+    top->refCount = 1;
+    c->stackPtr++;
+}
+
+//! ppl_stackClean - Pop objects from the evaluation stack until it is no deeper than a given level
+//! \param [in] c - The Pyxplot context
+//! \param [in] level - The stack depth to return to
+//! \return Zero on success, or one if any object popped was still referenced
+
+int ppl_stackClean(ppl_context *c, const int level) {
+    int status = 0;
+    while (c->stackPtr > level) status |= ppl_stackPop(c);
+    return status;
+}
+
+//! ppl_stackRequest - Make sure there is room on the evaluation stack for <n> more objects, enlarging the stack if
+//! necessary. Sets <c->stackFull> if this fails. This must only be called when nothing holds pointers into the stack.
+//! \param [in] c - The Pyxplot context
+//! \param [in] n - The number of objects which are about to be pushed
+
+void ppl_stackRequest(ppl_context *c, const int n) {
+    c->stackFull = 0;
+    if (c->stackPtr > c->stackSize - 1024 - n) {
+        const int newStackSize = 2 * c->stackSize;
+        pplObj *newStack = (pplObj *) realloc(c->stack, newStackSize * sizeof(pplObj));
+        if (newStack != NULL) {
+            c->stack = newStack;
+            c->stackSize = newStackSize;
+        } else c->stackFull = 1;
+    }
+}
+
+//! ppl_stackMustHave - Check whether there is room on the evaluation stack for <n> more objects, without enlarging
+//! it, and set <c->stackFull> if there is not
+//! \param [in] c - The Pyxplot context
+//! \param [in] n - The number of objects which are about to be pushed
+
+void ppl_stackMustHave(ppl_context *c, const int n) {
+    c->stackFull = (c->stackPtr > c->stackSize - 4 - n);
+}
+
+//! ppl_stackReinit - Empty the evaluation stack, and if it has grown larger than its default size, shrink it back
+//! \param [in] c - The Pyxplot context
+
+void ppl_stackReinit(ppl_context *c) {
+    ppl_stackClean(c, 0);
+    if (c->stackSize > STACK_DEFAULT) {
+        pplObj *newStack = (pplObj *) malloc(STACK_DEFAULT * sizeof(pplObj));
+        if (newStack != NULL) {
+            free(c->stack);
+            c->stack = newStack;
+            c->stackSize = STACK_DEFAULT;
+        }
+    }
 }

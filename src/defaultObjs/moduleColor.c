@@ -39,6 +39,7 @@
 #include <gsl/gsl_math.h>
 
 #include "expressions/expCompile.h"
+#include "userspace/stack.h"
 #include "expressions/expEval.h"
 #include "expressions/fnCall.h"
 #include "settings/settings.h"
@@ -284,17 +285,6 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     return;
 }
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            *status = 1; \
-            *errType = ERR_INTERNAL; \
-            strcpy(errText, "Stack forward reference detected."); \
-            return; \
-        } \
-    }
 
 //! pplfunc_colSpectrum - Implement the function colors.spectrum(spec,norm) in the colors module, which returns a color
 //! representation of the spectrum spec, normalised to brightness norm. spec should be a function that takes a single
@@ -347,7 +337,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     norm = in[1].real;
 
     // Check there's enough space on the stack
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -366,10 +356,8 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         dummy.srcFname = "<dummy>";
         dummy.ascii = "<colors.spectrum() function call>";
 
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], &in[0], 1, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its argument
+        ppl_stackPushCopy(c, &in[0], 1);
 
         // Push wavelength
         pplObjNum(&c->stack[c->stackPtr], 0, wlen, 0);
@@ -405,7 +393,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         // Get number back and clean stack
         w = fabs(c->stack[c->stackPtr - 1].real) / N_CIE_STEPS;
         if (!gsl_finite(w)) w = 0;
-        while (c->stackPtr > stkLevelOld) { STACK_POP; }
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
 
         // Add color to accumulators
         x += cie_color_match[i][0] * w;

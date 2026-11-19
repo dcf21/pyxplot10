@@ -110,6 +110,28 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
     return;
 }
 
+//! ppl_tbAddLine - Add a level to the error traceback, for an error in a command
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command in which the error occurred
+//! \param [in] errType - The type of error, one of the ERR_* constants
+//! \param [in] errPos - The position of the error within the command, or -1 if unknown
+//! \param [in] context - A description of the context in which the error occurred, or NULL
+
+void ppl_tbAddLine(ppl_context *c, const parserLine *pl, const int errType, const int errPos, const char *context) {
+    ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, errType, errPos, pl->linetxt, context);
+}
+
+//! ppl_tbAddExpr - Add a level to the error traceback, for an error in an algebraic expression
+//! \param [in] c - The Pyxplot context
+//! \param [in] expr - The compiled expression in which the error occurred
+//! \param [in] errType - The type of error, one of the ERR_* constants
+//! \param [in] errPos - The position of the error within the expression, or -1 if unknown
+//! \param [in] context - A description of the context in which the error occurred, or NULL
+
+void ppl_tbAddExpr(ppl_context *c, const pplExpr *expr, const int errType, const int errPos, const char *context) {
+    ppl_tbAdd(c, expr->srcLineN, expr->srcId, expr->srcFname, 0, errType, errPos, expr->ascii, context);
+}
+
 //! ppl_tbWrite - Report the error which has been recorded to the user, together with its traceback
 //! \param [in] c - The Pyxplot context
 

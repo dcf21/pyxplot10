@@ -22,12 +22,16 @@
 #ifndef _TRACEBACK_FNS_H
 #define _TRACEBACK_FNS_H 1
 
+#include "expressions/expCompile.h"
 #include "expressions/traceback.h"
+#include "parser/parser.h"
 #include "userspace/context.h"
 
 void ppl_tbClear(ppl_context *c);
 void ppl_tbAdd(ppl_context *c, int srcLineN, long srcId, const char *srcFname, int cmdOrExpr, int errType, int errPos,
                const char *linetext, const char *context);
+void ppl_tbAddLine(ppl_context *c, const parserLine *pl, int errType, int errPos, const char *context);
+void ppl_tbAddExpr(ppl_context *c, const pplExpr *expr, int errType, int errPos, const char *context);
 void ppl_tbWrite(ppl_context *c);
 
 #endif

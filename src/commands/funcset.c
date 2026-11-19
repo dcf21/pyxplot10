@@ -48,7 +48,6 @@
 
 #include "pplConstants.h"
 
-#define TBADD(et, charpos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, charpos, pl->linetxt, "")
 
 //! ppl_directive_funcset - Implement function definitions, such as f(x)=x**2, including definitions restricted to
 //! ranges of their arguments, e.g. f(x)[0:1]=x, and the deletion of functions with f(x)=
@@ -76,7 +75,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     if (nArgs > FUNC_MAXARGS) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Too many arguments to function; the maximum allowed number is %d.", FUNC_MAXARGS);
-        TBADD(ERR_OVERFLOW, 0);
+        ppl_tbAddLine(c, pl, ERR_OVERFLOW, 0, "");
         return;
     }
 
@@ -87,7 +86,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     f = (pplFunc *) malloc(sizeof(pplFunc));
     if (f == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-        TBADD(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         return;
     }
     f->functionType = PPL_FUNC_USERDEF;
@@ -112,7 +111,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     if ((f->argList == NULL) || ((!nullDefn) && (f->functionPtr == NULL)) || (f->min == NULL) || (f->max == NULL) ||
         (f->minActive == NULL) || (f->maxActive == NULL)) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-        TBADD(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         goto fail;
     }
 
@@ -142,7 +141,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Where ranges are specified for function arguments, these must be real numbers. Ranges may not be imposed upon complex arguments to functions.");
-                    TBADD(ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_min_0range_list], "");
                     goto fail;
                 }
                 pplObjCpy(f->min + j, min, 0, 0, 1);
@@ -158,7 +157,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Where ranges are specified for function arguments, these must be real numbers. Ranges may not be imposed upon complex arguments to functions.");
-                    TBADD(ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_max_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_max_0range_list], "");
                     goto fail;
                 }
                 if (f->minActive[j] && !ppl_unitsDimEqual(min, max)) {
@@ -167,7 +166,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                             "The minimum and maximum values specified for argument number %d are dimensionally incompatible: the minimum has dimensions of <%s>, while the maximum has dimensions of <%s>.",
                             j + 1, ppl_printUnit(c, min, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, min, NULL, NULL, 1, 1, 0));
-                    TBADD(ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_max_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_max_0range_list], "");
                     goto fail;
                 }
                 pplObjCpy(f->max + j, max, 0, 0, 1);
@@ -193,7 +192,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     if (tmpObj->objType == PPLOBJ_GLOB) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Variable declared global in global namespace.");
-        TBADD(ERR_NAMESPACE, 0);
+        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
         goto fail;
     }
 

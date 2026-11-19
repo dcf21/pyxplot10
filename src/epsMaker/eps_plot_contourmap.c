@@ -31,6 +31,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/memAlloc.h"
+#include "userspace/stack.h"
 #include "expressions/expEval.h"
 #include "expressions/traceback_fns.h"
 #include "mathsTools/dcfmath.h"
@@ -905,9 +906,9 @@ GOT_CONTOURS:
                     }
                     if (flagU[i] != NULL) *flagU[i] = 1;
                     if (flagA[i] != NULL) *flagA[i] = 0;
-                    EPS_STACK_POP;
+                    ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
                 }
-                EPS_STACK_POP;
+                ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
 
                 if ((col1 >= 0.0) && (col2 >= 0.0) && (col3 >= 0.0) &&
                     ((pd->ww_final.Col1234Space != SW_COLSPACE_CMYK) || (col4 >= 0.0))) {

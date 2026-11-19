@@ -36,6 +36,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/errorReport.h"
+#include "userspace/stack.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/expCompile_fns.h"
 #include "expressions/expEval.h"
@@ -64,17 +65,6 @@
 #define FACTOR_MULTIPLY        2.0 /* Factorise LogBase**2, so that 0.00,0.25,0.50,0.75,1.00 is a valid factorisation */
 #define NOT_THROW 9999 /* Value we put in DivOfThrow when a tick isn't dividing throw (to get sorting right) */
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            ppl_warning(&c->errcontext, ERR_STACKED, "Stack forward reference detected."); \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
 
 // Structure used for storing information about a substitution argument in 'set format'
 typedef struct ArgumentInfo {
@@ -434,7 +424,7 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
                     }
                     DiscreteMoveMin = (x == arg->NumericValues[tick->IntervalNum - 1]);
                 }
-                STACK_CLEAN;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
 
                 // Decide whether to pick left half of interval or right half
                 if (!arg->ContinuousArg) {
@@ -610,20 +600,20 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
         int lOp;
         pplObj *o = ppl_expEval(c, formatExp[i], &lOp, 1, x->iterDepth + 1);
         if ((o == NULL) || c->errStat.status) {
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             ppl_tbClear(c);
             goto FAIL;
         }
         if ((o->objType == PPLOBJ_NUM) || (o->objType == PPLOBJ_DATE) || (o->objType == PPLOBJ_BOOL)) {
             args[i].StringArg = 0;
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
             continue;
         } else if (o->objType == PPLOBJ_STR) {
             args[i].StringArg = 1;
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
             continue;
         } else {
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             ppl_tbClear(c);
             goto FAIL;
         } // Not a number or a string
@@ -661,7 +651,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                 }
                 args[i].StringValues[j] = (char *) ppl_memAlloc(strlen(DummyStr) + 1);
                 if (args[i].StringValues[j] == NULL) {
-                    STACK_CLEAN;
+                    ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                     goto FAIL;
                 }
                 strcpy(args[i].StringValues[j], DummyStr);
@@ -689,7 +679,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                     args[i].MaxValueSet = 1;
                 }
             }
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
         }
     }
     for (i = 0; i < NArgs; i++) {

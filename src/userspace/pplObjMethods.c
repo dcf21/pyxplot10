@@ -28,6 +28,7 @@
 #include <math.h>
 
 #include "gsl/gsl_blas.h"
+#include "userspace/stack.h"
 #include "gsl/gsl_eigen.h"
 #include "gsl/gsl_linalg.h"
 #include "gsl/gsl_math.h"
@@ -76,15 +77,6 @@ dict **pplObjMethods;
         } \
         strcpy(X, Y); \
     }
-
-#define STACK_POP_LISTMETHOD \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { fprintf(stderr, "Stack forward reference detected."); } \
-    }
-
-#define TBADD_LISTMETHOD(et) ppl_tbAdd(c, dummy.srcLineN, dummy.srcId, dummy.srcFname, 0, et, 0, dummy.ascii, "")
 
 
 // Universal methods of all objects
@@ -1552,7 +1544,6 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
 
 static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
-    ppl_context *context = c;
     char *FunctionDescription = "filter(f)";
     pplObj *st = in[-1].self_this;
     gsl_vector *va = ((pplVector *) st->auxil)->v;
@@ -1563,7 +1554,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     pplFunc *fi;
     pplExpr dummy;
 
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1612,16 +1603,12 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     for (i = 0; i < va->size; i++) {
         const int stkLevelOld = c->stackPtr;
 
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], &in[0], 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its arguments
+        ppl_stackPushCopy(c, &in[0], 0);
 
-        // Push a
+        // The argument: an item of the list
         v.real = gsl_vector_get(va, i);
-        pplObjCpy(&c->stack[c->stackPtr], &v, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        ppl_stackPushCopy(c, &v, 0); // The argument: an element of the vector
 
         // Call function
         c->errStat.errMsgExpr[0] = '\0';
@@ -1638,9 +1625,9 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
             return;
         }
 
-        CAST_TO_BOOL(&c->stack[c->stackPtr - 1]);
+        ppl_castToBool(c, &c->stack[c->stackPtr - 1]);
         if (c->stack[c->stackPtr - 1].real) ovec[ovlen++] = v.real;
-        while (c->stackPtr > stkLevelOld) { STACK_POP_LISTMETHOD; }
+        ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
     }
 
     if (pplObjVector(&OUTPUT, 0, 1, ovlen) == NULL) {
@@ -1817,7 +1804,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     pplFunc *fi;
     pplExpr dummy;
 
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1865,16 +1852,12 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     for (i = 0; i < vec->size; i++) {
         const int stkLevelOld = c->stackPtr;
 
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], &in[0], 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its arguments
+        ppl_stackPushCopy(c, &in[0], 0);
 
-        // Push a
+        // The argument: an item of the list
         v.real = gsl_vector_get(vec, i);
-        pplObjCpy(&c->stack[c->stackPtr], &v, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        ppl_stackPushCopy(c, &v, 0); // The argument: an element of the vector
 
         // Call function
         c->errStat.errMsgExpr[0] = '\0';
@@ -1922,7 +1905,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         }
 
         gsl_vector_set(ovec, i, c->stack[c->stackPtr - 1].real);
-        while (c->stackPtr > stkLevelOld) { STACK_POP_LISTMETHOD; }
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     }
 
     return;
@@ -1970,7 +1953,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     pplObj val, val2;
     pplFunc *fi;
 
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2020,21 +2003,15 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     memcpy(&val2, &val, sizeof(pplObj));
 
     for (i = 1; i < v->size; i++) {
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], &in[0], 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its arguments
+        ppl_stackPushCopy(c, &in[0], 0);
 
-        // Push old value
-        pplObjCpy(&c->stack[c->stackPtr], &val, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // The first argument: the result accumulated so far
+        ppl_stackPushCopy(c, &val, 0);
 
-        // Push next value
+        // The second argument: the next item
         val2.real = gsl_vector_get(v, i);
-        pplObjCpy(&c->stack[c->stackPtr], &val2, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        ppl_stackPushCopy(c, &val2, 0); // The second argument: the next element of the vector
 
         // Call function
         c->errStat.errMsgExpr[0] = '\0';
@@ -2054,7 +2031,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
 
         pplObjCpy(&val, &c->stack[c->stackPtr - 1], 0, 0, 1);
         val.refCount = 1;
-        while (c->stackPtr > stkLevelOld) { STACK_POP_LISTMETHOD; }
+        ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
     }
     pplObjCpy(&OUTPUT, &val, 0, 0, 1);
     ppl_garbageObject(&val);
@@ -2217,7 +2194,6 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
-    ppl_context *context = c;
     char *FunctionDescription = "filter(f)";
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -2227,7 +2203,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     listIterator *li = ppl_listIterateInit(l);
     pplExpr dummy;
 
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2271,15 +2247,11 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
         const int stkLevelOld = c->stackPtr;
 
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], &in[0], 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its arguments
+        ppl_stackPushCopy(c, &in[0], 0);
 
-        // Push a
-        pplObjCpy(&c->stack[c->stackPtr], item, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // The argument: an item of the list
+        ppl_stackPushCopy(c, item, 0);
 
         // Call function
         c->errStat.errMsgExpr[0] = '\0';
@@ -2294,14 +2266,14 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
             return;
         }
 
-        CAST_TO_BOOL(&c->stack[c->stackPtr - 1]);
+        ppl_castToBool(c, &c->stack[c->stackPtr - 1]);
         if (c->stack[c->stackPtr - 1].real) {
             pplObj v;
             pplObjCpy(&v, item, 0, 1, 1);
             v.refCount = 1;
             ppl_listAppendCpy(ol, &v, sizeof(v));
         }
-        while (c->stackPtr > stkLevelOld) { STACK_POP_LISTMETHOD; }
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     }
 
     return;
@@ -2426,7 +2398,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     pplExpr dummy;
     listIterator *li = ppl_listIterateInit(l);
 
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2470,15 +2442,11 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
         const int stkLevelOld = c->stackPtr;
 
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], &in[0], 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its arguments
+        ppl_stackPushCopy(c, &in[0], 0);
 
-        // Push a
-        pplObjCpy(&c->stack[c->stackPtr], item, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // The argument: an item of the list
+        ppl_stackPushCopy(c, item, 0);
 
         // Call function
         c->errStat.errMsgExpr[0] = '\0';
@@ -2499,7 +2467,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
             v.refCount = 1;
             ppl_listAppendCpy(ol, &v, sizeof(v));
         }
-        while (c->stackPtr > stkLevelOld) { STACK_POP_LISTMETHOD; }
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     }
 
     return;
@@ -2628,7 +2596,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     pplFunc *fi;
     listIterator *li = ppl_listIterateInit(l);
 
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2677,20 +2645,14 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     v.refCount = 1;
 
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
-        // Push function object
-        pplObjCpy(&c->stack[c->stackPtr], &in[0], 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // Push the function to call, followed by its arguments
+        ppl_stackPushCopy(c, &in[0], 0);
 
-        // Push old value
-        pplObjCpy(&c->stack[c->stackPtr], &v, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // The first argument: the result accumulated so far
+        ppl_stackPushCopy(c, &v, 0);
 
-        // Push next value
-        pplObjCpy(&c->stack[c->stackPtr], item, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        // The second argument: the next item
+        ppl_stackPushCopy(c, item, 0);
 
         // Call function
         c->errStat.errMsgExpr[0] = '\0';
@@ -2710,7 +2672,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
 
         pplObjCpy(&v, &c->stack[c->stackPtr - 1], 0, 0, 1);
         v.refCount = 1;
-        while (c->stackPtr > stkLevelOld) { STACK_POP_LISTMETHOD; }
+        ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
     }
     pplObjCpy(&OUTPUT, &v, 0, 0, 1);
     ppl_garbageObject(&v);
@@ -2817,20 +2779,14 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
     dummy.srcFname = "<dummy>";
     dummy.ascii = "<sortOn(f) method>";
 
-    // Push function object
-    pplObjCpy(&c->stack[c->stackPtr], pplmethod_listSortOnCustom_fn, 1, 0, 1);
-    c->stack[c->stackPtr].refCount = 1;
-    c->stackPtr++;
+    // Push the function to call, followed by its arguments
+    ppl_stackPushCopy(c, pplmethod_listSortOnCustom_fn, 1);
 
-    // Push a
-    pplObjCpy(&c->stack[c->stackPtr], *ao, 0, 0, 1);
-    c->stack[c->stackPtr].refCount = 1;
-    c->stackPtr++;
+    // The argument: an item of the list
+    ppl_stackPushCopy(c, *ao, 0);
 
-    // Push b
-    pplObjCpy(&c->stack[c->stackPtr], *bo, 0, 0, 1);
-    c->stack[c->stackPtr].refCount = 1;
-    c->stackPtr++;
+    // The second argument: another item of the list
+    ppl_stackPushCopy(c, *bo, 0);
 
     // Call function
     c->errStat.errMsgExpr[0] = '\0';
@@ -2848,7 +2804,7 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
                 c->errStat.errBuff, sizeof(c->errStat.errBuff),
                 "The sortOn(f) function requires a comparison function that returns a number. Supplied function returned an object of type <%s>.",
                 pplObjTypeNames[c->stack[c->stackPtr - 1].objType]);
-        TBADD_LISTMETHOD(ERR_TYPE);
+        ppl_tbAddExpr(c, &dummy, ERR_TYPE, 0, "");
         pplmethod_listSortOnCustom_errFlag = 1;
         return 0;
     }
@@ -2857,7 +2813,7 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
     if (c->stack[c->stackPtr - 1].real < 0) out = -1;
     else if (c->stack[c->stackPtr - 1].real > 0) out = 1;
     else out = 0;
-    while (c->stackPtr > stkLevelOld) { STACK_POP_LISTMETHOD; }
+    ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
 
     return out;
 }
@@ -2886,7 +2842,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     int fail;
     listIterator *li = ppl_listIterateInit(l);
 
-    STACK_MUSTHAVE(c, 4);
+    ppl_stackMustHave(c, 4);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;

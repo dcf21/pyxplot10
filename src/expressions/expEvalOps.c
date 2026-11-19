@@ -42,47 +42,6 @@
 
 #include "pplConstants.h"
 
-#define CAST_TO_NUM2(X) \
-    { \
-        double d = 0; \
-        int t = (X)->objType; \
-        int rc = (X)->refCount; \
-        if (t != PPLOBJ_NUM) { \
-            switch (t) { \
-                case PPLOBJ_BOOL: \
-                    d = ((X)->real != 0); \
-                    break; \
-                case PPLOBJ_STR: { \
-                    int len; \
-                    char *c = (char *) (X)->auxil; \
-                    d = ppl_getFloat(c, &len); \
-                    if (len > 0) { \
-                        while ((c[len] > '\0') && ((unsigned char) c[len] <= ' ')) len++; \
-                    } \
-                    if ((len < 0) || (c[len] != '\0')) { \
-                        *status = 1; \
-                        *errType = ERR_TYPE; \
-                        ppl_snprintfTrunc( \
-                                errText, LSTR_LENGTH, \
-                                "Attempt to implicitly cast string to number failed: string is not a valid number."); \
-                        goto cast_fail; \
-                    } \
-                    break; \
-                } \
-                default: { \
-                    *status = 1; \
-                    *errType = ERR_TYPE; \
-                    ppl_snprintfTrunc(errText, LSTR_LENGTH, \
-                                      "Cannot implicitly cast an object of type <%s> to a number.", \
-                                      pplObjTypeNames[t]); \
-                    goto cast_fail; \
-                } \
-            } \
-            ppl_garbageObject(X); \
-            pplObjNum(X, 0, d, 0); \
-            (X)->refCount = rc; \
-        } \
-    }
 
 //! ppl_opAdd - Evaluate the + operator, which adds numbers, vectors and matrices, concatenates strings and lists,
 //! merges dictionaries, and adds time intervals to dates
@@ -346,8 +305,16 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         ppl_unitsDimCpy(o, a);
     } else // adding numbers
     {
-        CAST_TO_NUM2(a);
-        CAST_TO_NUM2(b);
+        if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
+        if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
     am_numeric:
         o->objType =
                 PPLOBJ_NUM; // Do this by hand rather than calling pplObjNum to save time (some field will be set by function call below)
@@ -516,8 +483,16 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         ppl_unitsDimCpy(o, a);
     } else // subtracting numbers
     {
-        CAST_TO_NUM2(a);
-        CAST_TO_NUM2(b);
+        if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
+        if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
     am_numeric:
         o->objType =
                 PPLOBJ_NUM; // Do this by hand rather than calling pplObjNum to save time (some field will be set by function call below)
@@ -721,8 +696,16 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
     } else // multiplying numbers
     {
-        CAST_TO_NUM2(a);
-        CAST_TO_NUM2(b);
+        if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
+        if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
     am_numeric:
         o->objType =
                 PPLOBJ_NUM; // Do this by hand rather than calling pplObjNum to save time (some field will be set by function call below)
@@ -830,8 +813,16 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         o->real = 0;
     } else // dividing numbers
     {
-        CAST_TO_NUM2(a);
-        CAST_TO_NUM2(b);
+        if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
+        if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
+            *status = 1;
+            *errType = ERR_TYPE;
+            goto cast_fail;
+        }
     am_numeric:
         o->objType =
                 PPLOBJ_NUM; // Do this by hand rather than calling pplObjNum to save time (some field will be set by function call below)

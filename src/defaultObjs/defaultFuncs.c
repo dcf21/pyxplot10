@@ -45,6 +45,7 @@
 #define GSL_RANGE_CHECK_OFF 1
 
 #include "coreUtils/dict.h"
+#include "userspace/stack.h"
 #include "mathsTools/dcfmath.h"
 #include "settings/settings.h"
 #include "stringTools/asciidouble.h"
@@ -67,12 +68,6 @@
 
 #include "texify.h"
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { fprintf(stderr, "Stack forward reference detected."); } \
-    }
 
 //! ppl_addMagicFunction - Add a "magic" function, such as diff_d or int_d, to a namespace. Magic functions are
 //! handled specially by the expression evaluator, because their arguments are not evaluated in the usual way.
@@ -791,7 +786,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     argList = (list *) in[1].auxil;
     li = ppl_listIterateInit(argList);
 
-    STACK_MUSTHAVE(c, argList->length);
+    ppl_stackMustHave(c, argList->length);
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -805,16 +800,12 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     dummy.srcFname = "<dummy>";
     dummy.ascii = "<call(f,a) function>";
 
-    // Push function object
-    pplObjCpy(&c->stack[c->stackPtr], &in[0], 0, 0, 1);
-    c->stack[c->stackPtr].refCount = 1;
-    c->stackPtr++;
+    // Push the function to call, followed by its arguments
+    ppl_stackPushCopy(c, &in[0], 0);
 
     // Push arguments
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
-        pplObjCpy(&c->stack[c->stackPtr], item, 0, 0, 1);
-        c->stack[c->stackPtr].refCount = 1;
-        c->stackPtr++;
+        ppl_stackPushCopy(c, item, 0); // Each item of the list is an argument
     }
 
     // Call function
@@ -831,7 +822,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     }
 
     pplObjCpy(&OUTPUT, &c->stack[c->stackPtr - 1], 0, 0, 1);
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
+    ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     return;
 }
 
@@ -1318,16 +1309,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
         return;
     }
     pplObjCpy(&OUTPUT, output, 0, 0, 1);
-    while (c->stackPtr > stkLevelOld) {
-        c->stackPtr--;
-        if (c->stack[c->stackPtr].objType != PPLOBJ_NUM) // optimisation: Don't waste time garbage collecting numbers
-        {
-            ppl_garbageObject(&c->stack[c->stackPtr]);
-            if (c->stack[c->stackPtr].refCount != 0) {
-                ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, "Stack forward reference detected.");
-            }
-        }
-    }
+    ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
     return;
 }
 

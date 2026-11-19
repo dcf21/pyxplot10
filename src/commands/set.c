@@ -68,7 +68,6 @@
 #include "children.h"
 #include "pplConstants.h"
 
-#define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 #define GET_AXISLOG(OUT, AXIS, DEFAULT) \
     { \

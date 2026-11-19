@@ -24,14 +24,6 @@
 
 #define IF_NOT_INVISIBLE if (x->CurrentColor[0] != '\0')
 
-#define EPS_STACK_POP \
-    while (x->c->stackPtr > stkLevelOld) { \
-        x->c->stackPtr--; \
-        ppl_garbageObject(&x->c->stack[x->c->stackPtr]); \
-        if (x->c->stack[x->c->stackPtr].refCount != 0) { \
-            ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Stack forward reference detected."); \
-        } \
-    }
 
 #include "epsMaker/eps_comm.h"
 

@@ -29,6 +29,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/errorReport.h"
+#include "userspace/stack.h"
 
 #include "expressions/expEval.h"
 #include "expressions/traceback_fns.h"
@@ -48,7 +49,6 @@
 
 #include "pplConstants.h"
 
-#define TBADD(et, pos) ppl_tbAdd(c, in->srcLineN, in->srcId, in->srcFname, 0, et, pos, in->linetxt, NULL)
 
 //! ppl_parserLinePrint - Print a description of a compiled command line and its atoms, for debugging
 //! \param [in] c - The Pyxplot context
@@ -98,19 +98,6 @@ void ppl_parserOutFree(parserOutput *in) {
     return;
 }
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            strcpy(c->errStat.errBuff, "Stack forward reference detected."); \
-            TBADD(ERR_INTERNAL, 0); \
-            return; \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
 
 //! ppl_parserExecute - Execute a compiled command line: evaluate its atoms to fill an output stack, and pass the
 //! result to ppl_parserShell() to run the command
@@ -133,13 +120,12 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
     // Check that recursion depth has not been exceeded
     if (iterDepth > MAX_RECURSION_DEPTH) {
         strcpy(eB, "Maximum recursion depth exceeded.");
-        TBADD(ERR_OVERFLOW, 0);
+        ppl_tbAddLine(c, in, ERR_OVERFLOW, 0, NULL);
         return;
     }
 
     // If at bottom iteration depth, clean up stack now if there is any left-over junk
-    if (iterDepth == 0)
-        while (c->stackPtr > 0) { STACK_POP; }
+    if (iterDepth == 0) ppl_stackClean(c, 0);
 
     while ((in != NULL) && (!c->errStat.status) && (!c->shellExiting) && (!c->shellBroken) && (!c->shellContinued) &&
            (!c->shellReturned)) {
@@ -155,7 +141,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
             ppl_parserStatInit(&ps, &pl);
             if (ps == NULL) {
                 strcpy(eB, "Out of memory.");
-                TBADD(ERR_MEMORY, 0);
+                ppl_tbAddLine(c, in, ERR_MEMORY, 0, NULL);
                 return;
             }
             stat = ppl_parserCompile(c, ps, in->srcLineN, in->srcId, in->srcFname, in->linetxt, 1, iterDepth + 1);
@@ -171,7 +157,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
         out = (parserOutput *) malloc(sizeof(parserOutput));
         if (out == NULL) {
             strcpy(eB, "Out of memory.");
-            TBADD(ERR_MEMORY, 0);
+            ppl_tbAddLine(c, in, ERR_MEMORY, 0, NULL);
             return;
         }
         stk = (pplObj *) malloc(in->stackLen * sizeof(pplObj));
@@ -179,7 +165,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
             free(out);
             out = NULL;
             strcpy(eB, "Out of memory.");
-            TBADD(ERR_MEMORY, 0);
+            ppl_tbAddLine(c, in, ERR_MEMORY, 0, NULL);
             return;
         }
         for (i = 0; i < in->stackLen; i++) {
@@ -193,7 +179,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
             free(stk);
             stk = NULL;
             strcpy(eB, "Out of memory.");
-            TBADD(ERR_MEMORY, 0);
+            ppl_tbAddLine(c, in, ERR_MEMORY, 0, NULL);
             return;
         }
         for (i = 0; i < in->stackLen; i++) { stkCharPos[i] = -1; }
@@ -221,7 +207,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                         goto gotTypeCexpression;
                     } else {
                         strcpy(c->errStat.errBuff, "");
-                        TBADD(ERR_GENERIC, item->linePos);
+                        ppl_tbAddLine(c, in, ERR_GENERIC, item->linePos, NULL);
                         break; // On error, stop
                     }
                 }
@@ -230,7 +216,6 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                 strcpy(eB + k, "Expression evaluates to the wrong type: needed");
                 k += strlen(eB + k);
                 for (j = 0; ((j < PARSER_TYPE_OPTIONS) && (item->options[j] != '\0') && (!passed)); j++) {
-                    ppl_context *context = c; // Needed for CAST_TO_BOOL
                     if (j != 0) {
                         strcpy(eB + k, ", or");
                         k += strlen(eB + k);
@@ -264,7 +249,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                             passed = (p > 0);
                             break;
                         case 'b':
-                            CAST_TO_BOOL(val);
+                            ppl_castToBool(c, val);
                             passed = 1;
                             break;
                         case 'c':
@@ -395,13 +380,13 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                 // If expression has produced a value of the wrong type, throw an error
                 if (!passed) {
                     strcpy(eB + k, ".");
-                    TBADD(ERR_TYPE, item->linePos);
+                    ppl_tbAddLine(c, in, ERR_TYPE, item->linePos, NULL);
                     break;
                 }
 
                 // Copy value produced by atom
                 pplObjCpy(&stk[item->stackOutPos], val, 0, 0, 1);
-                STACK_CLEAN;
+                ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
             }
         gotTypeCexpression:
             stkCharPos[item->stackOutPos] = item->linePos;
@@ -414,17 +399,17 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
             if ((dirName != NULL) && (strcmp(dirName, cmd) != 0) &&
                 ((strcmp(dirName, "set") != 0) || (strcmp(cmd, "set_error") != 0))) {
                 sprintf(eB, "Command of type '%s' is not allowed in this section of a configuration file.", cmd);
-                TBADD(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, in, ERR_SYNTAX, 0, NULL);
             } else if ((dirName != NULL) && (stk[PARSE_arc_editno].objType == PPLOBJ_NUM)) {
                 sprintf(eB, "Settings may not be edited for canvas items within a configuration file.");
-                TBADD(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, in, ERR_SYNTAX, 0, NULL);
             } else {
                 ppl_parserShell(c, in, out, interactive, iterDepth);
             }
         }
 
         // Free output stack
-        STACK_CLEAN;
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
         ppl_parserOutFree(out);
 
         in = in->next;

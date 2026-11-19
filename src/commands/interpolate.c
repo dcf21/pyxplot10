@@ -31,6 +31,7 @@
 #include <gsl/gsl_math.h>
 
 #include "commands/interpolate.h"
+#include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
 #include "stringTools/asciidouble.h"
 #include "commands/interpolate_2d_engine.h"
@@ -49,21 +50,6 @@
 #include "userspace/unitsArithmetic.h"
 #include "userspace/unitsDisp.h"
 
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            ppl_snprintfTrunc(msg, sizeof(msg), "Stack forward reference detected."); \
-            TBADD2(ERR_INTERNAL, 0); \
-            return; \
-        } \
-    }
-
-#define STACK_CLEAN \
-    while (c->stackPtr > stkLevelOld) { STACK_POP; }
-
-#define TBADD2(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 #define COUNTEDERR1 \
     if (errCount > 0) { \
@@ -135,7 +121,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             if (nr >= 2) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; a maximum of two are allowed.");
-                TBADD2(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 return;
             }
             if ((stk[pos + o1].objType == PPLOBJ_NUM) || (stk[pos + o1].objType == PPLOBJ_DATE) ||
@@ -151,7 +137,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_interpolate2d_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_interpolate2d_min_0range_list], "");
                     return;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
@@ -160,7 +146,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_interpolate2d_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_interpolate2d_min_0range_list], "");
                     return;
                 }
                 unit[nr] = stk[pos + o2];
@@ -214,7 +200,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     } else {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "interpolate command requested to perform unknown type of interpolation.");
-        TBADD2(ERR_INTERNAL, 0);
+        ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
         return;
     }
 
@@ -236,7 +222,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     else {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "interpolate command requested to perform unknown type of interpolation.");
-        TBADD2(ERR_INTERNAL, 0);
+        ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
         return;
     }
 
@@ -248,7 +234,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
         // Exit on error
         if ((status) || (data == NULL)) {
-            TBADD2(ERR_GENERIC, 0);
+            ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
             ppl_memAlloc_AscendOutOfContext(contextLocalVec);
             return;
         }
@@ -262,7 +248,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                             "The minimum and maximum limits specified in range %ld in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                             j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
-                    TBADD2(ERR_NUMERICAL, 0);
+                    ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                     return;
                 }
             }
@@ -274,7 +260,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         else xdata = (double *) malloc(NcolRequired * (data->Nrows + 2) * sizeof(double));
         if (xdata == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-            TBADD2(ERR_MEMORY, 0);
+            ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
             return;
         }
         ydata = xdata + data->Nrows;
@@ -302,7 +288,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "%s interpolation is only possible on data sets with at least %d member%s.",
                               splineTypeName, NxRequired, (NxRequired > 1) ? "s" : "");
-            TBADD2(ERR_NUMERICAL, 0);
+            ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
             if (NcolRequired >= 3) {
                 free(xdata);
                 xdata = NULL;
@@ -341,7 +327,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             if (minSet[i] || maxSet[i]) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Ranges cannot be applied when interpolating bitmap data.");
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return;
             }
 
@@ -349,7 +335,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         if ((stk[pos].objType != PPLOBJ_NUM) || (pos = (int) round(stk[pos].real), stk[pos].objType == PPLOBJ_NUM)) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "A single filename must be supplied when interpolating a bitmap image.");
-            TBADD2(ERR_SYNTAX, 0);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
             return;
         }
         {
@@ -358,14 +344,14 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             pplExpr *expr = (pplExpr *) stk[pos + PARSE_interpolate2d_expression_expression_list].auxil;
             pplObj *first = ppl_expEval(c, expr, &i, 0, iterDepth);
             if ((c->errStat.status) || (first->objType != PPLOBJ_STR)) {
-                STACK_CLEAN;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "A single filename must be supplied when interpolating a bitmap image.");
-                TBADD2(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 return;
             }
             ppl_snprintfTrunc(filenameOut, sizeof(filenameOut), "%s", (char *) first->auxil);
-            STACK_CLEAN;
+            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
         }
 
         // glob filename
@@ -383,12 +369,12 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             }
             if ((wordexp(escaped, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open file '%s'.", escaped);
-                TBADD2(ERR_FILE, 0);
+                ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
                 return;
             }
             if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open file '%s'.", escaped);
-                TBADD2(ERR_FILE, 0);
+                ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
                 wordfree(&wordExp);
                 return;
             }
@@ -402,7 +388,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         if (infile == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open input file '%s'",
                               filenameOut);
-            TBADD2(ERR_FILE, 0);
+            ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
             return;
         }
 
@@ -412,7 +398,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             if (j == EOF) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Could not read any image data from the input file '%s'", filenameOut);
-                TBADD2(ERR_FILE, 0);
+                ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
                 fclose(infile);
                 return;
             }
@@ -421,7 +407,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         if ((buff[0] != 'B') && (buff[1] != 'M')) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "File '%s' does not appear to be a valid bitmap image.", filenameOut);
-            TBADD2(ERR_FILE, 0);
+            ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
             fclose(infile);
             return;
         }
@@ -429,7 +415,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         ppl_bmp_bmpread(&c->errcontext, infile, &bmpdata);
         if (bmpdata.data == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Reading of bitmap image data failed");
-            TBADD2(ERR_GENERIC, 0);
+            ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
             return;
         }
 
@@ -446,7 +432,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         if (bmpchars == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Out of memory whilst reading data from input file.");
-            TBADD2(ERR_MEMORY, 0);
+            ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
             return;
         }
 
@@ -472,7 +458,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                         "The minimum and maximum limits specified in the interpolate command for the x axis have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                         ppl_printUnit(c, unit + 0, NULL, NULL, 0, 1, 0),
                         ppl_printUnit(c, firstEntries + 0, NULL, NULL, 1, 1, 0));
-                TBADD2(ERR_UNIT, 0);
+                ppl_tbAddLine(c, pl, ERR_UNIT, 0, "");
                 return;
             }
         }
@@ -483,7 +469,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                         "The minimum and maximum limits specified in the interpolate command for the y axis have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                         ppl_printUnit(c, unit + 1, NULL, NULL, 0, 1, 0),
                         ppl_printUnit(c, firstEntries + 1, NULL, NULL, 1, 1, 0));
-                TBADD2(ERR_UNIT, 0);
+                ppl_tbAddLine(c, pl, ERR_UNIT, 0, "");
                 return;
             }
         }
@@ -498,7 +484,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             long int j;
             if (sortArray == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-                TBADD2(ERR_MEMORY, 0);
+                ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
                 return;
             }
             for (j = 0; j < i; j++) sortArray[j] = j;
@@ -573,7 +559,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                     c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "%s interpolation is only possible on data sets with members at at least %d distinct values of x.",
                     splineTypeName, NxRequired);
-            TBADD2(ERR_NUMERICAL, 0);
+            ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
             if (NcolRequired >= 3) {
                 free(xdata);
                 xdata = NULL;
@@ -589,20 +575,20 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             if (splineObj == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Failed to make interpolation object.");
-                TBADD2(ERR_INTERNAL, 0);
+                ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
                 return;
             }
             if (accel == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Failed to make GSL interpolation accelerator.");
-                TBADD2(ERR_MEMORY, 0);
+                ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
                 return;
             }
             status = gsl_spline_init(splineObj, xdata, ydata, k);
             if (status) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Error whilst creating interpolation object: %s", gsl_strerror(status));
-                TBADD2(ERR_INTERNAL, 0);
+                ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
                 return;
             }
         } else {
@@ -624,7 +610,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     if (desc == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Out of memory whilst adding interpolation object to function dictionary.");
-        TBADD2(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         return;
     }
     desc->unitX = firstEntries[0];
@@ -639,7 +625,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     if (desc->filename == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Out of memory whilst adding interpolation object to function dictionary.");
-        TBADD2(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         return;
     }
     strcpy(desc->filename, filenameOut);
@@ -650,7 +636,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     if (funcPtr == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Out of memory whilst adding interpolation object to function dictionary.");
-        TBADD2(ERR_MEMORY, 0);
+        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
         return;
     }
     if (NcolRequired == 2) funcPtr->functionType = PPL_FUNC_SPLINE;
@@ -683,7 +669,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         if (obj->objType == PPLOBJ_GLOB) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Variable declared global in global namespace.");
-            TBADD2(ERR_NAMESPACE, 0);
+            ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
             return;
         }
 

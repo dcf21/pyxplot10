@@ -28,6 +28,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/memAlloc.h"
+#include "userspace/stack.h"
 
 #include "canvasItems.h"
 #include "coreUtils/errorReport.h"
@@ -598,7 +599,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         img.data[p++] = component_r; \
         img.data[p++] = component_g; \
         img.data[p++] = component_b; \
-        EPS_STACK_POP; \
+        ppl_stackClean(x->c, stkLevelOld); /* Discard anything left on the stack */ \
     }
 
             C1Var = CVar[0];

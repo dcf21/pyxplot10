@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "coreUtils/memAlloc.h"
+#include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
 #include "mathsTools/dcfmath.h"
 #include "expressions/expCompile_fns.h"
@@ -294,7 +295,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     k = c->stackPtr;
     for (i = 0; i < tlen; i++)
         if (tokenBuff[i].state == (unsigned char) 'L') {
-            STACK_MUSTHAVE(c, 4);
+            ppl_stackMustHave(c, 4);
             if (c->stackFull) {
                 free(stkpos);
                 stkpos = NULL;
@@ -315,7 +316,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
              ((tokenBuff[i - 1].state != (unsigned char) 'R') && (tokenBuff[i - 1].state != (unsigned char) 'G')))) {
             int ei = i, upos, p, q = 0, errpos = -1;
             pplObj val;
-            STACK_MUSTHAVE(c, 4);
+            ppl_stackMustHave(c, 4);
             if (c->stackFull) {
                 free(stkpos);
                 stkpos = NULL;

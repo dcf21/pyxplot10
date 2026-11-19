@@ -31,6 +31,7 @@
 #include <gsl/gsl_math.h>
 
 #include "commands/fft.h"
+#include "userspace/stack.h"
 #include "commands/histogram.h"
 #include "commands/interpolate.h"
 #include "coreUtils/dict.h"
@@ -54,22 +55,6 @@
 
 #include "pplConstants.h"
 
-#define TBADD(et) \
-    ppl_tbAdd(context, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, et, inExprCharPos, inExpr->ascii, "")
-
-#define TBADD2(et, place) \
-    ppl_tbAdd(context, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, et, inExprCharPos, inExpr->ascii, place)
-
-#define STACK_POP \
-    { \
-        context->stackPtr--; \
-        ppl_garbageObject(&context->stack[context->stackPtr]); \
-        if (context->stack[context->stackPtr].refCount != 0) { \
-            strcpy(context->errStat.errBuff, "Stack forward reference detected."); \
-            TBADD(ERR_INTERNAL); \
-            goto cleanup; \
-        } \
-    }
 
 //! ppl_fnCall - Evaluate a function call. The function object and its arguments are taken from the top of the
 //! stack, and replaced by the result. Calling a module or class creates an instance of it, and calling a type
@@ -92,7 +77,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
     if (context->stackPtr < nArgs + 1) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "Attempt to call function with few items on the stack.");
-        TBADD(ERR_INTERNAL);
+        ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, inExprCharPos, "");
         return;
     }
     memcpy(&called, out, sizeof(pplObj));
@@ -105,7 +90,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
         if (nArgs != 0) {
             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                               "Instantiation takes zero arguments; %d supplied.", nArgs);
-            TBADD(ERR_TYPE);
+            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
             goto cleanup;
         }
         pplObjUser(out, 0, 1, &called);
@@ -120,13 +105,13 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 if (nArgs == 0) {
                     pplObjNum(out, 0, 0, 0);
                 } else if (nArgs == 1) {
-                    CAST_TO_NUM(&args[0]);
+                    if (ppl_castToNum(context, &args[0], inExpr, inExprCharPos)) goto cast_fail;
                     pplObjCpy(out, &args[0], 0, 0, 1);
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The numeric object constructor takes either zero or one arguments; %d supplied.",
                                       nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_STR:
@@ -143,20 +128,20 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The string object constructor takes either zero or one arguments; %d supplied.",
                                       nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_BOOL:
                 if (nArgs == 0) {
                     pplObjBool(out, 0, 1);
                 } else if (nArgs == 1) {
-                    CAST_TO_BOOL(&args[0]);
+                    ppl_castToBool(context, &args[0]);
                     pplObjCpy(out, &args[0], 0, 0, 1);
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The boolean object constructor takes either zero or one arguments; %d supplied.",
                                       nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_DATE:
@@ -169,12 +154,12 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The first argument to the date object constructor should be a date; an object of type <%s> was supplied.",
                                 pplObjTypeNames[args[0].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     }
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The date object constructor takes zero or one arguments; %d supplied.", nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_COL:
@@ -194,12 +179,12 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The first argument to the color object constructor should be a color; an object of type <%s> was supplied.",
                                 pplObjTypeNames[args[0].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     }
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The color object constructor takes zero or one arguments; %d supplied.", nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_DICT:
@@ -212,13 +197,13 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The first argument to the dictionary object constructor should be a dictionary; an object of type <%s> was supplied.",
                                 pplObjTypeNames[args[0].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     }
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The dictionary object constructor takes zero or one arguments; %d supplied.",
                                       nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_MOD:
@@ -235,13 +220,13 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The first argument to the module/instance object constructor should be a module or instance; an object of type <%s> was supplied.",
                                 pplObjTypeNames[args[0].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     }
                 } else {
                     ppl_snprintfTrunc(
                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                             "The module/instance object constructor takes zero or one arguments; %d supplied.", nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_FILE:
@@ -254,24 +239,24 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The first argument to the file object constructor should be a file object; an object of type <%s> was supplied.",
                                 pplObjTypeNames[args[0].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     }
                 } else {
                     sprintf(context->errStat.errBuff,
                             "The file object constructor takes zero or one arguments; %d supplied.", nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_TYPE:
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Creation of new data type objects is not permitted.");
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             case PPLOBJ_FUNC:
                 ppl_snprintfTrunc(
                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                         "New function objects must be created with the syntax f(x)=... or subroutine f(x) { ... }.");
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             case PPLOBJ_EXC:
                 if (nArgs == 1) {
@@ -284,12 +269,12 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         sprintf(context->errStat.errBuff,
                                 "The first argument to the exception object constructor should be a string; an object of type <%s> was supplied.",
                                 pplObjTypeNames[args[0].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     }
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The exception object constructor takes one argument; %d supplied.", nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_NULL:
@@ -298,7 +283,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 } else {
                     sprintf(context->errStat.errBuff, "The null object constructor takes zero arguments; %d supplied.",
                             nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 }
                 goto cleanup;
             case PPLOBJ_LIST:
@@ -308,7 +293,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 }
                 if (pplObjList(out, 0, 1, NULL) == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                    TBADD(ERR_MEMORY);
+                    ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                     goto cleanup;
                 }
                 if (nArgs < 1) goto cleanup;
@@ -354,27 +339,27 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Specified length of vector should be dimensionless; supplied length has units of <%s>.",
                                     ppl_printUnit(context, &args[0], NULL, NULL, 0, 1, 0));
-                            TBADD(ERR_TYPE);
+                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (args[0].flagComplex) {
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Specified length of vector should be real; supplied length is complex number.");
-                            TBADD(ERR_NUMERICAL);
+                            ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                             goto cleanup;
                         }
                         if ((args[0].real < 1) || (args[0].real > INT_MAX)) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Specified length of vector should be in the range 1<len<%d.", INT_MAX);
-                            TBADD(ERR_RANGE);
+                            ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                             goto cleanup;
                         }
                         len = floor(args[0].real);
                         if (pplObjVector(out, 0, 1, len) == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
                         v = ((pplVector *) out->auxil)->v;
@@ -389,13 +374,13 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         if (len == 0) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Cannot create a vector of length zero.");
-                            TBADD(ERR_RANGE);
+                            ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (pplObjVector(out, 0, 1, len) == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
                         v = ((pplVector *) out->auxil)->v;
@@ -406,14 +391,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
                                         pplObjTypeNames[item->objType]);
-                                TBADD(ERR_TYPE);
+                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             if (item->flagComplex) {
                                 ppl_snprintfTrunc(
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                                TBADD(ERR_TYPE);
+                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             ppl_unitsDimCpy(out, item);
@@ -426,14 +411,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
                                         pplObjTypeNames[item->objType]);
-                                TBADD(ERR_TYPE);
+                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             if (item->flagComplex) {
                                 ppl_snprintfTrunc(
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                                TBADD(ERR_TYPE);
+                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             if (!ppl_unitsDimEqual(item, out)) {
@@ -454,7 +439,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
                                             ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
                                 }
-                                TBADD(ERR_UNIT);
+                                ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                 goto cleanup;
                             }
                             gsl_vector_set(v, i, item->real);
@@ -468,7 +453,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     gsl_vector *v;
                     if (pplObjVector(out, 0, 1, nArgs) == NULL) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                        TBADD(ERR_MEMORY);
+                        ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
                     v = ((pplVector *) out->auxil)->v;
@@ -479,14 +464,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
                                     pplObjTypeNames[item->objType]);
-                            TBADD(ERR_TYPE);
+                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (item->flagComplex) {
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                            TBADD(ERR_TYPE);
+                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                             goto cleanup;
                         }
                         ppl_unitsDimCpy(out, item);
@@ -499,14 +484,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
                                     pplObjTypeNames[item->objType]);
-                            TBADD(ERR_TYPE);
+                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (item->flagComplex) {
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                            TBADD(ERR_TYPE);
+                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (!ppl_unitsDimEqual(item, out)) {
@@ -527,7 +512,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
                                         ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
                             }
-                            TBADD(ERR_UNIT);
+                            ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                             goto cleanup;
                         }
                         gsl_vector_set(v, i, item->real);
@@ -545,7 +530,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "When initialising a matrix from another matrix, only one argument should be supplied (the source matrix). %d have been provided.",
                                 nArgs);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
                     pplObjDeepCpy(out, &args[0], 0, 0, 1);
@@ -558,7 +543,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "When specifying the size of a matrix, two numerical arguments must be supplied. %d have been provided.",
                                 nArgs);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
                     if (args[1].objType != PPLOBJ_NUM) {
@@ -566,7 +551,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "When specifying the size of a matrix, two numerical arguments must be supplied. Second argument has type <%s>.",
                                 pplObjTypeNames[args[1].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
                     if (!args[0].dimensionless) {
@@ -574,7 +559,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "When specifying the size of a matrix, both numerical arguments must be dimensionless. First has units of <%s>.",
                                 ppl_printUnit(context, &args[0], NULL, NULL, 1, 1, 0));
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
                     if (!args[1].dimensionless) {
@@ -582,14 +567,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "When specifying the size of a matrix, both numerical arguments must be dimensionless. Second has units of <%s>.",
                                 ppl_printUnit(context, &args[1], NULL, NULL, 1, 1, 0));
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
                     if ((args[0].flagComplex) || (args[1].flagComplex)) {
                         ppl_snprintfTrunc(
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "When specifying the size of a matrix, both arguments must be real numbers. Supplied arguments are complex.");
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
                     s1 = args[0].real;
@@ -597,18 +582,18 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     if ((s1 < 1) || (s1 > INT_MAX)) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Specified dimension of vector should be in the range 1<len<%d.", INT_MAX);
-                        TBADD(ERR_RANGE);
+                        ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                         goto cleanup;
                     }
                     if ((s2 < 1) || (s2 > INT_MAX)) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Specified dimension of vector should be in the range 1<len<%d.", INT_MAX);
-                        TBADD(ERR_RANGE);
+                        ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                         goto cleanup;
                     }
                     if (pplObjMatrix(out, 0, 1, s1, s2) == NULL) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                        TBADD(ERR_MEMORY);
+                        ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
                     m = ((pplMatrix *) out->auxil)->m;
@@ -622,7 +607,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     gsl_matrix *m;
                     if (pplObjMatrix(out, 0, 1, s1, s2) == NULL) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
-                        TBADD(ERR_MEMORY);
+                        ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
                     m = ((pplMatrix *) out->auxil)->m;
@@ -635,7 +620,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "When initialising a matrix from a list of vectors, all arguments must be vectors. Supplied argument has type <%s>.",
                                     pplObjTypeNames[args[i].objType]);
-                            TBADD(ERR_TYPE);
+                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                             goto cleanup;
                         }
                         v = ((pplVector *) args[i].auxil)->v;
@@ -644,7 +629,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "When initialising a matrix from a list of vectors, the vectors must have consistent lengths. Supplied vector has length %ld whereas previous arguments have had a length %ld.",
                                     (long) v->size, s1);
-                            TBADD(ERR_RANGE);
+                            ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (!ppl_unitsDimEqual(out, &args[i])) {
@@ -653,7 +638,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     "When initialising a matrix from a list of vectors, the vectors must all have the same dimensions. Supplied vectors have units of <%s> and <%s>.",
                                     ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
                                     ppl_printUnit(context, &args[i], NULL, NULL, 1, 1, 0));
-                            TBADD(ERR_UNIT);
+                            ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                         }
                         for (j = 0; j < s1; j++) { gsl_matrix_set(m, j, i, gsl_vector_get(v, j)); }
                     }
@@ -666,7 +651,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     if (len == 0) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Cannot create a matrix of dimension zero.");
-                        TBADD(ERR_MEMORY);
+                        ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
                     item = (pplObj *) listin->first->data;
@@ -681,13 +666,13 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "When initialising a matrix from a list of lists, all arguments must be lists. Supplied argument has type <%s>.",
                                         pplObjTypeNames[args[i].objType]);
-                                TBADD(ERR_TYPE);
+                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
                         if (pplObjMatrix(out, 0, 1, s2, s1) == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
                         m = ((pplMatrix *) out->auxil)->m;
@@ -701,7 +686,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "When initialising a matrix from a list of lists, the lists must have consistent lengths. Supplied list has length %ld whereas previous lists have had a length %ld.",
                                         (long) listin->length, s1);
-                                TBADD(ERR_RANGE);
+                                ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             for (j = 0; j < s1; j++) {
@@ -711,7 +696,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "When initialising a matrix from a list of lists, the elements must all be numerical values; supplied element has type <%s>.",
                                             pplObjTypeNames[item->objType]);
-                                    TBADD(ERR_RANGE);
+                                    ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                                     goto cleanup;
                                 }
                                 if (!ppl_unitsDimEqual(out, item)) {
@@ -720,14 +705,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             "When initialising a matrix from a list of lists, all of the elements must have the same dimensions. Supplied elements have units of <%s> and <%s>.",
                                             ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
                                             ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
-                                    TBADD(ERR_UNIT);
+                                    ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                     goto cleanup;
                                 }
                                 if (item->flagComplex) {
                                     ppl_snprintfTrunc(
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "Matrices can only hold real numbers; supplied elements are complex.");
-                                    TBADD(ERR_NUMERICAL);
+                                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                                     goto cleanup;
                                 }
                                 gsl_matrix_set(m, i, j, item->real);
@@ -744,13 +729,13 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "When initialising a matrix from a list of vectors, only one argument should be supplied. %d arguments were supplied.",
                                     nArgs);
-                            TBADD(ERR_RANGE);
+                            ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (pplObjMatrix(out, 0, 1, s1, s2) == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
                         m = ((pplMatrix *) out->auxil)->m;
@@ -764,7 +749,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "When initialising a matrix from a list of vectors, all arguments must be vectors. Supplied argument has type <%s>.",
                                         pplObjTypeNames[item->objType]);
-                                TBADD(ERR_TYPE);
+                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             v = ((pplVector *) item->auxil)->v;
@@ -773,7 +758,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "When initialising a matrix from a list of vectors, the vectors must have consistent lengths. Supplied vector has length %ld whereas previous arguments have had a length %ld.",
                                         (long) v->size, s1);
-                                TBADD(ERR_RANGE);
+                                ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             if (!ppl_unitsDimEqual(out, item)) {
@@ -782,7 +767,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         "When initialising a matrix from a list of vectors, the vectors must all have the same dimensions. Supplied vectors have units of <%s> and <%s>.",
                                         ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
                                         ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
-                                TBADD(ERR_UNIT);
+                                ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                 goto cleanup;
                             }
                             for (j = 0; j < s1; j++) { gsl_matrix_set(m, j, i, gsl_vector_get(v, j)); }
@@ -798,19 +783,19 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "When initialising a matrix from a list of lists, only one argument should be supplied. %d arguments were supplied.",
                                     nArgs);
-                            TBADD(ERR_RANGE);
+                            ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (s1 == 0) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Cannot create a matrix of dimension zero.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
                         if (pplObjMatrix(out, 0, 1, s2, s1) == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
-                            TBADD(ERR_MEMORY);
+                            ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
                         m = ((pplMatrix *) out->auxil)->m;
@@ -823,7 +808,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "When initialising a matrix from a list of lists, all arguments must be lists. Supplied argument has type <%s>.",
                                         pplObjTypeNames[item->objType]);
-                                TBADD(ERR_TYPE);
+                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             list *listin2 = (list *) item->auxil;
@@ -833,7 +818,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                         "When initialising a matrix from a list of lists, the lists must have consistent lengths. Supplied list has length %ld whereas previous lists have had a length %ld.",
                                         (long) listin2->length, s1);
-                                TBADD(ERR_RANGE);
+                                ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                                 goto cleanup;
                             }
                             for (j = 0; j < s1; j++) {
@@ -843,7 +828,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "When initialising a matrix from a list of lists, the elements must all be numerical values; supplied element has type <%s>.",
                                             pplObjTypeNames[item2->objType]);
-                                    TBADD(ERR_RANGE);
+                                    ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                                     goto cleanup;
                                 }
                                 if (!ppl_unitsDimEqual(out, item2)) {
@@ -852,14 +837,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             "When initialising a matrix from a list of lists, all of the elements must have the same dimensions. Supplied elements have units of <%s> and <%s>.",
                                             ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
                                             ppl_printUnit(context, item2, NULL, NULL, 1, 1, 0));
-                                    TBADD(ERR_UNIT);
+                                    ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                     goto cleanup;
                                 }
                                 if (item->flagComplex) {
                                     ppl_snprintfTrunc(
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "Matrices can only hold real numbers; supplied elements are complex.");
-                                    TBADD(ERR_NUMERICAL);
+                                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                                     goto cleanup;
                                 }
                                 gsl_matrix_set(m, i, j, item2->real);
@@ -870,14 +855,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Cannot initialise a matrix from an object of type <%s>.",
                                           pplObjTypeNames[item->objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
                 } else {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Cannot initialise a matrix from an object of type <%s>.",
                                       pplObjTypeNames[args[0].objType]);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     goto cleanup;
                 }
                 goto cleanup;
@@ -888,7 +873,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
     if (t != PPLOBJ_FUNC) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "Object of type <%s> cannot be called as a function.", pplObjTypeNames[t]);
-        TBADD(ERR_TYPE);
+        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
         goto cleanup;
     }
     fn = (pplFunc *) called.auxil;
@@ -901,18 +886,18 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             if (nArgs != 1) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "The unit() function takes exactly one argument; %d supplied.", nArgs);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
             ppl_unitsStringEvaluate(context, u, out, &end, &errPos, context->errStat.errBuff);
             if (errPos >= 0) {
-                TBADD(ERR_UNIT);
+                ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                 goto cleanup;
             }
             if (end != strlen(u)) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Unexpected trailing matter after unit string.");
-                TBADD(ERR_UNIT);
+                ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                 goto cleanup;
             }
         } else if (fn->minArgs == 2) // diff_d()
@@ -927,19 +912,19 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             else {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "The diff_d() function takes two or thee arguments; %d supplied.", nArgs - 1);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
             if (args[0].objType != PPLOBJ_STR) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Dummy variable not passed to diff_d() as a string");
-                TBADD(ERR_INTERNAL);
+                ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, inExprCharPos, "");
                 goto cleanup;
             }
             if (args[1].objType != PPLOBJ_STR) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Differentiation expression not passed to diff_d() as a string");
-                TBADD(ERR_INTERNAL);
+                ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, inExprCharPos, "");
                 goto cleanup;
             }
             if (args[2].objType != PPLOBJ_NUM) {
@@ -947,7 +932,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                         "The diff_d() function requires a number as its second argument; supplied argument has type <%s>.",
                         pplObjTypeNames[args[2].objType]);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
             if ((nArgs == 4) && (args[3].objType != PPLOBJ_NUM)) {
@@ -955,7 +940,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                         "The diff_d() function requires a number as its third argument; supplied argument has type <%s>.",
                         pplObjTypeNames[args[3].objType]);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
             xpos = &args[2];
@@ -976,19 +961,19 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             if (nArgs != 4) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "The int_d() function takes two or three arguments; %d supplied.", nArgs - 1);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
             if (args[0].objType != PPLOBJ_STR) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Dummy variable not passed to int_d() as a string");
-                TBADD(ERR_INTERNAL);
+                ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, inExprCharPos, "");
                 goto cleanup;
             }
             if (args[1].objType != PPLOBJ_STR) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Integration expression not passed to diff_d() as a string");
-                TBADD(ERR_INTERNAL);
+                ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, inExprCharPos, "");
                 goto cleanup;
             }
             if (args[2].objType != PPLOBJ_NUM) {
@@ -996,7 +981,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                         "The int_d() function requires a number as its second argument; supplied argument has type <%s>.",
                         pplObjTypeNames[args[2].objType]);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
             if (args[3].objType != PPLOBJ_NUM) {
@@ -1004,7 +989,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         context->errStat.errBuff, sizeof(context->errStat.errBuff),
                         "The int_d() function requires a number as its third argument; supplied argument has type <%s>.",
                         pplObjTypeNames[args[3].objType]);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
             ppl_expIntegrate(context, inExpr, inExprCharPos, (char *) args[1].auxil, k, (char *) args[0].auxil,
@@ -1017,7 +1002,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 if (context->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Function takes exactly %d arguments; %d supplied.", fn->maxArgs, nArgs);
-                    TBADD(ERR_TYPE);
+                    ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                     goto cleanup;
                 } else {
                     context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1028,7 +1013,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             if (context->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Function takes a minimum of %d arguments; %d supplied.", fn->minArgs, nArgs);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             } else {
                 context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1038,7 +1023,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             if (context->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Function takes a maximum of %d arguments; %d supplied.", fn->maxArgs, nArgs);
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             } else {
                 context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1053,7 +1038,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Function required numeric arguments; argument %d has type <%s>.", i + 1,
                                           pplObjTypeNames[args[i].objType]);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     } else {
                         context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1067,7 +1052,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     if (context->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Function requires real arguments; argument %d is complex.", i + 1);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     } else {
                         context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1083,7 +1068,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "Function requires dimensionless arguments; argument %d has dimensions of <%s>.", i + 1,
                                 ppl_printUnit(context, &args[i], NULL, NULL, 1, 1, 0));
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     } else {
                         context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1097,7 +1082,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     if (context->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Function requires finite arguments; argument %d is not finite.", i + 1);
-                        TBADD(ERR_TYPE);
+                        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     } else {
                         context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1109,7 +1094,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             if (context->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Function is a method which has been detached from the object that owns it.");
-                TBADD(ERR_TYPE);
+                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             } else {
                 context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1123,7 +1108,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 ((void (*)(ppl_context *, pplObj *, int, int *, int *, char *)) fn->functionPtr)(
                         context, args, nArgs, &stat, &errType, context->errStat.errBuff);
                 if (stat) {
-                    TBADD(errType);
+                    ppl_tbAddExpr(context, inExpr, errType, inExprCharPos, "");
                     goto cleanup;
                 }
                 break;
@@ -1144,7 +1129,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "Argument %d supplied to this function is not numeric, but a numeric range is specified for this argument in the function's definition.",
                                             k + 1);
-                                    TBADD(ERR_NUMERICAL);
+                                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                                     return;
                                 } else if (!ppl_unitsDimEqual(f->min + k, args + k)) {
                                     ppl_snprintfTrunc(
@@ -1152,14 +1137,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             "Argument %d supplied to this function is dimensionally incompatible with the argument's specified min/max range: argument has dimensions of <%s>, meanwhile range has dimensions of <%s>.",
                                             k + 1, ppl_printUnit(context, args + k, NULL, NULL, 0, 1, 0),
                                             ppl_printUnit(context, f->min + k, NULL, NULL, 1, 1, 0));
-                                    TBADD(ERR_UNIT);
+                                    ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                     return;
                                 } else if (args[k].flagComplex) {
                                     ppl_snprintfTrunc(
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "Argument %d supplied to this function must be a real number: any arguments which have min/max ranges specified must be real.",
                                             k + 1);
-                                    TBADD(ERR_NUMERICAL);
+                                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                                     return;
                                 } else {
                                     checked[k] = 1;
@@ -1178,7 +1163,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "Argument %d supplied to this function is not numeric, but a numeric range is specified for this argument in the function's definition.",
                                             k + 1);
-                                    TBADD(ERR_NUMERICAL);
+                                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                                     return;
                                 } else if (!ppl_unitsDimEqual(f->max + k, args + k)) {
                                     ppl_snprintfTrunc(
@@ -1186,14 +1171,14 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                             "Argument %d supplied to this function is dimensionally incompatible with the argument's specified min/max range: argument has dimensions of <%s>, meanwhile range has dimensions of <%s>.",
                                             k + 1, ppl_printUnit(context, args + k, NULL, NULL, 0, 1, 0),
                                             ppl_printUnit(context, f->max + k, NULL, NULL, 1, 1, 0));
-                                    TBADD(ERR_UNIT);
+                                    ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                     return;
                                 } else if (args[k].flagComplex) {
                                     ppl_snprintfTrunc(
                                             context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                             "Argument %d supplied to this function must be a real number: any arguments which have min/max ranges specified must be real.",
                                             k + 1);
-                                    TBADD(ERR_UNIT);
+                                    ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                     return;
                                 } else {
                                     checked[k] = 1;
@@ -1213,7 +1198,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     if (context->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "This function is not defined in the requested region of parameter space.");
-                        TBADD(ERR_RANGE);
+                        ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                         goto cleanup;
                     } else {
                         context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1231,7 +1216,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "This function is not defined in the requested region of parameter space.");
-                            TBADD(ERR_RANGE);
+                            ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                             goto cleanup;
                         } else {
                             context->stack[context->stackPtr - 1 - nArgs].real = GSL_NAN;
@@ -1240,15 +1225,15 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     }
 
                     // Check that there's enough space on the stack
-                    STACK_MUSTHAVE(context, nArgs + 1);
+                    ppl_stackMustHave(context, nArgs + 1);
                     if (context->stackFull) {
                         strcpy(context->errStat.errBuff, "Stack overflow.");
-                        TBADD(ERR_MEMORY);
+                        ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
                     if (context->ns_ptr > CONTEXT_DEPTH - 2) {
                         strcpy(context->errStat.errBuff, "Stack overflow.");
-                        TBADD(ERR_MEMORY);
+                        ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
 
@@ -1259,21 +1244,22 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         context->namespaces[++context->ns_ptr] = d;
                     }
 
-                    // Insert arguments into namespace dictionary
+                    // Insert arguments into namespace dictionary. Any existing variables with the same names as the
+                    // arguments are saved in the stack slots above the arguments (stkp + j), to be restored afterwards.
                     for (k = j = 0; j < nArgs; j++) {
                         pplObj *varObj;
                         ppl_contextGetVarPointer(context, fn->argList + k, &varObj, &context->stack[stkp + j]);
                         pplObjCpy(varObj, args + j, 0, varObj->amMalloced, 1);
                         k += strlen(fn->argList + k) + 1;
                     }
-                    context->stackPtr += nArgs;
+                    context->stackPtr += nArgs; // Keep the saved variables on the stack while the function runs
 
                     // Insert variable 'self' into namespace, if this is a method
                     if (setSelf) {
                         pplObj *varObj;
                         ppl_contextGetVarPointer(context, "self", &varObj, &context->stack[stkp + j]);
                         pplObjCpy(varObj, called.self_this, 0, varObj->amMalloced, 1);
-                        context->stackPtr++;
+                        context->stackPtr++; // Keep any saved variable called self on the stack too
                     }
 
                     // Evaluate function
@@ -1292,15 +1278,17 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     // Add traceback information if error happened
                     if (context->errStat.status) {
                         strcpy(context->errStat.errBuff, "");
-                        TBADD2(ERR_GENERIC, "called function");
+                        ppl_tbAddExpr(context, inExpr, ERR_GENERIC, inExprCharPos, "called function");
                     }
 
                     // Tidy up
                     if (output != NULL) {
+                        // Move the function's result into the slot reserved for it below the arguments, and remove
+                        // it from the top of the stack
                         memcpy(args - 1, output, sizeof(pplObj));
                         context->stackPtr--;
                     }
-                    context->stackPtr -= nArgs + setSelf;
+                    context->stackPtr -= nArgs + setSelf; // Release the slots used to save variables
                     context->ns_ptr = ns_ptr;
                 }
                 break;
@@ -1314,7 +1302,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 // Check that there's enough space on the stack
                 if (context->ns_ptr > CONTEXT_DEPTH - 2) {
                     strcpy(context->errStat.errBuff, "Stack overflow.");
-                    TBADD(ERR_MEMORY);
+                    ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                     goto cleanup;
                 }
 
@@ -1322,7 +1310,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 d = ppl_dictInit(1);
                 if (d == NULL) {
                     strcpy(context->errStat.errBuff, "Out of memory.");
-                    TBADD(ERR_MEMORY);
+                    ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                     goto cleanup;
                 }
                 context->namespaces[++context->ns_ptr] = d;
@@ -1356,12 +1344,12 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 // Garbage subroutine's namespace
                 ppl_garbageNamespace(d);
                 context->ns_ptr = ns_ptr;
-                while (context->stackPtr > stkLevelOld) { STACK_POP; }
+                ppl_stackClean(context, stkLevelOld); // Discard anything left on the stack
 
                 // Add traceback information if error happened
                 if (context->errStat.status) {
                     strcpy(context->errStat.errBuff, "");
-                    TBADD2(ERR_GENERIC, "called subroutine");
+                    ppl_tbAddExpr(context, inExpr, ERR_GENERIC, inExprCharPos, "called subroutine");
                     goto cleanup;
                 }
 
@@ -1378,7 +1366,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 FFTDescriptor *f = (FFTDescriptor *) fn->functionPtr;
                 ppl_fft_evaluate(context, "fft", f, args, out, &stat, context->errStat.errBuff);
                 if (stat) {
-                    TBADD(ERR_NUMERICAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                     goto cleanup;
                 }
                 break;
@@ -1388,7 +1376,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 histogramDescriptor *h = (histogramDescriptor *) fn->functionPtr;
                 ppl_histogram_evaluate(context, "histogram", h, args, out, &stat, context->errStat.errBuff);
                 if (stat) {
-                    TBADD(ERR_NUMERICAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                     goto cleanup;
                 }
                 break;
@@ -1398,7 +1386,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 splineDescriptor *s = (splineDescriptor *) fn->functionPtr;
                 ppl_spline_evaluate(context, "interpolation", s, args, out, &stat, context->errStat.errBuff);
                 if (stat) {
-                    TBADD(ERR_NUMERICAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                     goto cleanup;
                 }
                 break;
@@ -1410,7 +1398,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 ppl_interp2d_evaluate(context, "interpolation", s, args, args + 1, fn->functionType == PPL_FUNC_BMPDATA,
                                       out, &stat, context->errStat.errBuff);
                 if (stat) {
-                    TBADD(ERR_NUMERICAL);
+                    ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, inExprCharPos, "");
                     goto cleanup;
                 }
                 break;
@@ -1418,7 +1406,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             default: {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Call of unsupported function type.");
-                TBADD(ERR_INTERNAL);
+                ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, inExprCharPos, "");
                 goto cleanup;
             }
         }
@@ -1427,7 +1415,7 @@ cleanup:
 cast_fail:
     out->self_this = NULL;
     out->refCount = 1;
-    for (i = 0; i < nArgs; i++) { STACK_POP; }
+    for (i = 0; i < nArgs; i++) { ppl_stackPop(context); } // Pop the function's arguments
     ppl_garbageObject(&called);
     return;
 }

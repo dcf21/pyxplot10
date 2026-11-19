@@ -31,6 +31,7 @@
 #include <gsl/gsl_multimin.h>
 
 #include "commands/eqnsolve.h"
+#include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
 #include "coreUtils/list.h"
 #include "coreUtils/memAlloc.h"
@@ -434,7 +435,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
         }
         {
             EPSComm *x = X;
-            EPS_STACK_POP;
+            ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
         }
     }
 
@@ -447,7 +448,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
 FAIL:
     {
         EPSComm *x = X;
-        EPS_STACK_POP;
+        ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
     }
     ppl_contextRestoreVarPointer(X->c, VarName, &DummyTemp);
     out->AxisLinearInterpolation = NULL;
@@ -533,7 +534,7 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
 end:
     {
         EPSComm *x = data->x;
-        EPS_STACK_POP;
+        ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack before giving up
     }
     return output;
 }

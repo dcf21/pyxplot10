@@ -26,6 +26,7 @@
 #include <gsl/gsl_math.h>
 
 #include "expressions/expEvalSlice.h"
+#include "userspace/stack.h"
 #include "stringTools/asciidouble.h"
 #include "userspace/context.h"
 #include "userspace/garbageCollector.h"
@@ -35,17 +36,6 @@
 
 #include "pplConstants.h"
 
-#define STACK_POP \
-    { \
-        context->stackPtr--; \
-        ppl_garbageObject(&context->stack[context->stackPtr]); \
-        if (context->stack[context->stackPtr].refCount != 0) { \
-            *status = 1; \
-            *errType = ERR_INTERNAL; \
-            strcpy(errText, "Stack forward reference detected."); \
-            goto fail; \
-        } \
-    }
 
 //! ppl_sliceItem - Evaluate the [] operator with a single index, e.g. a[3], which looks up an item in a list,
 //! vector, matrix row, dictionary or string. The object and index are taken from the top of the stack, and replaced
@@ -255,7 +245,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
     }
 
 cleanup:
-    for (i = 0; i < nArgs; i++) { STACK_POP; }
+    for (i = 0; i < nArgs; i++) { ppl_stackPop(context); } // Pop the subscripts
     ppl_garbageObject(&called);
     return;
 fail:
@@ -462,7 +452,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
     }
 
 cleanup:
-    for (i = 0; i < nArgs; i++) { STACK_POP; }
+    for (i = 0; i < nArgs; i++) { ppl_stackPop(context); } // Pop the subscripts
     ppl_garbageObject(&called);
     return;
 fail:

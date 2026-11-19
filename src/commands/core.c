@@ -69,7 +69,6 @@
 #include "input.h"
 #include "pplConstants.h"
 
-#define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 //! ppl_directive_assert - Implement the assert command, which raises an error if an expression is false, or if a
 //! version requirement is not met
@@ -89,12 +88,11 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
     lt = (stk[PARSE_assert_lt].objType == PPLOBJ_STR);
 
     if (val->objType != PPLOBJ_ZOM) {
-        ppl_context *context = c;
-        CAST_TO_BOOL(val);
+        ppl_castToBool(c, val);
         if (txt == NULL) txt = "Assertion was not true.";
         if (val->real < 0.5) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "%s", txt);
-            TBADD(ERR_ASSERT, in->stkCharPos[PARSE_assert_expr]);
+            ppl_tbAddLine(c, pl, ERR_ASSERT, in->stkCharPos[PARSE_assert_expr], "");
             return;
         }
     }
@@ -107,13 +105,13 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
 #define VERSION_FAIL \
     { \
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "%s", txt); \
-        TBADD(ERR_ASSERT, in->stkCharPos[PARSE_assert_version]); \
+        ppl_tbAddLine(c, pl, ERR_ASSERT, in->stkCharPos[PARSE_assert_version], ""); \
         return; \
     }
 #define VERSION_MALF \
     { \
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "Malformed version string."); \
-        TBADD(ERR_SYNTAX, in->stkCharPos[PARSE_assert_version]); \
+        ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_assert_version], ""); \
         return; \
     }
         if (txt == NULL) txt = txtauto;
@@ -185,19 +183,19 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
 
         if ((wordexp(dirName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not enter directory '%s'.", dirName);
-            TBADD(ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path]);
+            ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path], "");
             return;
         }
         if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not enter directory '%s'.", dirName);
-            TBADD(ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path]);
+            ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path], "");
             wordfree(&wordExp);
             return;
         }
         wordfree(&wordExp);
         if (chdir(globData.gl_pathv[0]) < 0) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not change into directory '%s'.", globData.gl_pathv[0]);
-            TBADD(ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path]);
+            ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path], "");
             globfree(&globData);
             break;
         }
@@ -261,7 +259,7 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
     if (c->ns_ptr < 2) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Cannot declare global variables when not in a subroutine or module namespace.");
-        TBADD(ERR_NAMESPACE, 0);
+        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
         return;
     }
 
@@ -282,14 +280,14 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
             obj = (pplObj *) ppl_dictLookup(c->namespaces[c->ns_ptr], varname);
             if (obj == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-                TBADD(ERR_MEMORY, 0);
+                ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
                 return;
             }
         }
         if ((obj == NULL) || (c->namespaces[c->ns_ptr]->immutable)) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Cannot modify variable in immutable namespace.");
-            TBADD(ERR_NAMESPACE, in->stkCharPos[pos + PARSE_global_var_name_var_names]);
+            ppl_tbAddLine(c, pl, ERR_NAMESPACE, in->stkCharPos[pos + PARSE_global_var_name_var_names], "");
             return;
         }
         if (obj->objType == PPLOBJ_GLOB) return;
@@ -330,7 +328,7 @@ void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOut
     snprintf(
             c->errStat.errBuff, LSTR_LENGTH,
             "The 'history' command is not available as the GNU readline library was not linked to when Pyxplot was installed.");
-    TBADD(ERR_GENERIC, 0);
+    ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
     return;
 #endif
 }
@@ -364,14 +362,14 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
 
     if ((wordexp(fn, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not access file '%s'.", fn);
-        TBADD(ERR_FILE, in->stkCharPos[PARSE_load_filename]);
+        ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[PARSE_load_filename], "");
         return;
     }
     for (j = 0; (j < wordExp.we_wordc) && (!cancellationFlag); j++) {
         if ((glob(wordExp.we_wordv[j], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
             if (wordExp.we_wordc == 1) {
                 snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not access file '%s'.", fn);
-                TBADD(ERR_FILE, in->stkCharPos[PARSE_load_filename]);
+                ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[PARSE_load_filename], "");
                 wordfree(&wordExp);
                 return;
             } else {
@@ -408,7 +406,7 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
     if (c->ns_ptr < 2) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Cannot declare global variables when not in a subroutine or module namespace.");
-        TBADD(ERR_NAMESPACE, 0);
+        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
         return;
     }
 
@@ -427,7 +425,7 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
                     c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "Variable '%s' has not previously been declared global in this namespace. It is already a local variable.",
                     varname);
-            TBADD(ERR_NAMESPACE, in->stkCharPos[pos + PARSE_local_var_name_var_names]);
+            ppl_tbAddLine(c, pl, ERR_NAMESPACE, in->stkCharPos[pos + PARSE_local_var_name_var_names], "");
             return;
         }
 
@@ -504,7 +502,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     if (outfile == NULL) {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "The save command could not open output file '%s' for writing.",
                  outfname);
-        TBADD(ERR_FILE, in->stkCharPos[pos]);
+        ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[pos], "");
         return;
     }
     fprintf(outfile, "# Command script saved by Pyxplot %s\n# Timestamp: %s\n", VERSION,
@@ -525,7 +523,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     snprintf(
             c->errStat.errBuff, LSTR_LENGTH,
             "The 'save' command is not available as the GNU readline library was not linked to when Pyxplot was installed.");
-    TBADD(ERR_GENERIC, 0);
+    ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
     return;
 #endif
 }
@@ -543,18 +541,18 @@ void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *
     if (tempstr != NULL) {
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unrecognised set option '%s'.", tempstr);
-            TBADD(ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option]);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
         } else {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, ppltxt_set, tempstr);
-            TBADD(ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option]);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
         }
     } else {
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "set command detected with no set option following it.");
-            TBADD(ERR_SYNTAX, 0);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
         } else {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "%s", ppltxt_set_noword);
-            TBADD(ERR_SYNTAX, 0);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
         }
     }
     return;
@@ -573,18 +571,18 @@ void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput
     if (tempstr != NULL) {
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unrecognised set option '%s'.", tempstr);
-            TBADD(ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option]);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
         } else {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, ppltxt_unset, tempstr);
-            TBADD(ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option]);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
         }
     } else {
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "unset command detected with no set option following it.");
-            TBADD(ERR_SYNTAX, 0);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
         } else {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "%s", ppltxt_unset_noword);
-            TBADD(ERR_SYNTAX, 0);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
         }
     }
     return;
@@ -611,7 +609,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
     if (obj->objType == PPLOBJ_GLOB) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Variable declared global in global namespace.");
-        TBADD(ERR_NAMESPACE, 0);
+        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
         return;
     }
 

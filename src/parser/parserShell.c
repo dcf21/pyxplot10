@@ -27,6 +27,7 @@
 #include <sys/wait.h>
 
 #include "commands/core.h"
+#include "userspace/stack.h"
 #include "commands/eqnsolve.h"
 #include "commands/fft.h"
 #include "commands/fit.h"
@@ -69,18 +70,6 @@
 #include "children.h"
 #include "pplConstants.h"
 
-#define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
-
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            strcpy(c->errStat.errBuff, "Stack forward reference detected."); \
-            TBADD(ERR_INTERNAL, 0); \
-            return; \
-        } \
-    }
 
 //! ppl_parserShell - Run a command whose parameters have been placed in an output stack by ppl_parserExecute(), by
 //! dispatching it to the function which implements it. Expressions typed on their own are evaluated and their values
@@ -136,7 +125,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
         }
 
         // Clean up stack
-        while (c->stackPtr > stkLevelOld) { STACK_POP; }
+        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
         return;
     }
 
@@ -295,7 +284,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     else if (strcmp(d, "with") == 0) ppl_directive_with(c, pl, in, interactive, iterDepth);
     else {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unimplemented command: %s", d);
-        TBADD(ERR_INTERNAL, 0);
+        ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
     }
 
     // Ascend out of memory context

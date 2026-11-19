@@ -30,6 +30,7 @@
 #include <gsl/gsl_math.h>
 
 #include "canvasItems.h"
+#include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
 #include "datafile.h"
 
@@ -59,14 +60,6 @@
 #include "userspace/unitsArithmetic.h"
 #include "userspace/unitsDisp.h"
 
-#define TBADD(et, msg, pos) \
-    { \
-        strcpy(c->errStat.errBuff, msg); \
-        ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, ""); \
-    }
-
-#define TBADD2(et, pos) \
-    { ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, ""); }
 
 //! canvas_item_delete - Free an item on the multiplot canvas, including its settings, axes, arrows, labels, plot
 //! items and any data stored with them
@@ -923,7 +916,9 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
     int pos;
 
     if (canvas_items == NULL) {
-        TBADD(ERR_GENERIC, "There are currently no items on the multiplot canvas.", 0);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
+                          "There are currently no items on the multiplot canvas.");
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
 
@@ -967,7 +962,9 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     int pos;
 
     if (canvas_items == NULL) {
-        TBADD(ERR_GENERIC, "There are currently no items on the multiplot canvas.", 0);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
+                          "There are currently no items on the multiplot canvas.");
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
 
@@ -1022,7 +1019,9 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     canvas_item *ptr;
 
     if (canvas_items == NULL) {
-        TBADD(ERR_GENERIC, "There are currently no items on the multiplot canvas.", 0);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
+                          "There are currently no items on the multiplot canvas.");
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
 
@@ -1037,7 +1036,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     if (ptr == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "There is no multiplot item with ID %d.",
                           moveno);
-        TBADD2(ERR_GENERIC, 0);
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
     rotatable = ((ptr->type != CANVAS_ARROW) && (ptr->type != CANVAS_CIRC) && (ptr->type != CANVAS_PIE) &&
@@ -1109,7 +1108,9 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     canvas_item **ptr1, **ptr2, *temp;
 
     if (canvas_items == NULL) {
-        TBADD(ERR_GENERIC, "There are currently no items on the multiplot canvas.", 0);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
+                          "There are currently no items on the multiplot canvas.");
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
 
@@ -1123,7 +1124,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     if (*ptr1 == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "There is no multiplot item with ID %d.",
                           item1);
-        TBADD2(ERR_GENERIC, 0);
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
 
@@ -1133,7 +1134,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     if (*ptr2 == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "There is no multiplot item with ID %d.",
                           item2);
-        TBADD2(ERR_GENERIC, 0);
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
 
@@ -1256,7 +1257,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
         ppl_snprintfTrunc(
                 c->errStat.errBuff, sizeof(c->errStat.errBuff),
                 "When a box is specified with given width and height, both width and height must be specified.");
-        TBADD2(ERR_SYNTAX, 0);
+        ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
         return 1;
     }
 
@@ -1439,7 +1440,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         e++;
         if ((ecc < 0.0) || (ecc >= 1.0)) {
             strcpy(c->errStat.errBuff, "Supplied eccentricity is not in the range 0 <= e < 1.");
-            TBADD2(ERR_NUMERICAL, 0);
+            ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
             return 1;
         }
     }
@@ -1464,7 +1465,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     if ((!gotX1) && (((p == 2) && ((e != 1) || (r != 0))) || ((p < 2) && (e != 2)))) {
         strcpy(c->errStat.errBuff,
                "Ellipse command has received an inappropriate set of inputs. Must specify either the position of both the centre and focus of the ellipse, and one further piece of information out of the major axis length, the minor axis length, the eccentricity or the semi-latus rectum, or the position of one of these two points, the rotation angle of the major axis of the ellipse, and two further pieces of information.");
-        TBADD2(ERR_GENERIC, 0);
+        ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
 
@@ -1492,7 +1493,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             if ((ecc < 0.0) || (ecc >= 1.0)) {
                 strcpy(c->errStat.errBuff,
                        "Supplied semi-major axis length is shorter than the distance between the supplied focus and centre of the ellipse. No ellipse may have such parameters.");
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return 1;
             }
             if (ppl_dblEqual(ecc, 0.0)) {
@@ -1507,7 +1508,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             if (b > a) {
                 strcpy(c->errStat.errBuff,
                        "Supplied minor axis length is longer than the implied major axis length of the ellipse.");
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return 1;
             }
             ecc = sqrt(1.0 - pow(b / a, 2.0));
@@ -1525,14 +1526,14 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             ecc = (sqrt(1 + 4 * pow(ratio, 2)) - 1.0) / (2 * ratio);
             if ((ecc < 0.0) || (ecc >= 1.0)) {
                 strcpy(c->errStat.errBuff, "Eccentricity implied for ellipse is not in the range 0 <= e < 1.");
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return 1;
             }
             a = hypot(xc - xf, yc - yf) / ecc;
             b = a * sqrt(1.0 - pow(ecc, 2.0));
         } else {
             strcpy(c->errStat.errBuff, "Flow control error in ellipse command.");
-            TBADD2(ERR_INTERNAL, 0);
+            ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
             return 1;
         }
     } else // User has specified centre / focus of ellipse and two further pieces of information...
@@ -1544,8 +1545,8 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             if (b > a) {
                 strcpy(c->errStat.errBuff,
                        "Supplied minor axis length is longer than the supplied major axis length of the ellipse.");
-                TBADD2(ERR_NUMERICAL, 0);
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return 1;
             }
             ecc = sqrt(1.0 - pow(b / a, 2.0));
@@ -1559,7 +1560,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             if (fabs(slr) > a) {
                 strcpy(c->errStat.errBuff,
                        "Supplied semi-latus rectum is longer than the supplied semi-major axis length of the ellipse. No ellipse may have such parameters.");
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return 1;
             }
             ecc = sqrt(1.0 - fabs(slr) / a);
@@ -1574,7 +1575,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             if (fabs(slr) > b) {
                 strcpy(c->errStat.errBuff,
                        "Supplied semi-latus rectum is longer than the supplied semi-minor axis length of the ellipse. No ellipse may have such parameters.");
-                TBADD2(ERR_NUMERICAL, 0);
+                ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return 1;
             }
             ecc = sqrt(1.0 - pow(fabs(slr) / b, 2.0));
@@ -1585,7 +1586,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             b = a * sqrt(1.0 - pow(ecc, 2.0));
         } else {
             strcpy(c->errStat.errBuff, "Flow control error in ellipse command.");
-            TBADD2(ERR_INTERNAL, 0);
+            ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
             return 1;
         }
 
@@ -2216,23 +2217,6 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     return 0;
 }
 
-#define TBADDP ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_NUMERICAL, 0, pl->linetxt, "")
-
-#define STACK_POPP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[c->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            strcpy(msg, "Stack forward reference detected."); \
-            ppl_error(&c->errcontext, ERR_STACKED, -1, -1, msg); \
-            free(new); \
-            new = NULL; \
-            return 1; \
-        } \
-    }
-
-#define STACK_CLEANP \
-    while (c->stackPtr > stkLevelOld) { STACK_POPP; }
 
 //! ppl_getPlotFname - Look up the Nth filename matching a wildcard given in a plot command, and store it in a plot
 //! item descriptor
@@ -2388,7 +2372,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             {
                 char *datafile = (char *) first->auxil;
                 const int status = ppl_getPlotFname(c, datafile, wildcardMatchNumber, new);
-                STACK_CLEANP;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                 if (status) return 1;
             } else if ((!c->errStat.status) && (first->objType == PPLOBJ_VEC)) {
                 const int stkLevelOld = c->stackPtr;
@@ -2409,11 +2393,11 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                     if (c->errStat.status) {
                         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                           "Could not evaluate vector expressions.");
-                        TBADDP;
+                        ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                         ppl_tbWrite(c);
                         ppl_tbClear(c);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
-                        STACK_CLEANP;
+                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         free(new);
                         new = NULL;
                         return 1;
@@ -2425,7 +2409,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                                 i + 1, pplObjTypeNames[obj->objType]);
                         ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
-                        STACK_CLEANP;
+                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         free(new);
                         new = NULL;
                         return 1;
@@ -2438,14 +2422,14 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                                 l, 1, l2, i + 1);
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         for (j = 0; j < i; j++) ppl_garbageObject(vecs + j);
-                        STACK_CLEANP;
+                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         free(new);
                         new = NULL;
                         return 1;
                     }
                     pplObjCpy(vecs + i, obj, 0, 0, 1);
                     vecs[i].refCount = 1;
-                    STACK_CLEANP;
+                    ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
                 }
                 if (wildcardMatchNumber <= 0) {
                     new->function = 0;
@@ -2468,7 +2452,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                     return 1;
                 }
             } else {
-                STACK_CLEANP;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
                 ppl_tbClear(c);
                 if (wildcardMatchNumber <= 0) {
                     new->function = 1;
@@ -2993,7 +2977,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (nr >= USING_ITEMS_MAX) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
-                TBADD2(ERR_SYNTAX, 0);
+                ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 canvas_delete(c, id);
                 return 1;
             }
@@ -3023,7 +3007,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified in range %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[min->objType], pplObjTypeNames[max->objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_replot_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_replot_min_0range_list], "");
                     canvas_delete(c, id);
                     return 1;
                 }
@@ -3033,7 +3017,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "Minimum and maximum limits specified in range %d have conflicting units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, min, NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, max, NULL, NULL, 0, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_replot_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_replot_min_0range_list], "");
                     canvas_delete(c, id);
                     return 1;
                 }
@@ -3044,7 +3028,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified in range %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[min->objType], pplObjTypeNames[(*rangePtr)->unit.objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_replot_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_replot_min_0range_list], "");
                     canvas_delete(c, id);
                     return 1;
                 }
@@ -3055,7 +3039,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "Minimum and maximum limits specified in range %d have conflicting units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, min, NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &(*rangePtr)->unit, NULL, NULL, 0, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_replot_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_replot_min_0range_list], "");
                     canvas_delete(c, id);
                     return 1;
                 }
@@ -3066,7 +3050,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified in range %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[(*rangePtr)->unit.objType], pplObjTypeNames[max->objType]);
-                    TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_replot_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_replot_min_0range_list], "");
                     canvas_delete(c, id);
                     return 1;
                 }
@@ -3077,7 +3061,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "Minimum and maximum limits specified in range %d have conflicting units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &(*rangePtr)->unit, NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, max, NULL, NULL, 0, 0, 0));
-                    TBADD2(ERR_UNIT, in->stkCharPos[pos + PARSE_replot_min_0range_list]);
+                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_replot_min_0range_list], "");
                     canvas_delete(c, id);
                     return 1;
                 }

@@ -1830,7 +1830,6 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     return p;
 }
 
-#define TBADD(et, pos) ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, "")
 
 //! ppl_directive_show - Implement the show command, which displays the values of Pyxplot's settings
 //! \param [in] c - The Pyxplot context
@@ -1929,7 +1928,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         }
         if ((p == 0) && (showWord != NULL)) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unrecognised show option '%s'.\n\n%s", showWord, ppltxt_show);
-            TBADD(ERR_SYNTAX, in->stkCharPos[pos + PARSE_show_setting_0setting_list]);
+            ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[pos + PARSE_show_setting_0setting_list], "");
         }
     }
     return;

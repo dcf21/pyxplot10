@@ -59,7 +59,7 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, size_t
             if ((i < 0) || (i >= MAX_AXES)) { \
                 sprintf(context->errStat.errBuff, \
                         "Axis number %d is out of range; axis numbers must be in the range 0 - %d", i, MAX_AXES - 1); \
-                TBADD(ERR_RANGE, in->stkCharPos[ptab[X]]); \
+                ppl_tbAddLine(context, pl, ERR_RANGE, in->stkCharPos[ptab[X]], ""); \
                 return; \
             } \
         } \
@@ -77,11 +77,11 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, size_t
                             sprintf(context->errStat.errBuff, \
                                     "Coordinates specified in the graph and page systems must have dimensions of length. Received coordinate with dimensions of <%s>.", \
                                     ppl_printUnit(context, o, NULL, NULL, 0, 1, 0)); \
-                            TBADD(ERR_UNIT, in->stkCharPos[ptab[X]]); \
+                            ppl_tbAddLine(context, pl, ERR_UNIT, in->stkCharPos[ptab[X]], ""); \
                         } \
             if (!gsl_finite(o->real)) { \
                 sprintf(context->errStat.errBuff, "Coordinates specified are not finite."); \
-                TBADD(ERR_NUMERICAL, in->stkCharPos[ptab[X]]); \
+                ppl_tbAddLine(context, pl, ERR_NUMERICAL, in->stkCharPos[ptab[X]], ""); \
             } \
         } \
     }

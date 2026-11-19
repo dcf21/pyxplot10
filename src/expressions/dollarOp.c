@@ -41,19 +41,6 @@
 #include "datafile.h"
 #include "pplConstants.h"
 
-#define TBADD(et) \
-    ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, et, inExprCharPos, inExpr->ascii, "")
-
-#define STACK_POP \
-    { \
-        c->stackPtr--; \
-        ppl_garbageObject(&c->stack[context->stackPtr]); \
-        if (c->stack[c->stackPtr].refCount != 0) { \
-            strcpy(c->errStat.errBuff, "Stack forward reference detected."); \
-            TBADD(ERR_INTERNAL); \
-            goto cleanup; \
-        } \
-    }
 
 //! ppl_dollarOp_config - Make a row of data from a data file available to the $ operator, which expressions in
 //! "using" modifiers use to refer to columns of data
@@ -143,7 +130,7 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
                           c->dollarStat.file_linenumber);
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No %s with number %d.",
                           (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colNum);
-        TBADD(ERR_RANGE);
+        ppl_tbAddExpr(c, inExpr, ERR_RANGE, inExprCharPos, "");
         return;
     }
 
@@ -199,6 +186,6 @@ void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, const int inEx
                       c->dollarStat.file_linenumber);
     ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No %s with name '%s'.",
                       (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colName);
-    TBADD(ERR_DICTKEY);
+    ppl_tbAddExpr(c, inExpr, ERR_DICTKEY, inExprCharPos, "");
     return;
 }

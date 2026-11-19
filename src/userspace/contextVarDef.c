@@ -45,7 +45,6 @@
 #include "defaultObjs/defaultUnits.h"
 #include "defaultObjs/defaultVars.h"
 
-#define TBADD(et, pos) ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, et, pos, linetxt, "")
 
 //! ppl_contextVarHierLookup - Look up a variable referred to by a hierarchical name, such as a.b.c, where a is a
 //! dictionary, module or instance and b and c are members of it. If the final member does not exist it is created,
@@ -78,14 +77,14 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
             ppl_contextVarLookup(c, name, out, 0);
             if (*out == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable, '%s'.", name);
-                TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
+                ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, stkPos[pos + offset], linetxt, "");
                 return;
             }
             if (((*out)->objType != PPLOBJ_DICT) && ((*out)->objType != PPLOBJ_MOD) &&
                 ((*out)->objType != PPLOBJ_USER)) {
                 sprintf(c->errStat.errBuff, "Cannot reference members of object of type '%s'.",
                         pplObjTypeNames[(*out)->objType]);
-                TBADD(ERR_TYPE, stkPos[pos + offset]);
+                ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_TYPE, stkPos[pos + offset], linetxt, "");
                 return;
             }
         } else if (first) {
@@ -105,20 +104,20 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
                                   last ? "modify the immutable variable" : "set variables in the immutable namespace",
                                   name);
-                TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
+                ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, stkPos[pos + offset], linetxt, "");
                 return;
             }
             *out = (pplObj *) ppl_dictLookup(d, name);
             if ((*out) == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable, '%s'.", name);
-                TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
+                ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, stkPos[pos + offset], linetxt, "");
                 return;
             }
             if (((*out)->objType != PPLOBJ_DICT) && ((*out)->objType != PPLOBJ_MOD) &&
                 ((*out)->objType != PPLOBJ_USER)) {
                 sprintf(c->errStat.errBuff, "Cannot reference members of object of type '%s'.",
                         pplObjTypeNames[(*out)->objType]);
-                TBADD(ERR_TYPE, stkPos[pos + offset]);
+                ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_TYPE, stkPos[pos + offset], linetxt, "");
                 return;
             }
         } else {
@@ -127,7 +126,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
                                   last ? "modify the immutable variable" : "set variables in the immutable namespace",
                                   name);
-                TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
+                ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, stkPos[pos + offset], linetxt, "");
                 return;
             }
             *out = (pplObj *) ppl_dictLookup((dict *) (*out)->auxil, name);
@@ -143,14 +142,14 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
                               last ? "modify the immutable variable" : "set variables in the immutable namespace",
                               name);
-            TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
+            ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, stkPos[pos + offset], linetxt, "");
             return;
         }
         first = 0;
     }
     if ((*out) == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable.");
-        TBADD(ERR_NAMESPACE, 0);
+        ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, 0, linetxt, "");
         return;
     }
 

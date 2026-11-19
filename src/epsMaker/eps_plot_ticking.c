@@ -33,6 +33,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/errorReport.h"
+#include "userspace/stack.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/expEval.h"
 #include "expressions/traceback_fns.h"
@@ -543,7 +544,7 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     ppl_snprintfTrunc(*output, strlen(tmp_string) + 3, "%s", tmp_string);
     {
         EPSComm *x = X;
-        EPS_STACK_POP;
+        ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
     }
 
     // Restore original value of x (or y/z)
