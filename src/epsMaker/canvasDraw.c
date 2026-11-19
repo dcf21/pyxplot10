@@ -501,7 +501,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     }
 
     // Make string buffer
-    str_buffer = (char *) ppl_memAlloc(LSTR_LENGTH);
+    str_buffer = (char *) malloc(LSTR_LENGTH);
     if (str_buffer == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (y).");
         return;
@@ -513,6 +513,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     if (output == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Could not create temporary LaTeX document");
         *(x->status) = 1;
+        free(str_buffer);
         return;
     }
     FPRINTF_LINECOUNT(TextHeader1);
@@ -641,6 +642,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     // Finish talking to LaTeX process
     close(LatexStdIn); // This has the effect of killing latex
     close(LatexOut);
+    free(str_buffer);
     sigprocmask(SIG_UNBLOCK, &sigs, NULL);
 
     // Return error message if latex has failed

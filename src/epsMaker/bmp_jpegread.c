@@ -50,7 +50,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     unsigned char *buff, *header, *headp, *headendp, type = 0, comp = 0, *p;
 
     BMP_ALLOC(buff, chunk);
-    header = (unsigned char *) ppl_memAlloc(HEADLEN);
+    header = (unsigned char *) malloc(HEADLEN);
     headp = header;
     headendp = header + HEADLEN - 8;
 
@@ -58,6 +58,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
 
     if ((buff == NULL) || (header == NULL)) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
+        free(header);
         return;
     }
 
@@ -67,6 +68,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     do {
         if (fread(buff, 3, 1, jpeg) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This JPEG image file appears to be corrupted (A)");
+            free(header);
             return;
         }
         type = buff[0];
@@ -74,6 +76,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         save = 0;
         if (fread(buff, len, 1, jpeg) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This JPEG image file appears to be corrupted (B)");
+            free(header);
             return;
         }
         if (DEBUG) {
@@ -114,6 +117,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         if (((type & 0xf0) == 0xc0) && (type != 0xc4) && (type != 0xcc)) {
             if (comp) {
                 ppl_error(ec, ERR_FILE, -1, -1, "Cannot decode JPEG image file: it contains multiple images?");
+                free(header);
                 return;
             }
             comp = type;
@@ -145,6 +149,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
             *(headp++) = (len + 2) & 0xff;
             if (headp + len > headendp) {
                 ppl_error(ec, ERR_FILE, -1, -1, "JPEG header storage exhausted");
+                free(header);
                 return;
             }
             for (i = 0; i < len; i++) *(headp++) = buff[i];
@@ -170,12 +175,14 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
             ppl_error(
                     ec, ERR_FILE, -1, -1,
                     "JPEG image detected to have progressive encoding, which Pyxplot does not support. Please convert to baseline JPEG and try again.");
+            free(header);
             return;
         default:
             sprintf(ec->tempErrStr,
                     "JPEG image detected to have unsupported compression type SOF%d. Please convert to baseline JPEG and try again.",
                     ((int) comp) & 0xf);
             ppl_error(ec, ERR_FILE, -1, -1, NULL);
+            free(header);
             return;
     }
 
@@ -184,6 +191,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
                 "JPEG image contains %d colour components; Pyxplot only supports JPEG images with one (greyscale) or three (RGB) components",
                 comps);
         ppl_error(ec, ERR_FILE, -1, -1, NULL);
+        free(header);
         return;
     }
 
@@ -208,6 +216,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
 
     for (i = 0; header + i < headp; i++) buff[i] = header[i];
     len = chunk - (headp - header);
+    free(header);
     j = fread(buff + i, 1, len, jpeg);
 
     if (j < len) {

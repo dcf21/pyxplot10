@@ -288,11 +288,13 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                 sprintf(c->errcontext.tempErrStr, "Using input filter '%s'.", filter);
                 ppl_log(&c->errcontext, NULL);
             }
-            filterArgs = (char *) ppl_memAlloc(strlen(filter) + 1);
-            argList = (char **) ppl_memAlloc((strlen(filter) / 2 + 1) * sizeof(char *));
+            filterArgs = (char *) malloc(strlen(filter) + 1);
+            argList = (char **) malloc((strlen(filter) / 2 + 3) * sizeof(char *));
             if ((filterArgs == NULL) || (argList == NULL)) {
                 sprintf(errtext, "Out of memory (01).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
+                free(filterArgs);
+                free(argList);
                 return NULL;
             };
             strcpy(filterArgs, filter);
@@ -314,8 +316,12 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
             if ((infile = fdopen(i, "r")) == NULL) {
                 sprintf(errtext, "Could not open connection to input filter '%s'.", argList[0]);
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
+                free(filterArgs);
+                free(argList);
                 return NULL;
             };
+            free(filterArgs);
+            free(argList);
             return infile;
         }
         ppl_dictIterate(&dictIter, &dkey);

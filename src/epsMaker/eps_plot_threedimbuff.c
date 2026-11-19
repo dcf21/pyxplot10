@@ -99,7 +99,12 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         eps_core_WritePSColor(x);
 
         // Display all items in 3D display buffer, from back to front
-        DepthArray = (struct DepthArrayEntry *) ppl_memAlloc(Nitems * sizeof(struct DepthArrayEntry));
+        DepthArray = (struct DepthArrayEntry *) malloc(Nitems * sizeof(struct DepthArrayEntry));
+        if (DepthArray == NULL) {
+            ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            ThreeDimBuffer_Reset(x);
+            return 1;
+        }
         i = 0;
         ListIter = ppl_listIterateInit(ThreeDimBuffer_buffer);
         while (ListIter != NULL) {
@@ -124,6 +129,7 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
                                        item->colstr, item->psfrag);
             }
         }
+        free(DepthArray);
     }
     ThreeDimBuffer_linepenup(x);
     ThreeDimBuffer_Reset(x);

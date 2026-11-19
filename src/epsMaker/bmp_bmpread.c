@@ -249,7 +249,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             }
         }
     } else { // if (rle)
-        p = ppl_memAlloc(size);
+        p = malloc(size);
         if (p == NULL) {
             ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
             image->data = NULL;
@@ -257,12 +257,15 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         }
         if (fread(p, size, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
+            free(p);
             return;
         }
         if (ppl_bmp_demsrle(ec, image, p, size) != 0) {
             image->data = NULL;
+            free(p);
             return;
         }
+        free(p);
     }
     return;
 }
@@ -309,7 +312,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
         return;
     }
 
-    rowptr = ppl_memAlloc(2 * width);
+    rowptr = malloc(2 * width);
     if (rowptr == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         image->data = NULL;
@@ -319,6 +322,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
     for (i = 1; i <= height; i++) {
         if (fread(rowptr, 2 * width, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
+            free(rowptr);
             return;
         }
         ptr = image->data + (height - i) * 3 * width;
@@ -338,10 +342,12 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
         if (width & 1) {
             if (fread(rowptr, 2, 1, in) != 1) {
                 ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
+                free(rowptr);
                 return;
             }
         } // rows are dword aligned
     }
+    free(rowptr);
     return;
 }
 

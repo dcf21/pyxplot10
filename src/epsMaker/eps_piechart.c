@@ -446,8 +446,8 @@ void eps_pie_RenderEPS(EPSComm *x) {
         postscriptPage *dviPage;
 
         // Calculate dimensions of text items
-        TextWidth = (double *) ppl_memAlloc(x->current->plotdata[0]->Nrows * sizeof(double));
-        TextHeight = (double *) ppl_memAlloc(x->current->plotdata[0]->Nrows * sizeof(double));
+        TextWidth = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
+        TextHeight = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
         if ((TextWidth == NULL) || (TextHeight == NULL)) goto END_LABEL_PRINTING;
         blk = x->current->plotdata[0]->first;
         while (blk != NULL) {
@@ -649,6 +649,8 @@ void eps_pie_RenderEPS(EPSComm *x) {
         }
 
     END_LABEL_PRINTING:
+        free(TextWidth);
+        free(TextHeight);
 
         // Title of piechart
         x->LaTeXpageno = x->current->TitleTextID;

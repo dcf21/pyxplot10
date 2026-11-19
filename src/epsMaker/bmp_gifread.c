@@ -262,7 +262,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         ppl_log(ec, NULL);
     }
 
-    rawz = (unsigned char *) ppl_memAlloc((width * height * 3) / 2);
+    rawz = (unsigned char *) malloc((width * height * 3) / 2);
     if (rawz == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return;
@@ -271,16 +271,19 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     datalen = 0;
     if (fread(&len, 1, 1, in) != 1) {
         ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
+        free(rawz);
         return;
     }
     while (len) {
         if (fread(rawz + datalen, len, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
+            free(rawz);
             return;
         }
         datalen += len;
         if (fread(&len, 1, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
+            free(rawz);
             return;
         }
     }
@@ -292,10 +295,12 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     BMP_ALLOC(image->data, width * height);
     if (image->data == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
+        free(rawz);
         return;
     }
 
     datalen = ppl_bmp_de_lzw(ec, rawz, image->data, width * height, lzwcs);
+    free(rawz);
 
     if (datalen == 0) {
         image->data = NULL;

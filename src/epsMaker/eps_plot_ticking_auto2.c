@@ -156,10 +156,10 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     int FactorsTen[MAX_FACTORS];
     double OoM, axis_min, axis_max, axis_min_l, axis_max_l, outer_min, outer_max;
     int TL_best_len, TL_trial_len;
-    double *TLP, *TL_best, *TL_trial;
+    double *TLP, *TL_best = NULL, *TL_trial = NULL;
     char **TLS;
     int NTickSchemes;
-    TickScheme *TickSchemes;
+    TickScheme *TickSchemes = NULL;
 
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto2()");
 
@@ -212,13 +212,13 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
         goto FAIL;
 
     // Malloc temporary lists of ticks
-    TL_best = (double *) ppl_memAlloc((TICKS_MAXIMUM + 1) * sizeof(double));
-    TL_trial = (double *) ppl_memAlloc((TICKS_MAXIMUM + 1) * sizeof(double));
+    TL_best = (double *) malloc((TICKS_MAXIMUM + 1) * sizeof(double));
+    TL_trial = (double *) malloc((TICKS_MAXIMUM + 1) * sizeof(double));
     if ((TL_best == NULL) || (TL_trial == NULL)) goto FAIL;
     TL_best_len = 0;
 
     // Malloc list of tick schemes
-    TickSchemes = (TickScheme *) ppl_memAlloc((TICKS_MAXIMUM + 1) * sizeof(TickScheme));
+    TickSchemes = (TickScheme *) malloc((TICKS_MAXIMUM + 1) * sizeof(TickScheme));
     if (TickSchemes == NULL) goto FAIL;
 
     // Deal with MAJOR ticks. Then MINOR ticks.
@@ -378,6 +378,11 @@ FAIL:
     axis->TickListStrings[i] = NULL; // null terminate list
 
 CLEANUP:
+    // Delete temporary lists of ticks and tick schemes
+    free(TL_best);
+    free(TL_trial);
+    free(TickSchemes);
+
     // Delete rough workspace
     if (ContextRough > 0) ppl_memAlloc_AscendOutOfContext(ContextRough);
     return;

@@ -865,8 +865,13 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
+        free(unsuccessful_ops);
     }
     return 0;
 }
@@ -903,8 +908,13 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
+        free(unsuccessful_ops);
     }
     return 0;
 }
@@ -977,8 +987,13 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
+        free(unsuccessful_ops);
     }
     return 0;
 }
@@ -1030,8 +1045,13 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
+        free(unsuccessful_ops);
     }
     return 0;
 }
@@ -1073,9 +1093,16 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Arrow has been removed from multiplot, because it generated an error.");
@@ -1145,9 +1172,16 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Box has been removed from multiplot, because it generated an error.");
@@ -1197,9 +1231,16 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Circle has been removed from multiplot, because it generated an error.");
@@ -1491,9 +1532,16 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Ellipse has been removed from multiplot, because it generated an error.");
@@ -1576,9 +1624,16 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "EPS image has been removed from multiplot, because it generated an error.");
@@ -1626,9 +1681,16 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Point has been removed from multiplot, because it generated an error.");
@@ -1764,9 +1826,16 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Polygon has been removed from multiplot, because it generated an error.");
@@ -1846,9 +1915,16 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Text item has been removed from multiplot, because it generated an error.");
@@ -1955,9 +2031,16 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Bitmap image has been removed from multiplot, because it generated an error.");
@@ -2545,9 +2628,16 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Piechart has been removed from multiplot, because it generated an error.");
@@ -2840,9 +2930,16 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) ppl_memAlloc(MULTIPLOT_MAXINDEX);
+        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        int failed;
+        if (unsuccessful_ops == NULL) {
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        if (unsuccessful_ops[id]) {
+        failed = unsuccessful_ops[id];
+        free(unsuccessful_ops);
+        if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Plot has been removed from multiplot, because it generated an error.");
