@@ -335,7 +335,7 @@ int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int 
     fv = v < 128 ? v : v - 256;
     for (i = 0; i < n - 1; i++) {
         if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
-        fv = (fv << 8) | v;
+        fv = (fv * 256) + v; // Not (fv << 8), since left-shifting a negative value is undefined behaviour
     }
     *sli = fv;
     return 0;

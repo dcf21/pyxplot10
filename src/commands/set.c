@@ -1708,8 +1708,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         c->set->term_current.output[FNAME_LENGTH - 1] = '\0';
     } else if (strcmp_unset && (strcmp(setoption, "output") == 0)) /* unset output */
     {
-        strncpy(c->set->term_current.output, c->set->term_default.output, FNAME_LENGTH - 1);
-        c->set->term_current.output[FNAME_LENGTH - 1] = '\0';
+        ppl_snprintfTrunc(c->set->term_current.output, FNAME_LENGTH, "%s", c->set->term_default.output);
     } else if (strcmp_set && (strcmp(setoption, "palette") == 0)) /* set palette */
     {
         if (command[PARSE_set_palette_palette].objType == PPLOBJ_NUM) {
@@ -1862,8 +1861,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         c->set->term_current.LatexPreamble[FNAME_LENGTH - 1] = '\0';
     } else if (strcmp_unset && (strcmp(setoption, "preamble") == 0)) /* unset preamble */
     {
-        strncpy(c->set->term_current.LatexPreamble, c->set->term_default.LatexPreamble, FNAME_LENGTH - 1);
-        c->set->term_current.LatexPreamble[FNAME_LENGTH - 1] = '\0';
+        ppl_snprintfTrunc(c->set->term_current.LatexPreamble, FNAME_LENGTH, "%s", c->set->term_default.LatexPreamble);
     } else if (strcmp_set && (strcmp(setoption, "samples") == 0)) /* set samples */
     {
         if (command[PARSE_set_samples_samples].objType == PPLOBJ_NUM) {

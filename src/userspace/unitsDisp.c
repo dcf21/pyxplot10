@@ -64,13 +64,17 @@ const char *SIprefixes_latex[] = {"y", "z", "a", "f", "p", "n", "\\upmu ", "m", 
 //! \return Pointer to the output buffer, which is overwritten by subsequent calls
 
 char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const int N, const char *formatString,
-                                        const char formatChar, const int maxLen, const int requiredArgs, int arg1i,
+                                        const char formatChar, int maxLen, const int requiredArgs, int arg1i,
                                         int arg2i) {
     double numberOutReal, numberOutImag;
     char *output, *unitstr;
     int i = 0, done = 0, intArg = 0;
     if (N == 0) output = c->udNumDispA;
     else output = c->udNumDispB;
+
+    // The output is written to a fixed-size buffer in the context, so never write more than it can hold, even if the
+    // caller's own buffer is larger
+    if (maxLen > (int) sizeof(c->udNumDispA)) maxLen = (int) sizeof(c->udNumDispA);
 
     if ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && (in->flagComplex != 0)) {
         strcpy(output, "nan");

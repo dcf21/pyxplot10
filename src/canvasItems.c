@@ -2791,7 +2791,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             return 1;
         }
 
-        memcpy(UsingList, new->UsingList, NUsing * sizeof(pplExpr *));
+        if (NUsing > 0) memcpy(UsingList, new->UsingList, NUsing * sizeof(pplExpr *)); // UsingList may be NULL
         new->ww.linespoints =
                 linespoints; // Fix plot style, so that number of expected columns doesn't later change with DataStyle
         new->ww.USElinespoints = 1;

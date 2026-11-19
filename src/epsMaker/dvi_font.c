@@ -388,7 +388,7 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
     snprintf(name, sizeof(name), "%s", encFile);
     path = ppl_kpse_wrap_find_enc(ec, name);
     if ((path == NULL) || ((fp = fopen(path, "r")) == NULL)) {
-        snprintf(errStr, SSTR_LENGTH, "Could not find font encoding file '%s'.", encFile);
+        ppl_snprintfTrunc(errStr, SSTR_LENGTH, "Could not find font encoding file '%s'.", encFile);
         ppl_error(ec, ERR_FILE, -1, -1, errStr);
         return NULL;
     }
@@ -424,8 +424,8 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
     }
     fclose(fp);
     if (nNames != 256) {
-        snprintf(errStr, SSTR_LENGTH, "Font encoding file '%s' contains %d glyph names, rather than 256.", encFile,
-                 nNames);
+        ppl_snprintfTrunc(errStr, SSTR_LENGTH, "Font encoding file '%s' contains %d glyph names, rather than 256.",
+                          encFile, nNames);
         ppl_error(ec, ERR_FILE, -1, -1, errStr);
         return NULL;
     }

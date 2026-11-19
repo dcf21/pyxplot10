@@ -623,7 +623,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                 *(x->status) = 1;
                 return;
             }
-            memcpy(UsingList, pd->UsingList, NUsing * sizeof(pplExpr *));
+            if (NUsing > 0) memcpy(UsingList, pd->UsingList, NUsing * sizeof(pplExpr *)); // UsingList may be NULL
 
             if (pd->ww_final.linespoints == SW_STYLE_COLORMAP) {
                 const int listlen = NUsing;
@@ -843,7 +843,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                 *(x->status) = 1;
                 return;
             }
-            memcpy(UsingList, pd->UsingList, NUsing * sizeof(pplExpr *));
+            if (NUsing > 0) memcpy(UsingList, pd->UsingList, NUsing * sizeof(pplExpr *)); // UsingList may be NULL
 
             if (pd->ww_final.linespoints == SW_STYLE_COLORMAP) {
                 const int listlen = NUsing;

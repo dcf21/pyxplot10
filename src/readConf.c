@@ -1507,7 +1507,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             ppl_warning(&c->errcontext, ERR_PREFORMED, msg); \
             continue; \
         } \
-        strncpy(output, setkey + j, i - j); \
+        memcpy(output, setkey + j, i - j); \
         output[i - j] = '\0'; \
     } \
     while (((unsigned char) setkey[i] <= ' ') && (setkey[i] != '\0')) i++; \
