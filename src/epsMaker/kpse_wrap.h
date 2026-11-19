@@ -28,5 +28,7 @@ void ppl_kpse_wrap_init(ppl_context *c);
 char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s);
 char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s);
 char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s);
+char *ppl_kpse_wrap_find_map(pplerr_context *ec, char *s);
+char *ppl_kpse_wrap_find_enc(pplerr_context *ec, char *s);
 
 #endif

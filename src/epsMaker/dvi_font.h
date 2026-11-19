@@ -92,6 +92,9 @@ typedef struct dviFontDetails {
     char *area; // "Area" that the font is given as living in
     char *name; // Font name
     char *psName; // Name to use for font in postscript file
+    char *basePsName; // Name of the type 1 font which <psName> is derived from; the same as <psName> unless the font
+    // is re-encoded, slanted or extended, as instructed by the TeX font map (psfonts.map)
+    char *fontSetup; // Postscript code which defines <psName> from <basePsName>, or NULL if none is needed
     int useSize, desSize; // Use and design sizes
     dviTFM *tfm; // Data from tfm file
     char *pfaPath; // PFA file location

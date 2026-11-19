@@ -274,6 +274,11 @@ int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
 //! \return Zero on success, or a DVIE_* error code
 
 int dviInOpSet1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
+    int err;
+    // Typeset any characters queued up before this one (e.g. "Gr" before the "\366" of "Gr\366"); otherwise
+    // dviNonAsciiChar() discards them
+    if (interp->currentString != NULL)
+        if ((err = dviTypeset(ec, interp)) != 0) return err;
     return dviNonAsciiChar(ec, interp, op->ul[0], DVI_YES);
 }
 
@@ -688,6 +693,7 @@ int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperat
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
     }
+    memset(font, 0, sizeof(dviFontDetails));
     ppl_listAppend(interp->fonts, (void *) font);
 
     // Populate with information from operator

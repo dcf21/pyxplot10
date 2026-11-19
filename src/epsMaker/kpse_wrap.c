@@ -44,13 +44,15 @@
 #include <unistd.h>
 #include <errno.h>
 #include "children.h"
-#define MAX_PATHS 256
-char ppl_kpse_FilePaths[3][LSTR_LENGTH];
-char *ppl_kpse_PathList[3][MAX_PATHS];
-unsigned char ppl_kpse_PathRecursive[3][MAX_PATHS];
+#define MAX_PATHS    256
+#define N_FILE_TYPES 5 // TFM, PFA, PFB, font map and encoding files
+char ppl_kpse_FilePaths[N_FILE_TYPES][LSTR_LENGTH];
+char *ppl_kpse_PathList[N_FILE_TYPES][MAX_PATHS];
+unsigned char ppl_kpse_PathRecursive[N_FILE_TYPES][MAX_PATHS];
 #endif
 
-//! ppl_kpse_wrap_init - Read the search paths for TeX font files (TFM, PFA and PFB) by running kpsewhich, for use when
+//! ppl_kpse_wrap_init - Read the search paths for TeX font files (TFM, PFA, PFB, font maps and encodings) by running
+//! kpsewhich, for use when
 //! looking up fonts
 //! \param [in] c - The Pyxplot context
 
@@ -59,7 +61,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
     kpse_set_program_name("dvips", "dvips");
 #else
     char msg[PPL_MSG_LENGTH];
-    const char *FileTypes[3] = {"tfm", "pfa", "pfb"};
+    const char *FileTypes[N_FILE_TYPES] = {"tfm", "pfa", "pfb", "map", "enc"};
     int i, j, k, l, s, TrialNumber, fstdout;
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
@@ -69,12 +71,12 @@ void ppl_kpse_wrap_init(ppl_context *c) {
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
-    for (j = 0; j < 3; j++) {
+    for (j = 0; j < N_FILE_TYPES; j++) {
         ppl_kpse_PathList[j][0] = NULL;
         for (i = 0; i < MAX_PATHS; i++) ppl_kpse_PathRecursive[j][i] = 0;
     }
 
-    for (j = 0; j < 3; j++) {
+    for (j = 0; j < N_FILE_TYPES; j++) {
         pplcsp_forkKpseWhich(c, FileTypes[j], &fstdout);
 
         // Wait for kpsewhich process's stdout to become readable. Get bored if this takes more than a second.
@@ -256,5 +258,31 @@ char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s) {
     return (char *) kpse_find_tfm(s);
 #else
     return ppl_kpse_wrap_find_file(ec, s, ppl_kpse_PathList[0], ppl_kpse_PathRecursive[0]);
+#endif
+}
+
+//! ppl_kpse_wrap_find_map - Search the TeX font search path for a font map file, such as psfonts.map
+//! \param [in] ec - The error-reporting context
+//! \param [in] s - The filename to search for
+//! \return The full path of the file, stored in a static buffer, or NULL if it was not found
+
+char *ppl_kpse_wrap_find_map(pplerr_context *ec, char *s) {
+#ifdef HAVE_KPATHSEA
+    return (char *) kpse_find_file(s, kpse_fontmap_format, true);
+#else
+    return ppl_kpse_wrap_find_file(ec, s, ppl_kpse_PathList[3], ppl_kpse_PathRecursive[3]);
+#endif
+}
+
+//! ppl_kpse_wrap_find_enc - Search the TeX font search path for a postscript font encoding (.enc) file
+//! \param [in] ec - The error-reporting context
+//! \param [in] s - The filename to search for
+//! \return The full path of the file, stored in a static buffer, or NULL if it was not found
+
+char *ppl_kpse_wrap_find_enc(pplerr_context *ec, char *s) {
+#ifdef HAVE_KPATHSEA
+    return (char *) kpse_find_file(s, kpse_enc_format, true);
+#else
+    return ppl_kpse_wrap_find_file(ec, s, ppl_kpse_PathList[4], ppl_kpse_PathRecursive[4]);
 #endif
 }

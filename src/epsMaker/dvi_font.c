@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "coreUtils/errorReport.h"
 #include "stringTools/asciidouble.h"
@@ -43,6 +44,7 @@ char builtinFontNames[N_BUILTIN_FONTS][L_BUILTIN_FPSNAME] = {"Times-Bold", "Time
 
 
 int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename);
+static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font);
 
 //! dviGetTFM - Locate and read the TeX font metric (TFM) file for a font
 //! \param [in] ec - The error-reporting context
@@ -149,21 +151,26 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
   else */
     if (font->psName == NULL) // Not found a built-in font
     {
-        // Obtain the pfa file
+        // Obtain the pfa file. First look for a type 1 font with the same name as the TeX font (e.g. cmr10.pfb).
+        // Failing that, look the font up in the TeX font map psfonts.map, which may say that it is a re-encoded
+        // version of another font (e.g. tcrm1000 is sfrm1000.pfb with the TS1 encoding). Finally, try the family
+        // name given in the TFM file.
         err = dviGetPfa(ec, font, font->name);
+        if (err == DVIE_NOFONT) err = dviGetFontFromMap(ec, font);
+        if (err == DVIE_NOFONT) err = dviGetPfa(ec, font, font->tfm->family);
         if (err == DVIE_NOFONT) {
-            err = dviGetPfa(ec, font, font->tfm->family);
-            if (err == DVIE_NOFONT) {
-                snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot find pfa or pfb file for font %s", font->name);
-                ppl_error(ec, ERR_GENERIC, -1, -1, errStr);
-            }
+            snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot find pfa or pfb file for font %s", font->name);
+            ppl_error(ec, ERR_GENERIC, -1, -1, errStr);
         }
         if (err != 0) return err;
 
-        // Obtain the font name from the PFA file
-        font->psName = psNameFromPFA(ec, font->pfaPath);
-        if (font->psName == NULL) return 1;
+        // Obtain the font name from the PFA file, unless the font map has already supplied it
+        if (font->psName == NULL) {
+            font->psName = psNameFromPFA(ec, font->pfaPath);
+            if (font->psName == NULL) return 1;
+        }
     }
+    if (font->basePsName == NULL) font->basePsName = font->psName;
 
     return 0;
 }
@@ -248,6 +255,249 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
         fclose(fpout);
         font->pfaPath = PFApath;
     }
+    return 0;
+}
+
+//! dviFontMapEntry - The information about a TeX font given by a line of the TeX font map psfonts.map, e.g.
+//!   tcrm1000 SFRM1000 " TS1Encoding ReEncodeFont " <cm-super-ts1.enc <sfrm1000.pfb
+//! meaning that the TeX font tcrm1000 is the type 1 font SFRM1000, from the file sfrm1000.pfb, re-encoded using the
+//! encoding vector in cm-super-ts1.enc.
+typedef struct dviFontMapEntry {
+    char psName[SSTR_LENGTH]; // Postscript name of the type 1 font, or empty if not given
+    char fontFile[SSTR_LENGTH]; // Filename of the type 1 font, or empty if it is resident in the printer
+    char encFile[SSTR_LENGTH]; // Filename of the encoding vector to apply, or empty if none
+    double slant; // Slant to apply to the font, from a "SlantFont" instruction (zero for none)
+    double extend; // Horizontal scaling to apply to the font, from an "ExtendFont" instruction (one for none)
+} dviFontMapEntry;
+
+//! dviCopyToken - Copy a whitespace-delimited token into a buffer
+//! \param [in] in - Pointer to the start of the token
+//! \param [out] out - Buffer into which to write the token
+//! \param [in] outLen - Size of the buffer <out>
+//! \return Pointer to the first character after the token
+
+static const char *dviCopyToken(const char *in, char *out, const size_t outLen) {
+    size_t i = 0;
+    while ((*in != '\0') && !isspace((unsigned char) *in)) {
+        if (i < outLen - 1) out[i++] = *in;
+        in++;
+    }
+    out[i] = '\0';
+    return in;
+}
+
+//! dviParseFontMapLine - Parse a line of a dvips font map file
+//! \param [in] line - The line, which must start with the TeX font name followed by whitespace
+//! \param [out] entry - The information in the line
+//! \return Zero on success, or nonzero if the line could not be parsed
+
+static int dviParseFontMapLine(const char *line, dviFontMapEntry *entry) {
+    char token[SSTR_LENGTH];
+    double lastNumber = 0;
+    memset(entry, 0, sizeof(dviFontMapEntry));
+    entry->extend = 1;
+
+    line = dviCopyToken(line, token, sizeof(token)); // Skip the TeX font name
+    while (1) {
+        while (isspace((unsigned char) *line)) line++;
+        if (*line == '\0') break;
+        if (*line == '"') {
+            // Postscript instructions, e.g. " .167 SlantFont ". Encodings are applied using the encoding file.
+            line++;
+            while ((*line != '"') && (*line != '\0')) {
+                while (isspace((unsigned char) *line)) line++;
+                if ((*line == '"') || (*line == '\0')) break;
+                line = dviCopyToken(line, token, sizeof(token));
+                if (token[strlen(token) - 1] == '"') {
+                    token[strlen(token) - 1] = '\0';
+                    line--;
+                }
+                if (strcmp(token, "SlantFont") == 0) entry->slant = lastNumber;
+                else if (strcmp(token, "ExtendFont") == 0) entry->extend = lastNumber;
+                else lastNumber = strtod(token, NULL);
+            }
+            if (*line == '"') line++;
+        } else if (*line == '<') {
+            // A file to download: <file, <<file, <[file, or "< file". Files ending .enc are encoding vectors.
+            char *dest;
+            while ((*line == '<') || (*line == '[')) line++;
+            while (isspace((unsigned char) *line)) line++;
+            line = dviCopyToken(line, token, sizeof(token));
+            if ((strlen(token) > 4) && (strcmp(token + strlen(token) - 4, ".enc") == 0)) dest = entry->encFile;
+            else dest = entry->fontFile;
+            snprintf(dest, SSTR_LENGTH, "%s", token);
+        } else {
+            // The postscript name of the font
+            line = dviCopyToken(line, token, sizeof(token));
+            if (entry->psName[0] == '\0') snprintf(entry->psName, SSTR_LENGTH, "%s", token);
+        }
+    }
+    return 0;
+}
+
+//! dviLookupFontMap - Look up a TeX font in the dvips font map psfonts.map
+//! \param [in] ec - The error-reporting context
+//! \param [in] texName - The name of the TeX font, e.g. tcrm1000
+//! \param [out] entry - The information about the font in the map
+//! \return Zero on success, or DVIE_NOFONT if the font map could not be found or does not list the font
+
+static int dviLookupFontMap(pplerr_context *ec, const char *texName, dviFontMapEntry *entry) {
+    char line[LSTR_LENGTH];
+    const size_t nameLen = strlen(texName);
+    char *mapPath;
+    FILE *fp;
+    int found = 0;
+
+    mapPath = ppl_kpse_wrap_find_map(ec, "psfonts.map");
+    if (mapPath == NULL) {
+        if (DEBUG) ppl_log(ec, "Could not find TeX font map psfonts.map");
+        return DVIE_NOFONT;
+    }
+    if ((fp = fopen(mapPath, "r")) == NULL) return DVIE_NOFONT;
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        // Find the line which starts with the font name. (Comment lines start with one of %#;* so never match.)
+        if ((strncmp(line, texName, nameLen) != 0) || !isspace((unsigned char) line[nameLen])) continue;
+        found = (dviParseFontMapLine(line, entry) == 0);
+        break;
+    }
+    fclose(fp);
+    if (DEBUG && found) {
+        char msg[PPL_MSG_LENGTH];
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Font map entry for %s: psName <%s> fontFile <%s> encFile <%s> slant %g extend %g", texName,
+                          entry->psName, entry->fontFile, entry->encFile, entry->slant, entry->extend);
+        ppl_log(ec, msg);
+    }
+    return found ? 0 : DVIE_NOFONT;
+}
+
+//! dviReadEncoding - Read a postscript encoding vector from an .enc file, such as cm-super-ts1.enc
+//! \param [in] ec - The error-reporting context
+//! \param [in] encFile - The filename of the encoding file
+//! \return Postscript code for the encoding vector, of the form [ /name1 /name2 ... ], allocated in the current
+//! ppl_memAlloc context, or NULL on error
+
+static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
+    char errStr[SSTR_LENGTH];
+    char name[SSTR_LENGTH];
+    char *path, *out;
+    FILE *fp;
+    int c, inArray = 0, nNames = 0, lineLen = 0;
+    size_t outLen = 0, outAlloc = 8192;
+
+    snprintf(name, sizeof(name), "%s", encFile);
+    path = ppl_kpse_wrap_find_enc(ec, name);
+    if ((path == NULL) || ((fp = fopen(path, "r")) == NULL)) {
+        snprintf(errStr, SSTR_LENGTH, "Could not find font encoding file '%s'.", encFile);
+        ppl_error(ec, ERR_FILE, -1, -1, errStr);
+        return NULL;
+    }
+    if ((out = (char *) ppl_memAlloc(outAlloc)) == NULL) {
+        fclose(fp);
+        ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
+        return NULL;
+    }
+    outLen = sprintf(out, "[");
+
+    // The file contains /EncodingName [ /glyph0 /glyph1 ... /glyph255 ] def, possibly with % comments
+    while ((c = getc(fp)) != EOF) {
+        if (c == '%') {
+            while ((c != '\n') && (c != EOF)) c = getc(fp);
+        } else if (c == '[') inArray = 1;
+        else if (c == ']') break;
+        else if (inArray && (c == '/')) {
+            int len = 0;
+            while (((c = getc(fp)) != EOF) && !isspace(c) && (c != '/') && (c != ']') && (c != '%')) {
+                if (len < (int) sizeof(name) - 1) name[len++] = (char) c;
+            }
+            name[len] = '\0';
+            if (c != EOF) ungetc(c, fp);
+            if (outLen + len + 4 >= outAlloc) break; // Malformed: far longer than 256 glyph names
+            if (lineLen + len > 72) {
+                out[outLen++] = '\n';
+                lineLen = 0;
+            }
+            outLen += sprintf(out + outLen, " /%s", name);
+            lineLen += len + 2;
+            nNames++;
+        }
+    }
+    fclose(fp);
+    if (nNames != 256) {
+        snprintf(errStr, SSTR_LENGTH, "Font encoding file '%s' contains %d glyph names, rather than 256.", encFile,
+                 nNames);
+        ppl_error(ec, ERR_FILE, -1, -1, errStr);
+        return NULL;
+    }
+    sprintf(out + outLen, " ]");
+    return out;
+}
+
+//! dviGetFontFromMap - Locate the type 1 font for a TeX font by looking it up in the dvips font map psfonts.map. If
+//! the map says that the font must be re-encoded, slanted or extended, generate postscript code to do so.
+//! \param [in] ec - The error-reporting context
+//! \param [in] font - The font, whose <pfaPath>, <psName>, <basePsName> and <fontSetup> are set
+//! \return Zero on success, DVIE_NOFONT if the font is not in the map, or another DVIE_* error code
+
+static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font) {
+    dviFontMapEntry entry;
+    char *encoding = NULL;
+    char *setup;
+    size_t setupLen;
+    int err;
+
+    if ((err = dviLookupFontMap(ec, font->name, &entry)) != 0) return err;
+
+    if (entry.fontFile[0] != '\0') {
+        // The font file is given with its extension, e.g. sfrm1000.pfb, but dviGetPfa() adds its own extension
+        char fileStem[SSTR_LENGTH];
+        char *dot;
+        snprintf(fileStem, sizeof(fileStem), "%s", entry.fontFile);
+        dot = strrchr(fileStem, '.');
+        if ((dot != NULL) && ((strcmp(dot, ".pfb") == 0) || (strcmp(dot, ".pfa") == 0))) *dot = '\0';
+        if ((err = dviGetPfa(ec, font, fileStem)) != 0) return err;
+        font->basePsName = psNameFromPFA(ec, font->pfaPath);
+        if (font->basePsName == NULL) return 1;
+    } else if (entry.psName[0] != '\0') {
+        // A font resident in the postscript interpreter, e.g. Times-Roman
+        font->pfaPath = NULL;
+        font->basePsName = (char *) ppl_memAlloc(strlen(entry.psName) + 1);
+        if (font->basePsName == NULL) {
+            ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
+            return DVIE_MEMORY;
+        }
+        strcpy(font->basePsName, entry.psName);
+    } else {
+        return DVIE_NOFONT;
+    }
+
+    // If the font is used without modification, it needs no setup
+    if ((entry.encFile[0] == '\0') && (entry.slant == 0) && (entry.extend == 1)) {
+        font->psName = font->basePsName;
+        return 0;
+    }
+
+    // Otherwise, define a modified copy of the font, named e.g. SFRM1000-tcrm1000
+    if ((entry.encFile[0] != '\0') && ((encoding = dviReadEncoding(ec, entry.encFile)) == NULL)) return DVIE_NOFONT;
+    font->psName = (char *) ppl_memAlloc(strlen(font->basePsName) + strlen(font->name) + 2);
+    setupLen = 2 * strlen(font->basePsName) + strlen(font->name) + (encoding ? strlen(encoding) : 0) + 512;
+    setup = (char *) ppl_memAlloc(setupLen);
+    if ((font->psName == NULL) || (setup == NULL)) {
+        ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
+        return DVIE_MEMORY;
+    }
+    sprintf(font->psName, "%s-%s", font->basePsName, font->name);
+    snprintf(setup, setupLen,
+             "/%s /%s findfont\n"
+             "dup length dict begin\n"
+             "{1 index /FID ne {def} {pop pop} ifelse} forall\n"
+             "%s%s%s"
+             "/FontMatrix FontMatrix [%g 0 %g 1 0 0] matrix concatmatrix def\n"
+             "currentdict end\n"
+             "definefont pop\n",
+             font->psName, font->basePsName, encoding ? "/Encoding " : "", encoding ? encoding : "",
+             encoding ? " def\n" : "", entry.extend, entry.slant);
+    font->fontSetup = setup;
     return 0;
 }
 

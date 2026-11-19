@@ -771,6 +771,21 @@ void canvas_MakeEPSBuffer(EPSComm *x) {
 
 //! canvas_EPSWrite - Write the final postscript file, with a header giving the overall bounding box, followed by the
 //! postscript fragments from the temporary buffer file
+//! fontListedEarlier - Test whether a font in a list of the fonts used in a DVI file is derived from the same type 1
+//! font as an earlier font in the list, in which case the type 1 font only needs to be included once
+//! \param [in] fonts - The list of fonts (dviFontDetails structures)
+//! \param [in] font - A font in the list
+//! \return True if an earlier font in the list has the same <basePsName>
+
+static int fontListedEarlier(list *fonts, const dviFontDetails *font) {
+    listIterator *iter = ppl_listIterateInit(fonts);
+    while ((iter != NULL) && (iter->data != font)) {
+        if (strcmp(((dviFontDetails *) iter->data)->basePsName, font->basePsName) == 0) return 1;
+        ppl_listIterate(&iter);
+    }
+    return 0;
+}
+
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void canvas_EPSWrite(EPSComm *x) {
@@ -846,7 +861,8 @@ void canvas_EPSWrite(EPSComm *x) {
     if (x->dvi != NULL) ListIter = ppl_listIterateInit(x->dvi->fonts);
     else ListIter = NULL;
     while (ListIter != NULL) {
-        fprintf(epsout, " %s", ((dviFontDetails *) ListIter->data)->psName);
+        const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
+        if (!fontListedEarlier(x->dvi->fonts, font)) fprintf(epsout, " %s", font->basePsName);
         ppl_listIterate(&ListIter);
     }
     fprintf(epsout, "\n");
@@ -872,11 +888,12 @@ void canvas_EPSWrite(EPSComm *x) {
     if (x->dvi != NULL) ListIter = ppl_listIterateInit(x->dvi->fonts);
     else ListIter = NULL;
     while (ListIter != NULL) {
-        PFAfilename = ((dviFontDetails *) ListIter->data)->pfaPath;
-        if (PFAfilename !=
-            NULL) // PFAfilename==NULL indicates that this is a built-in font that doesn't require a fontdef
-        {
-            fprintf(epsout, "%%%%BeginFont: %s\n", ((dviFontDetails *) ListIter->data)->psName);
+        const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
+        PFAfilename = font->pfaPath;
+        // PFAfilename==NULL indicates that this is a built-in font that doesn't require a fontdef. Several TeX fonts
+        // may be derived from the same type 1 font (e.g. ecrm1000 and tcrm1000), which only needs including once.
+        if ((PFAfilename != NULL) && !fontListedEarlier(x->dvi->fonts, font)) {
+            fprintf(epsout, "%%%%BeginFont: %s\n", font->basePsName);
             PFAfile = fopen(PFAfilename, "r");
             if (PFAfile == NULL) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Could not open pfa file '%s'", PFAfilename);
@@ -901,6 +918,15 @@ void canvas_EPSWrite(EPSComm *x) {
     }
     if (chdir(x->c->errcontext.session_default.cwd) < 0) {
         ppl_fatal(&x->c->errcontext, __FILE__, __LINE__, "chdir into cwd failed.");
+    }
+
+    // Define re-encoded, slanted or extended versions of fonts, as instructed by the TeX font map
+    if (x->dvi != NULL) ListIter = ppl_listIterateInit(x->dvi->fonts);
+    else ListIter = NULL;
+    while (ListIter != NULL) {
+        const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
+        if (font->fontSetup != NULL) fprintf(epsout, "%s", font->fontSetup);
+        ppl_listIterate(&ListIter);
     }
 
     // Output macros which Pyxplot needs
