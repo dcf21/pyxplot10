@@ -439,93 +439,108 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
 //! \param [in] context - The Pyxplot context
 //! \param [in] defn - The plot style modifiers to describe
 //! \param [out] out - Character buffer into which to write the description
+//! \param [in] outLen - The size of the buffer <out>
 
-void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out) {
+void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, const size_t outLen) {
     int i = 0;
     out[i] = '\0';
     if (defn->USElinespoints) {
-        sprintf(out + i, "%s ",
-                *(char **) ppl_fetchSettingName(&context->errcontext, defn->linespoints, SW_STYLE_INT,
-                                                (void *) SW_STYLE_STR, sizeof(char *)));
+        ppl_strAppendf(out, outLen, &i, "%s ",
+                       *(char **) ppl_fetchSettingName(&context->errcontext, defn->linespoints, SW_STYLE_INT,
+                                                       (void *) SW_STYLE_STR, sizeof(char *)));
         i += strlen(out + i);
     }
     if (defn->EXPcolor != NULL) {
-        sprintf(out + i, "color %s", defn->EXPcolor->ascii);
+        ppl_strAppendf(out, outLen, &i, "color %s", defn->EXPcolor->ascii);
     } else if (defn->USEcolor1234) {
         if (defn->Col1234Space == SW_COLSPACE_RGB)
-            sprintf(out + i, "color rgb(%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
-                    S_RGB(defn->color3, 2));
+            ppl_strAppendf(out, outLen, &i, "color rgb(%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
+                           S_RGB(defn->color3, 2));
         else if (defn->Col1234Space == SW_COLSPACE_HSB)
-            sprintf(out + i, "color hsb(%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
-                    S_RGB(defn->color3, 2));
+            ppl_strAppendf(out, outLen, &i, "color hsb(%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
+                           S_RGB(defn->color3, 2));
         else if (defn->Col1234Space == SW_COLSPACE_CMYK)
-            sprintf(out + i, "color cmyk(%s,%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
-                    S_RGB(defn->color3, 2), S_RGB(defn->color4, 3));
+            ppl_strAppendf(out, outLen, &i, "color cmyk(%s,%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
+                           S_RGB(defn->color3, 2), S_RGB(defn->color4, 3));
     } else if (defn->USEcolor) {
-        sprintf(out + i, "color %s ",
-                *(char **) ppl_fetchSettingName(&context->errcontext, defn->color, SW_COLOR_INT, (void *) SW_COLOR_STR,
-                                                sizeof(char *)));
+        ppl_strAppendf(out, outLen, &i, "color %s ",
+                       *(char **) ppl_fetchSettingName(&context->errcontext, defn->color, SW_COLOR_INT,
+                                                       (void *) SW_COLOR_STR, sizeof(char *)));
     }
     i += strlen(out + i);
     if (defn->EXPfillcolor != NULL) {
-        sprintf(out + i, "fillcolor %s", defn->EXPfillcolor->ascii);
+        ppl_strAppendf(out, outLen, &i, "fillcolor %s", defn->EXPfillcolor->ascii);
     } else if (defn->USEfillcolor1234) {
         if (defn->FillCol1234Space == SW_COLSPACE_RGB)
-            sprintf(out + i, "fillcolor rgb(%s,%s,%s) ", S_RGB(defn->fillcolor1, 0), S_RGB(defn->fillcolor2, 1),
-                    S_RGB(defn->fillcolor3, 2));
+            ppl_strAppendf(out, outLen, &i, "fillcolor rgb(%s,%s,%s) ", S_RGB(defn->fillcolor1, 0),
+                           S_RGB(defn->fillcolor2, 1), S_RGB(defn->fillcolor3, 2));
         else if (defn->FillCol1234Space == SW_COLSPACE_HSB)
-            sprintf(out + i, "fillcolor hsb(%s,%s,%s) ", S_RGB(defn->fillcolor1, 0), S_RGB(defn->fillcolor2, 1),
-                    S_RGB(defn->fillcolor3, 2));
+            ppl_strAppendf(out, outLen, &i, "fillcolor hsb(%s,%s,%s) ", S_RGB(defn->fillcolor1, 0),
+                           S_RGB(defn->fillcolor2, 1), S_RGB(defn->fillcolor3, 2));
         else if (defn->FillCol1234Space == SW_COLSPACE_CMYK)
-            sprintf(out + i, "fillcolor cmyk(%s,%s,%s,%s) ", S_RGB(defn->fillcolor1, 0), S_RGB(defn->fillcolor2, 1),
-                    S_RGB(defn->fillcolor3, 2), S_RGB(defn->fillcolor4, 2));
+            ppl_strAppendf(out, outLen, &i, "fillcolor cmyk(%s,%s,%s,%s) ", S_RGB(defn->fillcolor1, 0),
+                           S_RGB(defn->fillcolor2, 1), S_RGB(defn->fillcolor3, 2), S_RGB(defn->fillcolor4, 2));
     } else if (defn->USEfillcolor) {
-        sprintf(out + i, "fillcolor %s ",
-                *(char **) ppl_fetchSettingName(&context->errcontext, defn->fillcolor, SW_COLOR_INT,
-                                                (void *) SW_COLOR_STR, sizeof(char *)));
+        ppl_strAppendf(out, outLen, &i, "fillcolor %s ",
+                       *(char **) ppl_fetchSettingName(&context->errcontext, defn->fillcolor, SW_COLOR_INT,
+                                                       (void *) SW_COLOR_STR, sizeof(char *)));
     }
     i += strlen(out + i);
     if (defn->EXPlinetype != NULL) {
-        sprintf(out + i, "linetype %s ", defn->EXPlinetype->ascii);
+        ppl_strAppendf(out, outLen, &i, "linetype %s ", defn->EXPlinetype->ascii);
         i += strlen(out + i);
     } else if (defn->USElinetype) {
-        sprintf(out + i, "linetype %d ", defn->linetype);
+        ppl_strAppendf(out, outLen, &i, "linetype %d ", defn->linetype);
         i += strlen(out + i);
     }
     if (defn->EXPlinewidth != NULL) {
-        sprintf(out + i, "linewidth %s ", defn->EXPlinewidth->ascii);
+        ppl_strAppendf(out, outLen, &i, "linewidth %s ", defn->EXPlinewidth->ascii);
         i += strlen(out + i);
     } else if (defn->USElinewidth) {
-        sprintf(out + i, "linewidth %s ", NUMDISP(defn->linewidth));
+        ppl_strAppendf(out, outLen, &i, "linewidth %s ", NUMDISP(defn->linewidth));
         i += strlen(out + i);
     }
     if (defn->EXPpointlinewidth != NULL) {
-        sprintf(out + i, "pointlinewidth %s ", defn->EXPpointlinewidth->ascii);
+        ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ", defn->EXPpointlinewidth->ascii);
         i += strlen(out + i);
     } else if (defn->USEpointlinewidth) {
-        sprintf(out + i, "pointlinewidth %s ", NUMDISP(defn->pointlinewidth));
+        ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ", NUMDISP(defn->pointlinewidth));
         i += strlen(out + i);
     }
     if (defn->EXPpointsize != NULL) {
-        sprintf(out + i, "pointsize %s ", defn->EXPpointsize->ascii);
+        ppl_strAppendf(out, outLen, &i, "pointsize %s ", defn->EXPpointsize->ascii);
         i += strlen(out + i);
     } else if (defn->USEpointsize) {
-        sprintf(out + i, "pointsize %s ", NUMDISP(defn->pointsize));
+        ppl_strAppendf(out, outLen, &i, "pointsize %s ", NUMDISP(defn->pointsize));
         i += strlen(out + i);
     }
     if (defn->EXPpointtype != NULL) {
-        sprintf(out + i, "pointtype %s ", defn->EXPpointtype->ascii);
+        ppl_strAppendf(out, outLen, &i, "pointtype %s ", defn->EXPpointtype->ascii);
         i += strlen(out + i);
     } else if (defn->USEpointtype) {
-        sprintf(out + i, "pointtype %d ", defn->pointtype);
+        ppl_strAppendf(out, outLen, &i, "pointtype %d ", defn->pointtype);
         i += strlen(out + i);
     }
     if (defn->USEstyle) {
-        sprintf(out + i, "style %d ", defn->style);
+        ppl_strAppendf(out, outLen, &i, "style %d ", defn->style);
         i += strlen(out + i);
     }
     out[i] = '\0';
     return;
+}
+
+//! ppl_withWordsAppend - Append " with <style>" to a string, describing a set of style keywords in the syntax of the
+//! with modifier, unless the style is empty
+//! \param [in] context - The Pyxplot context
+//! \param [in] defn - The style keywords to describe
+//! \param [in,out] out - The buffer containing the string to append to
+//! \param [in] outLen - The size of the buffer <out>
+//! \param [in,out] pos - The position of the end of the string in <out>, which is advanced past the appended text
+
+void ppl_withWordsAppend(ppl_context *context, const withWords *defn, char *out, const size_t outLen, int *pos) {
+    char words[LSTR_LENGTH];
+    ppl_withWordsPrint(context, defn, words, sizeof(words));
+    if (words[0] != '\0') ppl_strAppendf(out, outLen, pos, " with %s", words);
 }
 
 //! ppl_withWordsDestroy - Free the expressions referenced by a set of plot style modifiers

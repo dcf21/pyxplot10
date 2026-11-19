@@ -909,7 +909,7 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
         int end = 0, ep = 0, es = 0;
         char ascii[16];
         pplExpr *exptmp = NULL;
-        sprintf(ascii, "%d", i + 1);
+        ppl_snprintfTrunc(ascii, sizeof(ascii), "%d", i + 1);
         ppl_expCompile(c, 0, 0, "", ascii, &end, 0, 0, 0, &exptmp, &ep, &es, errtext);
         if (es || c->errStat.status) {
             ppl_tbClear(c);
@@ -1078,10 +1078,13 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         else lineptr = ppldata_fetchFromSpool(dataSpool);
 
         if (readFromCommandLine && (lineptr == NULL)) break; // End of file reached
-        if (readFromCommandLine && (strcmp(ppl_strStrip(lineptr, linebuffer), "END") == 0)) break;
+
+        // Lines of data supplied inline after the command may be of any length, so truncate them to fit linebuffer
+        if (lineptr != linebuffer) ppl_snprintfTrunc(linebuffer, sizeof(linebuffer), "%s", lineptr);
+        ppl_strStrip(linebuffer, linebuffer);
+        if (readFromCommandLine && (strcmp(linebuffer, "END") == 0)) break;
 
         file_linenumber++;
-        ppl_strStrip(lineptr, linebuffer);
 
         for (j = 0; ((linebuffer[j] != '\0') && ((unsigned char) linebuffer[j] <= ' ')); j++);
         if (linebuffer[j] == '\0') // We have a blank line
@@ -1410,7 +1413,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             if ((itemsOnLine == 1) && autoUsingExprs && oneColumnInput) {
                 colData[itemsOnLine++] = colData[0];
                 colData[0] = lineNumberStr;
-                sprintf(lineNumberStr, "%ld", file_linenumber);
+                ppl_snprintfTrunc(lineNumberStr, sizeof(lineNumberStr), "%ld", file_linenumber);
             }
 
             ppldata_ApplyUsingList(c, *out, usingExprs, labelExpr, selectExpr, continuity, &discontinuity, colData,
@@ -1576,12 +1579,12 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                 ordinateVar[0]->real = rasterX[i];
                 if (sampleGrid) ordinateVar[1]->real = rasterY[i2];
                 if (sampleGrid)
-                    sprintf(buffer, "%c=%s; %c=%s", (parametric ? 'u' : 'x'),
-                            ppl_unitsNumericDisplay(c, ordinateVar[0], 0, 0, 0), (parametric ? 'v' : 'y'),
-                            ppl_unitsNumericDisplay(c, ordinateVar[1], 1, 0, 0));
+                    ppl_snprintfTrunc(buffer, sizeof(buffer), "%c=%s; %c=%s", (parametric ? 'u' : 'x'),
+                                      ppl_unitsNumericDisplay(c, ordinateVar[0], 0, 0, 0), (parametric ? 'v' : 'y'),
+                                      ppl_unitsNumericDisplay(c, ordinateVar[1], 1, 0, 0));
                 else
-                    sprintf(buffer, "%c=%s", (parametric ? 't' : 'x'),
-                            ppl_unitsNumericDisplay(c, ordinateVar[0], 0, 0, 0));
+                    ppl_snprintfTrunc(buffer, sizeof(buffer), "%c=%s", (parametric ? 't' : 'x'),
+                                      ppl_unitsNumericDisplay(c, ordinateVar[0], 0, 0, 0));
                 pplObjNum(colData + 0, 0, p, 0);
                 if (!parametric) colData[1] = *ordinateVar[0];
                 if ((!parametric) && sampleGrid) colData[2] = *ordinateVar[1];
@@ -2172,7 +2175,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             char ascii[16];
             pplExpr *exptmp = NULL;
             usingExprs[1] = usingExprs[0];
-            sprintf(ascii, "%d", 0);
+            ppl_snprintfTrunc(ascii, sizeof(ascii), "%d", 0);
             ppl_expCompile(c, pl->srcLineN, pl->srcId, pl->srcFname, ascii, &end, 0, 0, 0, &exptmp, &ep, &es, errtext);
             if (es || c->errStat.status) {
                 ppl_tbClear(c);

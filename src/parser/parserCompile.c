@@ -259,7 +259,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                 goto cleanup;
             } else {
                 status = 0;
-                sprintf(c->errStat.errBuff, "Bad node type coming out of code block.");
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Bad node type coming out of code block.");
                 PARSE_TBADD(ERR_INTERNAL, 0, line);
             }
             goto cleanup;
@@ -273,7 +274,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
         ppl_parserLineInit(&output, srcLineN, srcId, srcFname, line);
         output->stackLen = node->listLen;
         if (output == NULL) {
-            sprintf(c->errStat.errBuff, "Out of memory.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
             PARSE_TBADD(ERR_MEMORY, 0, line);
             return 0;
         }
@@ -308,7 +309,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                 parserLine *output = NULL;
                 ppl_parserLineInit(&output, srcLineN, srcId, srcFname, line);
                 if (output == NULL) {
-                    sprintf(c->errStat.errBuff, "Out of memory.");
+                    ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                     ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_MEMORY, 0, line, "inline data");
                     status = 0;
                     goto cleanup;
@@ -376,10 +377,10 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         s->expectingList[0] = '\0';
                     }
                     if (s->eLPos != 0) {
-                        strcpy(s->expectingList + s->eLPos, ", or ");
+                        snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "%s", ", or ");
                         s->eLPos += strlen(s->expectingList + s->eLPos);
                     }
-                    sprintf(s->expectingList + s->eLPos, "\"{\"");
+                    snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
                     l = strlen(s->expectingList + s->eLPos);
                     for (j = k = 0; ((j < s->eLPos) && !k); j++)
                         k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
@@ -427,10 +428,11 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                 s->expectingList[0] = '\0';
                             }
                             if (s->eLPos != 0) {
-                                strcpy(s->expectingList + s->eLPos, ", or ");
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "%s",
+                                         ", or ");
                                 s->eLPos += strlen(s->expectingList + s->eLPos);
                             }
-                            sprintf(s->expectingList + s->eLPos, "\"{\"");
+                            snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
                             l = strlen(s->expectingList + s->eLPos);
                             for (j = k = 0; ((j < s->eLPos) && !k); j++)
                                 k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
@@ -675,7 +677,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                 val.refCount = 1;
                                 pplObjNum(&val, 1, anum, 0);
                                 val.exponent[0] = xyz;
-                                sprintf(opt, "a%d", xyz);
+                                ppl_snprintfTrunc(opt, sizeof(opt), "a%d", xyz);
                                 ppl_parserAtomAdd(s->pl[blockDepth], s->pl[blockDepth]->stackOffset + node->outStackPos,
                                                   *linepos + 1, opt, NULL, &val);
                             }
@@ -774,16 +776,18 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                     s->eLPos = 0;
                     s->expectingList[0] = '\0';
                 }
-                if ((node->varName != NULL) && (node->varName[0] != '\0')) sprintf(varname, " (%s)", node->varName);
+                if ((node->varName != NULL) && (node->varName[0] != '\0'))
+                    ppl_snprintfTrunc(varname, sizeof(varname), " (%s)", node->varName);
                 else varname[0] = '\0';
                 for (i = 1; 1; i++) {
                     if (s->eLPos != 0) {
-                        strcpy(s->expectingList + s->eLPos, ", or ");
+                        snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "%s", ", or ");
                         s->eLPos += strlen(s->expectingList + s->eLPos);
                     }
 
                     if (node->matchString[0] != '%') {
-                        sprintf(s->expectingList + s->eLPos, "\"%s\"", node->matchString);
+                        snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"%s\"",
+                                 node->matchString);
                     } else {
                         if (node->matchString[i] == '\0') {
                             if (s->eLPos != 0) {
@@ -794,64 +798,84 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         }
                         switch (node->matchString[i]) {
                             case 'a':
-                                sprintf(s->expectingList + s->eLPos, "an axis name%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an axis name%s", varname);
                                 break;
                             case 'A':
-                                sprintf(s->expectingList + s->eLPos, "an angle%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "an angle%s",
+                                         varname);
                                 break;
                             case 'b':
-                                sprintf(s->expectingList + s->eLPos, "a boolean%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a boolean%s", varname);
                                 break;
                             case 'c':
-                                sprintf(s->expectingList + s->eLPos, "a color%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "a color%s",
+                                         varname);
                                 break;
                             case 'd':
-                                sprintf(s->expectingList + s->eLPos, "an integer%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an integer%s", varname);
                                 break;
                             case 'D':
-                                sprintf(s->expectingList + s->eLPos, "a distance%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a distance%s", varname);
                                 break;
                             case 'e':
-                                sprintf(s->expectingList + s->eLPos, "an algebraic expression%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an algebraic expression%s", varname);
                                 break;
                             case 'E':
-                                sprintf(s->expectingList + s->eLPos, "an algebraic expression%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an algebraic expression%s", varname);
                                 break;
                             case 'F':
-                                sprintf(s->expectingList + s->eLPos, "an algebraic expression%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an algebraic expression%s", varname);
                                 break;
                             case 'g':
-                                sprintf(s->expectingList + s->eLPos, "an algebraic expression%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an algebraic expression%s", varname);
                                 break;
                             case 'f':
-                                sprintf(s->expectingList + s->eLPos, "a real, dimensionless number%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a real, dimensionless number%s", varname);
                                 break;
                             case 'o':
-                                sprintf(s->expectingList + s->eLPos, "an expression%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an expression%s", varname);
                                 break;
                             case 'p':
-                                sprintf(s->expectingList + s->eLPos, "a position vector%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a position vector%s", varname);
                                 break;
                             case 'P':
-                                sprintf(s->expectingList + s->eLPos, "a position vector%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a position vector%s", varname);
                                 break;
                             case 'q':
-                                sprintf(s->expectingList + s->eLPos, "a string%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "a string%s",
+                                         varname);
                                 break;
                             case 'r':
-                                sprintf(s->expectingList + s->eLPos, "a string of text%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a string of text%s", varname);
                                 break;
                             case 's':
-                                sprintf(s->expectingList + s->eLPos, "an alphabetical word%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "an alphabetical word%s", varname);
                                 break;
                             case 'S':
-                                sprintf(s->expectingList + s->eLPos, "a word%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "a word%s",
+                                         varname);
                                 break;
                             case 'u':
-                                sprintf(s->expectingList + s->eLPos, "a physical quantity%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a physical quantity%s", varname);
                                 break;
                             case 'v':
-                                sprintf(s->expectingList + s->eLPos, "a variable name%s", varname);
+                                snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos,
+                                         "a variable name%s", varname);
                                 break;
                         }
                     }
@@ -1350,7 +1374,8 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
         {
             const int bd = ppl_max(blockDepth, s->blockDepth);
             if (s->waitingForBrace) {
-                sprintf(c->errStat.errBuff, "Cannot process a macro on the same line as the opening brace of a loop.");
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Cannot process a macro on the same line as the opening brace of a loop.");
                 PARSE_TBADD(ERR_SYNTAX, 0, line);
                 ppl_parserStatReInit(s);
                 return 1;
@@ -1359,7 +1384,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
             if ((s->stk[blockDepth][0] == NULL) && (blockDepth == 0)) ppl_parserStatReInit(s);
             ppl_parserLineInit(&output, srcLineN, srcId, srcFname, line);
             if (output == NULL) {
-                sprintf(c->errStat.errBuff, "Out of memory.");
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                 PARSE_TBADD(ERR_MEMORY, 0, line);
                 ppl_parserStatReInit(s);
                 return 1;
@@ -1396,13 +1421,13 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                     FILE *substPipe;
                     for (; ((line[i] != '\0') && (line[i] != '`')); i++); // Find end of ` ` expression
                     if (line[i] != '`') {
-                        sprintf(c->errStat.errBuff, "Mismatched `");
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Mismatched `");
                         fail = 1;
                         break;
                     }
                     key = (char *) malloc(i - is + 1); // Put macro name into a string
                     if (key == NULL) {
-                        sprintf(c->errStat.errBuff, "Out of memory.");
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                         fail = 1;
                         break;
                     }
@@ -1413,7 +1438,8 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                         ppl_log(&c->errcontext, msg);
                     }
                     if ((substPipe = popen(key, "r")) == NULL) {
-                        sprintf(c->errStat.errBuff, "Could not spawl shell substitution command '%s'.", key);
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                          "Could not spawl shell substitution command '%s'.", key);
                         fail = 1;
                         goto shellSubstErr;
                     }
@@ -1425,7 +1451,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                             obLen += LSTR_LENGTH;
                             outbuff = (char *) realloc(outbuff, obLen);
                             if (outbuff == NULL) {
-                                sprintf(c->errStat.errBuff, "Out of memory.");
+                                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                                 fail = 1;
                                 break;
                             }
@@ -1437,17 +1463,20 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                     if (WIFEXITED(status)) {
                         int ec = WEXITSTATUS(status);
                         if (ec) {
-                            sprintf(c->errStat.errBuff, "Command failure during ` ` substitution (exit code %d).", ec);
+                            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                              "Command failure during ` ` substitution (exit code %d).", ec);
                             fail = 1;
                             goto shellSubstErr;
                         }
                     } else if (WIFSIGNALED(status)) {
-                        sprintf(c->errStat.errBuff,
-                                "Command failure during ` ` substitution (terminated by signal %d).", WTERMSIG(status));
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                          "Command failure during ` ` substitution (terminated by signal %d).",
+                                          WTERMSIG(status));
                         fail = 1;
                         goto shellSubstErr;
                     } else {
-                        sprintf(c->errStat.errBuff, "Command failure during ` ` substitution (fail happened).");
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                          "Command failure during ` ` substitution (fail happened).");
                         fail = 1;
                         goto shellSubstErr;
                     }
@@ -1467,7 +1496,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                     for (; (isalnum(line[i]) || (line[i] == '_')); i++); // Find end of macro name
                     key = (char *) malloc(i - is + 1); // Put macro name into a string
                     if (key == NULL) {
-                        sprintf(c->errStat.errBuff, "Out of memory.");
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                         fail = 1;
                         break;
                     }
@@ -1478,8 +1507,9 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                         if (obj == NULL) continue;
                         if ((obj->objType == PPLOBJ_GLOB) || (obj->objType == PPLOBJ_ZOM)) continue;
                         if (obj->objType != PPLOBJ_STR) {
-                            sprintf(c->errStat.errBuff,
-                                    "Attempt to expand a macro, \"%s\", which is not a string variable.", key);
+                            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                              "Attempt to expand a macro, \"%s\", which is not a string variable.",
+                                              key);
                             got = -1;
                             break;
                         }
@@ -1496,7 +1526,10 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                         got = 1;
                         break;
                     }
-                    if (got == 0) { sprintf(c->errStat.errBuff, "Undefined macro, \"%s\".", key); }
+                    if (got == 0) {
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Undefined macro, \"%s\".",
+                                          key);
+                    }
                     free(key);
                     key = NULL;
                     if (got <= 0) {
@@ -1607,7 +1640,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
     }
 
     // We have not found a match to this command
-    sprintf(c->errStat.errBuff, "Unrecognised command.");
+    ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Unrecognised command.");
     PARSE_TBADD(ERR_SYNTAX, 0, line);
     if (outbuff != NULL) {
         free(outbuff);

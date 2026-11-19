@@ -61,9 +61,9 @@ application is a dummy filter which does nothing.\n\n");
 #endif
 
     // Make help and version strings
-    sprintf(version_string, "\nPyxplot Fits Helper %s\n\n", VERSION);
+    ppl_snprintfTrunc(version_string, sizeof(version_string), "\nPyxplot Fits Helper %s\n\n", VERSION);
 
-    sprintf(help_string, "\nPyxplot Fits Helper %s\n\
+    ppl_snprintfTrunc(help_string, sizeof(help_string), "\nPyxplot Fits Helper %s\n\
 %s\n\
 \n\
 %sUsage: pyxplot_fitshelper <filename>\n\
@@ -81,7 +81,7 @@ full Users' Guide can be found in the file:\n\
 \n\
 For the latest information on Pyxplot development, see the project website:\n\
 <http://www.pyxplot.org.uk>\n\n",
-            VERSION, ppl_strUnderline(version_string, version_string_underline), warntext, DOCDIR, PATHLINK);
+                      VERSION, ppl_strUnderline(version_string, version_string_underline), warntext, DOCDIR, PATHLINK);
 
     // Scan command-line options for any switches
     HaveFilename = 0;

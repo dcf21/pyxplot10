@@ -331,79 +331,79 @@ void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
 //! \param [in] context - The Pyxplot context
 //! \param [in] in - The label to describe
 //! \param [out] out - Character buffer into which to write the description
+//! \param [in] outLen - The size of the buffer <out>
 
-void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out) {
+void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const size_t outLen) {
     int i;
-    ppl_strEscapify(in->text, out);
+    ppl_strEscapify(in->text, out, outLen);
     i = strlen(out);
-    sprintf(out + i, " at %s",
-            *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x, SW_SYSTEM_INT, (void *) SW_SYSTEM_STR,
-                                            sizeof(char *)));
+    ppl_strAppendf(out, outLen, &i, " at %s",
+                   *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x, SW_SYSTEM_INT,
+                                                   (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
     if (in->system_x == SW_SYSTEM_AXISN) {
-        sprintf(out + i, " %d", in->axis_x);
+        ppl_strAppendf(out, outLen, &i, " %d", in->axis_x);
         i += strlen(out + i);
     }
-    sprintf(out + i, " %s,", ppl_unitsNumericDisplay(context, &(in->x), 0, 0, 0));
+    ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->x), 0, 0, 0));
     i += strlen(out + i);
-    sprintf(out + i, " %s",
-            *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y, SW_SYSTEM_INT, (void *) SW_SYSTEM_STR,
-                                            sizeof(char *)));
+    ppl_strAppendf(out, outLen, &i, " %s",
+                   *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y, SW_SYSTEM_INT,
+                                                   (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
     if (in->system_y == SW_SYSTEM_AXISN) {
-        sprintf(out + i, " %d", in->axis_y);
+        ppl_strAppendf(out, outLen, &i, " %d", in->axis_y);
         i += strlen(out + i);
     }
-    sprintf(out + i, " %s,", ppl_unitsNumericDisplay(context, &(in->y), 0, 0, 0));
+    ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->y), 0, 0, 0));
     i += strlen(out + i);
-    sprintf(out + i, " %s",
-            *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z, SW_SYSTEM_INT, (void *) SW_SYSTEM_STR,
-                                            sizeof(char *)));
+    ppl_strAppendf(out, outLen, &i, " %s",
+                   *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z, SW_SYSTEM_INT,
+                                                   (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
     if (in->system_z == SW_SYSTEM_AXISN) {
-        sprintf(out + i, " %d", in->axis_z);
+        ppl_strAppendf(out, outLen, &i, " %d", in->axis_z);
         i += strlen(out + i);
     }
-    sprintf(out + i, " %s", ppl_unitsNumericDisplay(context, &(in->z), 0, 0, 0));
+    ppl_strAppendf(out, outLen, &i, " %s", ppl_unitsNumericDisplay(context, &(in->z), 0, 0, 0));
     i += strlen(out + i);
     if (in->rotation != 0.0) {
-        sprintf(out + i, " rotate %s",
-                ppl_numericDisplay(in->rotation * 180 / M_PI, context->numdispBuff[0],
-                                   context->set->term_current.SignificantFigures,
-                                   (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_strAppendf(out, outLen, &i, " rotate %s",
+                       ppl_numericDisplay(in->rotation * 180 / M_PI, context->numdispBuff[0],
+                                          context->set->term_current.SignificantFigures,
+                                          (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i += strlen(out + i);
     }
     if (in->HAlign > 0) {
-        sprintf(out + i, " halign %s",
-                *(char **) ppl_fetchSettingName(&context->errcontext, in->HAlign, SW_HALIGN_INT, (void *) SW_HALIGN_STR,
-                                                sizeof(char *)));
+        ppl_strAppendf(out, outLen, &i, " halign %s",
+                       *(char **) ppl_fetchSettingName(&context->errcontext, in->HAlign, SW_HALIGN_INT,
+                                                       (void *) SW_HALIGN_STR, sizeof(char *)));
         i += strlen(out + i);
     }
     if (in->VAlign > 0) {
-        sprintf(out + i, " valign %s",
-                *(char **) ppl_fetchSettingName(&context->errcontext, in->VAlign, SW_VALIGN_INT, (void *) SW_VALIGN_STR,
-                                                sizeof(char *)));
+        ppl_strAppendf(out, outLen, &i, " valign %s",
+                       *(char **) ppl_fetchSettingName(&context->errcontext, in->VAlign, SW_VALIGN_INT,
+                                                       (void *) SW_VALIGN_STR, sizeof(char *)));
         i += strlen(out + i);
     }
     if (in->gap != 0.0) {
-        sprintf(out + i, " gap %s",
-                ppl_numericDisplay(in->gap * 100, context->numdispBuff[0],
-                                   context->set->term_current.SignificantFigures,
-                                   (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_strAppendf(out, outLen, &i, " gap %s",
+                       ppl_numericDisplay(in->gap * 100, context->numdispBuff[0],
+                                          context->set->term_current.SignificantFigures,
+                                          (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i += strlen(out + i);
     }
-    ppl_withWordsPrint(context, &in->style, out + i + 6);
-    if ((strlen(out + i + 6) > 0) || in->fontsizeSet) {
-        sprintf(out + i, " with");
-        out[i + 5] = ' ';
-    } else {
-        out[i] = '\0';
+    {
+        char words[LSTR_LENGTH];
+        ppl_withWordsPrint(context, &in->style, words, sizeof(words));
+        if ((words[0] != '\0') || in->fontsizeSet) ppl_strAppendf(out, outLen, &i, " with %s", words);
     }
     i += strlen(out + i);
     if (in->fontsizeSet) {
-        sprintf(out + i, " fontsize %s",
-                ppl_numericDisplay(in->fontsize, context->numdispBuff[0], context->set->term_current.SignificantFigures,
-                                   (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_strAppendf(out, outLen, &i, " fontsize %s",
+                       ppl_numericDisplay(in->fontsize, context->numdispBuff[0],
+                                          context->set->term_current.SignificantFigures,
+                                          (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i += strlen(out + i);
     }
     return;

@@ -62,7 +62,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     int i, j, Ncolumns, Nchildren, strlen_version, strlen_date;
     FILE *pagerHandle;
 
-    sprintf(textBuffer, "\\\\**** Help Topic: %s****\\\\", PageName);
+    ppl_snprintfTrunc(textBuffer, sizeof(textBuffer), "\\\\**** Help Topic: %s****\\\\", PageName);
     i = strlen(textBuffer);
     for (cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
         if (cur_node->type == XML_TEXT_NODE) {
@@ -276,7 +276,7 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
     topicString = (char *) in->stk[PARSE_help_topic].auxil;
     topicWords = ppl_strSplit(topicString);
 
-    sprintf(filename, "%s%s%s", SRCDIR, PATHLINK, "help.xml"); // Find help.xml
+    ppl_snprintfTrunc(filename, sizeof(filename), "%s%s%s", SRCDIR, PATHLINK, "help.xml"); // Find help.xml
     LIBXML_TEST_VERSION
 
     doc = xmlReadFile(filename, NULL, 0);

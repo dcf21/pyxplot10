@@ -30,6 +30,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "settings/epsColors.h"
 #include "settings/settingTypes.h"
 #include "epsMaker/eps_comm.h"
@@ -56,7 +57,7 @@ void eps_core_clear(EPSComm *x) {
 
 void eps_core_WritePSColor(EPSComm *x) {
     if ((strcmp(x->CurrentColor, x->LastPSColor) != 0) && (x->CurrentColor[0] != '\0')) {
-        strcpy(x->LastPSColor, x->CurrentColor);
+        ppl_snprintfTrunc(x->LastPSColor, sizeof(x->LastPSColor), "%s", x->CurrentColor);
         fprintf(x->epsbuffer, "%s\n", x->LastPSColor);
     }
     return;
@@ -71,31 +72,33 @@ void eps_core_SetColor(EPSComm *x, withWords *ww, const unsigned char WritePS) {
     // Color may be specified as a named color, or as RGB components, or may not be specified at all, in which case we use black
     if (ww->USEcolor1234) {
         if ((!gsl_finite(ww->color1)) || (!gsl_finite(ww->color2)) || (!gsl_finite(ww->color3))) {
-            sprintf(x->CurrentColor, "0 0 0 setrgbcolor");
+            snprintf(x->CurrentColor, sizeof(x->CurrentColor), "0 0 0 setrgbcolor");
         } else if ((ww->Col1234Space == SW_COLSPACE_CMYK) && (!gsl_finite(ww->color4))) {
-            sprintf(x->CurrentColor, "0 0 0 setrgbcolor");
+            snprintf(x->CurrentColor, sizeof(x->CurrentColor), "0 0 0 setrgbcolor");
         } else if (ww->Col1234Space == SW_COLSPACE_RGB)
-            sprintf(x->CurrentColor, "%.3f %.3f %.3f setrgbcolor", ww->color1, ww->color2, ww->color3);
+            snprintf(x->CurrentColor, sizeof(x->CurrentColor), "%.3f %.3f %.3f setrgbcolor", ww->color1, ww->color2,
+                     ww->color3);
         else if (ww->Col1234Space == SW_COLSPACE_HSB)
-            sprintf(x->CurrentColor, "%.3f %.3f %.3f sethsbcolor", ww->color1, ww->color2, ww->color3);
+            snprintf(x->CurrentColor, sizeof(x->CurrentColor), "%.3f %.3f %.3f sethsbcolor", ww->color1, ww->color2,
+                     ww->color3);
         else if (ww->Col1234Space == SW_COLSPACE_CMYK)
-            sprintf(x->CurrentColor, "%.3f %.3f %.3f %.3f setcmykcolor", ww->color1, ww->color2, ww->color3,
-                    ww->color4);
+            snprintf(x->CurrentColor, sizeof(x->CurrentColor), "%.3f %.3f %.3f %.3f setcmykcolor", ww->color1,
+                     ww->color2, ww->color3, ww->color4);
         else ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Illegal setting for color space switch.");
     } else if ((ww->USEcolor) &&
                ((ww->color == COLOR_NULL) || (ww->color == COLOR_INVISIBLE) || (ww->color == COLOR_TRANSPARENT)))
         strcpy(x->CurrentColor, ""); // This is code to tell us we're writing in invisible ink
     else if (ww->USEcolor)
-        sprintf(x->CurrentColor, "%.3f %.3f %.3f %.3f setcmykcolor",
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_C,
-                                                 sizeof(double)),
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_M,
-                                                 sizeof(double)),
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_Y,
-                                                 sizeof(double)),
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_K,
-                                                 sizeof(double)));
-    else sprintf(x->CurrentColor, "0 0 0 setrgbcolor");
+        snprintf(x->CurrentColor, sizeof(x->CurrentColor), "%.3f %.3f %.3f %.3f setcmykcolor",
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_C,
+                                                  sizeof(double)),
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_M,
+                                                  sizeof(double)),
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_Y,
+                                                  sizeof(double)),
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->color, SW_COLOR_INT, (void *) SW_COLOR_CMYK_K,
+                                                  sizeof(double)));
+    else snprintf(x->CurrentColor, sizeof(x->CurrentColor), "0 0 0 setrgbcolor");
 
     // Only change postscript color if the color we want isn't the one we are already using
     if ((strcmp(x->CurrentColor, x->LastPSColor) != 0) && WritePS && (x->CurrentColor[0] != '\0'))
@@ -111,27 +114,29 @@ void eps_core_SetFillColor(EPSComm *x, withWords *ww) {
     // Color may be specified as a named color, or as RGB components, or may not be specified at all, in which case we use black
     if (ww->USEfillcolor1234) {
         if (ww->FillCol1234Space == SW_COLSPACE_RGB)
-            sprintf(x->CurrentFillColor, "%.3f %.3f %.3f setrgbcolor", ww->fillcolor1, ww->fillcolor2, ww->fillcolor3);
+            snprintf(x->CurrentFillColor, sizeof(x->CurrentFillColor), "%.3f %.3f %.3f setrgbcolor", ww->fillcolor1,
+                     ww->fillcolor2, ww->fillcolor3);
         else if (ww->FillCol1234Space == SW_COLSPACE_HSB)
-            sprintf(x->CurrentFillColor, "%.3f %.3f %.3f sethsbcolor", ww->fillcolor1, ww->fillcolor2, ww->fillcolor3);
+            snprintf(x->CurrentFillColor, sizeof(x->CurrentFillColor), "%.3f %.3f %.3f sethsbcolor", ww->fillcolor1,
+                     ww->fillcolor2, ww->fillcolor3);
         else if (ww->FillCol1234Space == SW_COLSPACE_CMYK)
-            sprintf(x->CurrentFillColor, "%.3f %.3f %.3f %.3f setcmykcolor", ww->fillcolor1, ww->fillcolor2,
-                    ww->fillcolor3, ww->fillcolor4);
+            snprintf(x->CurrentFillColor, sizeof(x->CurrentFillColor), "%.3f %.3f %.3f %.3f setcmykcolor",
+                     ww->fillcolor1, ww->fillcolor2, ww->fillcolor3, ww->fillcolor4);
         else ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Illegal setting for color space switch.");
     } else if ((ww->USEfillcolor) &&
                ((ww->fillcolor == COLOR_NULL) || (ww->fillcolor == COLOR_INVISIBLE) ||
                 (ww->fillcolor == COLOR_TRANSPARENT)))
         strcpy(x->CurrentFillColor, ""); // This is code to tell us we're writing in invisible ink
     else if (ww->USEfillcolor)
-        sprintf(x->CurrentFillColor, "%.3f %.3f %.3f %.3f setcmykcolor",
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
-                                                 (void *) SW_COLOR_CMYK_C, sizeof(double)),
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
-                                                 (void *) SW_COLOR_CMYK_M, sizeof(double)),
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
-                                                 (void *) SW_COLOR_CMYK_Y, sizeof(double)),
-                *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
-                                                 (void *) SW_COLOR_CMYK_K, sizeof(double)));
+        snprintf(x->CurrentFillColor, sizeof(x->CurrentFillColor), "%.3f %.3f %.3f %.3f setcmykcolor",
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
+                                                  (void *) SW_COLOR_CMYK_C, sizeof(double)),
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
+                                                  (void *) SW_COLOR_CMYK_M, sizeof(double)),
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
+                                                  (void *) SW_COLOR_CMYK_Y, sizeof(double)),
+                 *(double *) ppl_fetchSettingName(&x->c->errcontext, ww->fillcolor, SW_COLOR_INT,
+                                                  (void *) SW_COLOR_CMYK_K, sizeof(double)));
     else strcpy(x->CurrentFillColor, ""); // If no fill color is specified, we don't fill
 
     return;
@@ -144,13 +149,15 @@ static char TempColor[256];
 //! \param [in] WritePS - If true, also write the postscript command to set the color
 
 void eps_core_SwitchTo_FillColor(EPSComm *x, const unsigned char WritePS) {
-    strcpy(TempColor,
-           x->CurrentColor); // Buffer the color we're stroking with so we can restore it in eps_core_SwitchFrom_FillColor
+    ppl_snprintfTrunc(
+            TempColor, sizeof(TempColor), "%s",
+            x->CurrentColor); // Buffer the color we're stroking with so we can restore it in eps_core_SwitchFrom_FillColor
     if ((strcmp(x->CurrentFillColor, x->LastPSColor) != 0) && WritePS && (x->CurrentFillColor[0] != '\0')) {
-        strcpy(x->LastPSColor, x->CurrentFillColor);
+        ppl_snprintfTrunc(x->LastPSColor, sizeof(x->LastPSColor), "%s", x->CurrentFillColor);
         fprintf(x->epsbuffer, "%s\n", x->LastPSColor);
     }
-    strcpy(x->CurrentColor, x->CurrentFillColor); // This make the supression of invisible ink work...
+    ppl_snprintfTrunc(x->CurrentColor, sizeof(x->CurrentColor), "%s",
+                      x->CurrentFillColor); // This make the supression of invisible ink work...
     return;
 }
 
@@ -161,10 +168,11 @@ void eps_core_SwitchTo_FillColor(EPSComm *x, const unsigned char WritePS) {
 
 void eps_core_SwitchFrom_FillColor(EPSComm *x, const unsigned char WritePS) {
     if ((strcmp(TempColor, x->LastPSColor) != 0) && WritePS && (TempColor[0] != '\0')) {
-        strcpy(x->LastPSColor, TempColor);
+        ppl_snprintfTrunc(x->LastPSColor, sizeof(x->LastPSColor), "%s", TempColor);
         fprintf(x->epsbuffer, "%s\n", x->LastPSColor);
     }
-    strcpy(x->CurrentColor, TempColor); // Restore the color we're stroking with
+    ppl_snprintfTrunc(x->CurrentColor, sizeof(x->CurrentColor), "%s",
+                      TempColor); // Restore the color we're stroking with
     return;
 }
 

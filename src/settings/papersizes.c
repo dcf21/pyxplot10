@@ -96,13 +96,14 @@ void ppl_PaperSizeInit() {
     for (i = 0; i < 11; i++) {
         height2 = height / sqrt(2);
         width2 = width / sqrt(2);
-        sprintf(PaperSizeList[pos].name, "japanese_b%d", i); // Japanese B0 - B11
+        ppl_snprintfTrunc(PaperSizeList[pos].name, sizeof(PaperSizeList[pos].name), "japanese_b%d",
+                          i); // Japanese B0 - B11
         PaperSizeList[pos].width = (width2 + width) / 2;
         PaperSizeList[pos].height = (height2 + height) / 2;
         pos++;
         for (j = 0; j < 8; j++) {
-            sprintf(PaperSizeList[pos].name, "%s%d", SeriesNames[j],
-                    i); // Logarithmically-spaced series, including the A, B and C-series.
+            ppl_snprintfTrunc(PaperSizeList[pos].name, sizeof(PaperSizeList[pos].name), "%s%d", SeriesNames[j],
+                              i); // Logarithmically-spaced series, including the A, B and C-series.
             PaperSizeList[pos].height = height2 * pow(2.0, ((float) j / 16));
             PaperSizeList[pos].width = width2 * pow(2.0, ((float) j / 16));
             pos++;

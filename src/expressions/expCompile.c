@@ -1660,7 +1660,7 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
             case PPL_BC_PUSH_NUMBER:
                 op = "push";
                 optype = "numeric";
-                sprintf(arg, "%.2e", in->operand.number);
+                ppl_snprintfTrunc(arg, sizeof(arg), "%.2e", in->operand.number);
                 break;
             case PPL_BC_PUSH_STRING:
                 op = "push";
@@ -1704,13 +1704,13 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
                 break;
             case PPL_BC_CALL:
                 op = "call";
-                sprintf(arg, "%d args", in->operand.count);
+                ppl_snprintfTrunc(arg, sizeof(arg), "%d args", in->operand.count);
                 break;
             case PPL_BC_OPERATOR: {
                 const int arity = (in->operand.operatorCode >> 5) & 3;
                 op = "op";
                 optype = (arity == 1) ? "unary" : (arity == 2) ? "binary" : (arity == 3) ? "ternary" : "???";
-                strcpy(arg, operatorSymbol(in->operand.operatorCode));
+                ppl_snprintfTrunc(arg, sizeof(arg), "%s", operatorSymbol(in->operand.operatorCode));
                 break;
             }
             case PPL_BC_ASSIGN:
@@ -1731,7 +1731,7 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
             case PPL_BC_STRING_SUBST:
                 op = "op";
                 optype = "binary";
-                sprintf(arg, "string subst (%d items)", in->operand.count);
+                ppl_snprintfTrunc(arg, sizeof(arg), "string subst (%d items)", in->operand.count);
                 break;
             case PPL_BC_DOLLAR:
                 op = "op";
@@ -1743,16 +1743,16 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
                 const int ifTrue = (in->opcode == PPL_BC_BRANCH_IF_TRUE);
                 op = "branch if";
                 optype = ifTrue ? "true" : "false";
-                sprintf(arg, "to %d (%s)", in->operand.target,
-                        in->popOnBranch  ? "pop conditional"
-                                : ifTrue ? "pop conditional; push TRUE on branch"
-                                         : "pop conditional; push FALSE on branch");
+                ppl_snprintfTrunc(arg, sizeof(arg), "to %d (%s)", in->operand.target,
+                                  in->popOnBranch  ? "pop conditional"
+                                          : ifTrue ? "pop conditional; push TRUE on branch"
+                                                   : "pop conditional; push FALSE on branch");
                 break;
             }
             case PPL_BC_GOTO:
                 op = "branch";
                 optype = "goto";
-                sprintf(arg, "%d", in->operand.target);
+                ppl_snprintfTrunc(arg, sizeof(arg), "%d", in->operand.target);
                 break;
             case PPL_BC_MAKE_BOOLEAN:
                 op = "make";

@@ -198,7 +198,8 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
     if (argP < 0) {
         free(out);
         out = NULL;
-        sprintf(context->errStat.errBuff,
+        ppl_snprintfTrunc(
+                context->errStat.errBuff, sizeof(context->errStat.errBuff),
                 "Too many arguments supplied to string substitution operator; %d supplied when %d were needed.", Nsubs,
                 Nsubs + argP);
         TBADD(ERR_RANGE);
@@ -299,7 +300,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 char *out;
                 *lastOpAssign = 0;
                 if ((out = (char *) malloc(l + 1)) == NULL) {
-                    sprintf(context->errStat.errBuff, "Out of memory.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
                     TBADD(ERR_MEMORY);
                     goto cleanup_on_error;
                 }
@@ -325,7 +326,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     break;
                 }
                 if (!got) {
-                    sprintf(context->errStat.errBuff, "No such variable '%s'.", key);
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "No such variable '%s'.", key);
                     TBADD(ERR_NAMESPACE);
                     goto cleanup_on_error;
                 }
@@ -344,19 +346,22 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         stk->amMalloced = 0;
                         obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
                         if (obj == NULL) {
-                            sprintf(context->errStat.errBuff, "Out of memory.");
+                            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                              "Out of memory.");
                             TBADD(ERR_MEMORY);
                             goto cleanup_on_error;
                         }
                     }
                     if ((obj == NULL) || ((context->namespaces[i]->immutable) && (obj->objType != PPLOBJ_GLOB))) {
-                        sprintf(context->errStat.errBuff, "Cannot modify variable in immutable namespace.");
+                        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                          "Cannot modify variable in immutable namespace.");
                         TBADD(ERR_NAMESPACE);
                         goto cleanup_on_error;
                     }
                     if (obj->objType == PPLOBJ_GLOB) {
                         if (i < 2) {
-                            sprintf(context->errStat.errBuff, "Variable declared global in global namespace.");
+                            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                              "Variable declared global in global namespace.");
                             TBADD(ERR_NAMESPACE);
                             goto cleanup_on_error;
                         }
@@ -381,7 +386,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 // Make copy of object that will be self_this (in, which we therefore don't garbage below)
                 in_cpy = (pplObj *) malloc(sizeof(pplObj));
                 if (in_cpy == NULL) {
-                    sprintf(context->errStat.errBuff, "Out of memory.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
                     TBADD(ERR_MEMORY);
                     goto cleanup_on_error;
                 }
@@ -408,7 +413,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     dict *d = pplObjMethods[in->objType];
                     pplObj *obj = (pplObj *) ppl_dictLookup(d, key);
                     if (obj == NULL) {
-                        sprintf(context->errStat.errBuff, "No such method '%s'.", key);
+                        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                          "No such method '%s'.", key);
                         TBADD(ERR_NAMESPACE);
                         free(in_cpy);
                         in_cpy = NULL;
@@ -427,14 +433,16 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 dict *d = (dict *) ((stk - 1)->auxil);
                 *lastOpAssign = 0;
                 if ((stk - 1)->immutable) {
-                    sprintf(context->errStat.errBuff, "Cannot modify variable in immutable namespace.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Cannot modify variable in immutable namespace.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
                 if ((t == PPLOBJ_MOD) || (t == PPLOBJ_USER)) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(d, key);
                     if (d->immutable) {
-                        sprintf(context->errStat.errBuff, "Cannot modify variable in immutable namespace.");
+                        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                          "Cannot modify variable in immutable namespace.");
                         TBADD(ERR_TYPE);
                         goto cleanup_on_error;
                     }
@@ -444,7 +452,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         ppl_dictAppendCpy(d, key, stk, sizeof(pplObj));
                         obj = (pplObj *) ppl_dictLookup(d, key);
                         if (obj == NULL) {
-                            sprintf(context->errStat.errBuff, "Out of memory.");
+                            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                              "Out of memory.");
                             TBADD(ERR_MEMORY);
                             goto cleanup_on_error;
                         }
@@ -455,7 +464,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     context->stackPtr++;
                     break;
                 } else {
-                    sprintf(context->errStat.errBuff, "Cannot assign methods or variables to this object.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Cannot assign methods or variables to this object.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
@@ -476,29 +486,33 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     for (i = 1; i <= Nrange; i++) {
                         int *out = ((i == 1) && maxset) ? &max : &min;
                         if ((stk - i)->objType != PPLOBJ_NUM) {
-                            sprintf(context->errStat.errBuff,
+                            ppl_snprintfTrunc(
+                                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Range limits when slicing must be numerical values; supplied limit has type <%s>.",
                                     pplObjTypeNames[(stk - 1)->objType]);
                             TBADD(ERR_TYPE);
                             goto cleanup_on_error;
                         }
                         if (!(stk - i)->dimensionless) {
-                            sprintf(context->errStat.errBuff,
+                            ppl_snprintfTrunc(
+                                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Range limits when slicing must be dimensionless numbers; supplied limit has units of <%s>.",
                                     ppl_printUnit(context, stk - i, NULL, NULL, 0, 1, 0));
                             TBADD(ERR_NUMERICAL);
                             goto cleanup_on_error;
                         }
                         if ((stk - i)->flagComplex) {
-                            sprintf(context->errStat.errBuff,
+                            ppl_snprintfTrunc(
+                                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                     "Range limits when slicing must be real numbers; supplied limit is complex.");
                             TBADD(ERR_NUMERICAL);
                             goto cleanup_on_error;
                         }
                         if ((!gsl_finite((stk - i)->real)) || ((stk - i)->real < INT_MIN) ||
                             ((stk - i)->real > INT_MAX)) {
-                            sprintf(context->errStat.errBuff,
-                                    "Range limits when slicing must be in the range %d to %d.", INT_MIN, INT_MAX);
+                            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                              "Range limits when slicing must be in the range %d to %d.", INT_MIN,
+                                              INT_MAX);
                             TBADD(ERR_RANGE);
                             goto cleanup_on_error;
                         }
@@ -519,20 +533,21 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 dict *d = ppl_dictInit(1);
                 *lastOpAssign = 0;
                 if (d == NULL) {
-                    sprintf(context->errStat.errBuff, "Out of memory.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
                 if (context->stackPtr < 2 * len) {
-                    sprintf(context->errStat.errBuff, "Attempt to make dictionary with too few items on the stack.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Attempt to make dictionary with too few items on the stack.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
                 for (k = 0; k < len; k++)
                     if ((stk - 2 * (len - k))->objType != PPLOBJ_STR) {
-                        sprintf(context->errStat.errBuff,
-                                "Dictionary keys must be strings; supplied key has type <%s>.",
-                                pplObjTypeNames[(stk - 2 * (len - k))->objType]);
+                        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                          "Dictionary keys must be strings; supplied key has type <%s>.",
+                                          pplObjTypeNames[(stk - 2 * (len - k))->objType]);
                         TBADD(ERR_TYPE);
                         goto cleanup_on_error;
                     }
@@ -554,12 +569,13 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 list *l = ppl_listInit(1);
                 *lastOpAssign = 0;
                 if (l == NULL) {
-                    sprintf(context->errStat.errBuff, "Out of memory.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
                 if (context->stackPtr < len) {
-                    sprintf(context->errStat.errBuff, "Attempt to make list with too few items on the stack.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Attempt to make list with too few items on the stack.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
@@ -758,7 +774,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         break;
                     }
                     default:
-                        sprintf(context->errStat.errBuff, "Unknown operator with id=%d.", t);
+                        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                          "Unknown operator with id=%d.", t);
                         TBADD(ERR_INTERNAL);
                         goto cleanup_on_error;
                 }
@@ -773,17 +790,20 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 int status = 0, errType = -1;
                 *lastOpAssign = 1;
                 if (context->stackPtr < 2) {
-                    sprintf(context->errStat.errBuff, "Too few items on stack for assignment operator.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Too few items on stack for assignment operator.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
                 if (o->self_lval == NULL) {
-                    sprintf(context->errStat.errBuff, "Assignment operators can only be applied to variables.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Assignment operators can only be applied to variables.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
                 if (o->immutable) {
-                    sprintf(context->errStat.errBuff, "Cannot assign to an immutable object.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Cannot assign to an immutable object.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
@@ -855,7 +875,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ASSIGN;
                 } else {
                     if (o->objType != PPLOBJ_NUM) {
-                        sprintf(context->errStat.errBuff,
+                        ppl_snprintfTrunc(
+                                context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The fused operator-assignment operators can only be applied to numeric variables.");
                         TBADD(ERR_TYPE);
                         goto cleanup_on_error;
@@ -895,8 +916,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             ppl_uaPow(context, o, in, tmp, &status, &errType, context->errStat.errBuff);
                             break;
                         default:
-                            sprintf(context->errStat.errBuff, "Unknown fused operator-assignment operator with id=%d.",
-                                    t);
+                            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                              "Unknown fused operator-assignment operator with id=%d.", t);
                             TBADD(ERR_INTERNAL);
                             goto cleanup_on_error;
                     }
@@ -914,23 +935,26 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 pplObj *o = stk - 1;
                 *lastOpAssign = 1;
                 if (context->stackPtr < 1) {
-                    sprintf(context->errStat.errBuff, "Too few items on stack for -- or ++ operator.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Too few items on stack for -- or ++ operator.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
                 if (o->self_lval == NULL) {
-                    sprintf(context->errStat.errBuff, "The -- and ++ operators can only be applied to variables.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "The -- and ++ operators can only be applied to variables.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
                 if (o->objType != PPLOBJ_NUM) {
-                    sprintf(context->errStat.errBuff,
-                            "The -- and ++ operators can only be applied to numeric variables.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "The -- and ++ operators can only be applied to numeric variables.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
                 if (o->immutable) {
-                    sprintf(context->errStat.errBuff, "Cannot modify an immutable object.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Cannot modify an immutable object.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
@@ -950,7 +974,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             o->real = (o->self_dval != NULL) ? *o->self_dval : o->self_lval->real;
                         break;
                     default:
-                        sprintf(context->errStat.errBuff, "Unknown increment/decrement operator with id=%d.", t);
+                        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                          "Unknown increment/decrement operator with id=%d.", t);
                         TBADD(ERR_INTERNAL);
                         goto cleanup_on_error;
                 }
@@ -960,12 +985,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 const int Nsubs = instruction->operand.count;
                 int i;
                 if (context->stackPtr < Nsubs + 1) {
-                    sprintf(context->errStat.errBuff, "Too few items on stack for string substitution operator.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Too few items on stack for string substitution operator.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
                 if ((stk - Nsubs - 1)->objType != PPLOBJ_STR) {
-                    sprintf(context->errStat.errBuff, "Attempt to apply string substitution operator to a non-string.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Attempt to apply string substitution operator to a non-string.");
                     TBADD(ERR_TYPE);
                     goto cleanup_on_error;
                 }
@@ -981,7 +1008,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             case PPL_BC_DOLLAR: {
                 int t;
                 if (context->stackPtr < 1) {
-                    sprintf(context->errStat.errBuff, "Too few items on stack for dollar operator.");
+                    ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                      "Too few items on stack for dollar operator.");
                     TBADD(ERR_INTERNAL);
                     goto cleanup_on_error;
                 }
@@ -990,7 +1018,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     double num = context->stack[context->stackPtr - 1].real;
                     int n;
                     if ((num < -4) || (num > MAX_DATACOLS) || (!gsl_finite(num))) {
-                        sprintf(context->errStat.errBuff,
+                        ppl_snprintfTrunc(
+                                context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                 "The $ column reference operator was passed an illegal column number; must be in range -3 to %d.",
                                 MAX_DATACOLS);
                         TBADD(ERR_RANGE);
@@ -1008,7 +1037,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         name = NULL;
                     }
                 } else {
-                    sprintf(context->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            context->errStat.errBuff, sizeof(context->errStat.errBuff),
                             "The $ column reference operator can only act on column numbers and (string) names. Object supplied was of type <%s>,",
                             pplObjTypeNames[t]);
                     TBADD(ERR_TYPE);
@@ -1055,7 +1085,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             default:
-                sprintf(context->errStat.errBuff, "Illegal bytecode opcode passed to expEval.");
+                ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                  "Illegal bytecode opcode passed to expEval.");
                 charpos = 0;
                 TBADD(ERR_INTERNAL);
                 goto cleanup_on_error;
@@ -1064,7 +1095,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         j = next;
     }
     if (context->stackPtr <= 0) {
-        sprintf(context->errStat.errBuff, "Unexpected empty stack at end of evaluation.");
+        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                          "Unexpected empty stack at end of evaluation.");
         charpos = 0;
         TBADD(ERR_INTERNAL);
         goto cleanup_on_error;

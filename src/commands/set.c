@@ -745,7 +745,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_unset && (strcmp(setoption, "c1label") == 0)) /* unset c1label */
     {
-        strcpy(sg->c1label, c->set->graph_default.c1label);
+        ppl_snprintfTrunc(sg->c1label, sizeof(sg->c1label), "%s", c->set->graph_default.c1label);
         sg->c1LabelRotate = c->set->graph_default.c1LabelRotate;
     } else if (strcmp_set && (strcmp(setoption, "c1tics") == 0)) /* set c1tics */
     {
@@ -1819,7 +1819,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         c->set->term_current.PaperHeight.real = c->set->term_default.PaperHeight.real;
         c->set->term_current.PaperWidth.real = c->set->term_default.PaperWidth.real;
-        strcpy(c->set->term_current.PaperName, c->set->term_default.PaperName);
+        ppl_snprintfTrunc(c->set->term_current.PaperName, sizeof(c->set->term_current.PaperName), "%s",
+                          c->set->term_default.PaperName);
     } else if (strcmp_set && (strcmp(setoption, "pointlinewidth") == 0)) /* set pointlinewidth */
     {
         const double tempdbl = command[PARSE_set_pointlinewidth_pointlinewidth].real;
@@ -2150,7 +2151,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             int i = (int) round(command[PARSE_unset_tics_axis].real);
             int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
             char cmd[16];
-            sprintf(cmd, "%s%c%d", m ? "m" : "", 'x' + j, i);
+            ppl_snprintfTrunc(cmd, sizeof(cmd), "%s%c%d", m ? "m" : "", 'x' + j, i);
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
                 int *alog;
                 pplset_axis *a;
@@ -2305,7 +2306,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         c->set->term_current.timezone[FNAME_LENGTH - 1] = '\0';
     } else if (strcmp_unset && (strcmp(setoption, "timezone") == 0)) /* unset timezone */
     {
-        strcpy(c->set->term_current.timezone, c->set->term_default.timezone);
+        ppl_snprintfTrunc(c->set->term_current.timezone, sizeof(c->set->term_current.timezone), "%s",
+                          c->set->term_default.timezone);
     } else if (strcmp_set && (strcmp(setoption, "title") == 0)) /* set title */
     {
         if (command[PARSE_set_title_title].objType == PPLOBJ_STR) {
@@ -2728,7 +2730,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int changedViewer = ((c->set->term_current.viewer != c->set->term_default.viewer) ||
                                    (strcmp(c->set->term_current.ViewerCmd, c->set->term_default.ViewerCmd) != 0));
         c->set->term_current.viewer = c->set->term_default.viewer;
-        strcpy(c->set->term_current.ViewerCmd, c->set->term_default.ViewerCmd);
+        ppl_snprintfTrunc(c->set->term_current.ViewerCmd, sizeof(c->set->term_current.ViewerCmd), "%s",
+                          c->set->term_default.ViewerCmd);
         if (changedViewer) pplcsp_sendCommand(c, "A\n"); // Clear away SingleWindow viewer
     } else if (strcmp(setoption, "xformat") == 0) /* set xformat | unset xformat */
     {

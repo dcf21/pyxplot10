@@ -235,7 +235,8 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
         if ((!gsl_finite(out->real)) || (!gsl_finite(out->imag)) ||
             ((out->flagComplex) && (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF))) {
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                sprintf(c->errStat.errBuff, "Integral does not evaluate to a finite value.");
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Integral does not evaluate to a finite value.");
                 ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, ERR_NUMERICAL, exprPos,
                           inExpr->ascii, "int_d?() function");
                 return;
@@ -353,7 +354,8 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
 
         if ((!ppl_dblApprox(resultReal, dIdI, 2 * (resultReal_error + dIdI_error))) ||
             (!ppl_dblApprox(resultImag, -dRdI, 2 * (resultImag_error + dRdI_error)))) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The Cauchy-Riemann equations are not satisfied at this point in the complex plane. It does not therefore appear possible to perform complex differentiation. In the notation f(x+iy)=u+iv, the offending derivatives were: du/dx=%e, dv/dy=%e, du/dy=%e and dv/dx=%e.",
                     resultReal, dIdI, dRdI, resultImag);
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, ERR_NUMERICAL, exprPos, inExpr->ascii,
@@ -384,7 +386,8 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
     if ((!gsl_finite(out->real)) || (!gsl_finite(out->imag)) ||
         ((out->flagComplex) && (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF))) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            sprintf(c->errStat.errBuff, "Differentiated expression does not evaluate to a finite value.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Differentiated expression does not evaluate to a finite value.");
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, ERR_NUMERICAL, exprPos, inExpr->ascii,
                       "diff_d?() function");
             return;

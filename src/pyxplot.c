@@ -203,11 +203,12 @@ int main(const int argc, char **argv) {
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not read current working directory.");
     } // Store cwd
     while (1) {
-        sprintf(tempdirpath, "/tmp/pyxplot_%d_%d", getpid(), tempdirnumber);
+        ppl_snprintfTrunc(tempdirpath, sizeof(tempdirpath), "/tmp/pyxplot_%d_%d", getpid(), tempdirnumber);
         if (access(tempdirpath, F_OK) != 0) break;
         tempdirnumber++;
     } // Find an unused dir path
-    strcpy(context->errcontext.session_default.tempdir, tempdirpath); // Store our chosen temporary directory path
+    ppl_snprintfTrunc(context->errcontext.session_default.tempdir, sizeof(context->errcontext.session_default.tempdir),
+                      "%s", tempdirpath); // Store our chosen temporary directory path
 
     // Launch child process
     if (DEBUG) ppl_log(&context->errcontext, "Launching the Child Support Process.");
@@ -224,7 +225,7 @@ int main(const int argc, char **argv) {
 
         // Wait for temporary directory to appear, and change directory into it
         if (DEBUG) ppl_log(&context->errcontext, "Waiting for temporary directory to appear.");
-        strcpy(tempdirpath, context->errcontext.session_default.tempdir);
+        ppl_snprintfTrunc(tempdirpath, sizeof(tempdirpath), "%s", context->errcontext.session_default.tempdir);
         for (i = 0; i < 100; i++) {
             if (access(tempdirpath, F_OK) == 0) break;
             nanosleep(&waitperiod, &waitedperiod);

@@ -822,8 +822,8 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (c->errStat.status) {
         *status = 1;
         *errType = ERR_TYPE;
-        sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
-                c->errStat.errMsgExpr);
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
+                          FunctionDescription, c->errStat.errMsgExpr);
         return;
     }
 

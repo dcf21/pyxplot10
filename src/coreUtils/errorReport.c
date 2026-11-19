@@ -30,7 +30,7 @@
 #include "coreUtils/errorReport.h"
 #include "settings/settingTypes.h"
 
-#define BLEN LSTR_LENGTH - 1
+#define BLEN (LSTR_LENGTH - 1)
 
 static char temp_stringA[BLEN + 1], temp_stringB[BLEN + 1], temp_stringC[BLEN + 1], temp_stringD[BLEN + 1],
         temp_stringE[BLEN + 1];

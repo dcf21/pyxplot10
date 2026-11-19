@@ -285,14 +285,16 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             stepVal = &stepTmp;
         }
         if (!ppl_unitsDimEqual(beginVal, endVal)) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The start and end values of this for loop are dimensionally incompatible: the start value has dimensions of <%s> but the end value has dimensions of <%s>.",
                     ppl_printUnit(c, beginVal, NULL, NULL, 0, 1, 0), ppl_printUnit(c, endVal, NULL, NULL, 1, 1, 0));
             TBADD2(ERR_NUMERICAL, in->stkCharPos[PARSE_for_final_value]);
             goto cleanup;
         }
         if (!ppl_unitsDimEqual(beginVal, stepVal)) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The start value and step size of this for loop are dimensionally incompatible: the start value has dimensions of <%s> but the step size has dimensions of <%s>.",
                     ppl_printUnit(c, beginVal, NULL, NULL, 0, 1, 0), ppl_printUnit(c, stepVal, NULL, NULL, 1, 1, 0));
             TBADD2(ERR_NUMERICAL, in->stkCharPos[PARSE_for_start_value]);
@@ -530,7 +532,8 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
             if ((c->shellBroken) || (c->shellContinued) || (c->shellReturned) || (c->shellExiting)) break;
         }
     } else {
-        sprintf(c->errStat.errBuff, "Cannot iterate over an object of type <%s>.", pplObjTypeNames[iter->objType]);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot iterate over an object of type <%s>.",
+                          pplObjTypeNames[iter->objType]);
         TBADD2(ERR_TYPE, in->stkCharPos[PARSE_foreach_item_list]);
         goto cleanup;
     }
@@ -580,7 +583,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
         if (Nvars >= USING_ITEMS_MAX) {
-            sprintf(c->errStat.errBuff, "Too many variable names; a maximum of %d may be specified.", USING_ITEMS_MAX);
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Too many variable names; a maximum of %d may be specified.", USING_ITEMS_MAX);
             TBADD2(ERR_SYNTAX, in->stkCharPos[pos + PARSE_foreachdatum_variable_variables]);
             goto cleanup;
         }
@@ -599,7 +603,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
             if (nr >= Nvars) {
-                sprintf(c->errStat.errBuff, "Too many ranges specified; there are only %d loop variables.", Nvars);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Too many ranges specified; there are only %d loop variables.", Nvars);
                 TBADD2(ERR_SYNTAX, 0);
                 goto cleanup;
             }
@@ -612,7 +617,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d (%s) have conflicting types of <%s> and <%s>.",
                             nr + 1, varname[nr], pplObjTypeNames[unit[nr].objType],
                             pplObjTypeNames[stk[pos + o2].objType]);
@@ -620,7 +626,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
                     goto cleanup;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d (%s) have conflicting physical units of <%s> and <%s>.",
                             nr + 1, varname[nr], ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
@@ -846,7 +853,8 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
         argListLen += strlen(name) + 1;
     }
     if (nArgs > FUNC_MAXARGS) {
-        sprintf(c->errStat.errBuff, "Too many arguments to function; the maximum allowed number is %d.", FUNC_MAXARGS);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Too many arguments to function; the maximum allowed number is %d.", FUNC_MAXARGS);
         TBADD(ERR_OVERFLOW, 0);
         return;
     }
@@ -854,7 +862,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     // Allocate function descriptor
     f = (pplFunc *) malloc(sizeof(pplFunc));
     if (f == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD(ERR_MEMORY, 0);
         return;
     }
@@ -877,7 +885,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     f->description = NULL;
     f->descriptionShort = NULL;
     if (f->argList == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD(ERR_MEMORY, 0);
         goto fail;
     }
@@ -898,7 +906,8 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
                              PARSE_subroutine_subroutine_names, PARSE_subroutine_subroutine_name_subroutine_names);
     if ((c->errStat.status) || (tmpObj == NULL)) goto fail;
     if (tmpObj->objType == PPLOBJ_GLOB) {
-        sprintf(c->errStat.errBuff, "Variable declared global in global namespace.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Variable declared global in global namespace.");
         TBADD(ERR_NAMESPACE, 0);
         goto fail;
     }
@@ -1011,8 +1020,8 @@ void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput
 
     // Check requested namespace
     if ((obj->objType != PPLOBJ_MOD) && (obj->objType != PPLOBJ_USER)) {
-        sprintf(c->errStat.errBuff, "Requested namespace is not a module; it has type <%s>.",
-                pplObjTypeNames[obj->objType]);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Requested namespace is not a module; it has type <%s>.", pplObjTypeNames[obj->objType]);
         TBADD(ERR_TYPE, "");
         return;
     }

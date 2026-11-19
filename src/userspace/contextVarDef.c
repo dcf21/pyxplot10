@@ -26,6 +26,7 @@
 #include <math.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/dict.h"
 #include "coreUtils/memAlloc.h"
 
@@ -76,7 +77,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
         if (first && !last) {
             ppl_contextVarLookup(c, name, out, 0);
             if (*out == NULL) {
-                sprintf(c->errStat.errBuff, "No such variable, '%s'.", name);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable, '%s'.", name);
                 TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
                 return;
             }
@@ -101,14 +102,15 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
         } else if (!last) {
             dict *d = (dict *) (*out)->auxil;
             if (d->immutable) {
-                sprintf(c->errStat.errBuff, "Cannot %s '%s'.",
-                        last ? "modify the immutable variable" : "set variables in the immutable namespace", name);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
+                                  last ? "modify the immutable variable" : "set variables in the immutable namespace",
+                                  name);
                 TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
                 return;
             }
             *out = (pplObj *) ppl_dictLookup(d, name);
             if ((*out) == NULL) {
-                sprintf(c->errStat.errBuff, "No such variable, '%s'.", name);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable, '%s'.", name);
                 TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
                 return;
             }
@@ -122,8 +124,9 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
         } else {
             dict *d = (dict *) (*out)->auxil;
             if (d->immutable) {
-                sprintf(c->errStat.errBuff, "Cannot %s '%s'.",
-                        last ? "modify the immutable variable" : "set variables in the immutable namespace", name);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
+                                  last ? "modify the immutable variable" : "set variables in the immutable namespace",
+                                  name);
                 TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
                 return;
             }
@@ -137,15 +140,16 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
             }
         }
         if (((*out) != NULL) && ((*out)->immutable)) {
-            sprintf(c->errStat.errBuff, "Cannot %s '%s'.",
-                    last ? "modify the immutable variable" : "set variables in the immutable namespace", name);
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
+                              last ? "modify the immutable variable" : "set variables in the immutable namespace",
+                              name);
             TBADD(ERR_NAMESPACE, stkPos[pos + offset]);
             return;
         }
         first = 0;
     }
     if ((*out) == NULL) {
-        sprintf(c->errStat.errBuff, "No such variable.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable.");
         TBADD(ERR_NAMESPACE, 0);
         return;
     }

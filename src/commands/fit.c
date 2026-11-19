@@ -499,8 +499,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
             if (Nvars >= USING_ITEMS_MAX - 4) {
-                sprintf(c->errStat.errBuff, "Too many fitting variables; a maximum of %d may be specified.",
-                        USING_ITEMS_MAX - 4);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Too many fitting variables; a maximum of %d may be specified.", USING_ITEMS_MAX - 4);
                 TBADD2(ERR_SYNTAX, in->stkCharPos[pos + PARSE_fit_fit_variable_fit_variables]);
                 return;
             }
@@ -508,7 +508,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             Nvars++;
         }
         if (Nvars < 1) {
-            sprintf(c->errStat.errBuff, "Too few fitting variables; a minimum of one must be specified.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Too few fitting variables; a minimum of one must be specified.");
             TBADD2(ERR_SYNTAX, 0);
             return;
         }
@@ -534,20 +535,21 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     fnName = (char *) stk[PARSE_fit_fit_function].auxil;
     ppl_contextVarLookup(c, fnName, &funcObj, 0);
     if (funcObj == NULL) {
-        sprintf(c->errStat.errBuff, "No such function as '%s()'.", fnName);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such function as '%s()'.", fnName);
         TBADD2(ERR_NAMESPACE, in->stkCharPos[PARSE_fit_fit_function]);
         return;
     }
     if (funcObj->objType != PPLOBJ_FUNC) {
-        sprintf(c->errStat.errBuff, "Object '%s' is not a function, but has type <%s>.", fnName,
-                pplObjTypeNames[funcObj->objType]);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Object '%s' is not a function, but has type <%s>.", fnName,
+                          pplObjTypeNames[funcObj->objType]);
         TBADD2(ERR_TYPE, in->stkCharPos[PARSE_fit_fit_function]);
         return;
     }
     funcDef = (pplFunc *) funcObj->auxil;
     if (funcDef->functionType == PPL_FUNC_MAGIC) {
-        sprintf(c->errStat.errBuff, "Function %s() needs wrapping in a user-defined function before it can be fit.",
-                fnName);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Function %s() needs wrapping in a user-defined function before it can be fit.", fnName);
         TBADD2(ERR_TYPE, in->stkCharPos[PARSE_fit_fit_function]);
         return;
     }
@@ -565,7 +567,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
             if (Nusing >= USING_ITEMS_MAX) {
-                sprintf(c->errStat.errBuff, "Too many using items; maximum of %d are allowed.", USING_ITEMS_MAX);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Too many using items; maximum of %d are allowed.", USING_ITEMS_MAX);
                 TBADD2(ERR_RANGE, in->stkCharPos[pos + o]);
                 goto cleanup;
             }
@@ -603,14 +606,16 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
                     TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_fit_min_0range_list]);
                     goto cleanup;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
@@ -644,7 +649,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     for (j = 0; j < NExpect; j++)
         if (minSet[j] || maxSet[j]) {
             if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
-                sprintf(c->errStat.errBuff,
+                ppl_snprintfTrunc(
+                        c->errStat.errBuff, sizeof(c->errStat.errBuff),
                         "The minimum and maximum limits specified in range %ld in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                         j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                         ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
@@ -675,7 +681,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Copy data into a new table and apply the specified ranges to it
     localDataTable = (double *) ppl_memAlloc_incontext(NDataPoints * NExpect * sizeof(double), contextLocalVec);
     if (localDataTable == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         goto cleanup;
     }
@@ -725,7 +731,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     dataComm.errtext = (char *) ppl_memAlloc_incontext(LSTR_LENGTH, contextLocalVec);
     scratchPad = (char *) ppl_memAlloc_incontext(LSTR_LENGTH, contextLocalVec);
     if ((scratchPad == NULL) || (dataComm.errtext == NULL)) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         goto cleanup;
     }
@@ -734,7 +740,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Set up a minimiser
     status = FitMinimiseIterate(&dataComm, &ResidualMinimiserSlave, 0);
     if (status) {
-        sprintf(c->errStat.errBuff, "%s", dataComm.errtext);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s", dataComm.errtext);
         TBADD2(ERR_NUMERICAL, 0);
         goto cleanup;
     }
@@ -774,7 +780,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_report(&c->errcontext, msg);
         status = FitMinimiseIterate(&dataComm, &FitsigmaData, 1);
         if (status) {
-            sprintf(c->errStat.errBuff, "%s", dataComm.errtext);
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s", dataComm.errtext);
             TBADD2(ERR_NUMERICAL, 0);
             gsl_vector_free(bestFitParamVals);
             bestFitParamVals = NULL;

@@ -48,6 +48,8 @@
 
 #include "mathsTools/dcfmath.h"
 
+#include "stringTools/asciidouble.h"
+
 #include "userspace/calendars.h"
 #include "userspace/context.h"
 #include "userspace/garbageCollector.h"
@@ -1611,8 +1613,8 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
         if (c->errStat.status) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
-                    c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
+                              FunctionDescription, c->errStat.errMsgExpr);
             free(ovec);
             ovec = NULL;
             return;
@@ -1857,8 +1859,8 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         if (c->errStat.status) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
-                    c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
+                              FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2014,8 +2016,8 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
         if (c->errStat.status) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
-                    c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
+                              FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2253,8 +2255,8 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
         if (c->errStat.status) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
-                    c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
+                              FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2448,8 +2450,8 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
         if (c->errStat.status) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
-                    c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
+                              FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2658,8 +2660,8 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
         if (c->errStat.status) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Error inside function supplied to the %s function: %s", FunctionDescription,
-                    c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
+                              FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2799,7 +2801,8 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
 
     // Return error if function didn't return a number
     if (c->stack[c->stackPtr - 1].objType != PPLOBJ_NUM) {
-        sprintf(c->errStat.errBuff,
+        ppl_snprintfTrunc(
+                c->errStat.errBuff, sizeof(c->errStat.errBuff),
                 "The sortOn(f) function requires a comparison function that returns a number. Supplied function returned an object of type <%s>.",
                 pplObjTypeNames[c->stack[c->stackPtr - 1].objType]);
         TBADD_LISTMETHOD(ERR_TYPE);

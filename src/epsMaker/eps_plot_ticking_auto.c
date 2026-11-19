@@ -523,7 +523,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     // Work through format string identifying substitution expressions
     VarName[0] = "xyzc"[axis->xyz];
     if (axis->format == NULL) {
-        sprintf(FormatTemp, "\"%%s\"%%(%s)", VarName);
+        ppl_snprintfTrunc(FormatTemp, sizeof(FormatTemp), "\"%%s\"%%(%s)", VarName);
         format = FormatTemp;
     } else {
         format = ((pplExpr *) axis->format)->ascii;
@@ -534,7 +534,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     }
     if ((format == FormatTemp) && (axis->AxisLinearInterpolation == NULL) && (axis->LogFinal == SW_BOOL_TRUE) &&
         (log(axis->MaxFinal / axis->MinFinal) / log(axis->tics.logBase) > axis->PhysicalLengthMajor)) {
-        sprintf(FormatTemp, "\"%%s\"%%(logn(%s,%d))", VarName, axis->tics.logBase);
+        ppl_snprintfTrunc(FormatTemp, sizeof(FormatTemp), "\"%%s\"%%(logn(%s,%d))", VarName, axis->tics.logBase);
     }
     for (i = 0; ((format[i] != '\0') && (format[i] != '\'') && (format[i] != '\"')); i++);
     quoteType = format[i];

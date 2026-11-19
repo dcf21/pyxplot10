@@ -789,7 +789,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 }
             }
             else if (strcmp(setkey, "OUTPUT") == 0) {
-                strcpy(c->set->term_default.output, setvalue);
+                ppl_snprintfTrunc(c->set->term_default.output, sizeof(c->set->term_default.output), "%s", setvalue);
             }
             else if (strcmp(setkey, "PAPERHEIGHT") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
@@ -1060,7 +1060,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 }
             }
             else if (strcmp(setkey, "TITLE") == 0) {
-                strcpy(c->set->graph_default.title, setvalue);
+                ppl_snprintfTrunc(c->set->graph_default.title, sizeof(c->set->graph_default.title), "%s", setvalue);
             }
             else if (strcmp(setkey, "TITLE_XOFF") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
@@ -1402,7 +1402,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         } else if (state == 4) // [latex] section
         {
             ppl_strUpper(setkey, setkey);
-            if (strcmp(setkey, "PREAMBLE") == 0) strcpy(c->set->term_default.LatexPreamble, setvalue);
+            if (strcmp(setkey, "PREAMBLE") == 0)
+                ppl_snprintfTrunc(c->set->term_default.LatexPreamble, sizeof(c->set->term_default.LatexPreamble), "%s",
+                                  setvalue);
             else {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Error in line %d of configuration file %s: Unrecognised setting name '%s'.",
@@ -1858,7 +1860,7 @@ void ppl_readconfig(ppl_context *c) {
     if (snprintf(ConfigFname, FNAME_LENGTH, "%s%s%s", c->errcontext.session_default.homedir, PATHLINK, ".pyxplotrc") <
         FNAME_LENGTH)
         ppl_readConfigFile(c, ConfigFname);
-    sprintf(ConfigFname, "%s", ".pyxplotrc");
+    ppl_snprintfTrunc(ConfigFname, sizeof(ConfigFname), "%s", ".pyxplotrc");
     ppl_readConfigFile(c, ConfigFname);
 
     // Copy Default Settings to Current Settings

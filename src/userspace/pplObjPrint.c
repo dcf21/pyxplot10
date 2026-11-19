@@ -59,21 +59,22 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
     const int typeable = c->set->term_current.NumDisplay;
 
     if (o == NULL) {
-        strcpy(out, "<null>");
+        ppl_snprintfTrunc(out, outlen, "%s", "<null>");
         return;
     }
     t = o->objType;
     switch (t) {
         case PPLOBJ_NUM:
-            strncpy(out, ppl_unitsNumericDisplay(c, o, 0, internal ? SW_DISPLAY_T : typeable, NSigFigs), outlen);
+            ppl_snprintfTrunc(out, outlen, "%s",
+                              ppl_unitsNumericDisplay(c, o, 0, internal ? SW_DISPLAY_T : typeable, NSigFigs));
             break;
         case PPLOBJ_STR:
-            if (internal || (typeable == SW_DISPLAY_T)) ppl_strEscapify(o->auxil, out);
-            else strncpy(out, o->auxil, outlen);
+            if (internal || (typeable == SW_DISPLAY_T)) ppl_strEscapify(o->auxil, out, outlen);
+            else ppl_snprintfTrunc(out, outlen, "%s", (char *) o->auxil);
             break;
         case PPLOBJ_BOOL:
-            if (o->real == 0) strncpy(out, "false", outlen);
-            else strncpy(out, "true", outlen);
+            if (o->real == 0) ppl_snprintfTrunc(out, outlen, "%s", "false");
+            else ppl_snprintfTrunc(out, outlen, "%s", "true");
             break;
         case PPLOBJ_DATE:
             if (internal || (typeable == SW_DISPLAY_T)) {
@@ -97,44 +98,48 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             int i = 0, n;
             const int ct = floor(o->exponent[0] + 0.01);
             if (ct == SW_COLSPACE_CMYK) {
-                strncpy(out + i, "cmyk(", outlen - i);
+                ppl_strAppendf(out, outlen, &i, "%s", "cmyk(");
                 n = 4;
             } else if (ct == SW_COLSPACE_RGB) {
-                strncpy(out + i, "rgb(", outlen - i);
+                ppl_strAppendf(out, outlen, &i, "%s", "rgb(");
                 n = 3;
             } else if (ct == SW_COLSPACE_HSB) {
-                strncpy(out + i, "hsb(", outlen - i);
+                ppl_strAppendf(out, outlen, &i, "%s", "hsb(");
                 n = 3;
             } else {
                 ppl_warning(&c->errcontext, ERR_INTERNAL, "Unknown color space in pplObjPrint.");
-                strncpy(out + i, "ERR(", outlen - i);
+                ppl_strAppendf(out, outlen, &i, "%s", "ERR(");
                 n = 0;
             }
             i += strlen(out + i);
             if (n >= 1) {
-                strcpy(out + i,
-                       ppl_numericDisplay(o->exponent[8], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
+                ppl_strAppendf(
+                        out, outlen, &i, "%s",
+                        ppl_numericDisplay(o->exponent[8], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
             }
             if (n >= 2) {
-                out[i++] = ',';
-                strcpy(out + i,
-                       ppl_numericDisplay(o->exponent[9], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
+                ppl_strAppendChar(out, outlen, &i, ',');
+                ppl_strAppendf(
+                        out, outlen, &i, "%s",
+                        ppl_numericDisplay(o->exponent[9], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
             }
             if (n >= 3) {
-                out[i++] = ',';
-                strcpy(out + i,
-                       ppl_numericDisplay(o->exponent[10], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
+                ppl_strAppendChar(out, outlen, &i, ',');
+                ppl_strAppendf(
+                        out, outlen, &i, "%s",
+                        ppl_numericDisplay(o->exponent[10], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
             }
             if (n >= 4) {
-                out[i++] = ',';
-                strcpy(out + i,
-                       ppl_numericDisplay(o->exponent[11], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
+                ppl_strAppendChar(out, outlen, &i, ',');
+                ppl_strAppendf(
+                        out, outlen, &i, "%s",
+                        ppl_numericDisplay(o->exponent[11], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
             }
-            strncpy(out + i, ")", outlen - i);
+            ppl_strAppendf(out, outlen, &i, "%s", ")");
             break;
         }
         case PPLOBJ_DICT: {
@@ -143,32 +148,32 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             dictIterator *iter = ppl_dictIterateInit((dict *) o->auxil);
             char *key;
             pplObj *item;
-            if (!expand) strcpy(out + i, "{ ... }");
+            if (!expand) ppl_strAppendf(out, outlen, &i, "%s", "{ ... }");
             else {
-                out[i++] = '{';
+                ppl_strAppendChar(out, outlen, &i, '{');
                 while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
                     if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                         continue; // Hide globals and zombies
                     if (!first) {
-                        out[i++] = ',';
-                        if (prevMod) { out[i++] = '\n'; }
-                        out[i++] = ' ';
+                        ppl_strAppendChar(out, outlen, &i, ',');
+                        if (prevMod) { ppl_strAppendChar(out, outlen, &i, '\n'); }
+                        ppl_strAppendChar(out, outlen, &i, ' ');
                     }
-                    ppl_strEscapify(key, out + i);
+                    ppl_strEscapify(key, out + i, outlen - i);
                     i += strlen(out + i);
-                    sprintf(out + i, ":");
+                    ppl_strAppendf(out, outlen, &i, ":");
                     i += strlen(out + i);
                     pplObjPrint(c, item, NULL, out + i, outlen - i, 1, modIterDepth + 1);
                     i += strlen(out + i);
                     if (i > outlen - 400) {
-                        strncpy(out + i, ", ...", outlen - i);
+                        ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                         i += strlen(out + i);
                         break;
                     }
                     first = 0;
                     prevMod = item->objType == PPLOBJ_MOD;
                 }
-                strncpy(out + i, "}", outlen - i);
+                ppl_strAppendf(out, outlen, &i, "%s", "}");
             }
             break;
         }
@@ -179,39 +184,39 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             dictIterator *iter = ppl_dictIterateInit((dict *) o->auxil);
             char *key;
             pplObj *item;
-            sprintf(out + i, (t == PPLOBJ_MOD) ? "module {" : "module instance {");
+            ppl_strAppendf(out, outlen, &i, (t == PPLOBJ_MOD) ? "module {" : "module instance {");
             i += strlen(out + i);
-            if (!expand) strcpy(out + i, " ... }");
+            if (!expand) ppl_strAppendf(out, outlen, &i, "%s", " ... }");
             else {
-                out[i++] = '\n';
+                ppl_strAppendChar(out, outlen, &i, '\n');
                 while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
                     const int j = i;
                     if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                         continue; // Hide globals and zombies
                     for (k = 0; k <= modIterDepth; k++) {
-                        out[i++] = ' ';
-                        out[i++] = ' ';
+                        ppl_strAppendChar(out, outlen, &i, ' ');
+                        ppl_strAppendChar(out, outlen, &i, ' ');
                     }
-                    strcpy(out + i, key);
+                    ppl_strAppendf(out, outlen, &i, "%s", key);
                     i += strlen(out + i);
-                    while (i < j + 16) out[i++] = ' ';
+                    while ((i < j + 16) && (i + 1 < outlen)) ppl_strAppendChar(out, outlen, &i, ' ');
                     snprintf(out + i, outlen - i, ": ");
                     i += strlen(out + i);
                     pplObjPrint(c, item, key, out + i, outlen - i, 1, modIterDepth + 1);
                     i += strlen(out + i);
-                    out[i++] = '\n';
+                    ppl_strAppendChar(out, outlen, &i, '\n');
                     if (i > outlen - 400) {
-                        strncpy(out + i, "  ...\n", outlen - i);
+                        ppl_strAppendf(out, outlen, &i, "%s", "  ...\n");
                         i += strlen(out + i);
                         break;
                     }
                 }
-                if (i < outlen) out[i++] = ' ';
+                if (i < outlen) ppl_strAppendChar(out, outlen, &i, ' ');
                 for (k = 0; ((k < modIterDepth) && (i < outlen - 2)); k++) {
-                    out[i++] = ' ';
-                    out[i++] = ' ';
+                    ppl_strAppendChar(out, outlen, &i, ' ');
+                    ppl_strAppendChar(out, outlen, &i, ' ');
                 }
-                strncpy(out + i, "}", outlen - i);
+                ppl_strAppendf(out, outlen, &i, "%s", "}");
             }
             break;
         }
@@ -220,26 +225,26 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             int i = 0, first = 1, prevMod = 0;
             listIterator *iter = ppl_listIterateInit((list *) o->auxil);
             pplObj *item;
-            if (!expand) strcpy(out + i, "[ ... ]");
+            if (!expand) ppl_strAppendf(out, outlen, &i, "%s", "[ ... ]");
             else {
-                out[i++] = '[';
+                ppl_strAppendChar(out, outlen, &i, '[');
                 while ((item = (pplObj *) ppl_listIterate(&iter)) != NULL) {
                     if (!first) {
-                        out[i++] = ',';
-                        if (prevMod) { out[i++] = '\n'; }
-                        out[i++] = ' ';
+                        ppl_strAppendChar(out, outlen, &i, ',');
+                        if (prevMod) { ppl_strAppendChar(out, outlen, &i, '\n'); }
+                        ppl_strAppendChar(out, outlen, &i, ' ');
                     }
                     pplObjPrint(c, item, NULL, out + i, outlen - i, 1, modIterDepth + 1);
                     i += strlen(out + i);
                     if (i > outlen - 400) {
-                        strcpy(out + i, ", ...");
+                        ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                         i += strlen(out + i);
                         break;
                     }
                     first = 0;
                     prevMod = item->objType == PPLOBJ_MOD;
                 }
-                strcpy(out + i, "]");
+                ppl_strAppendf(out, outlen, &i, "%s", "]");
             }
             break;
         }
@@ -253,26 +258,26 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             unit = ppl_printUnit(c, o, &real, &imag, 1, 1, SW_DISPLAY_T);
             if (o->dimensionless) real = 1;
             gsl_vector *v = ((pplVector *) (o->auxil))->v;
-            strcpy(out + i, "vector(");
+            ppl_strAppendf(out, outlen, &i, "%s", "vector(");
             i += strlen(out + i);
             for (j = 0; j < v->size; j++) {
                 if (j > 0) {
-                    out[i++] = ',';
-                    out[i++] = ' ';
+                    ppl_strAppendChar(out, outlen, &i, ',');
+                    ppl_strAppendChar(out, outlen, &i, ' ');
                 }
-                strcpy(out + i,
-                       ppl_numericDisplay(gsl_vector_get(v, j) * real, c->numdispBuff[0], NSigFigs,
-                                          (typeable == SW_DISPLAY_L)));
+                ppl_strAppendf(out, outlen, &i, "%s",
+                               ppl_numericDisplay(gsl_vector_get(v, j) * real, c->numdispBuff[0], NSigFigs,
+                                                  (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
                 if (i > outlen - 400) {
-                    strcpy(out + i, ", ...");
+                    ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                     i += strlen(out + i);
                     break;
                 }
             }
-            strcpy(out + i, ")");
+            ppl_strAppendf(out, outlen, &i, "%s", ")");
             i += strlen(out + i);
-            if (!o->dimensionless) sprintf(out + i, "%s", unit);
+            if (!o->dimensionless) ppl_strAppendf(out, outlen, &i, "%s", unit);
             break;
         }
         case PPLOBJ_MAT: {
@@ -286,65 +291,65 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             if (o->dimensionless) real = 1;
             gsl_matrix *m = ((pplMatrix *) (o->auxil))->m;
             if (internal || (typeable == SW_DISPLAY_T)) {
-                strcpy(out + i, "matrix(");
+                ppl_strAppendf(out, outlen, &i, "%s", "matrix(");
                 i += strlen(out + i);
                 for (j = 0; j < m->size1; j++) {
                     if (j > 0) {
-                        out[i++] = ',';
-                        out[i++] = ' ';
+                        ppl_strAppendChar(out, outlen, &i, ',');
+                        ppl_strAppendChar(out, outlen, &i, ' ');
                     }
-                    out[i++] = '[';
+                    ppl_strAppendChar(out, outlen, &i, '[');
                     for (k = 0; k < m->size2; k++) {
                         if (k > 0) {
-                            out[i++] = ',';
-                            out[i++] = ' ';
+                            ppl_strAppendChar(out, outlen, &i, ',');
+                            ppl_strAppendChar(out, outlen, &i, ' ');
                         }
-                        strcpy(out + i,
-                               ppl_numericDisplay(gsl_matrix_get(m, j, k) * real, c->numdispBuff[0], NSigFigs,
-                                                  (typeable == SW_DISPLAY_L)));
+                        ppl_strAppendf(out, outlen, &i, "%s",
+                                       ppl_numericDisplay(gsl_matrix_get(m, j, k) * real, c->numdispBuff[0], NSigFigs,
+                                                          (typeable == SW_DISPLAY_L)));
                         i += strlen(out + i);
                         if (i > outlen - 400) {
-                            strcpy(out + i, ", ...");
+                            ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                             i += strlen(out + i);
                             break;
                         }
                     }
-                    strcpy(out + i, "]");
+                    ppl_strAppendf(out, outlen, &i, "%s", "]");
                     i += strlen(out + i);
                     if (i > outlen - 400) {
-                        strcpy(out + i, ", ...");
+                        ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                         i += strlen(out + i);
                         break;
                     }
                 }
-                strcpy(out + i, ")");
+                ppl_strAppendf(out, outlen, &i, "%s", ")");
                 i += strlen(out + i);
-                if (!o->dimensionless) sprintf(out + i, "%s", unit);
+                if (!o->dimensionless) ppl_strAppendf(out, outlen, &i, "%s", unit);
             } else {
                 const int unitLine = m->size1 / 2;
                 for (j = 0; j < m->size1; j++) {
-                    strcpy(out + i, "(");
+                    ppl_strAppendf(out, outlen, &i, "%s", "(");
                     i += strlen(out + i);
                     for (k = 0; k < m->size2; k++) {
                         if (k > 0) {
-                            out[i++] = ',';
-                            out[i++] = ' ';
+                            ppl_strAppendChar(out, outlen, &i, ',');
+                            ppl_strAppendChar(out, outlen, &i, ' ');
                         }
-                        strcpy(out + i,
-                               ppl_numericDisplay(gsl_matrix_get(m, j, k) * real, c->numdispBuff[0], NSigFigs,
-                                                  (typeable == SW_DISPLAY_L)));
+                        ppl_strAppendf(out, outlen, &i, "%s",
+                                       ppl_numericDisplay(gsl_matrix_get(m, j, k) * real, c->numdispBuff[0], NSigFigs,
+                                                          (typeable == SW_DISPLAY_L)));
                         i += strlen(out + i);
                         if (i > outlen - 400) {
-                            strcpy(out + i, ", ...");
+                            ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                             i += strlen(out + i);
                             break;
                         }
                     }
-                    if ((j != unitLine) || (o->dimensionless)) strcpy(out + i, ")\n");
-                    else sprintf(out + i, ") %s\n", unit);
+                    if ((j != unitLine) || (o->dimensionless)) ppl_strAppendf(out, outlen, &i, "%s", ")\n");
+                    else ppl_strAppendf(out, outlen, &i, ") %s\n", unit);
                     i += strlen(out + i);
                     if (i > outlen - 400) {
-                        strcpy(out + i, "...\n");
+                        ppl_strAppendf(out, outlen, &i, "%s", "...\n");
                         i += strlen(out + i);
                         break;
                     }
@@ -353,7 +358,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             break;
         }
         case PPLOBJ_FILE: {
-            strcpy(out, "<file handle>");
+            ppl_snprintfTrunc(out, outlen, "%s", "<file handle>");
             break;
         }
         case PPLOBJ_FUNC: {
@@ -365,42 +370,42 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 const int t = f->functionType;
                 if (!first) {
                     int j;
-                    out[i++] = '\n';
-                    for (j = 0; j < indent; j++) out[i++] = ' ';
+                    ppl_strAppendChar(out, outlen, &i, '\n');
+                    for (j = 0; j < indent; j++) ppl_strAppendChar(out, outlen, &i, ' ');
                 }
                 switch (t) {
                     case PPL_FUNC_SYSTEM:
                     case PPL_FUNC_MAGIC:
-                        sprintf(out + i, "%s.", f->description);
+                        ppl_strAppendf(out, outlen, &i, "%s.", f->description);
                         i += strlen(out + i);
                         break;
                     case PPL_FUNC_USERDEF: {
                         int j = -1, k, l, m;
                         for (k = 0; k < f->maxArgs; k++)
                             if (f->minActive[k] || f->maxActive[k]) j = k;
-                        sprintf(out + i, "%s(", fnname);
+                        ppl_strAppendf(out, outlen, &i, "%s(", fnname);
                         i += strlen(out + i);
                         for (l = 0, m = 0; l < f->maxArgs; l++, m++) {
-                            for (; f->argList[m] != '\0'; m++) out[i++] = f->argList[m];
-                            out[i++] = ',';
+                            for (; f->argList[m] != '\0'; m++) ppl_strAppendChar(out, outlen, &i, f->argList[m]);
+                            ppl_strAppendChar(out, outlen, &i, ',');
                         }
                         if (f->maxArgs > 0) i--; // Remove final comma from list of arguments
-                        out[i++] = ')';
+                        ppl_strAppendChar(out, outlen, &i, ')');
                         for (k = 0; k <= j; k++) {
-                            out[i++] = '[';
+                            ppl_strAppendChar(out, outlen, &i, '[');
                             if (f->minActive[k]) {
-                                sprintf(out + i, "%s", ppl_unitsNumericDisplay(c, f->min + k, 0, 0, 0));
+                                ppl_strAppendf(out, outlen, &i, "%s", ppl_unitsNumericDisplay(c, f->min + k, 0, 0, 0));
                                 i += strlen(out + i);
                             }
-                            out[i++] = ':';
+                            ppl_strAppendChar(out, outlen, &i, ':');
                             if (f->maxActive[k]) {
-                                sprintf(out + i, "%s", ppl_unitsNumericDisplay(c, f->max + k, 0, 0, 0));
+                                ppl_strAppendf(out, outlen, &i, "%s", ppl_unitsNumericDisplay(c, f->max + k, 0, 0, 0));
                                 i += strlen(out + i);
                             }
-                            out[i++] = ']';
+                            ppl_strAppendChar(out, outlen, &i, ']');
                         }
-                        if (f->functionPtr == NULL) sprintf(out + i, "=");
-                        else sprintf(out + i, "=%s", ((pplExpr *) f->functionPtr)->ascii);
+                        if (f->functionPtr == NULL) ppl_strAppendf(out, outlen, &i, "=");
+                        else ppl_strAppendf(out, outlen, &i, "=%s", ((pplExpr *) f->functionPtr)->ascii);
                         i += strlen(out + i);
                         break;
                     }
@@ -408,38 +413,39 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     case PPL_FUNC_INTERP2D:
                     case PPL_FUNC_BMPDATA: {
                         splineDescriptor *s = (splineDescriptor *) f->functionPtr;
-                        sprintf(out + i, "%s(x)= [%s interpolation of data from the %sfile '%s']", fnname,
-                                s->splineType, (f->functionType == PPL_FUNC_BMPDATA) ? "bitmap " : "", s->filename);
+                        ppl_strAppendf(out, outlen, &i, "%s(x)= [%s interpolation of data from the %sfile '%s']",
+                                       fnname, s->splineType, (f->functionType == PPL_FUNC_BMPDATA) ? "bitmap " : "",
+                                       s->filename);
                         i += strlen(out + i);
                         break;
                     }
                     case PPL_FUNC_HISTOGRAM: {
-                        sprintf(out + i, "%s(x)= [histogram of data from the file '%s']", fnname,
-                                ((histogramDescriptor *) f->functionPtr)->filename);
+                        ppl_strAppendf(out, outlen, &i, "%s(x)= [histogram of data from the file '%s']", fnname,
+                                       ((histogramDescriptor *) f->functionPtr)->filename);
                         i += strlen(out + i);
                         break;
                     }
                     case PPL_FUNC_FFT: {
-                        sprintf(out + i, "%s(x)= [%d-dimensional fft]", fnname,
-                                ((FFTDescriptor *) f->functionPtr)->Ndims);
+                        ppl_strAppendf(out, outlen, &i, "%s(x)= [%d-dimensional fft]", fnname,
+                                       ((FFTDescriptor *) f->functionPtr)->Ndims);
                         i += strlen(out + i);
                         break;
                     }
                     case PPL_FUNC_SUBROUTINE: {
                         int l, m;
-                        sprintf(out + i, "%s(", fnname);
+                        ppl_strAppendf(out, outlen, &i, "%s(", fnname);
                         i += strlen(out + i);
                         for (l = 0, m = 0; l < f->maxArgs; l++, m++) {
-                            for (; f->argList[m] != '\0'; m++) out[i++] = f->argList[m];
-                            out[i++] = ',';
+                            for (; f->argList[m] != '\0'; m++) ppl_strAppendChar(out, outlen, &i, f->argList[m]);
+                            ppl_strAppendChar(out, outlen, &i, ',');
                         }
                         if (f->maxArgs > 0) i--; // Remove final comma from list of arguments
-                        sprintf(out + i, ") = [subroutine]");
+                        ppl_strAppendf(out, outlen, &i, ") = [subroutine]");
                         i += strlen(out + i);
                         break;
                     }
                     default:
-                        strcpy(out, "<unknown function type>");
+                        ppl_snprintfTrunc(out, outlen, "%s", "<unknown function type>");
                         break;
                 }
             }
@@ -447,50 +453,50 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
         }
         case PPLOBJ_TYPE: {
             int i = 0;
-            strcpy(out, "<data type");
+            ppl_snprintfTrunc(out, outlen, "%s", "<data type");
             i += strlen(out + i);
             if (((pplType *) (o->auxil))->id >= 0) {
-                strcpy(out + i, ": ");
+                ppl_strAppendf(out, outlen, &i, "%s", ": ");
                 i += strlen(out + i);
-                strcpy(out + i, pplObjTypeNames[((pplType *) (o->auxil))->id]);
+                ppl_strAppendf(out, outlen, &i, "%s", pplObjTypeNames[((pplType *) (o->auxil))->id]);
                 i += strlen(out + i);
             }
-            strcpy(out + i, ">");
+            ppl_strAppendf(out, outlen, &i, "%s", ">");
             break;
         }
         case PPLOBJ_NULL: {
-            strcpy(out, "null");
+            ppl_snprintfTrunc(out, outlen, "%s", "null");
             break;
         }
         case PPLOBJ_EXC: {
             int i = 0;
-            strcpy(out, "<exception: ");
+            ppl_snprintfTrunc(out, outlen, "%s", "<exception: ");
             i += strlen(out + i);
-            strncpy(out + i, (char *) o->auxil, outlen - i);
+            ppl_strAppendf(out, outlen, &i, "%s", (char *) o->auxil);
             i += strlen(out + i);
-            strncpy(out + i, ">", outlen - i);
+            ppl_strAppendf(out, outlen, &i, "%s", ">");
             i += strlen(out + i);
             out[outlen - 1] = '\0';
             break;
         }
         case PPLOBJ_GLOB: {
-            strcpy(out, "<internal: global marker>");
+            ppl_snprintfTrunc(out, outlen, "%s", "<internal: global marker>");
             break;
         }
         case PPLOBJ_ZOM: {
-            strcpy(out, "<internal: zombie>");
+            ppl_snprintfTrunc(out, outlen, "%s", "<internal: zombie>");
             break;
         }
         case PPLOBJ_EXP: {
-            strcpy(out, "<internal: expression bytecode>");
+            ppl_snprintfTrunc(out, outlen, "%s", "<internal: expression bytecode>");
             break;
         }
         case PPLOBJ_BYT: {
-            strcpy(out, "<internal: command-line bytecode>");
+            ppl_snprintfTrunc(out, outlen, "%s", "<internal: command-line bytecode>");
             break;
         }
         default:
-            strcpy(out, "<unknown object type>");
+            ppl_snprintfTrunc(out, outlen, "%s", "<unknown object type>");
             break;
     }
     out[outlen - 1] = '\0';

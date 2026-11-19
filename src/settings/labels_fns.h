@@ -35,6 +35,6 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
 unsigned char ppllabel_compare(ppl_context *context, ppllabel_object *a, ppllabel_object *b);
 void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_object **in);
 void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist);
-void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out);
+void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, size_t outLen);
 
 #endif

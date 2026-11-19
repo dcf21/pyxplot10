@@ -87,7 +87,7 @@ void pplcsp_init(ppl_context *context) {
     for (i = 0; i < PTABLE_LISTLEN; i++) HelperPIDs[i] = 0;
 
     // The string "signal 15" we filter out of GhostView's output
-    sprintf(SIGTERM_NAME, "signal %d", SIGTERM);
+    ppl_snprintfTrunc(SIGTERM_NAME, sizeof(SIGTERM_NAME), "signal %d", SIGTERM);
 
     // Create pipes for communication between main process and the CSP
     if (pipe(PipeCSP2MAIN) < 0) ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not create a pipe.");
@@ -109,7 +109,7 @@ void pplcsp_init(ppl_context *context) {
     close(PipeMAIN2CSP[1]);
 
     // Make all log messages appear to come from the CSP
-    sprintf(context->errcontext.error_source, "CSP%6d", getpid());
+    ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "CSP%6d", getpid());
     signal(SIGINT, SIG_IGN); // Ignore SIGINT
     if (setpgid(getpid(), getpid()) < 0)
         if (DEBUG)
@@ -142,7 +142,8 @@ void pplcsp_init(ppl_context *context) {
     if (chdir("/") < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__,
                   "chdir out of temporary directory failed."); // chdir out of temporary directory
-    sprintf(PipeOutputBuffer, "rm -Rf %s", context->errcontext.session_default.tempdir);
+    ppl_snprintfTrunc(PipeOutputBuffer, sizeof(PipeOutputBuffer), "rm -Rf %s",
+                      context->errcontext.session_default.tempdir);
     if (system(PipeOutputBuffer) < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__,
                   "Removal of temporary directory failed."); // Remove temporary directory
@@ -252,7 +253,7 @@ void pplcsp_checkForChildExits(const int signo) {
         if (gv_pid == 0) continue;
         if (waitpid(gv_pid, NULL, WNOHANG) != 0) {
             if (DEBUG) {
-                sprintf(errtext, "A ghostview process with pid %d has terminated.", gv_pid);
+                ppl_snprintfTrunc(errtext, sizeof(errtext), "A ghostview process with pid %d has terminated.", gv_pid);
                 ppl_log(&context->errcontext, errtext);
             }
             GhostViews[i] = 0; // Stabat mater dolorosa
@@ -265,7 +266,8 @@ void pplcsp_checkForChildExits(const int signo) {
         if (gv_pid == 0) continue;
         if (waitpid(gv_pid, NULL, WNOHANG) != 0) {
             if (DEBUG) {
-                sprintf(errtext, "A persistent ghostview process with pid %d has terminated.", gv_pid);
+                ppl_snprintfTrunc(errtext, sizeof(errtext),
+                                  "A persistent ghostview process with pid %d has terminated.", gv_pid);
                 ppl_log(&context->errcontext, errtext);
             }
             GhostView_Persists[i] = 0; // Stabat mater dolorosa
@@ -359,7 +361,7 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
                 }
         } else {
             if (DEBUG) ppl_log(&context->errcontext, "Received gv_singlewindow request. Making a new window for it.");
-            strcpy(context->pplcsp_ghostView_fname, filename);
+            ppl_snprintfTrunc(context->pplcsp_ghostView_fname, sizeof(context->pplcsp_ghostView_fname), "%s", filename);
             GhostView_pid = pplcsp_forkNewGv(context, in + 1, GhostViews);
         }
     } else if (in[0] == '1') // gv_multiwindow
@@ -437,7 +439,8 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
     } else {
         // Child process; about to run postscript viewer
         sigprocmask(SIG_UNBLOCK, &sigs, NULL);
-        sprintf(context->errcontext.error_source, "GV%7d", getpid());
+        ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "GV%7d",
+                          getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New postscript viewer process alive; going to view %s.", fname);
@@ -519,7 +522,7 @@ void pplcsp_checkForHelperExits(const int signo) {
         if (pid == 0) continue;
         if (waitpid(pid, NULL, WNOHANG) != 0) {
             if (DEBUG) {
-                sprintf(errtext, "A helper process with pid %d has terminated.", pid);
+                ppl_snprintfTrunc(errtext, sizeof(errtext), "A helper process with pid %d has terminated.", pid);
                 ppl_log(&context->errcontext, errtext);
             }
             HelperPIDs[i] = 0; // Stabat mater dolorosa
@@ -590,7 +593,8 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
         close(PipeCSP2MAIN[0]);
         close(PipeMAIN2CSP[1]);
         sigprocmask(SIG_UNBLOCK, &sigs, NULL);
-        sprintf(context->errcontext.error_source, "SED%6d", getpid());
+        ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "SED%6d",
+                          getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New sed process alive; going to run command \"%s\".", cmd);
@@ -668,7 +672,8 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
         close(PipeCSP2MAIN[0]);
         close(PipeMAIN2CSP[1]);
         sigprocmask(SIG_UNBLOCK, &sigs, NULL);
-        sprintf(context->errcontext.error_source, "TEX%6d", getpid());
+        ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "TEX%6d",
+                          getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New latex process alive; going to latex file \"%s\".", filename);
@@ -738,7 +743,8 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
         close(PipeCSP2MAIN[0]);
         close(PipeMAIN2CSP[1]);
         sigprocmask(SIG_UNBLOCK, &sigs, NULL);
-        sprintf(context->errcontext.error_source, "IF %6d", getpid());
+        ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "IF %6d",
+                          getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New input filter process alive; going to run command \"%s\".", cmd[0]);
@@ -806,7 +812,8 @@ void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout)
         close(PipeCSP2MAIN[0]);
         close(PipeMAIN2CSP[1]);
         sigprocmask(SIG_UNBLOCK, &sigs, NULL);
-        sprintf(context->errcontext.error_source, "KPS%6d", getpid());
+        ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "KPS%6d",
+                          getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New kpsewhich process alive; going to get paths for filetype \"%s\".",
@@ -825,7 +832,7 @@ void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout)
                 ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not redirect stderr to pipe.");
             close(PipeCSP2MAIN[1]);
         }
-        sprintf(CmdLineOpt, "-show-path=.%s", ftype);
+        ppl_snprintfTrunc(CmdLineOpt, sizeof(CmdLineOpt), "-show-path=.%s", ftype);
         if (execl(KPSE_COMMAND, KPSE_COMMAND, CmdLineOpt, NULL) != 0)
             if (DEBUG)
                 ppl_log(&context->errcontext, "Attempt to execute kpsewhich returned error code."); // Execute kpsewhich

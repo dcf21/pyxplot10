@@ -382,8 +382,8 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         if (c->errStat.status) {
             *status = 1;
             *errType = ERR_TYPE;
-            sprintf(errText, "Error inside spectrum function supplied to the %s function: %s", FunctionDescription,
-                    c->errStat.errMsgExpr);
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside spectrum function supplied to the %s function: %s",
+                              FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 

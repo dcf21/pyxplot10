@@ -51,21 +51,24 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     interactive = ((isatty(STDIN_FILENO) == 1) && (context->session_default.splash == SW_ONOFF_ON));
 
     if (interactive) {
-        sprintf(LineBuffer, "[%s] Running %s.", ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
+        ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "[%s] Running %s.",
+                          ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
         ppl_report(context, LineBuffer);
     }
 
-    sprintf(LineBuffer, "%s -q %s %s", PPLBINARY, (context->session_default.color == SW_ONOFF_ON) ? "-c" : "-m", fname);
+    ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "%s -q %s %s", PPLBINARY,
+                      (context->session_default.color == SW_ONOFF_ON) ? "-c" : "-m", fname);
     status = system(LineBuffer);
 
     if (status && !interactive) {
-        sprintf(LineBuffer, "[%s] Encountered problem in script file %s.", ppl_strStrip(ppl_friendlyTimestring(), msg),
-                fname);
+        ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "[%s] Encountered problem in script file %s.",
+                          ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
         ppl_error(context, ERR_PREFORMED, -1, -1, LineBuffer);
     }
 
     if (interactive) {
-        sprintf(LineBuffer, "[%s] Finished %s.", ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
+        ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "[%s] Finished %s.",
+                          ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
         ppl_report(context, LineBuffer);
     }
     return;
@@ -111,9 +114,9 @@ int main(const int argc, char **argv) {
     context->session_default.color_err = SW_TERMCOL_RED;
 
     // Make help and version strings
-    sprintf(version_string, "\nPyxplot Watch %s\n", VERSION);
+    ppl_snprintfTrunc(version_string, sizeof(version_string), "\nPyxplot Watch %s\n", VERSION);
 
-    sprintf(help_string, "%s\
+    ppl_snprintfTrunc(help_string, sizeof(help_string), "%s\
 %s\n\
 \n\
 Usage: pyxplot_watch <options> <filelist>\n\
@@ -130,9 +133,9 @@ full Users' Guide can be found in the file:\n\
 \n\
 For the latest information on Pyxplot development, see the project website:\n\
 <http://www.pyxplot.org.uk>\n",
-            version_string, ppl_strUnderline(version_string, version_string_underline), DOCDIR, PATHLINK);
+                      version_string, ppl_strUnderline(version_string, version_string_underline), DOCDIR, PATHLINK);
 
-    sprintf(init_string, "\n\
+    ppl_snprintfTrunc(init_string, sizeof(init_string), "\n\
                         _       _      PYXPLOT WATCH\n\
  _ __  _   ___  ___ __ | | ___ | |_    Version %s\n\
 | '_ \\| | | \\ \\/ / '_ \\| |/ _ \\| __|   %s\n\
@@ -142,7 +145,7 @@ For the latest information on Pyxplot development, see the project website:\n\
 \n\
 For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 ",
-            VERSION, DATE);
+                      VERSION, DATE);
 
     // Scan command-line options for any switches
     HaveFilenames = 0;

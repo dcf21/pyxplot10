@@ -216,9 +216,9 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
             c->set->term_current.output; // The final filename of whatever kind of output we're planning to produce
     if ((comm.FinalFilename == NULL) || (comm.FinalFilename[0] == '\0')) {
         comm.FinalFilename = FinalFilenameTemp; // If final target filename is blank, use pyxplot.<filetype>
-        sprintf(FinalFilenameTemp, "pyxplot.%s",
-                *(char **) ppl_fetchSettingName(&c->errcontext, termtype, SW_TERMTYPE_INT, (void *) SW_TERMTYPE_STR,
-                                                sizeof(char *)));
+        ppl_snprintfTrunc(FinalFilenameTemp, sizeof(FinalFilenameTemp), "pyxplot.%s",
+                          *(char **) ppl_fetchSettingName(&c->errcontext, termtype, SW_TERMTYPE_INT,
+                                                          (void *) SW_TERMTYPE_STR, sizeof(char *)));
     }
 
     // Perform expansion of shell filename shortcuts such as ~
@@ -234,7 +234,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         lock = 0;
         return;
     }
-    strcpy(FinalFilenameTemp, WordExp.we_wordv[0]);
+    ppl_snprintfTrunc(FinalFilenameTemp, sizeof(FinalFilenameTemp), "%s", WordExp.we_wordv[0]);
     wordfree(&WordExp);
     comm.FinalFilename = FinalFilenameTemp;
 
@@ -265,7 +265,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
             ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Path of temporary directory is too long.");
         if ((termtype == SW_TERMTYPE_X11S) || (termtype == SW_TERMTYPE_X11M) || (termtype == SW_TERMTYPE_X11P)) {
             comm.title = TitleTemp; // In X11 terminals, we give eps files numbered titles
-            sprintf(TitleTemp, "Pyxplot Output %ld", TempFile_counter);
+            ppl_snprintfTrunc(TitleTemp, sizeof(TitleTemp), "Pyxplot Output %ld", TempFile_counter);
         } else {
             comm.title =
                     comm.FinalFilename; // In other terminals, we give eps files filename titles, with path cut off front
@@ -536,7 +536,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     }
 
     // Start writing LaTeX document
-    sprintf(filename, "%s.tex", x->TeXFilename);
+    ppl_snprintfTrunc(filename, sizeof(filename), "%s.tex", x->TeXFilename);
     output = fopen(filename, "w");
     if (output == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Could not create temporary LaTeX document");
@@ -617,8 +617,8 @@ void canvas_CallLaTeX(EPSComm *x) {
                     if (str_buffer[j] == '\n') {
                         if (ErrReadState == 2) {
                             TempErrMsg[ErrReadPos] = '\0';
-                            strcpy(ErrFilename, TempErrFilename);
-                            strcpy(ErrMsg, TempErrMsg);
+                            ppl_snprintfTrunc(ErrFilename, sizeof(ErrFilename), "%s", TempErrFilename);
+                            ppl_snprintfTrunc(ErrMsg, sizeof(ErrMsg), "%s", TempErrMsg);
                             ErrLineNo = (int) ppl_getFloat(TempErrLineNo, NULL);
                             if (DEBUG) {
                                 ppl_snprintfTrunc(msg, sizeof(msg), "Received LaTeX error on line %d of file <%s>",
@@ -634,7 +634,7 @@ void canvas_CallLaTeX(EPSComm *x) {
                             TempErrFilename[ErrReadPos] = '\0';
                             ErrReadPos = 0;
                             if (strcmp(TempErrFilename, "! LaTeX Error") == 0) {
-                                strcpy(TempErrFilename, filename);
+                                ppl_snprintfTrunc(TempErrFilename, sizeof(TempErrFilename), "%s", filename);
                                 strcpy(TempErrLineNo, "-1");
                                 ErrReadState = 2;
                                 ReadErrorState = 1;
@@ -715,9 +715,9 @@ void canvas_CallLaTeX(EPSComm *x) {
                             msg, sizeof(msg),
                             "\nInput Pyxplot command was:\n\n"); // Now tell the user what Pyxplot command produced the culprit
                     i = strlen(msg);
-                    ppl_canvas_item_textify(x->c, ptr, msg + i);
+                    ppl_canvas_item_textify(x->c, ptr, msg + i, sizeof(msg) - i);
                     i += strlen(msg + i);
-                    strcpy(msg + i, "\n");
+                    ppl_strAppendf(msg, sizeof(msg), &i, "\n");
                     ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
                 } // Then output the LaTeX string which produced the error
                 ppl_snprintfTrunc(msg, sizeof(msg), "\nOffending input to LaTeX was:\n\n%s\n", SuspectTextItem->text);
@@ -744,7 +744,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     }
 
     // Convert dvi into postscript fragments
-    sprintf(filename, "%s.dvi", x->TeXFilename);
+    ppl_snprintfTrunc(filename, sizeof(filename), "%s.dvi", x->TeXFilename);
     x->dvi = ReadDviFile(&x->c->errcontext, filename, x->status);
     if (*(x->status)) return; // DVI interpreter failed
 

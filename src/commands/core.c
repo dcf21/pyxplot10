@@ -102,8 +102,8 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
     if (version != NULL) {
         int i = 0, j = 0, sgn, pass = 0;
         char txtauto[64];
-        sprintf(txtauto, "This script requires a%s version of Pyxplot (%s %s)", (!lt) ? " newer" : "n older",
-                (!lt) ? ">=" : "<", version);
+        ppl_snprintfTrunc(txtauto, sizeof(txtauto), "This script requires a%s version of Pyxplot (%s %s)",
+                          (!lt) ? " newer" : "n older", (!lt) ? ">=" : "<", version);
 #define VERSION_FAIL \
     { \
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "%s", txt); \
@@ -259,7 +259,8 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
     int pos;
 
     if (c->ns_ptr < 2) {
-        sprintf(c->errStat.errBuff, "Cannot declare global variables when not in a subroutine or module namespace.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Cannot declare global variables when not in a subroutine or module namespace.");
         TBADD(ERR_NAMESPACE, 0);
         return;
     }
@@ -280,13 +281,14 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
             ppl_dictAppendCpy(c->namespaces[c->ns_ptr], varname, (void *) &out, sizeof(pplObj));
             obj = (pplObj *) ppl_dictLookup(c->namespaces[c->ns_ptr], varname);
             if (obj == NULL) {
-                sprintf(c->errStat.errBuff, "Out of memory.");
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                 TBADD(ERR_MEMORY, 0);
                 return;
             }
         }
         if ((obj == NULL) || (c->namespaces[c->ns_ptr]->immutable)) {
-            sprintf(c->errStat.errBuff, "Cannot modify variable in immutable namespace.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Cannot modify variable in immutable namespace.");
             TBADD(ERR_NAMESPACE, in->stkCharPos[pos + PARSE_global_var_name_var_names]);
             return;
         }
@@ -404,7 +406,8 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
     int pos;
 
     if (c->ns_ptr < 2) {
-        sprintf(c->errStat.errBuff, "Cannot declare global variables when not in a subroutine or module namespace.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Cannot declare global variables when not in a subroutine or module namespace.");
         TBADD(ERR_NAMESPACE, 0);
         return;
     }
@@ -420,7 +423,8 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
         // Look up requested variable
         ppl_contextVarLookup(c, varname, &obj, 1);
         if ((obj == NULL) || (obj->objType != PPLOBJ_GLOB)) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "Variable '%s' has not previously been declared global in this namespace. It is already a local variable.",
                     varname);
             TBADD(ERR_NAMESPACE, in->stkCharPos[pos + PARSE_local_var_name_var_names]);
@@ -605,7 +609,8 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
                              PARSE_var_set_varnames, PARSE_var_set_varname_varnames);
     if ((c->errStat.status) || (obj == NULL)) return;
     if (obj->objType == PPLOBJ_GLOB) {
-        sprintf(c->errStat.errBuff, "Variable declared global in global namespace.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Variable declared global in global namespace.");
         TBADD(ERR_NAMESPACE, 0);
         return;
     }

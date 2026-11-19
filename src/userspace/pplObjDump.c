@@ -48,9 +48,10 @@
 
 static void pplObjDump_escaped(FILE *output, const char *str, const char *suffix) {
     // Each character escapes to at most two characters, plus two quotation marks and a null terminator
-    char *buffer = (char *) malloc(2 * strlen(str) + 3);
+    const size_t bufferLen = 2 * strlen(str) + 3;
+    char *buffer = (char *) malloc(bufferLen);
     if (buffer == NULL) return;
-    ppl_strEscapify(str, buffer);
+    ppl_strEscapify(str, buffer, bufferLen);
     fprintf(output, "%s%s", buffer, suffix);
     free(buffer);
     buffer = NULL;

@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "stringTools/strConstants.h"
+#include "stringTools/asciidouble.h"
 
 #include "coreUtils/memAlloc.h"
 
@@ -126,7 +127,8 @@ void fastmalloc_free(const int context) {
 void fastmalloc_close() {
     if (_fastmalloc_initialised == 0) return;
     if (DEBUG) {
-        sprintf(temp_merr_string,
+        ppl_snprintfTrunc(
+                temp_merr_string, sizeof(temp_merr_string),
                 "FastMalloc shutting down: Reduced %lld calls to fastmalloc, for a total of %lld bytes, to %lld calls to malloc.",
                 _fastmalloc_callcount, _fastmalloc_bytecount, _fastmalloc_malloccount);
         (*mem_log)(errcontext, temp_merr_string);
@@ -154,7 +156,8 @@ void *fastmalloc(int context, int size) {
     _fastmalloc_bytecount += size;
 
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
-        sprintf(temp_merr_string, "FastMalloc asked to malloc memory in an unrecognised context %d.", context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                          "FastMalloc asked to malloc memory in an unrecognised context %d.", context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
         return NULL;
     }
@@ -165,8 +168,8 @@ void *fastmalloc(int context, int size) {
         _fastmalloc_malloccount++;
         if (size > FM_BLOCKSIZE - sizeof(void **)) {
             if (MEMDEBUG1) {
-                sprintf(temp_merr_string, "Fastmalloc creating block of size %d bytes at memory level %d.", size,
-                        context);
+                ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                                  "Fastmalloc creating block of size %d bytes at memory level %d.", size, context);
                 (*mem_log)(errcontext, temp_merr_string);
             }
             if ((ptr = malloc(size + SYNCSTEP + sizeof(void **))) == NULL) {
@@ -175,8 +178,9 @@ void *fastmalloc(int context, int size) {
             } // This is a big malloc which needs to new block to itself
         } else {
             if (MEMDEBUG1) {
-                sprintf(temp_merr_string, "Fastmalloc creating block of size %d bytes at memory level %d.",
-                        FM_BLOCKSIZE, context);
+                ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                                  "Fastmalloc creating block of size %d bytes at memory level %d.", FM_BLOCKSIZE,
+                                  context);
                 (*mem_log)(errcontext, temp_merr_string);
             }
             if ((ptr = malloc(FM_BLOCKSIZE)) == NULL) {
@@ -254,7 +258,8 @@ int ppl_memAlloc_DescendIntoNewContext() {
     }
     _ppl_memAlloc_SetMemContext(ppl_memAlloc_mem_context + 1);
     if (MEMDEBUG1) {
-        sprintf(temp_merr_string, "Descended into memory context %d.", ppl_memAlloc_mem_context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Descended into memory context %d.",
+                          ppl_memAlloc_mem_context);
         (*mem_log)(errcontext, temp_merr_string);
     }
     return ppl_memAlloc_mem_context;
@@ -279,7 +284,8 @@ int ppl_memAlloc_AscendOutOfContext(const int context) {
         return -1;
     }
     if (MEMDEBUG1) {
-        sprintf(temp_merr_string, "Ascending out of memory context %d.", ppl_memAlloc_mem_context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Ascending out of memory context %d.",
+                          ppl_memAlloc_mem_context);
         (*mem_log)(errcontext, temp_merr_string);
     }
     ppl_memAlloc_FreeAll(context);
@@ -292,7 +298,8 @@ int ppl_memAlloc_AscendOutOfContext(const int context) {
 
 void _ppl_memAlloc_SetMemContext(int context) {
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
-        sprintf(temp_merr_string, "ppl_memAlloc_SetMemContext passed unrecognised context number %d.", context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                          "ppl_memAlloc_SetMemContext passed unrecognised context number %d.", context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
         return;
     }
@@ -319,7 +326,8 @@ void ppl_memAlloc_FreeAll(int context) {
     latch = 1;
 
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
-        sprintf(temp_merr_string, "ppl_memAlloc_FreeAll() passed unrecognised context %d.", context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                          "ppl_memAlloc_FreeAll() passed unrecognised context %d.", context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
         latch = 0;
         return;
@@ -345,14 +353,15 @@ void ppl_memAlloc_Free(int context) {
     latch = 1;
 
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
-        sprintf(temp_merr_string, "ppl_memAlloc_Free() passed unrecognised context %d.", context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                          "ppl_memAlloc_Free() passed unrecognised context %d.", context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
         latch = 0;
         return;
     }
 
     if (MEMDEBUG1) {
-        sprintf(temp_merr_string, "Freeing all memory down in level %d.", context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Freeing all memory down in level %d.", context);
         (*mem_log)(errcontext, temp_merr_string);
     }
     fastmalloc_free(context);
@@ -369,13 +378,15 @@ void *ppl_memAlloc(int size) {
     void *out;
 
     if ((ppl_memAlloc_mem_context < 0) || (ppl_memAlloc_mem_context >= PPL_MAX_CONTEXTS)) {
-        sprintf(temp_merr_string, "ppl_memAlloc_malloc() using unrecognised context %d.", ppl_memAlloc_mem_context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                          "ppl_memAlloc_malloc() using unrecognised context %d.", ppl_memAlloc_mem_context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
         return NULL;
     }
 
     if (MEMDEBUG2) {
-        sprintf(temp_merr_string, "Request to malloc %d bytes at memory level %d.", size, ppl_memAlloc_mem_context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Request to malloc %d bytes at memory level %d.",
+                          size, ppl_memAlloc_mem_context);
         (*mem_log)(errcontext, temp_merr_string);
     }
     out = fastmalloc(ppl_memAlloc_mem_context, size);
@@ -396,13 +407,15 @@ void *ppl_memAlloc_incontext(int size, int context) {
     void *out;
 
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
-        sprintf(temp_merr_string, "ppl_memAlloc_incontext() passed unrecognised context %d.", context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
+                          "ppl_memAlloc_incontext() passed unrecognised context %d.", context);
         (*mem_error)(errcontext, 100, -1, -1, temp_merr_string);
         return NULL;
     }
 
     if (MEMDEBUG2) {
-        sprintf(temp_merr_string, "Request to malloc %d bytes at memory level %d.", size, context);
+        ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Request to malloc %d bytes at memory level %d.",
+                          size, context);
         (*mem_log)(errcontext, temp_merr_string);
     }
     out = fastmalloc(context, size);

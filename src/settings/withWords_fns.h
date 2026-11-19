@@ -34,7 +34,8 @@ int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *
 int ppl_withWordsCmp_zero(const ppl_context *context, const withWords *a);
 void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a, const withWords *b,
                         const withWords *c, const withWords *d, const withWords *e, const unsigned char ExpandStyles);
-void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out);
+void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, size_t outLen);
+void ppl_withWordsAppend(ppl_context *context, const withWords *defn, char *out, size_t outLen, int *pos);
 void ppl_withWordsDestroy(const ppl_context *context, withWords *a);
 void ppl_withWordsCpy(const ppl_context *context, withWords *out, const withWords *in);
 

@@ -98,14 +98,14 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
             t->amErrMsgExpr = 1;
             c->errStat.sourceIdExpr = srcId;
             c->errStat.errPosExpr = errPos;
-            strcpy(c->errStat.errMsgExpr, c->errStat.errBuff);
+            ppl_snprintfTrunc(c->errStat.errMsgExpr, sizeof(c->errStat.errMsgExpr), "%s", c->errStat.errBuff);
         }
         if ((cmdOrExpr) && (c->errStat.sourceIdCmd < 0)) t->amErrMsgCmd = 1;
     }
     if ((cmdOrExpr) && (c->errStat.sourceIdCmd < 0) && (strlen(c->errStat.errBuff) > 0)) {
         c->errStat.sourceIdCmd = srcId;
         c->errStat.errPosCmd = errPos;
-        strcpy(c->errStat.errMsgCmd, c->errStat.errBuff);
+        ppl_snprintfTrunc(c->errStat.errMsgCmd, sizeof(c->errStat.errMsgCmd), "%s", c->errStat.errBuff);
     }
     return;
 }
@@ -208,10 +208,10 @@ void ppl_tbWrite(ppl_context *c) {
         if ((t->sourceId == c->errStat.sourceIdCmd) && (lp >= 0)) {
             ppl_snprintfTrunc(out + i, outLen - i, "%s\n", c->errStat.errMsgCmd);
             i += strlen(out + i);
-            for (k = 0; ((k < lp) && (i < outLen)); k++, i++) out[i] = ' ';
+            for (k = 0; ((k < lp) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, " |\n");
             i += strlen(out + i);
-            for (k = 0; ((k < lp) && (i < outLen)); k++, i++) out[i] = ' ';
+            for (k = 0; ((k < lp) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, "\\|/\n");
             i += strlen(out + i);
             h1 = i + 1 + lp;
@@ -220,10 +220,10 @@ void ppl_tbWrite(ppl_context *c) {
         snprintf(out + i, outLen - i, " %s\n", t->linetext);
         i += strlen(out + i);
         if ((t->sourceId == c->errStat.sourceIdExpr) && (lp2 >= 0)) {
-            for (k = 0; ((k < lp2) && (i < outLen)); k++, i++) out[i] = ' ';
+            for (k = 0; ((k < lp2) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, "/|\\\n");
             i += strlen(out + i);
-            for (k = 0; ((k < lp2) && (i < outLen)); k++, i++) out[i] = ' ';
+            for (k = 0; ((k < lp2) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, " |\n");
             i += strlen(out + i);
             snprintf(out + i, outLen - i, "%s\n", c->errStat.errMsgExpr);

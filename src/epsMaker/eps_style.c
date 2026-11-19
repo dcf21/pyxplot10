@@ -34,27 +34,32 @@
 //! \return The postscript command, stored in a static buffer which is overwritten by subsequent calls
 
 char *eps_LineType(int lt, double lw, double offset) {
-    static char output[256];
+    // Each number may be up to ~320 characters long if the line width is huge (e.g. lw 1e300)
+    static char output[4096];
     lt = (lt - 1) % 9;
     while (lt < 0) lt += 9;
-    if (lt == 0) sprintf(output, "0 setlinecap [] %.2f setdash", offset); // solid
-    else if (lt == 1) sprintf(output, "0 setlinecap [%.2f] %.2f setdash", 2 * lw, offset); // dashed
-    else if (lt == 2) sprintf(output, "1 setlinecap [0 %.2f] %.2f setdash", 2 * lw, offset); // dotted
+    if (lt == 0) snprintf(output, sizeof(output), "0 setlinecap [] %.2f setdash", offset); // solid
+    else if (lt == 1) snprintf(output, sizeof(output), "0 setlinecap [%.2f] %.2f setdash", 2 * lw, offset); // dashed
+    else if (lt == 2) snprintf(output, sizeof(output), "1 setlinecap [0 %.2f] %.2f setdash", 2 * lw, offset); // dotted
     else if (lt == 3)
-        sprintf(output, "1 setlinecap [0 %.2f %.2f %.2f] %.2f setdash", 2 * lw, 2 * lw, 2 * lw, offset); // dash-dotted
-    else if (lt == 4) sprintf(output, "0 setlinecap [%.2f %.2f] %.2f setdash", 7 * lw, 2 * lw, offset); // long dash
+        snprintf(output, sizeof(output), "1 setlinecap [0 %.2f %.2f %.2f] %.2f setdash", 2 * lw, 2 * lw, 2 * lw,
+                 offset); // dash-dotted
+    else if (lt == 4)
+        snprintf(output, sizeof(output), "0 setlinecap [%.2f %.2f] %.2f setdash", 7 * lw, 2 * lw, offset); // long dash
     else if (lt == 5)
-        sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw,
-                offset); // long dash - dot
+        snprintf(output, sizeof(output), "1 setlinecap [%.2f %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw,
+                 offset); // long dash - dot
     else if (lt == 6)
-        sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw, 2 * lw,
-                offset); // long dash - dot dot
+        snprintf(output, sizeof(output), "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw,
+                 2 * lw,
+                 offset); // long dash - dot dot
     else if (lt == 7)
-        sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw, 2 * lw,
-                2 * lw, offset); // long dash - dot dot dot
+        snprintf(output, sizeof(output), "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw,
+                 2 * lw, 2 * lw, 2 * lw, offset); // long dash - dot dot dot
     else if (lt == 8)
-        sprintf(output, "0 setlinecap [%.2f %.2f %.2f %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw, 2 * lw,
-                offset); // long dash - dash
+        snprintf(output, sizeof(output), "0 setlinecap [%.2f %.2f %.2f %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw,
+                 2 * lw,
+                 offset); // long dash - dash
     return output;
 }
 

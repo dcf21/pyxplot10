@@ -711,70 +711,119 @@ int ppl_strCmpNoCase(const char *a, const char *b) {
 }
 
 //! ppl_strEscapify - Copy a string into a new character buffer, enclosed in quotes and with escape characters inserted
-//! before quote characters, backslashes, and control characters
+//! before quote characters, backslashes, and control characters. If the buffer is too small, the escaped string is
+//! truncated (but still closed with a quote, if there is room).
 //! \param [in] in The input string
 //! \param [out] out The character buffer into which to write the escaped string
+//! \param [in] outLen The size of the buffer <out>
 //! \return Pointer to <out>
 
-char *ppl_strEscapify(const char *in, char *out) {
+char *ppl_strEscapify(const char *in, char *out, const size_t outLen) {
     const char *scanin = in;
-    char *scanout = out;
-    *scanout++ = '\"';
-    while (*scanin != '\0') {
-        if (*scanin == '\?') {
-            strcpy(scanout, "\\?");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if (*scanin == '\a') {
-            strcpy(scanout, "\\a");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if (*scanin == '\b') {
-            strcpy(scanout, "\\b");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if (*scanin == '\f') {
-            strcpy(scanout, "\\f");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if (*scanin == '\n') {
-            strcpy(scanout, "\\n");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if (*scanin == '\r') {
-            strcpy(scanout, "\\r");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if (*scanin == '\t') {
-            strcpy(scanout, "\\t");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if (*scanin == '\v') {
-            strcpy(scanout, "\\v");
-            scanout += 2;
-            scanin++;
-            continue;
-        }
-        if ((*scanin == '\'') || (*scanin == '\"') || (*scanin == '\\')) *(scanout++) = '\\';
-        *(scanout++) = *(scanin++);
+    size_t j = 0;
+    if (outLen < 3) {
+        if (outLen > 0) out[0] = '\0';
+        return out;
     }
-    *scanout++ = '\"';
-    *scanout = '\0';
+    out[j++] = '\"';
+    // Leave room for the closing quote and the null terminator
+    while ((*scanin != '\0') && (j + 2 < outLen - 1)) {
+        char escape = '\0';
+        switch (*scanin) {
+            case '\?':
+                escape = '?';
+                break;
+            case '\a':
+                escape = 'a';
+                break;
+            case '\b':
+                escape = 'b';
+                break;
+            case '\f':
+                escape = 'f';
+                break;
+            case '\n':
+                escape = 'n';
+                break;
+            case '\r':
+                escape = 'r';
+                break;
+            case '\t':
+                escape = 't';
+                break;
+            case '\v':
+                escape = 'v';
+                break;
+            case '\'':
+            case '\"':
+            case '\\':
+                escape = *scanin;
+                break;
+            default:
+                break;
+        }
+        if (escape != '\0') {
+            out[j++] = '\\';
+            out[j++] = escape;
+        } else {
+            out[j++] = *scanin;
+        }
+        scanin++;
+    }
+    out[j++] = '\"';
+    out[j] = '\0';
     return out;
+}
+
+//! ppl_strAppendf - Append printf-formatted text to a string in a fixed-size buffer, truncating it if the buffer is
+//! full. The string always remains null-terminated, and <*pos> never passes the last byte of the buffer, so calls
+//! may be chained safely.
+//! \param [in,out] out The buffer
+//! \param [in] outLen The size of the buffer <out>
+//! \param [in,out] pos The position at which to append the text, which must be the end of the string in <out>. It
+//! is advanced to the new end of the string.
+//! \param [in] format The printf-style format string
+//! \return The number of characters which would have been appended if the buffer were large enough
+
+int ppl_strAppendf(char *out, const size_t outLen, int *pos, const char *format, ...) {
+    va_list args;
+    int n;
+    if ((*pos < 0) || ((size_t) *pos + 1 >= outLen)) return 0;
+    va_start(args, format);
+    n = vsnprintf(out + *pos, outLen - *pos, format, args);
+    va_end(args);
+    out[outLen - 1] = '\0';
+    *pos += (int) strlen(out + *pos);
+    return n;
+}
+
+//! ppl_strAppendStripped - Append a string to a string in a fixed-size buffer, with whitespace removed from both
+//! ends, truncating it if the buffer is full
+//! \param [in,out] out The buffer
+//! \param [in] outLen The size of the buffer <out>
+//! \param [in,out] pos The position at which to append the string, which is advanced past it
+//! \param [in] in The string to append
+
+void ppl_strAppendStripped(char *out, const size_t outLen, int *pos, const char *in) {
+    const int start = *pos;
+    ppl_strAppendf(out, outLen, pos, "%s", in);
+    if (*pos <= start) return;
+    ppl_strStrip(out + start,
+                 out + start); // Stripping in place is safe, since the output never runs ahead of the input
+    *pos = start + (int) strlen(out + start);
+}
+
+//! ppl_strAppendChar - Append a single character to a string in a fixed-size buffer, unless the buffer is full. The
+//! string always remains null-terminated.
+//! \param [in,out] out The buffer
+//! \param [in] outLen The size of the buffer <out>
+//! \param [in,out] pos The position at which to append the character, which is advanced past it
+//! \param [in] c The character to append
+
+void ppl_strAppendChar(char *out, const size_t outLen, int *pos, const char c) {
+    if ((*pos < 0) || ((size_t) *pos + 1 >= outLen)) return;
+    out[(*pos)++] = c;
+    out[*pos] = '\0';
 }
 
 //! ppl_strWildcardTest - Test whether a string matches a wildcard pattern, in which ? matches any single character

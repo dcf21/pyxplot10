@@ -146,7 +146,7 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
         double xap[2], yap[2], zap[2], theta_x, theta_y, theta_z;
         int status = 0, xrn0, yrn0, zrn0, xrn1, yrn1, zrn1;
         int ArrowType = ai->pplarrow_style;
-        sprintf(ItemName, "arrow %d on plot %d", ai->id, x->current->id);
+        ppl_snprintfTrunc(ItemName, sizeof(ItemName), "arrow %d on plot %d", ai->id, x->current->id);
         FETCH_AXES(ai->system_x0, xa0, x->current->XAxes, ai->axis_x0, ai->x0, xin0);
         FETCH_AXES(ai->system_y0, ya0, x->current->YAxes, ai->axis_y0, ai->y0, yin0);
         if (x->current->ThreeDim) { FETCH_AXES(ai->system_z0, za0, x->current->ZAxes, ai->axis_z0, ai->z0, zin0); }
@@ -309,7 +309,7 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
             double xin, yin, zin = 0.5;
             double xpos_, ypos_, depth, xap, yap, zap, theta_x, theta_y, theta_z;
             int status = 0, xrn, yrn, zrn;
-            sprintf(ItemName, "label %d on plot %d", li->id, x->current->id);
+            ppl_snprintfTrunc(ItemName, sizeof(ItemName), "label %d on plot %d", li->id, x->current->id);
             FETCH_AXES(li->system_x, xa, x->current->XAxes, li->axis_x, li->x, xin);
             FETCH_AXES(li->system_y, ya, x->current->YAxes, li->axis_y, li->y, yin);
             if (x->current->ThreeDim) { FETCH_AXES(li->system_z, za, x->current->ZAxes, li->axis_z, li->z, zin); }

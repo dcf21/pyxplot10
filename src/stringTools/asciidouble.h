@@ -65,7 +65,10 @@ void ppl_strBracketMatch(const char *in, char open, char close, int *CommaPositi
 
 int ppl_strCmpNoCase(const char *a, const char *b);
 
-char *ppl_strEscapify(const char *in, char *out);
+char *ppl_strEscapify(const char *in, char *out, size_t outLen);
+int ppl_strAppendf(char *out, size_t outLen, int *pos, const char *format, ...) __attribute__((format(printf, 4, 5)));
+void ppl_strAppendChar(char *out, size_t outLen, int *pos, char c);
+void ppl_strAppendStripped(char *out, size_t outLen, int *pos, const char *in);
 
 int ppl_strWildcardTest(const char *test, const char *wildcard);
 

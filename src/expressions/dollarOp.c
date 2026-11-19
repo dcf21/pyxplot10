@@ -135,14 +135,14 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
     out->refCount = 1;
 
     if ((colNum < -3) || (colNum > c->dollarStat.Ncols)) {
-        sprintf(c->dollarStat.warntxt,
-                "%s:%ld: In the expression <%s>, the requested %s number %d does not exist %son line %ld.",
-                c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
-                (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colNum,
-                (c->dollarStat.usingRowCol == DATAFILE_COL) ? "" : "in the block commencing ",
-                c->dollarStat.file_linenumber);
-        sprintf(c->errStat.errBuff, "No %s with number %d.",
-                (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colNum);
+        ppl_snprintfTrunc(c->dollarStat.warntxt, sizeof(c->dollarStat.warntxt),
+                          "%s:%ld: In the expression <%s>, the requested %s number %d does not exist %son line %ld.",
+                          c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
+                          (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colNum,
+                          (c->dollarStat.usingRowCol == DATAFILE_COL) ? "" : "in the block commencing ",
+                          c->dollarStat.file_linenumber);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No %s with number %d.",
+                          (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colNum);
         TBADD(ERR_RANGE);
         return;
     }
@@ -191,14 +191,14 @@ void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, const int inEx
             ppl_dollarOp_fetchColByNum(c, inExpr, inExprCharPos, i);
             return;
         }
-    sprintf(c->dollarStat.warntxt,
-            "%s:%ld: In the expression <%s>, the requested %s named '%s' does not exist %son line %ld.",
-            c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
-            (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colName,
-            (c->dollarStat.usingRowCol == DATAFILE_COL) ? "" : "in the block commencing ",
-            c->dollarStat.file_linenumber);
-    sprintf(c->errStat.errBuff, "No %s with name '%s'.", (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row",
-            colName);
+    ppl_snprintfTrunc(c->dollarStat.warntxt, sizeof(c->dollarStat.warntxt),
+                      "%s:%ld: In the expression <%s>, the requested %s named '%s' does not exist %son line %ld.",
+                      c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
+                      (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colName,
+                      (c->dollarStat.usingRowCol == DATAFILE_COL) ? "" : "in the block commencing ",
+                      c->dollarStat.file_linenumber);
+    ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No %s with name '%s'.",
+                      (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colName);
     TBADD(ERR_DICTKEY);
     return;
 }

@@ -221,7 +221,8 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
             ppl_garbageObject(&c->stack[--c->stackPtr]); // trash and pop tmp from stack
 
             if (!ppl_unitsDimEqual(&output1, &output2)) {
-                sprintf(c->errStat.errBuff,
+                ppl_snprintfTrunc(
+                        c->errStat.errBuff, sizeof(c->errStat.errBuff),
                         "The two sides of the equation which is being solved are not dimensionally compatible. The left side has dimensions of <%s> while the right side has dimensions of <%s>.",
                         ppl_printUnit(c, &output1, NULL, NULL, 0, 1, 0),
                         ppl_printUnit(c, &output2, NULL, NULL, 1, 1, 0));
@@ -241,8 +242,8 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
                 data->isFirst[i] = 0;
             } else {
                 if (!ppl_unitsDimEqual(&data->first[i], &output1)) {
-                    sprintf(c->errStat.errBuff,
-                            "The function being minimised or maximised does not have consistent units.");
+                    ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                      "The function being minimised or maximised does not have consistent units.");
                     ppl_tbAdd(c, data->expr1[i]->srcLineN, data->expr1[i]->srcId, data->expr1[i]->srcFname, 0, ERR_UNIT,
                               data->expr1pos[i], data->inLine, "");
                     return GSL_NAN;
@@ -323,7 +324,7 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
         if (commlink->warnPos >= 0) {
             const int i = commlink->warnExprId;
             const int j = commlink->warnExprNo;
-            strcpy(c->errStat.errBuff, commlink->warntext);
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s", commlink->warntext);
             if (j == 1)
                 ppl_tbAdd(c, commlink->expr1[i]->srcLineN, commlink->expr1[i]->srcId, commlink->expr1[i]->srcFname, 1,
                           ERR_NUMERICAL, commlink->expr1pos[i] + commlink->warnPos, commlink->inLine, "");
@@ -371,7 +372,8 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
 
     if (iter2 >= 20) status = 1;
     if (status) {
-        sprintf(c->errStat.errBuff, "Failed to converge. GSL returned error: %s", gsl_strerror(status));
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Failed to converge. GSL returned error: %s",
+                          gsl_strerror(status));
         ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_UNIT, 0, pl->linetxt, "");
         return;
     }
@@ -423,7 +425,8 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
         commlink.fitvarname[commlink.Nfitvars] = varName;
         commlink.Nfitvars += 1;
         if (commlink.Nfitvars >= EQNSOLVE_MAXDIMS) {
-            sprintf(c->errStat.errBuff, "Too many via variables; the maximum allowed number is %d.", EQNSOLVE_MAXDIMS);
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Too many via variables; the maximum allowed number is %d.", EQNSOLVE_MAXDIMS);
             ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_OVERFLOW, 0, pl->linetxt, "");
             return;
         }
@@ -494,7 +497,8 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
         commlink.fitvarname[commlink.Nfitvars] = varName;
         commlink.Nfitvars += 1;
         if (commlink.Nfitvars >= EQNSOLVE_MAXDIMS) {
-            sprintf(c->errStat.errBuff, "Too many via variables; the maximum allowed number is %d.", EQNSOLVE_MAXDIMS);
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Too many via variables; the maximum allowed number is %d.", EQNSOLVE_MAXDIMS);
             ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_OVERFLOW,
                       in->stkCharPos[pos + PARSE_solve_fit_variable_fit_variables], pl->linetxt, "");
             return;
@@ -512,8 +516,9 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
         commlink.expr2pos[commlink.Nexprs] = in->stkCharPos[pos + PARSE_solve_right_expression_expressions];
         commlink.Nexprs += 1;
         if (commlink.Nexprs >= EQNSOLVE_MAXDIMS) {
-            sprintf(c->errStat.errBuff, "Too many simultaneous equations to solve; the maximum allowed number is %d.",
-                    EQNSOLVE_MAXDIMS);
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Too many simultaneous equations to solve; the maximum allowed number is %d.",
+                              EQNSOLVE_MAXDIMS);
             ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_OVERFLOW,
                       in->stkCharPos[pos + PARSE_solve_left_expression_expressions], pl->linetxt, "");
             return;
@@ -521,7 +526,7 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
     }
 
     if (commlink.Nexprs < 1) {
-        sprintf(c->errStat.errBuff, "No equations supplied to solve.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No equations supplied to solve.");
         ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_NUMERICAL, 0, pl->linetxt, "");
         return;
     }

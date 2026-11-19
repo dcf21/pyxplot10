@@ -35,7 +35,7 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
 unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarrow_object *b);
 void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_object **in);
 void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist);
-void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out);
+void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, size_t outLen);
 
 #define pplarrow_add_get_system(X, Y) \
     { \

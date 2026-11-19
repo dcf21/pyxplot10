@@ -270,7 +270,8 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
             if (nr >= USING_ITEMS_MAX) {
-                sprintf(c->errStat.errBuff, "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
                 TBADD2(ERR_SYNTAX, 0);
                 return;
             }
@@ -283,14 +284,16 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
                     TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_tabulate_min_0range_list]);
                     return;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));

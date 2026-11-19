@@ -123,7 +123,7 @@ typedef struct canvas_itemlist {
 
 
 int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive);
-char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output);
+char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, size_t outLen);
 int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive);
 int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive,

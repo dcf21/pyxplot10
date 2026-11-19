@@ -74,7 +74,8 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
         argListLen += strlen(name) + 1;
     }
     if (nArgs > FUNC_MAXARGS) {
-        sprintf(c->errStat.errBuff, "Too many arguments to function; the maximum allowed number is %d.", FUNC_MAXARGS);
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Too many arguments to function; the maximum allowed number is %d.", FUNC_MAXARGS);
         TBADD(ERR_OVERFLOW, 0);
         return;
     }
@@ -85,7 +86,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     // Allocate function descriptor
     f = (pplFunc *) malloc(sizeof(pplFunc));
     if (f == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD(ERR_MEMORY, 0);
         return;
     }
@@ -110,7 +111,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     f->descriptionShort = NULL;
     if ((f->argList == NULL) || ((!nullDefn) && (f->functionPtr == NULL)) || (f->min == NULL) || (f->max == NULL) ||
         (f->minActive == NULL) || (f->maxActive == NULL)) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD(ERR_MEMORY, 0);
         goto fail;
     }
@@ -138,7 +139,8 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                 f->minActive[j] = 0;
             } else {
                 if (min->flagComplex) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Where ranges are specified for function arguments, these must be real numbers. Ranges may not be imposed upon complex arguments to functions.");
                     TBADD(ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_min_0range_list]);
                     goto fail;
@@ -153,13 +155,15 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                 f->maxActive[j] = 0;
             } else {
                 if (max->flagComplex) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Where ranges are specified for function arguments, these must be real numbers. Ranges may not be imposed upon complex arguments to functions.");
                     TBADD(ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_max_0range_list]);
                     goto fail;
                 }
                 if (f->minActive[j] && !ppl_unitsDimEqual(min, max)) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "The minimum and maximum values specified for argument number %d are dimensionally incompatible: the minimum has dimensions of <%s>, while the maximum has dimensions of <%s>.",
                             j + 1, ppl_printUnit(c, min, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, min, NULL, NULL, 1, 1, 0));
@@ -187,7 +191,8 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                              PARSE_func_set_function_names, PARSE_func_set_function_name_function_names);
     if ((c->errStat.status) || (tmpObj == NULL)) goto fail;
     if (tmpObj->objType == PPLOBJ_GLOB) {
-        sprintf(c->errStat.errBuff, "Variable declared global in global namespace.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Variable declared global in global namespace.");
         TBADD(ERR_NAMESPACE, 0);
         goto fail;
     }

@@ -71,16 +71,19 @@ void pplset_makedefault(ppl_context *context) {
             COLOR_SEAGREEN, COLOR_GREENYELLOW, COLOR_ORANGE, COLOR_CARNATIONPINK, COLOR_PLUM,       -1};
 
     // Clear settings
-    memset((void *) s, 0, sizeof(s));
+    memset((void *) s, 0, sizeof(*s));
 
     // Default palette
     for (i = 0; default_cols[i] >= 0; i++) {
+        // default_cols contains color codes (COLOR_*), so find each color's position in the tables of color data
+        int j;
+        for (j = 0; (SW_COLOR_INT[j] >= 0) && (SW_COLOR_INT[j] != default_cols[i]); j++);
         s->palette_default[i] = default_cols[i];
         s->paletteS_default[i] = SW_COLSPACE_CMYK;
-        s->palette1_default[i] = SW_COLOR_CMYK_C[default_cols[i]];
-        s->palette2_default[i] = SW_COLOR_CMYK_M[default_cols[i]];
-        s->palette3_default[i] = SW_COLOR_CMYK_Y[default_cols[i]];
-        s->palette4_default[i] = SW_COLOR_CMYK_K[default_cols[i]];
+        s->palette1_default[i] = SW_COLOR_CMYK_C[j];
+        s->palette2_default[i] = SW_COLOR_CMYK_M[j];
+        s->palette3_default[i] = SW_COLOR_CMYK_Y[j];
+        s->palette4_default[i] = SW_COLOR_CMYK_K[j];
     }
     s->palette_default[i] = -1;
 
@@ -384,7 +387,8 @@ void pplset_makedefault(ppl_context *context) {
     se->session_default.color_rep = SW_TERMCOL_GRN;
     se->session_default.color_wrn = SW_TERMCOL_BRN;
     se->session_default.color_err = SW_TERMCOL_RED;
-    strcpy(se->session_default.homedir, ppl_unixGetHomeDir(&context->errcontext));
+    ppl_snprintfTrunc(se->session_default.homedir, sizeof(se->session_default.homedir), "%s",
+                      ppl_unixGetHomeDir(&context->errcontext));
 
     // Estimate the machine precision of the floating point unit we are using
     ppl_makeMachineEpsilon();

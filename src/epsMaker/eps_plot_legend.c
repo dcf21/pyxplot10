@@ -153,7 +153,8 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                     }
                 } else {
                     cptr[k++] = ' ';
-                    ppl_strEscapify((pd->filenameFinal == NULL) ? pd->filename : pd->filenameFinal, buffer);
+                    ppl_strEscapify((pd->filenameFinal == NULL) ? pd->filename : pd->filenameFinal, buffer,
+                                    LSTR_LENGTH);
                     inlen = strlen(buffer);
                     ppl_texify_generic(x->c, buffer, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL, NULL);
                     k += strlen(cptr + k); // Filename of datafile we are plotting

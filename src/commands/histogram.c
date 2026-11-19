@@ -108,7 +108,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
             if (nr >= 1) {
-                sprintf(c->errStat.errBuff, "Too many ranges specified; only one is allowed.");
+                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                  "Too many ranges specified; only one is allowed.");
                 TBADD2(ERR_SYNTAX, 0);
                 return;
             }
@@ -121,14 +122,16 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
                             nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
                     TBADD2(ERR_TYPE, in->stkCharPos[pos + PARSE_histogram_min_0range_list]);
                     return;
                 }
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
                             nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
                             ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
@@ -165,7 +168,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         for (j = 0; j < NcolRequired; j++)
             if (minSet[j] || maxSet[j]) {
                 if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
-                    sprintf(c->errStat.errBuff,
+                    ppl_snprintfTrunc(
+                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "The minimum and maximum limits specified in range %d in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                             j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
@@ -176,7 +180,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
         // Check that we have at least three datapoints
         if (data->Nrows < 3) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "Histogram construction is only possible on data sets with members at at least three values of x.");
             TBADD2(ERR_NUMERICAL, 0);
             return;
@@ -189,7 +194,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     xdata = (double *) ppl_memAlloc_incontext(data->Nrows * sizeof(double), contextLocalVec);
 
     if (xdata == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         return;
     }
@@ -241,7 +246,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
     // Check that we have at least three points to interpolate
     if (k < 3) {
-        sprintf(c->errStat.errBuff,
+        ppl_snprintfTrunc(
+                c->errStat.errBuff, sizeof(c->errStat.errBuff),
                 "Histogram construction is only possible on data sets with members at at least three values of x.");
         TBADD2(ERR_NUMERICAL, 0);
         return;
@@ -250,7 +256,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     // Make histogramDescriptor data structure
     output = (histogramDescriptor *) malloc(sizeof(histogramDescriptor));
     if (output == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         return;
     }
@@ -258,7 +264,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     output->log = logAxis;
     output->filename = (char *) malloc(strlen(filenameOut) + 1);
     if (output->filename == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         free(output);
         output = NULL;
@@ -277,7 +283,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
         output->bins = (double *) malloc(binListLen * sizeof(double));
         if (output->bins == NULL) {
-            sprintf(c->errStat.errBuff, "Out of memory.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
             TBADD2(ERR_MEMORY, 0);
             free(output->filename);
             output->filename = NULL;
@@ -350,7 +356,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
 
         if ((!logAxis) && (!ppl_unitsDimEqual(&firstEntry, BinWidth))) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The bin width supplied to the histogram command has conflicting physical dimensions with the data supplied. The former has units of <%s>, whilst the latter has units of <%s>.",
                     ppl_printUnit(c, BinWidth, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &firstEntry, NULL, NULL, 1, 1, 0));
@@ -362,7 +369,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if ((logAxis) && (BinWidth->dimensionless == 0)) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "For logarithmically spaced bins, the multiplicative spacing between bins must be dimensionless. The supplied spacing has units of <%s>.",
                     ppl_printUnit(c, BinWidth, NULL, NULL, 0, 1, 0));
             TBADD2(ERR_NUMERICAL, 0);
@@ -373,7 +381,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if ((BinOriginSet) && (!ppl_unitsDimEqual(&firstEntry, BinOrigin))) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The bin origin supplied to the histogram command has conflicting physical dimensions with the data supplied. The former has units of <%s>, whilst the latter has units of <%s>.",
                     ppl_printUnit(c, BinOrigin, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &firstEntry, NULL, NULL, 1, 1, 0));
@@ -385,7 +394,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if ((logAxis) && (BinWidth->real <= 1.0)) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "For logarithmically spaced bins, the multiplicative spacing between bins must be greater than 1.0. Value supplied was %s.",
                     ppl_unitsNumericDisplay(c, BinWidth, 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
@@ -396,7 +406,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if (BinWidth->real <= 0.0) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The bin width supplied to the histogram command must be greater than zero. Value supplied was %s.",
                     ppl_unitsNumericDisplay(c, BinWidth, 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
@@ -407,7 +418,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if ((logAxis) && (BinOriginSet) && (BinOrigin->real <= 0.0)) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "For logarithmically spaced bins, the specified bin origin must be greater than zero. Value supplied was %s.",
                     ppl_unitsNumericDisplay(c, BinOrigin, 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
@@ -419,7 +431,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
         if ((logAxis) && (minSet[0]) && (min[0] <= 0.0)) {
             unit[0].real = min[0];
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "For logarithmically spaced bins, the specified minimum must be greater than zero. Value supplied was %s.",
                     ppl_unitsNumericDisplay(c, &unit[0], 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
@@ -431,7 +444,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
         if ((logAxis) && (maxSet[0]) && (max[0] <= 0.0)) {
             unit[0].real = max[0];
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "For logarithmically spaced bins, the specified maximum must be greater than zero. Value supplied was %s.",
                     ppl_unitsNumericDisplay(c, &unit[0], 0, 0, 0));
             TBADD2(ERR_NUMERICAL, 0);
@@ -442,7 +456,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if ((minSet[0] || maxSet[0]) && (!ppl_unitsDimEqual(&firstEntry, &unit[0]))) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The range supplied to the histogram command has conflicting physical dimensions with the data supplied. The former has units of <%s>, whilst the latter has units of <%s>.",
                     ppl_printUnit(c, &unit[0], NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &firstEntry, NULL, NULL, 1, 1, 0));
@@ -454,7 +469,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if (!gsl_finite(BinWidth->real)) {
-            sprintf(c->errStat.errBuff, "The bin width specified to the histogram command is not a finite number.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "The bin width specified to the histogram command is not a finite number.");
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
             output->filename = NULL;
@@ -463,7 +479,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             return;
         }
         if (BinOriginSet && !gsl_finite(BinOrigin->real)) {
-            sprintf(c->errStat.errBuff, "The bin origin specified to the histogram command is not a finite number.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "The bin origin specified to the histogram command is not a finite number.");
             TBADD2(ERR_NUMERICAL, 0);
             free(output->filename);
             output->filename = NULL;
@@ -498,7 +515,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
 
         if (((xbinmax - xbinmin) / BinWidthDbl + 1.0001) > 1e7) {
-            sprintf(c->errStat.errBuff,
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
                     "The supplied value of BinWidth produces a binning scheme with more than 1e7 bins. This is probably not sensible.");
             TBADD2(ERR_GENERIC, 0);
             return;
@@ -510,7 +528,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
         output->bins = (double *) malloc(output->Nbins * sizeof(double));
         if (output->bins == NULL) {
-            sprintf(c->errStat.errBuff, "Out of memory.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
             TBADD2(ERR_MEMORY, 0);
             return;
         }
@@ -521,7 +539,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     // Allocate vector for storing histogram values
     output->binvals = (double *) malloc(output->Nbins * sizeof(double));
     if (output->binvals == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         TBADD2(ERR_MEMORY, 0);
         free(output->bins);
         output->bins = NULL;
@@ -557,7 +575,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     // Make a new function descriptor
     funcPtr = (pplFunc *) malloc(sizeof(pplFunc));
     if (funcPtr == NULL) {
-        sprintf(c->errStat.errBuff, "Out of memory whilst adding histogram object to function dictionary.");
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                          "Out of memory whilst adding histogram object to function dictionary.");
         TBADD2(ERR_MEMORY, 0);
         return;
     }
@@ -587,7 +606,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                                  PARSE_histogram_varnames, PARSE_histogram_varname_varnames);
         if ((c->errStat.status) || (obj == NULL)) return;
         if (obj->objType == PPLOBJ_GLOB) {
-            sprintf(c->errStat.errBuff, "Variable declared global in global namespace.");
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                              "Variable declared global in global namespace.");
             TBADD2(ERR_NAMESPACE, 0);
             return;
         }

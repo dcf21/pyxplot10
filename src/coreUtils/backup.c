@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "pplConstants.h"
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
@@ -43,7 +44,7 @@ void ppl_createBackupIfRequired(const ppl_context *c, const char *filename) {
     if (c->set->term_current.backup == SW_ONOFF_OFF) return; // Backup is switched off
     if (access(filename, F_OK) != 0) return; // File we're about to write to does not already exist
 
-    strcpy(newname, filename);
+    ppl_snprintfTrunc(newname, sizeof(newname), "%s", filename);
     i = strlen(filename);
     for (j = 0; j < 65536; j++) {
         sprintf(newname + i, "~%d", j);

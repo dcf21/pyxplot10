@@ -1013,17 +1013,17 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     if ((data == NULL) || (data->Nrows < 1)) {
         char *output = msg;
         int i = 0;
-        sprintf(output + i, "plotted item");
+        ppl_strAppendf(output, sizeof(msg), &i, "plotted item");
         i += strlen(output + i);
         if (!pd->function) {
             if (pd->filename != NULL) {
-                output[i++] = ' ';
-                ppl_strEscapify(pd->filename, output + i);
+                ppl_strAppendChar(output, sizeof(msg), &i, ' ');
+                ppl_strEscapify(pd->filename, output + i, sizeof(msg) - i);
                 i += strlen(output + i); // Filename of datafile we are plotting
             } else if (pd->vectors != NULL) {
                 for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
                 {
-                    output[i++] = (j != 0) ? ':' : ' ';
+                    ppl_strAppendChar(output, sizeof(msg), &i, (j != 0) ? ':' : ' ');
                     pplObjPrint(x->c, &pd->vectors[j], NULL, output + i, ppl_min(250, sizeof(msg) - i), 0, 0);
                     i += strlen(output + i);
                 }
@@ -1031,11 +1031,10 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
         } else
             for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
             {
-                output[i++] = (j != 0) ? ':' : ' ';
-                ppl_strStrip(pd->functions[j]->ascii, output + i);
-                i += strlen(output + i);
+                ppl_strAppendChar(output, sizeof(msg), &i, (j != 0) ? ':' : ' ');
+                ppl_strAppendStripped(output, sizeof(msg), &i, pd->functions[j]->ascii);
             }
-        sprintf(output + i, " produced no data.");
+        ppl_strAppendf(output, sizeof(msg), &i, " produced no data.");
         ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
         return 0; // No data present
     }
@@ -1130,14 +1129,15 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                N_POINTTYPES); // Dots are always pt 17 (filled circle)
                                     while (pt < 0) pt += N_POINTTYPES;
                                     x->PointTypesUsed[pt] = 1;
-                                    sprintf(epsbuff, "%.2f %.2f pt%d", xpos, ypos, pt + 1);
+                                    ppl_snprintfTrunc(epsbuff, sizeof(epsbuff), "%.2f %.2f pt%d", xpos, ypos, pt + 1);
                                     eps_core_BoundingBox(x, xpos, ypos,
                                                          2 * final_pointsize * eps_PointSize[pt] * EPS_DEFAULT_PS);
                                 } else {
                                     pt = ((pd->ww_final.pointtype - 1) % N_STARTYPES);
                                     while (pt < 0) pt += N_STARTYPES;
                                     x->StarTypesUsed[pt] = 1;
-                                    sprintf(epsbuff, "/angle { 40 } def %.2f %.2f st%d", xpos, ypos, pt + 1);
+                                    ppl_snprintfTrunc(epsbuff, sizeof(epsbuff), "/angle { 40 } def %.2f %.2f st%d",
+                                                      xpos, ypos, pt + 1);
                                     eps_core_BoundingBox(x, xpos, ypos,
                                                          2 * final_pointsize * eps_StarSize[pt] * EPS_DEFAULT_PS);
                                 }
@@ -1527,7 +1527,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 y4 = y2 -
                                         EPS_ARROW_HEADSIZE / 2 * lw * cos(theta[an]) * (1.0 - EPS_ARROW_CONSTRICT) *
                                                 cos(EPS_ARROW_ANGLE / 2);
-                                sprintf(epsbuff,
+                                ppl_snprintfTrunc(
+                                        epsbuff, sizeof(epsbuff),
                                         "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
                                         x4, y4, x3, y3, x2, y2, x5, y5);
                                 ThreeDimBuffer_writeps(x, depth, 1, lw, 0.0, 1.0, last_colstr, epsbuff);
@@ -1808,7 +1809,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     y4 = y2 -
                                             EPS_ARROW_HEADSIZE * lw * cos(theta_y) * (1.0 - EPS_ARROW_CONSTRICT) *
                                                     cos(EPS_ARROW_ANGLE / 2);
-                                    sprintf(epsbuff,
+                                    ppl_snprintfTrunc(
+                                            epsbuff, sizeof(epsbuff),
                                             "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
                                             x4, y4, x3, y3, x2, y2, x5, y5);
                                     ThreeDimBuffer_writeps(x, depth, 1, lw, 0.0, 1.0, last_colstr, epsbuff);
@@ -1835,7 +1837,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     y4 = y2 -
                                             EPS_ARROW_HEADSIZE * lw * cos(theta_y) * (1.0 - EPS_ARROW_CONSTRICT) *
                                                     cos(EPS_ARROW_ANGLE / 2);
-                                    sprintf(epsbuff,
+                                    ppl_snprintfTrunc(
+                                            epsbuff, sizeof(epsbuff),
                                             "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
                                             x4, y4, x3, y3, x2, y2, x5, y5);
                                     ThreeDimBuffer_writeps(x, depth2, 1, lw, 0.0, 1.0, last_colstr, epsbuff);
@@ -1974,7 +1977,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                         SURFACE_POINT(x4, y4, z4); // Draw a square
                                         depth = (z1 + z2 + z3 + z4) / 4.0;
                                         if (fill) depth += 1e-6 * fabs(depth);
-                                        sprintf(epsbuff,
+                                        ppl_snprintfTrunc(
+                                                epsbuff, sizeof(epsbuff),
                                                 "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath %s\n",
                                                 x1, y1, x2, y2, x3, y3, x4, y4, fill ? "eofill" : "stroke");
                                         ThreeDimBuffer_writeps(x, depth, pd->ww_final.linetype, pd->ww_final.linewidth,

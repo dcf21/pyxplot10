@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/list.h"
 
 #include "epsMaker/eps_comm.h"
@@ -180,7 +181,7 @@ int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const
             fprintf(x->epsbuffer, "/ps { %f } def\n", pointsize * EPS_DEFAULT_PS);
         }
         colstr_old = colstr;
-        strcpy(x->CurrentColor, colstr);
+        ppl_snprintfTrunc(x->CurrentColor, sizeof(x->CurrentColor), "%s", colstr);
         eps_core_WritePSColor(x);
         eps_core_SetLinewidth(x, linewidth * EPS_DEFAULT_LINEWIDTH, linetype, offset);
         fprintf(x->epsbuffer, "%s\n", psfrag);
@@ -251,7 +252,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
                                   broken ? (LengthOffset - hypot(x1 - x0, y1 - y0)) : 0.0);
             if ((colstr_old == NULL) || (strcmp(colstr_old, colstr) != 0)) {
                 colstr_old = colstr;
-                strcpy(x->CurrentColor, colstr);
+                ppl_snprintfTrunc(x->CurrentColor, sizeof(x->CurrentColor), "%s", colstr);
                 eps_core_WritePSColor(x);
             }
 
