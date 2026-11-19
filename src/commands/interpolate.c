@@ -51,16 +51,6 @@
 #include "userspace/unitsDisp.h"
 
 
-#define COUNTEDERR1 \
-    if (errCount > 0) { \
-        errCount--;
-#define COUNTEDERR2 \
-    if (errCount == 0) { \
-        ppl_snprintfTrunc(msg, sizeof(msg), "%s: Too many errors: no more errors will be shown.", filenameOut); \
-        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
-    } \
-    }
-
 static double *compareZeroPoint;
 
 //! interpolateSorter - Comparison function for qsort(), used to sort data points into ascending order of x
@@ -520,27 +510,29 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             if ((maxSet[1]) && (ydata[j] > max[1])) continue; // Ignore out-of-range datapoints
 
             if ((j > 0) && (xdata[j] == xdata[j - 1])) {
-                COUNTEDERR1;
-                v = firstEntries[0];
-                v.real = xdata[j];
-                ppl_snprintfTrunc(msg, sizeof(msg), "Repeat values for interpolation have been supplied at x=%s.",
-                                  ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
-                ppl_warning(&c->errcontext, ERR_GENERIC, msg);
-                COUNTEDERR2;
+                if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
+                    v = firstEntries[0];
+                    v.real = xdata[j];
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Repeat values for interpolation have been supplied at x=%s.",
+                                      ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
+                    ppl_warning(&c->errcontext, ERR_GENERIC, msg);
+                    ppl_errorCountCheck(&c->errcontext, errCount, filenameOut, -1);
+                }
                 continue;
             }
 
             if (mode == INTERP_LOGLIN) {
                 if ((xdata[j] <= 0.0) || (ydata[j] <= 0.0)) {
-                    COUNTEDERR1;
-                    v = firstEntries[0];
-                    v.real = xdata[j];
-                    ppl_snprintfTrunc(
-                            msg, sizeof(msg),
-                            "Negative or zero values are not allowed in power-law interpolation; negative values supplied at x=%s will be ignored.",
-                            ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
-                    ppl_warning(&c->errcontext, ERR_NUMERICAL, msg);
-                    COUNTEDERR2;
+                    if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
+                        v = firstEntries[0];
+                        v.real = xdata[j];
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
+                                "Negative or zero values are not allowed in power-law interpolation; negative values supplied at x=%s will be ignored.",
+                                ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
+                        ppl_warning(&c->errcontext, ERR_NUMERICAL, msg);
+                        ppl_errorCountCheck(&c->errcontext, errCount, filenameOut, -1);
+                    }
                     continue;
                 }
                 xdata[k] = log(xdata[j]);

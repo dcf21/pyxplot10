@@ -62,16 +62,6 @@
 #include "datafile.h"
 #include "datafile_rasters.h"
 
-#define COUNTERR_BEGIN \
-    if (errCount > 0) { \
-        errCount--;
-#define COUNTERR_END \
-    if (errCount == 0) { \
-        ppl_snprintfTrunc(msg, sizeof(msg), "Too many errors: no more errors will be shown."); \
-        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
-    } \
-    }
-
 
 //! eps_pie_ReadAccessibleData - Read the data for a piechart canvas item from its data file or functions
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -283,24 +273,27 @@ void eps_pie_YieldUpText(EPSComm *x) {
             pplObjNum(var_p, 0, var_w->real / pd->PieChart_total * 100.0, 0);
             o = ppl_expEval(c, formatExpr, &lOp, 1, x->iterDepth + 1);
             if (c->errStat.status || (c->dollarStat.warntxt[0] != '\0') || (o == NULL)) {
-                COUNTERR_BEGIN;
-                char *errt = NULL;
-                if (c->dollarStat.warntxt[0] != '\0') errt = c->dollarStat.warntxt;
-                else if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
-                else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
-                else errt = "Fail occurred.";
-                ppl_snprintfTrunc(msg, sizeof(msg), "Error in format expression <%s>: %s", formatExpr->ascii, errt);
-                ppl_warning(&c->errcontext, ERR_TYPE, msg);
-                COUNTERR_END;
+                if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
+                    char *errt = NULL;
+                    if (c->dollarStat.warntxt[0] != '\0') errt = c->dollarStat.warntxt;
+                    else if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
+                    else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
+                    else errt = "Fail occurred.";
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Error in format expression <%s>: %s", formatExpr->ascii, errt);
+                    ppl_warning(&c->errcontext, ERR_TYPE, msg);
+                    ppl_errorCountCheck(&c->errcontext, errCount, NULL, -1);
+                }
                 ppl_tbClear(c);
                 tmp = "?";
             } else if (o->objType != PPLOBJ_STR) {
-                COUNTERR_BEGIN;
-                ppl_snprintfTrunc(msg, sizeof(msg),
-                                  "Format expression <%s> did not evaluate to a string, but to an object of type <%s>.",
-                                  formatExpr->ascii, pplObjTypeNames[o->objType]);
-                ppl_warning(&c->errcontext, ERR_TYPE, msg);
-                COUNTERR_END;
+                if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
+                            "Format expression <%s> did not evaluate to a string, but to an object of type <%s>.",
+                            formatExpr->ascii, pplObjTypeNames[o->objType]);
+                    ppl_warning(&c->errcontext, ERR_TYPE, msg);
+                    ppl_errorCountCheck(&c->errcontext, errCount, NULL, -1);
+                }
                 tmp = NULL;
             } else {
                 tmp = (char *) o->auxil;

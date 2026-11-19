@@ -326,16 +326,6 @@ static void TriSwap(double *a, double *b) {
     return;
 }
 
-#define COUNTERR_BEGIN \
-    if (errCount > 0) { \
-        errCount--;
-#define COUNTERR_END \
-    if (errCount == 0) { \
-        ppl_snprintfTrunc(msg, sizeof(msg), "Too many errors: no more errors will be shown."); \
-        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
-    } \
-    }
-
 
 // Loop through all of the datasets plotted in a single plot command.
 // Initialise the datastructures for the plot command which we will fill in the

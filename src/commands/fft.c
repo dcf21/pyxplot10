@@ -57,16 +57,6 @@
 #include "datafile.h"
 
 
-#define COUNTEDERR1 \
-    if (errCount > 0) { \
-        errCount--;
-#define COUNTEDERR2 \
-    if (errCount == 0) { \
-        ppl_snprintfTrunc(msg, sizeof(msg), "%s: Too many errors: no more errors will be shown.", filenameOut); \
-        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
-    } \
-    }
-
 //! fftwindow_rectangular - Apply a rectangular window function (i.e. no windowing) to a sample of data before
 //! Fourier transforming it
 //! \param [in|out] x - The data sample, which is multiplied by the window function

@@ -367,3 +367,32 @@ void ppl_log(pplerr_context *context, char *msg) {
     latch = 0;
     return;
 }
+
+//! ppl_errorCountTake - Decide whether to report an error, when only a limited number of errors are to be reported
+//! (e.g. errors in the lines of a data file). If so, the count of errors remaining is decremented.
+//! \param [in,out] errCount - The number of errors which may still be reported
+//! \return True if the error should be reported
+
+int ppl_errorCountTake(int *errCount) {
+    if (*errCount <= 0) return 0;
+    (*errCount)--;
+    return 1;
+}
+
+//! ppl_errorCountCheck - After reporting an error with ppl_errorCountTake(), warn if no more errors will be reported
+//! \param [in] context - The error-reporting context
+//! \param [in] errCount - The number of errors which may still be reported
+//! \param [in] filename - The name of the file in which the errors are occurring, or NULL
+//! \param [in] lineNumber - The line number in the file, or -1 to omit it
+
+void ppl_errorCountCheck(pplerr_context *context, const int errCount, const char *filename, const long lineNumber) {
+    char msg[PPL_MSG_LENGTH];
+    if (errCount != 0) return;
+    if (filename == NULL) ppl_snprintfTrunc(msg, sizeof(msg), "Too many errors: no more errors will be shown.");
+    else if (lineNumber < 0)
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s: Too many errors: no more errors will be shown.", filename);
+    else
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld: Too many errors: no more errors will be shown.", filename,
+                          lineNumber);
+    ppl_warning(context, ERR_STACKED, msg);
+}

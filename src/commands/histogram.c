@@ -48,16 +48,6 @@
 #include "datafile.h"
 
 
-#define COUNTEDERR1 \
-    if (errCount > 0) { \
-        errCount--;
-#define COUNTEDERR2 \
-    if (errCount == 0) { \
-        ppl_snprintfTrunc(msg, sizeof(msg), "%s: Too many errors: no more errors will be shown.", filenameOut); \
-        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
-    } \
-    }
-
 //! hcompare - Comparison function for sorting arrays of doubles into ascending order with qsort()
 //! \param [in] x - Pointer to the first double
 //! \param [in] y - Pointer to the second double
@@ -224,15 +214,16 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
         if (logAxis) {
             if (xdata[j] <= 0.0) {
-                COUNTEDERR1;
-                v = firstEntry;
-                v.real = xdata[j];
-                ppl_snprintfTrunc(
-                        msg, sizeof(msg),
-                        "Negative or zero values are not allowed in the construction of histograms in log space; value of x=%s will be ignored.",
-                        ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
-                ppl_warning(&c->errcontext, ERR_NUMERICAL, msg);
-                COUNTEDERR2;
+                if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
+                    v = firstEntry;
+                    v.real = xdata[j];
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
+                            "Negative or zero values are not allowed in the construction of histograms in log space; value of x=%s will be ignored.",
+                            ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
+                    ppl_warning(&c->errcontext, ERR_NUMERICAL, msg);
+                    ppl_errorCountCheck(&c->errcontext, errCount, filenameOut, -1);
+                }
                 continue;
             }
             xdata[k] = log(xdata[j]); // If we're constructing histogram in log space, log data now

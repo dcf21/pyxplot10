@@ -482,28 +482,27 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
     return;
 }
 
-#define COUNTERR_BEGIN \
-    if (*errCount > 0) { \
-        (*errCount)--;
-#define COUNTERR_END \
-    if (*errCount == 0) { \
-        ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld: Too many errors: no more errors will be shown.", filename, \
-                          file_linenumber); \
-        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
-    } \
-    }
 
+//! applyUsingFail - Report an error evaluating the "using" expressions for a row of a data file, unless too many errors
+//! have already been reported, and mark the row as having failed
+//! \param [in] c - The Pyxplot context
+//! \param [in] errtext - The error message
+//! \param [in,out] errCount - The number of errors which may still be reported
+//! \param [in] filename - The name of the data file
+//! \param [in] file_linenumber - The line number of the row in the data file
+//! \param [out] status - Set to one, to indicate failure
+//! \param [out] discontinuity - Set to one, so that lines drawn through the data are broken at this row
 
-#define FAIL \
-    { \
-        COUNTERR_BEGIN; \
-        ppl_warning(&c->errcontext, ERR_STACKED, errtext); \
-        COUNTERR_END; \
-        *status = 1; \
-        *discontinuity = 1; \
-        if (DEBUG) ppl_log(&c->errcontext, errtext); \
-        return; \
+static void applyUsingFail(ppl_context *c, const char *errtext, int *errCount, const char *filename,
+                           const long file_linenumber, int *status, int *discontinuity) {
+    if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
+        ppl_warning(&c->errcontext, ERR_STACKED, (char *) errtext);
+        ppl_errorCountCheck(&c->errcontext, *errCount, filename, file_linenumber);
     }
+    *status = 1;
+    *discontinuity = 1;
+    if (DEBUG) ppl_log(&c->errcontext, (char *) errtext);
+}
 
 //! ppldata_ApplyUsingList - Evaluate all of the "using" expressions, the label expression and the select expression for
 //! the current row of data, and append the result as a new row of the output data table
@@ -545,7 +544,6 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                             const long index_number, const int usingRowCol, char **colHeads, const int NcolHeads,
                             pplObj *colUnits, const int NcolUnits, int *status, char *errtext, int *errCount,
                             const int iterDepth) {
-    char msg[PPL_MSG_LENGTH];
     const int stkLevelOld = c->stackPtr;
     const int nUsing = out->Ncolumns_real + out->Ncolumns_obj;
     char **labOut = &out->current->text[out->current->blockPosition];
@@ -566,7 +564,10 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                              NcolUnits, &fail, errtext, iterDepth);
         if (fail) {
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-            FAIL;
+            {
+                applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                return;
+            }
         }
         ppl_castToBool(c, stkObj);
         if (stkObj->real == 0) {
@@ -588,14 +589,20 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                              NcolUnits, &fail, errtext, iterDepth);
         if (fail) {
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-            FAIL;
+            {
+                applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                return;
+            }
         }
         if (stkObj->objType != PPLOBJ_STR) {
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                               "%s:%ld: Label expression '%s' did not evaluate to a string, but to type <%s>.", filename,
                               file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-            FAIL;
+            {
+                applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                return;
+            }
         }
         labIn = (char *) stkObj->auxil;
         *labOut = (char *) ppl_memAlloc_incontext(strlen(labIn) + 1, memContext);
@@ -614,7 +621,10 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                              NcolUnits, &fail, errtext, iterDepth);
         if (fail) {
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-            FAIL;
+            {
+                applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                return;
+            }
         }
         if (!outObj) {
             if ((stkObj->objType != PPLOBJ_NUM) && (stkObj->objType != PPLOBJ_BOOL) &&
@@ -624,14 +634,20 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                         "%s:%ld: Data item calculated from expression '%s' was not a number, but had type <%s>.",
                         filename, file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
                 ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-                FAIL;
+                {
+                    applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                    return;
+                }
             }
             if ((stkObj->objType == PPLOBJ_NUM) && (stkObj->flagComplex)) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                                   "%s:%ld: Data item calculated from expression '%s' was a complex number.", filename,
                                   file_linenumber, ex->ascii);
                 ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-                FAIL;
+                {
+                    applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                    return;
+                }
             }
             if (out->Nrows == 0) {
                 out->firstEntries[i] = *stkObj;
@@ -645,7 +661,10 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                             filename, file_linenumber, ex->ascii, pplObjTypeNames[out->firstEntries[i].objType],
                             pplObjTypeNames[stkObj->objType]);
                     ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-                    FAIL;
+                    {
+                        applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                        return;
+                    }
                 }
                 if ((out->firstEntries[i].objType == PPLOBJ_NUM) &&
                     (!ppl_unitsDimEqual(&out->firstEntries[i], stkObj))) {
@@ -656,7 +675,10 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                             ppl_printUnit(c, &out->firstEntries[i], NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, stkObj, NULL, NULL, 1, 1, 0));
                     ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-                    FAIL;
+                    {
+                        applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+                        return;
+                    }
                 }
             }
             out->current->data_real[idx + out->current->blockPosition * out->Ncolumns_real] = stkObj->real;
@@ -674,7 +696,10 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s:%ld: Out of memory storing data table.", filename,
                           file_linenumber);
         *errCount = -1;
-        FAIL;
+        {
+            applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
+            return;
+        }
     }
     *discontinuity = 0;
     return;
@@ -1261,11 +1286,12 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         ppl_unitsStringEvaluate(c, cptr + k, columnUnits + itemsOnLine, &l, &m, errtext);
                         if (m >= 0) {
                             pplObjNum(columnUnits + itemsOnLine, 0, 1, 0);
-                            COUNTERR_BEGIN;
-                            ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld:%d: %s", filename, file_linenumber, i + k,
-                                              errtext);
-                            ppl_warning(&c->errcontext, ERR_STACKED, msg);
-                            COUNTERR_END;
+                            if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
+                                ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld:%d: %s", filename, file_linenumber, i + k,
+                                                  errtext);
+                                ppl_warning(&c->errcontext, ERR_STACKED, msg);
+                                ppl_errorCountCheck(&c->errcontext, *errCount, filename, file_linenumber);
+                            }
                         }
                         itemsOnLine++;
                         k += l;
@@ -1324,11 +1350,12 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         ppl_unitsStringEvaluate(c, cptr + k, rowUnits + itemsOnLine, &l, &m, errtext);
                         if (m >= 0) {
                             pplObjNum(rowUnits + itemsOnLine, 0, 1, 0);
-                            COUNTERR_BEGIN;
-                            ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld:%d: %s", filename, file_linenumber, i + k,
-                                              errtext);
-                            ppl_warning(&c->errcontext, ERR_STACKED, msg);
-                            COUNTERR_END;
+                            if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
+                                ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld:%d: %s", filename, file_linenumber, i + k,
+                                                  errtext);
+                                ppl_warning(&c->errcontext, ERR_STACKED, msg);
+                                ppl_errorCountCheck(&c->errcontext, *errCount, filename, file_linenumber);
+                            }
                         }
                         itemsOnLine++;
                         k += l;
@@ -1590,8 +1617,6 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                 if (!parametric) colData[1] = *ordinateVar[0];
                 if ((!parametric) && sampleGrid) colData[2] = *ordinateVar[1];
                 for (j = 0; j < fnlist_len; j++) {
-                    long file_linenumber = 0;
-                    char *filename = buffer; // Dummy stuff needed for STACK_CLEAN
                     const int stkLevelOld = c->stackPtr;
                     pplObj *ob;
                     ob = ppl_expEval(c, fnlist[j], &k, 0, iterDepth);
@@ -1602,13 +1627,14 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                         if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
                         else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
                         else errt = "Fail occurred.";
-                        COUNTERR_BEGIN;
-                        ppl_snprintfTrunc(
-                                msg, sizeof(msg),
-                                "%s: Could not evaluate expression <%s>. The error, encountered at character position %d, was: '%s'",
-                                buffer, fnlist[j]->ascii, errp, errt);
-                        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
-                        COUNTERR_END;
+                        if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
+                            ppl_snprintfTrunc(
+                                    msg, sizeof(msg),
+                                    "%s: Could not evaluate expression <%s>. The error, encountered at character position %d, was: '%s'",
+                                    buffer, fnlist[j]->ascii, errp, errt);
+                            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+                            ppl_errorCountCheck(&c->errcontext, *errCount, buffer, 0);
+                        }
                         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                         ppl_tbClear(c);
                         *status = 1;
