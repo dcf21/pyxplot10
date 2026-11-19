@@ -66,11 +66,14 @@
 #define TRANS_G 2
 #define TRANS_B 20
 
-#define CLIP_COMPS \
-    comp[0] = (comp[0] < 0.0) ? 0.0 : ((comp[0] > 1.0) ? 1.0 : comp[0]); \
-    comp[1] = (comp[1] < 0.0) ? 0.0 : ((comp[1] > 1.0) ? 1.0 : comp[1]); \
-    comp[2] = (comp[2] < 0.0) ? 0.0 : ((comp[2] > 1.0) ? 1.0 : comp[2]); \
-    comp[3] = (comp[3] < 0.0) ? 0.0 : ((comp[3] > 1.0) ? 1.0 : comp[3]);
+//! clipComponents - Clip the four components of a colour to the range 0 to 1
+//! \param [in,out] comp - The components
+
+static void clipComponents(double comp[4]) {
+    int i;
+    for (i = 0; i < 4; i++) comp[i] = (comp[i] < 0.0) ? 0.0 : ((comp[i] > 1.0) ? 1.0 : comp[i]);
+}
+
 
 //! eps_plot_colormap_YieldText - Collect the text items which label the color scale of a colormap, so that they can be
 //! typeset
@@ -336,7 +339,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     img.depth = 24;
     img.data_len = 3 * XSize * YSize;
     img.TargetCompression = BMP_ENCODING_FLATE;
-    BMP_ALLOC(img.data, 3 * XSize * YSize);
+    img.data = (unsigned char *) ppl_memAlloc(3 * XSize * YSize);
     if (img.data == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (l).");
         return 1;
@@ -530,7 +533,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
             { \
                 double h2, ch, x, m; \
                 int h2i; \
-                CLIP_COMPS; \
+                clipComponents(comp); \
                 ch = comp[1] * comp[2]; \
                 h2i = (int) (h2 = comp[0] * 6); \
                 x = ch * (1.0 - fabs(fmod(h2, 2) - 1.0)); \
@@ -587,7 +590,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                 comp[0] = comp[1] = comp[2] = 0.0; \
                 break; \
         } \
-        CLIP_COMPS; \
+        clipComponents(comp); \
 \
         /* Store RGB components */ \
         component_r = (unsigned char) floor(comp[0] * 255.99); \

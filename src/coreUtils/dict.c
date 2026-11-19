@@ -107,7 +107,15 @@ int ppl_dictHash(const char *str, const int strLen) {
     return hash;
 }
 
-#define alloc(X) (in->useMalloc ? malloc(X) : ppl_memAlloc_incontext(X, in->memory_context))
+//! dictAlloc - Allocate memory for a dict, using malloc() or the memory context of the dict, as it requires
+//! \param [in] in - The dict
+//! \param [in] size - The number of bytes to allocate
+//! \return Pointer to the allocated memory, or NULL on failure
+
+static void *dictAlloc(const dict *in, const int size) {
+    return in->useMalloc ? malloc(size) : ppl_memAlloc_incontext(size, in->memory_context);
+}
+
 
 //! ppl_dictHashAdd - Add an entry to a dictionary's binary tree of key hashes. If an entry with the same hash
 //! already exists for the same key it is updated; if it exists for a different key, the tree is left unchanged and
@@ -133,7 +141,7 @@ static void ppl_dictHashAdd(dict *in, const char *str, const int hash, dictItem 
         }
     }
 
-    *ptr = alloc(sizeof(dictHash));
+    *ptr = dictAlloc(in, sizeof(dictHash));
     if (*ptr == NULL) return;
     (*ptr)->hash = hash;
     (*ptr)->item = item;
@@ -264,11 +272,11 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
         }
         ptr->data = item;
     } else {
-        ptrnew = (dictItem *) alloc(sizeof(dictItem));
+        ptrnew = (dictItem *) dictAlloc(in, sizeof(dictItem));
         if (ptrnew == NULL) return 1;
         ptrnew->prev = prev;
         ptrnew->next = ptr;
-        ptrnew->key = (char *) alloc((strlen(key) + 1));
+        ptrnew->key = (char *) dictAlloc(in, (strlen(key) + 1));
         if (ptrnew->key == NULL) {
             if (in->useMalloc) {
                 free(ptrnew);
@@ -303,7 +311,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
     int cmp = -1, hash;
 
     if (key == NULL) return 1;
-    cpy = alloc(size);
+    cpy = dictAlloc(in, size);
     if (cpy == NULL) return 1;
     memcpy(cpy, item, size);
 
@@ -322,7 +330,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         ptr->data = cpy;
         ptrnew = ptr;
     } else {
-        ptrnew = (dictItem *) alloc(sizeof(dictItem));
+        ptrnew = (dictItem *) dictAlloc(in, sizeof(dictItem));
         if (ptrnew == NULL) {
             if (in->useMalloc) {
                 free(cpy);
@@ -332,7 +340,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         }
         ptrnew->prev = prev;
         ptrnew->next = ptr;
-        ptrnew->key = (char *) alloc((strlen(key) + 1));
+        ptrnew->key = (char *) dictAlloc(in, (strlen(key) + 1));
         if (ptrnew->key == NULL) {
             if (in->useMalloc) {
                 free(cpy);

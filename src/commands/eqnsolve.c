@@ -142,6 +142,15 @@ static char *printParameterValues(MMComm *data, char *output) {
 //! the free parameters to the values requested, and evaluates the expressions being solved or optimised.
 //! \param [in] x - The trial values of the free parameters, in the minimiser's coordinate system
 //! \param [in] params - Pointer to the MMComm structure describing the problem
+//! twinLog - A logarithm which is extended smoothly to values below 1e-200 (including zero and negative values), so
+//! that it can be used to compare values on a logarithmic scale without failing
+//! \param [in] x - The value
+//! \return log(x) for x > 1e-200, or a reflection of the logarithm about x = 1e-200 otherwise
+
+static double twinLog(const double x) {
+    return (x > 1e-200) ? log(x) : (2 * log(1e-200) - log(2e-200 - x));
+}
+
 //! \return The value of the cost function, or NaN if the expressions could not be evaluated
 
 static double MultiMinSlave(const gsl_vector *x, void *params) {
@@ -230,10 +239,9 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
                 return GSL_NAN;
             }
 
-#define TWINLOG(X) ((X > 1e-200) ? log(X) : (2 * log(1e-200) - log(2e-200 - X)))
-            accumulator += pow(TWINLOG(output1.real) - TWINLOG(output2.real),
+            accumulator += pow(twinLog(output1.real) - twinLog(output2.real),
                                2); // Minimise sum of square deviations of many equations
-            accumulator += pow(TWINLOG(output1.imag) - TWINLOG(output2.imag), 2);
+            accumulator += pow(twinLog(output1.imag) - twinLog(output2.imag), 2);
             squareroot = 1;
         } else {
             if (data->isFirst[i]) {

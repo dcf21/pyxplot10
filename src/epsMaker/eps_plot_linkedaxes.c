@@ -477,6 +477,15 @@ typedef struct LAUComm {
 //! expression at a trial point and returns its distance from the target value
 //! \param [in] x - The trial value
 //! \param [in] params - Pointer to the LAUComm structure describing the problem
+//! twinLog - A logarithm which is extended smoothly to values below 1e-200 (including zero and negative values), so
+//! that it can be used to compare values on a logarithmic scale without failing
+//! \param [in] x - The value
+//! \return log(x) for x > 1e-200, or a reflection of the logarithm about x = 1e-200 otherwise
+
+static double twinLog(const double x) {
+    return (x > 1e-200) ? log(x) : (2 * log(1e-200) - log(2e-200 - x));
+}
+
 //! \return The absolute difference between the linkage expression and the target value
 
 double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
@@ -522,9 +531,8 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
     }
 
 
-#define TWINLOG(X) ((X > 1e-200) ? log(X) : (2 * log(1e-200) - log(2e-200 - X)))
-    if (data->mode == 0) output = pow(TWINLOG(data->target.real) - TWINLOG(outVal->real), 2);
-    else output = pow(TWINLOG(data->target.exponent[data->mode - 1]) - TWINLOG(outVal->exponent[data->mode - 1]), 2);
+    if (data->mode == 0) output = pow(twinLog(data->target.real) - twinLog(outVal->real), 2);
+    else output = pow(twinLog(data->target.exponent[data->mode - 1]) - twinLog(outVal->exponent[data->mode - 1]), 2);
     if ((!gsl_finite(output)) && (data->WorstScore > WORSTSCORE_INIT)) {
         data->WorstScore *= 1.1;
         return data->WorstScore;

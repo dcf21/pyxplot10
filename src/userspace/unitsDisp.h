@@ -33,6 +33,7 @@ extern const char *SIprefixes_latex[];
 
 char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, int N, const char *formatString,
                                         char formatChar, int maxLen, int requiredArgs, int arg1i, int arg2i);
+char *ppl_numericDisplayDefault(ppl_context *c, double x, int N);
 char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, int N, int typeable, int NSigFigs);
 void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, unsigned char first, unit **best, double *pow);
 void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const double *UnitPow, int *UnitPref,

@@ -227,7 +227,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     if (!rle) {
-        BMP_ALLOC(image->data, image->data_len);
+        image->data = (unsigned char *) ppl_memAlloc(image->data_len);
         if (image->data == NULL) {
             ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
             return;
@@ -325,7 +325,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
 
     image->depth = 24;
     image->data_len = 3 * width * height;
-    BMP_ALLOC(image->data, image->data_len);
+    image->data = (unsigned char *) ppl_memAlloc(image->data_len);
     if (image->data == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return;
@@ -402,7 +402,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
     size = height * width;
     image->data_len = size;
 
-    BMP_ALLOC(out, image->data_len);
+    out = (unsigned char *) ppl_memAlloc(image->data_len);
     if (out == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return 1;

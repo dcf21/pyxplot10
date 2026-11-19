@@ -48,7 +48,15 @@
 // -------------------------------------------
 
 
-#define CMPVAL(X, Y) (ppl_unitsDimEqual(&X, &Y) && ppl_dblEqual(X.real, Y.real))
+//! sameValue - Test whether two numerical values are equal, including having the same physical dimensions
+//! \param [in] a - The first value
+//! \param [in] b - The second value
+//! \return True if the values are equal
+
+static int sameValue(const pplObj *a, const pplObj *b) {
+    return ppl_unitsDimEqual(a, b) && ppl_dblEqual(a->real, b->real);
+}
+
 
 //! ppllabel_add - Implement the "set label" command, adding a new text label to a list of labels, or replacing an
 //! existing label with the same ID number
@@ -266,7 +274,7 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
 
 unsigned char ppllabel_compare(ppl_context *context, ppllabel_object *a, ppllabel_object *b) {
     if (a->id != b->id) return 0;
-    if ((!CMPVAL(a->x, b->x)) || (!CMPVAL(a->y, b->y)) || (!CMPVAL(a->z, b->z))) return 0;
+    if ((!sameValue(&a->x, &b->x)) || (!sameValue(&a->y, &b->y)) || (!sameValue(&a->z, &b->z))) return 0;
     if ((a->system_x != b->system_x) || (a->system_y != b->system_y) || (a->system_z != b->system_z)) return 0;
     if ((a->axis_x != b->axis_x) || (a->axis_y != b->axis_y) || (a->axis_z != b->axis_z)) return 0;
     if ((a->fontsizeSet != b->fontsizeSet) || ((a->fontsizeSet) && (a->fontsize != b->fontsize))) return 0;

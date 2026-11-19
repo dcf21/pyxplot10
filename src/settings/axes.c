@@ -98,13 +98,15 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
 }
 
 // c->set->axis_default is a safe fallback axis because it contains no malloced strings
-#define XMALLOC(X) \
-    (tmp = malloc(X)); \
-    if (tmp == NULL) { \
-        ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory"); \
-        *out = context->set->axis_default; \
-        return; \
-    }
+
+//! pplaxis_copyFailed - Report that memory ran out while copying an axis, and leave the copy with default settings
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - The partially-copied axis
+
+static void pplaxis_copyFailed(ppl_context *context, pplset_axis *out) {
+    ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
+    *out = context->set->axis_default;
+}
 
 //! pplaxis_copy - Make a deep copy of an axis descriptor
 //! \param [in] context - The Pyxplot context
@@ -112,11 +114,14 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
 //! \param [in] in - The axis descriptor to copy
 
 void pplaxis_copy(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
-    void *tmp;
     *out = *in;
     if (in->format != NULL) { out->format = (void *) pplExpr_cpy((pplExpr *) in->format); }
     if (in->label != NULL) {
-        out->label = (char *) XMALLOC(strlen(in->label) + 1);
+        out->label = (char *) malloc(strlen(in->label) + 1);
+        if (out->label == NULL) {
+            pplaxis_copyFailed(context, out);
+            return;
+        }
         strcpy(out->label, in->label);
     }
     if (in->linkusing != NULL) { out->linkusing = (void *) pplExpr_cpy((pplExpr *) in->linkusing); }
@@ -132,18 +137,29 @@ void pplaxis_copy(ppl_context *context, pplset_axis *out, const pplset_axis *in)
 
 void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
     int i = 0, j;
-    void *tmp;
     if (in->tics.tickStrs != NULL) {
         for (i = 0; in->tics.tickStrs[i] != NULL; i++);
-        out->tics.tickStrs = XMALLOC((i + 1) * sizeof(char *));
+        out->tics.tickStrs = malloc((i + 1) * sizeof(char *));
+        if (out->tics.tickStrs == NULL) {
+            pplaxis_copyFailed(context, out);
+            return;
+        }
         for (j = 0; j < i; j++) {
-            out->tics.tickStrs[j] = XMALLOC(strlen(in->tics.tickStrs[j]) + 1);
+            out->tics.tickStrs[j] = malloc(strlen(in->tics.tickStrs[j]) + 1);
+            if (out->tics.tickStrs[j] == NULL) {
+                pplaxis_copyFailed(context, out);
+                return;
+            }
             strcpy(out->tics.tickStrs[j], in->tics.tickStrs[j]);
         }
         out->tics.tickStrs[i] = NULL;
     }
     if (in->tics.tickList != NULL) {
-        out->tics.tickList = (double *) XMALLOC((i + 1) * sizeof(double));
+        out->tics.tickList = (double *) malloc((i + 1) * sizeof(double));
+        if (out->tics.tickList == NULL) {
+            pplaxis_copyFailed(context, out);
+            return;
+        }
         memcpy(out->tics.tickList, in->tics.tickList,
                (i +
                 1) * sizeof(double)); // NB: For this to be safe, tics.tickLists MUST have double to correspond to NULL in tics.tickStrs
@@ -158,18 +174,29 @@ void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis 
 
 void pplaxis_copyMTics(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
     int i = 0, j;
-    void *tmp;
     if (in->ticsM.tickStrs != NULL) {
         for (i = 0; in->ticsM.tickStrs[i] != NULL; i++);
-        out->ticsM.tickStrs = XMALLOC((i + 1) * sizeof(char *));
+        out->ticsM.tickStrs = malloc((i + 1) * sizeof(char *));
+        if (out->ticsM.tickStrs == NULL) {
+            pplaxis_copyFailed(context, out);
+            return;
+        }
         for (j = 0; j < i; j++) {
-            out->ticsM.tickStrs[j] = XMALLOC(strlen(in->ticsM.tickStrs[j]) + 1);
+            out->ticsM.tickStrs[j] = malloc(strlen(in->ticsM.tickStrs[j]) + 1);
+            if (out->ticsM.tickStrs[j] == NULL) {
+                pplaxis_copyFailed(context, out);
+                return;
+            }
             strcpy(out->ticsM.tickStrs[j], in->ticsM.tickStrs[j]);
         }
         out->ticsM.tickStrs[i] = NULL;
     }
     if (in->ticsM.tickList != NULL) {
-        out->ticsM.tickList = (double *) XMALLOC((i + 1) * sizeof(double));
+        out->ticsM.tickList = (double *) malloc((i + 1) * sizeof(double));
+        if (out->ticsM.tickList == NULL) {
+            pplaxis_copyFailed(context, out);
+            return;
+        }
         memcpy(out->ticsM.tickList, in->ticsM.tickList,
                (i +
                 1) * sizeof(double)); // NB: For this to be safe, tics.tickLists MUST have double to correspond to NULL in tics.tickStrs

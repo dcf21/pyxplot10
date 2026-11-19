@@ -79,7 +79,15 @@ int ppl_listLen(list *in) {
     return in->length;
 }
 
-#define alloc(X) (in->useMalloc ? malloc(X) : ppl_memAlloc_incontext(X, in->memory_context))
+//! listAlloc - Allocate memory for a list, using malloc() or the memory context of the list, as it requires
+//! \param [in] in - The list
+//! \param [in] size - The number of bytes to allocate
+//! \return Pointer to the allocated memory, or NULL on failure
+
+static void *listAlloc(const list *in, const int size) {
+    return in->useMalloc ? malloc(size) : ppl_memAlloc_incontext(size, in->memory_context);
+}
+
 
 //! ppl_listCpy - Make a copy of a linked list, also copying the data stored in each item
 //! \param [in] in - The list to copy
@@ -109,7 +117,7 @@ list *ppl_listCpy(list *in, const int useMalloc, const int itemSize) {
 int ppl_listAppend(list *in, void *item) {
     listItem *ptrnew;
     if (in == NULL) return 1;
-    ptrnew = (listItem *) alloc(sizeof(listItem));
+    ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
     ptrnew->prev = in->last;
     ptrnew->next = NULL;
@@ -130,11 +138,11 @@ int ppl_listAppend(list *in, void *item) {
 int ppl_listAppendCpy(list *in, const void *item, const int size) {
     listItem *ptrnew;
     if (in == NULL) return 1;
-    ptrnew = (listItem *) alloc(sizeof(listItem));
+    ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
     ptrnew->prev = in->last;
     ptrnew->next = NULL;
-    ptrnew->data = alloc(size);
+    ptrnew->data = listAlloc(in, size);
     if (ptrnew->data == NULL) {
         if (in->useMalloc) {
             free(ptrnew);
@@ -162,9 +170,9 @@ int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
     int i;
     listItem **ptr, *ptrnew;
     if (in == NULL) return 1;
-    ptrnew = (listItem *) alloc(sizeof(listItem));
+    ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
-    ptrnew->data = alloc(size);
+    ptrnew->data = listAlloc(in, size);
     if (ptrnew->data == NULL) {
         if (in->useMalloc) {
             free(ptrnew);

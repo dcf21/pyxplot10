@@ -41,6 +41,7 @@
 #include "settings/withWords_fns.h"
 
 #include "userspace/context.h"
+#include "userspace/unitsDisp.h"
 #include "userspace/pplObj.h"
 
 // -----------------------------------------------
@@ -426,13 +427,6 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
     return;
 }
 
-#define NUMDISP(X) \
-    ppl_numericDisplay(X, context->numdispBuff[0], context->set->term_current.SignificantFigures, \
-                       (context->set->term_current.NumDisplay == SW_DISPLAY_L))
-
-#define S_RGB(X, Y) \
-    (char *) ppl_numericDisplay(X, context->numdispBuff[Y], context->set->term_current.SignificantFigures, \
-                                (context->set->term_current.NumDisplay == SW_DISPLAY_L))
 
 //! ppl_withWordsPrint - Write a textual description of a set of plot style modifiers, in the syntax used after
 //! "with" in a plot command
@@ -454,14 +448,19 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "color %s", defn->EXPcolor->ascii);
     } else if (defn->USEcolor1234) {
         if (defn->Col1234Space == SW_COLSPACE_RGB)
-            ppl_strAppendf(out, outLen, &i, "color rgb(%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
-                           S_RGB(defn->color3, 2));
+            ppl_strAppendf(out, outLen, &i, "color rgb(%s,%s,%s) ", ppl_numericDisplayDefault(context, defn->color1, 0),
+                           ppl_numericDisplayDefault(context, defn->color2, 1),
+                           ppl_numericDisplayDefault(context, defn->color3, 2));
         else if (defn->Col1234Space == SW_COLSPACE_HSB)
-            ppl_strAppendf(out, outLen, &i, "color hsb(%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
-                           S_RGB(defn->color3, 2));
+            ppl_strAppendf(out, outLen, &i, "color hsb(%s,%s,%s) ", ppl_numericDisplayDefault(context, defn->color1, 0),
+                           ppl_numericDisplayDefault(context, defn->color2, 1),
+                           ppl_numericDisplayDefault(context, defn->color3, 2));
         else if (defn->Col1234Space == SW_COLSPACE_CMYK)
-            ppl_strAppendf(out, outLen, &i, "color cmyk(%s,%s,%s,%s) ", S_RGB(defn->color1, 0), S_RGB(defn->color2, 1),
-                           S_RGB(defn->color3, 2), S_RGB(defn->color4, 3));
+            ppl_strAppendf(out, outLen, &i, "color cmyk(%s,%s,%s,%s) ",
+                           ppl_numericDisplayDefault(context, defn->color1, 0),
+                           ppl_numericDisplayDefault(context, defn->color2, 1),
+                           ppl_numericDisplayDefault(context, defn->color3, 2),
+                           ppl_numericDisplayDefault(context, defn->color4, 3));
     } else if (defn->USEcolor) {
         ppl_strAppendf(out, outLen, &i, "color %s ",
                        *(char **) ppl_fetchSettingName(&context->errcontext, defn->color, SW_COLOR_INT,
@@ -472,14 +471,21 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "fillcolor %s", defn->EXPfillcolor->ascii);
     } else if (defn->USEfillcolor1234) {
         if (defn->FillCol1234Space == SW_COLSPACE_RGB)
-            ppl_strAppendf(out, outLen, &i, "fillcolor rgb(%s,%s,%s) ", S_RGB(defn->fillcolor1, 0),
-                           S_RGB(defn->fillcolor2, 1), S_RGB(defn->fillcolor3, 2));
+            ppl_strAppendf(out, outLen, &i, "fillcolor rgb(%s,%s,%s) ",
+                           ppl_numericDisplayDefault(context, defn->fillcolor1, 0),
+                           ppl_numericDisplayDefault(context, defn->fillcolor2, 1),
+                           ppl_numericDisplayDefault(context, defn->fillcolor3, 2));
         else if (defn->FillCol1234Space == SW_COLSPACE_HSB)
-            ppl_strAppendf(out, outLen, &i, "fillcolor hsb(%s,%s,%s) ", S_RGB(defn->fillcolor1, 0),
-                           S_RGB(defn->fillcolor2, 1), S_RGB(defn->fillcolor3, 2));
+            ppl_strAppendf(out, outLen, &i, "fillcolor hsb(%s,%s,%s) ",
+                           ppl_numericDisplayDefault(context, defn->fillcolor1, 0),
+                           ppl_numericDisplayDefault(context, defn->fillcolor2, 1),
+                           ppl_numericDisplayDefault(context, defn->fillcolor3, 2));
         else if (defn->FillCol1234Space == SW_COLSPACE_CMYK)
-            ppl_strAppendf(out, outLen, &i, "fillcolor cmyk(%s,%s,%s,%s) ", S_RGB(defn->fillcolor1, 0),
-                           S_RGB(defn->fillcolor2, 1), S_RGB(defn->fillcolor3, 2), S_RGB(defn->fillcolor4, 2));
+            ppl_strAppendf(out, outLen, &i, "fillcolor cmyk(%s,%s,%s,%s) ",
+                           ppl_numericDisplayDefault(context, defn->fillcolor1, 0),
+                           ppl_numericDisplayDefault(context, defn->fillcolor2, 1),
+                           ppl_numericDisplayDefault(context, defn->fillcolor3, 2),
+                           ppl_numericDisplayDefault(context, defn->fillcolor4, 2));
     } else if (defn->USEfillcolor) {
         ppl_strAppendf(out, outLen, &i, "fillcolor %s ",
                        *(char **) ppl_fetchSettingName(&context->errcontext, defn->fillcolor, SW_COLOR_INT,
@@ -497,21 +503,22 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "linewidth %s ", defn->EXPlinewidth->ascii);
         i += strlen(out + i);
     } else if (defn->USElinewidth) {
-        ppl_strAppendf(out, outLen, &i, "linewidth %s ", NUMDISP(defn->linewidth));
+        ppl_strAppendf(out, outLen, &i, "linewidth %s ", ppl_numericDisplayDefault(context, defn->linewidth, 0));
         i += strlen(out + i);
     }
     if (defn->EXPpointlinewidth != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ", defn->EXPpointlinewidth->ascii);
         i += strlen(out + i);
     } else if (defn->USEpointlinewidth) {
-        ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ", NUMDISP(defn->pointlinewidth));
+        ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ",
+                       ppl_numericDisplayDefault(context, defn->pointlinewidth, 0));
         i += strlen(out + i);
     }
     if (defn->EXPpointsize != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointsize %s ", defn->EXPpointsize->ascii);
         i += strlen(out + i);
     } else if (defn->USEpointsize) {
-        ppl_strAppendf(out, outLen, &i, "pointsize %s ", NUMDISP(defn->pointsize));
+        ppl_strAppendf(out, outLen, &i, "pointsize %s ", ppl_numericDisplayDefault(context, defn->pointsize, 0));
         i += strlen(out + i);
     }
     if (defn->EXPpointtype != NULL) {

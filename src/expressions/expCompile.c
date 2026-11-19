@@ -80,7 +80,15 @@
 // T can be followed by .....F...JK....PQRS.U.
 // V can be followed by .........JK.........U.
 
-#define MARKUP_MATCH(A) (strncmp(in + scanpos, A, strlen(A)) == 0)
+//! markupMatch - Test whether a string starts with a given piece of markup
+//! \param [in] text - The string to test
+//! \param [in] markup - The markup to look for
+//! \return True if <text> starts with <markup>
+
+static int markupMatch(const char *text, const char *markup) {
+    return strncmp(text, markup, strlen(markup)) == 0;
+}
+
 
 #define PGE_OVERFLOW \
     { \
@@ -236,12 +244,12 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'C') // string substitution operator
             {
-                if (MARKUP_MATCH("%")) { NEWSTATE(1, PPL_OP_STRING_SUBST, 4); }
+                if (markupMatch(in + scanpos, "%")) { NEWSTATE(1, PPL_OP_STRING_SUBST, 4); }
             } else if ((trialstate == 'D') // a list of string substitutions
                        || (trialstate == 'E') // a bracketed sub-expression
                        || (trialstate == 'P')) // a list of function arguments
             {
-                if (MARKUP_MATCH("(")) {
+                if (markupMatch(in + scanpos, "(")) {
                     int j, k, l, m, n = 1, cp[3], cpl = 3, extraStrArg = 0;
                     ppl_strBracketMatch(in + scanpos, '(', ')', cp, &cpl, &j, cpl); // Search for a ) to match the (
                     if (j <= 0) {
@@ -308,16 +316,16 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'F') // a unary post-lvalue operator
             {
-                if (MARKUP_MATCH("--")) {
+                if (markupMatch(in + scanpos, "--")) {
                     NEWSTATE(2, PPL_OP_POST_DECREMENT, 3);
-                } else if (MARKUP_MATCH("++")) {
+                } else if (markupMatch(in + scanpos, "++")) {
                     NEWSTATE(2, PPL_OP_POST_INCREMENT, 3);
                 }
             } else if (trialstate == 'H') // a unary pre-lvalue operator
             {
-                if (MARKUP_MATCH("--")) {
+                if (markupMatch(in + scanpos, "--")) {
                     NEWSTATE(2, PPL_OP_PRE_DECREMENT, 3);
-                } else if (MARKUP_MATCH("++")) {
+                } else if (markupMatch(in + scanpos, "++")) {
                     NEWSTATE(2, PPL_OP_PRE_INCREMENT, 3);
                 }
             } else if ((trialstate == 'G') || // a variable name
@@ -379,70 +387,71 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'I') // a unary value-based operator
             {
-                if (MARKUP_MATCH("-")) {
+                if (markupMatch(in + scanpos, "-")) {
                     NEWSTATE(1, PPL_OP_NEGATE, 3);
-                } else if (MARKUP_MATCH("+")) {
+                } else if (markupMatch(in + scanpos, "+")) {
                     NEWSTATE(1, PPL_OP_UNARY_PLUS, 3);
-                } else if (MARKUP_MATCH("~")) {
+                } else if (markupMatch(in + scanpos, "~")) {
                     NEWSTATE(1, PPL_OP_BITWISE_NOT, 3);
-                } else if (MARKUP_MATCH("!")) {
+                } else if (markupMatch(in + scanpos, "!")) {
                     NEWSTATE(1, PPL_OP_LOGICAL_NOT, 3);
-                } else if (MARKUP_MATCH("not") && (!isalpha(in[scanpos + 3]))) {
+                } else if (markupMatch(in + scanpos, "not") && (!isalpha(in[scanpos + 3]))) {
                     NEWSTATE(3, PPL_OP_LOGICAL_NOT, 3);
-                } else if (MARKUP_MATCH("NOT") && (!isalpha(in[scanpos + 3]))) {
+                } else if (markupMatch(in + scanpos, "NOT") && (!isalpha(in[scanpos + 3]))) {
                     NEWSTATE(3, PPL_OP_LOGICAL_NOT, 3);
                 }
             } else if (trialstate == 'J') // a binary operator
             {
-                if (MARKUP_MATCH("**")) {
+                if (markupMatch(in + scanpos, "**")) {
                     NEWSTATE(2, PPL_OP_POWER, 2);
-                } else if (MARKUP_MATCH("<<")) {
+                } else if (markupMatch(in + scanpos, "<<")) {
                     NEWSTATE(2, PPL_OP_SHIFT_LEFT, 7);
-                } else if (MARKUP_MATCH(">>")) {
+                } else if (markupMatch(in + scanpos, ">>")) {
                     NEWSTATE(2, PPL_OP_SHIFT_RIGHT, 7);
-                } else if (MARKUP_MATCH("<=")) {
+                } else if (markupMatch(in + scanpos, "<=")) {
                     NEWSTATE(2, PPL_OP_LESS_EQUAL, 8);
-                } else if (MARKUP_MATCH(">=")) {
+                } else if (markupMatch(in + scanpos, ">=")) {
                     NEWSTATE(2, PPL_OP_GREATER_EQUAL, 8);
-                } else if (MARKUP_MATCH("==")) {
+                } else if (markupMatch(in + scanpos, "==")) {
                     NEWSTATE(2, PPL_OP_EQUAL, 9);
-                } else if (MARKUP_MATCH("<>")) {
+                } else if (markupMatch(in + scanpos, "<>")) {
                     NEWSTATE(2, PPL_OP_NOT_EQUAL, 10);
-                } else if (MARKUP_MATCH("!=")) {
+                } else if (markupMatch(in + scanpos, "!=")) {
                     NEWSTATE(2, PPL_OP_NOT_EQUAL, 10);
-                } else if (MARKUP_MATCH("&&")) {
+                } else if (markupMatch(in + scanpos, "&&")) {
                     NEWSTATE(2, PPL_OP_LOGICAL_AND, 14);
-                } else if (MARKUP_MATCH("and") && (!isalpha(in[scanpos + 3]))) {
+                } else if (markupMatch(in + scanpos, "and") && (!isalpha(in[scanpos + 3]))) {
                     NEWSTATE(3, PPL_OP_LOGICAL_AND, 14);
-                } else if (MARKUP_MATCH("AND") && (!isalpha(in[scanpos + 3]))) {
+                } else if (markupMatch(in + scanpos, "AND") && (!isalpha(in[scanpos + 3]))) {
                     NEWSTATE(3, PPL_OP_LOGICAL_AND, 14);
-                } else if (MARKUP_MATCH("||")) {
+                } else if (markupMatch(in + scanpos, "||")) {
                     NEWSTATE(2, PPL_OP_LOGICAL_OR, 15);
-                } else if (MARKUP_MATCH("or") && (!isalpha(in[scanpos + 2]))) {
+                } else if (markupMatch(in + scanpos, "or") && (!isalpha(in[scanpos + 2]))) {
                     NEWSTATE(2, PPL_OP_LOGICAL_OR, 15);
-                } else if (MARKUP_MATCH("OR") && (!isalpha(in[scanpos + 2]))) {
+                } else if (markupMatch(in + scanpos, "OR") && (!isalpha(in[scanpos + 2]))) {
                     NEWSTATE(2, PPL_OP_LOGICAL_OR, 15);
-                } else if (MARKUP_MATCH("*")) {
+                } else if (markupMatch(in + scanpos, "*")) {
                     NEWSTATE(1, PPL_OP_MULTIPLY, 5);
-                } else if (MARKUP_MATCH("/")) {
+                } else if (markupMatch(in + scanpos, "/")) {
                     NEWSTATE(1, PPL_OP_DIVIDE, 5);
-                } else if (MARKUP_MATCH("%")) {
+                } else if (markupMatch(in + scanpos, "%")) {
                     NEWSTATE(1, PPL_OP_MODULO, 5);
-                } else if (MARKUP_MATCH("+")) {
+                } else if (markupMatch(in + scanpos, "+")) {
                     NEWSTATE(1, PPL_OP_ADD, 6);
-                } else if (MARKUP_MATCH("-")) {
+                } else if (markupMatch(in + scanpos, "-")) {
                     NEWSTATE(1, PPL_OP_SUBTRACT, 6);
-                } else if (MARKUP_MATCH("<")) {
+                } else if (markupMatch(in + scanpos, "<")) {
                     NEWSTATE(1, PPL_OP_LESS, 8);
-                } else if (MARKUP_MATCH(">")) {
+                } else if (markupMatch(in + scanpos, ">")) {
                     NEWSTATE(1, PPL_OP_GREATER, 8);
-                } else if (MARKUP_MATCH("&")) {
+                } else if (markupMatch(in + scanpos, "&")) {
                     NEWSTATE(1, PPL_OP_BITWISE_AND, 11);
-                } else if (MARKUP_MATCH("^")) {
+                } else if (markupMatch(in + scanpos, "^")) {
                     NEWSTATE(1, PPL_OP_BITWISE_XOR, 12);
-                } else if (MARKUP_MATCH("|")) {
+                } else if (markupMatch(in + scanpos, "|")) {
                     NEWSTATE(1, PPL_OP_BITWISE_OR, 13);
-                } else if ((MARKUP_MATCH(",") && (collectCommas || allowCommaOperator || (tertiaryDepth > 0)))) {
+                } else if ((markupMatch(in + scanpos, ",") &&
+                            (collectCommas || allowCommaOperator || (tertiaryDepth > 0)))) {
                     if ((!collectCommas) || (tertiaryDepth > 0)) {
                         NEWSTATE(1, PPL_OP_COMMA, 18);
                     } else {
@@ -461,10 +470,10 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'K') // a ternary operator
             {
-                if (MARKUP_MATCH("?")) {
+                if (markupMatch(in + scanpos, "?")) {
                     NEWSTATE(1, PPL_OP_TERNARY_QUESTION, 16);
                     tertiaryDepth++;
-                } else if (MARKUP_MATCH(":")) {
+                } else if (markupMatch(in + scanpos, ":")) {
                     if (isDict && (tertiaryDepth == 0)) {
                         if (nCommaItems < 2 - (nDictItems == 0)) {
                             *errPos = scanpos;
@@ -493,7 +502,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                        (trialstate == 'Q')) // an array dereference []
             {
                 expOp = 0;
-                if (MARKUP_MATCH("[")) {
+                if (markupMatch(in + scanpos, "[")) {
                     int j, k, l, m = 0, n = 1;
                     int slice = 0, minSet = 0, maxSet = 0;
                     ppl_strBracketMatch(in + scanpos, '[', ']', NULL, NULL, &j, 0); // Search for a ] to match the [
@@ -577,7 +586,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'N') // a dictionary literal
             {
-                if (MARKUP_MATCH("{")) {
+                if (markupMatch(in + scanpos, "{")) {
                     int j, k, l, m, n = 1;
                     ppl_strBracketMatch(in + scanpos, '{', '}', NULL, NULL, &j, 0); // Search for a } to match the {
                     if (j <= 0) {
@@ -618,36 +627,36 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'O') // a dollar sign
             {
-                if ((dollarAllowed) && (MARKUP_MATCH("$"))) { NEWSTATE(1, 0, 0); }
+                if ((dollarAllowed) && (markupMatch(in + scanpos, "$"))) { NEWSTATE(1, 0, 0); }
             } else if (trialstate == 'R') // the dot operator
             {
-                if (MARKUP_MATCH(".")) { NEWSTATE(1, 0, 0); }
+                if (markupMatch(in + scanpos, ".")) { NEWSTATE(1, 0, 0); }
             } else if (trialstate == 'S') // assignment operator
             {
-                if ((MARKUP_MATCH("=") && (in[scanpos + 1] != '=') && equalsAllowed)) {
+                if ((markupMatch(in + scanpos, "=") && (in[scanpos + 1] != '=') && equalsAllowed)) {
                     NEWSTATE(1, PPL_ASSIGN, 17);
                 } // Match = but not ==
-                else if (MARKUP_MATCH("+=")) {
+                else if (markupMatch(in + scanpos, "+=")) {
                     NEWSTATE(2, PPL_ASSIGN_ADD, 17);
-                } else if (MARKUP_MATCH("-=")) {
+                } else if (markupMatch(in + scanpos, "-=")) {
                     NEWSTATE(2, PPL_ASSIGN_SUBTRACT, 17);
-                } else if (MARKUP_MATCH("*=")) {
+                } else if (markupMatch(in + scanpos, "*=")) {
                     NEWSTATE(2, PPL_ASSIGN_MULTIPLY, 17);
-                } else if (MARKUP_MATCH("/=")) {
+                } else if (markupMatch(in + scanpos, "/=")) {
                     NEWSTATE(2, PPL_ASSIGN_DIVIDE, 17);
-                } else if (MARKUP_MATCH("%=")) {
+                } else if (markupMatch(in + scanpos, "%=")) {
                     NEWSTATE(2, PPL_ASSIGN_MODULO, 17);
-                } else if (MARKUP_MATCH("&=")) {
+                } else if (markupMatch(in + scanpos, "&=")) {
                     NEWSTATE(2, PPL_ASSIGN_BITWISE_AND, 17);
-                } else if (MARKUP_MATCH("^=")) {
+                } else if (markupMatch(in + scanpos, "^=")) {
                     NEWSTATE(2, PPL_ASSIGN_BITWISE_XOR, 17);
-                } else if (MARKUP_MATCH("|=")) {
+                } else if (markupMatch(in + scanpos, "|=")) {
                     NEWSTATE(2, PPL_ASSIGN_BITWISE_OR, 17);
-                } else if (MARKUP_MATCH("<<=")) {
+                } else if (markupMatch(in + scanpos, "<<=")) {
                     NEWSTATE(3, PPL_ASSIGN_SHIFT_LEFT, 17);
-                } else if (MARKUP_MATCH(">>=")) {
+                } else if (markupMatch(in + scanpos, ">>=")) {
                     NEWSTATE(3, PPL_ASSIGN_SHIFT_RIGHT, 17);
-                } else if (MARKUP_MATCH("**=")) {
+                } else if (markupMatch(in + scanpos, "**=")) {
                     NEWSTATE(3, PPL_ASSIGN_POWER, 17);
                 }
             } else if (trialstate == 'U') // end of expression

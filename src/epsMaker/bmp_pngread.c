@@ -129,7 +129,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             return;
         }
         image->pal_len = ncols;
-        BMP_ALLOC(image->palette, ncols * 3);
+        image->palette = (unsigned char *) ppl_memAlloc(ncols * 3);
         if (image->palette == NULL) {
             ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
             return;
@@ -154,7 +154,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     row_bytes = png_get_rowbytes(png_ptr, info_ptr);
 
     // Allocate block of memory for uncompressed image
-    BMP_ALLOC(image->data, row_bytes * height);
+    image->data = (unsigned char *) ppl_memAlloc(row_bytes * height);
     if (image->data == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return;

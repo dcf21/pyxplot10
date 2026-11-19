@@ -36,8 +36,6 @@
 #define BMP_ENCODING_FLATE 1102
 #define BMP_ENCODING_DCT   1103
 
-#define BMP_ALLOC(X, Y) \
-    { X = (unsigned char *) ppl_memAlloc(Y); }
 
 typedef struct bitmap_data {
     unsigned char *data, *palette, *trans;

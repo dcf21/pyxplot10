@@ -41,11 +41,6 @@
 #include "pplConstants.h"
 #include "texify.h"
 
-#define FFW_TOKEN \
-    while ((i < tlen) && (tokenBuff[i].state == o)) { i++; }
-
-#define FFW_N(n) \
-    { i += n; }
 
 #define ENTER_PLAINTEXT \
     if (*textRm) { \
@@ -242,6 +237,15 @@ void ppl_texify_string(const char *in, char *out, const int inlen, const int out
 //! \param [in|out] mm_in - Flag indicating whether the LaTeX output is currently in math mode, or NULL to start
 //! outside math mode
 //! \param [in|out] tr_in - Flag indicating whether the LaTeX output is currently in a \textrm block, or NULL to
+//! markupMatch - Test whether a string starts with a given piece of markup
+//! \param [in] text - The string to test
+//! \param [in] markup - The markup to look for
+//! \return True if <text> starts with <markup>
+
+static int markupMatch(const char *text, const char *markup) {
+    return strncmp(text, markup, strlen(markup)) == 0;
+}
+
 //! start outside one
 
 void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, char *out, const int outlen, int *mm_in,
@@ -460,7 +464,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         {
             snprintf(out + k, outlen - k, "\\%%");
             k += strlen(out + k);
-            FFW_TOKEN;
+            while ((i < tlen) && (tokenBuff[i].state == o)) i++; // Skip to the end of the token
         } else if ((o == 'D') || (o == 'E') || (o == 'P')) // open or close brackets
         {
             if (in[i] == '(') {
@@ -507,7 +511,9 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             k += strlen(out + k);
             i++;
             i++;
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if ((o == 'G') || (o == 'T') || (o == 'V')) // variable name
         {
             int mathrm = (o == 'T') || (o == 'V');
@@ -620,204 +626,218 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 snprintf(out + k, outlen - k, "}");
                 k += strlen(out + k);
             }
-            FFW_TOKEN;
+            while ((i < tlen) && (tokenBuff[i].state == o)) i++; // Skip to the end of the token
         } else if (o == 'I') // unary operator
         {
-#define MARKUP_MATCH(A) (strncmp(in + i, A, strlen(A)) == 0)
-
-            if (MARKUP_MATCH("-")) {
+            if (markupMatch(in + i, "-")) {
                 snprintf(out + k, outlen - k, "-");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("+")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "+")) {
                 snprintf(out + k, outlen - k, "+");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("~")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "~")) {
                 snprintf(out + k, outlen - k, "\\sim ");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("!")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "!")) {
                 snprintf(out + k, outlen - k, "!");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("not")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "not")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, " not ");
-                FFW_N(3);
-            } else if (MARKUP_MATCH("NOT")) {
+                { i += 3; };
+            } else if (markupMatch(in + i, "NOT")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, " not ");
-                FFW_N(3);
+                { i += 3; };
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if (o == 'J') // a binary operator
         {
-            if (MARKUP_MATCH("**")) {
+            if (markupMatch(in + i, "**")) {
                 snprintf(out + k, outlen - k, "\\,*\\kern-1.5pt *\\,\\,");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("<<")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "<<")) {
                 snprintf(out + k, outlen - k, "\\ll ");
-                FFW_N(2);
-            } else if (MARKUP_MATCH(">>")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, ">>")) {
                 snprintf(out + k, outlen - k, "\\gg ");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("<=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "<=")) {
                 snprintf(out + k, outlen - k, "\\leq ");
-                FFW_N(2);
-            } else if (MARKUP_MATCH(">=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, ">=")) {
                 snprintf(out + k, outlen - k, "\\geq ");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("==")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "==")) {
                 snprintf(out + k, outlen - k, "==");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("<>")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "<>")) {
                 snprintf(out + k, outlen - k, "<>");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("!=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "!=")) {
                 snprintf(out + k, outlen - k, "!=");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("&&")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "&&")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, "\\,\\&\\&\\,");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("and")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "and")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, " and ");
-                FFW_N(3);
-            } else if (MARKUP_MATCH("AND")) {
+                { i += 3; };
+            } else if (markupMatch(in + i, "AND")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, " and ");
-                FFW_N(3);
-            } else if (MARKUP_MATCH("||")) {
+                { i += 3; };
+            } else if (markupMatch(in + i, "||")) {
                 snprintf(out + k, outlen - k, "\\,||\\,");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("or")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "or")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, " or ");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("OR")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "OR")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, " or ");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("*")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "*")) {
                 snprintf(out + k, outlen - k, "\\times ");
-                FFW_N(1);
+                { i += 1; };
                 opMultDiv = 1;
-            } else if (MARKUP_MATCH("/")) {
+            } else if (markupMatch(in + i, "/")) {
                 snprintf(out + k, outlen - k, "/");
-                FFW_N(1);
+                { i += 1; };
                 opMultDiv = 1;
-            } else if (MARKUP_MATCH("%")) {
+            } else if (markupMatch(in + i, "%")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, "\\%%");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("+")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "+")) {
                 snprintf(out + k, outlen - k, "+");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("-")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "-")) {
                 snprintf(out + k, outlen - k, "-");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("<")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "<")) {
                 snprintf(out + k, outlen - k, "<");
-                FFW_N(1);
-            } else if (MARKUP_MATCH(">")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, ">")) {
                 snprintf(out + k, outlen - k, ">");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("&")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "&")) {
                 ENTER_TEXTRM;
                 snprintf(out + k, outlen - k, "\\,\\&\\,");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("^")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "^")) {
                 snprintf(out + k, outlen - k, "\\verb|^|");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("|")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "|")) {
                 snprintf(out + k, outlen - k, "\\,|\\,");
-                FFW_N(1);
-            } else if (MARKUP_MATCH(",")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, ",")) {
                 snprintf(out + k, outlen - k, ",");
-                FFW_N(1);
+                { i += 1; };
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if (o == 'K') // a terniary operator
         {
-            if (MARKUP_MATCH("?")) {
+            if (markupMatch(in + i, "?")) {
                 snprintf(out + k, outlen - k, "\\,?\\,");
-                FFW_N(1);
-            } else if (MARKUP_MATCH(":")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, ":")) {
                 snprintf(out + k, outlen - k, ":");
-                FFW_N(1);
+                { i += 1; };
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if ((o == 'M') || (o == 'Q')) // list literal
         {
             if (in[i] == '[') snprintf(out + k, outlen - k, "\\left[");
             if (in[i] == ']') snprintf(out + k, outlen - k, "\\right]");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if (o == 'N') // dictionary literal
         {
             if (in[i] == '{') snprintf(out + k, outlen - k, "\\left\\{");
             if (in[i] == '}') snprintf(out + k, outlen - k, "\\right\\}");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if (o == 'O') // dollar operator
         {
             if (in[i] == '$') snprintf(out + k, outlen - k, "\\$");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if (o == 'R') // dot operator
         {
             if (in[i] == '.') snprintf(out + k, outlen - k, ".");
             k += strlen(out + k);
             i++;
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else if (o == 'S') // assignment operator
         {
-            if (MARKUP_MATCH("=")) {
+            if (markupMatch(in + i, "=")) {
                 snprintf(out + k, outlen - k, "=");
-                FFW_N(1);
-            } else if (MARKUP_MATCH("+=")) {
+                { i += 1; };
+            } else if (markupMatch(in + i, "+=")) {
                 snprintf(out + k, outlen - k, "\\,\\,+\\kern-2.5pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("-=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "-=")) {
                 snprintf(out + k, outlen - k, "\\,\\,-\\kern-2.5pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("*=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "*=")) {
                 snprintf(out + k, outlen - k, "\\,\\,\\times\\kern-2.5pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("/=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "/=")) {
                 snprintf(out + k, outlen - k, "\\,/\\kern-1.5pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("%=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "%=")) {
                 snprintf(out + k, outlen - k, "\\,\\,\\textrm{\\%%}\\kern-2pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("&=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "&=")) {
                 snprintf(out + k, outlen - k, "\\,\\,\\textrm{\\&}\\kern-2pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("^=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "^=")) {
                 snprintf(out + k, outlen - k, "\\,\\,\\verb|^|\\kern-2pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("|=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "|=")) {
                 snprintf(out + k, outlen - k, "\\,\\,|\\kern-2.3pt =");
-                FFW_N(2);
-            } else if (MARKUP_MATCH("<<=")) {
+                { i += 2; };
+            } else if (markupMatch(in + i, "<<=")) {
                 snprintf(out + k, outlen - k, "\\ll=");
-                FFW_N(3);
-            } else if (MARKUP_MATCH(">>=")) {
+                { i += 3; };
+            } else if (markupMatch(in + i, ">>=")) {
                 snprintf(out + k, outlen - k, "\\gg=");
-                FFW_N(3);
-            } else if (MARKUP_MATCH("**=")) {
+                { i += 3; };
+            } else if (markupMatch(in + i, "**=")) {
                 snprintf(out + k, outlen - k, "\\,*\\kern-1.5pt *\\kern-1.5pt=");
-                FFW_N(3);
+                { i += 3; };
             }
             k += strlen(out + k);
-            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) { FFW_N(1); }
+            while ((in[i] >= '\0') && ((unsigned char) in[i] <= ' ') && (tokenBuff[i].state == o)) {
+                { i += 1; };
+            }
         } else // unknown token
         {
-            FFW_TOKEN;
+            while ((i < tlen) && (tokenBuff[i].state == o)) i++; // Skip to the end of the token
         }
         lastOpMultDiv = opMultDiv;
     }

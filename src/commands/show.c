@@ -232,9 +232,6 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     out[0] = buf[0] = '\0';
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "axescolour", 1) >= 0) ||
         (ppl_strAutocomplete(word, "axescolor", 1) >= 0)) {
-#define S_RGB(X, Y) \
-    ppl_numericDisplay(X, c->numdispBuff[Y], c->set->term_current.SignificantFigures, \
-                       (c->set->term_current.NumDisplay == SW_DISPLAY_L))
 #define SHOW_COLOR(COLOR, COL1234SPACE, COL1, COL2, COL3, COL4, DEFAULT, DEF1234SPACE, DEF1, DEF2, DEF3, DEF4, NAME1, \
                    NAME2) \
     { \
@@ -243,12 +240,15 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                               *(char **) ppl_fetchSettingName(&c->errcontext, COLOR, SW_COLOR_INT, SW_COLOR_STR, \
                                                               sizeof(char *))); \
         else if (COL1234SPACE == SW_COLSPACE_RGB) \
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "rgb(%s,%s,%s)", S_RGB(COL1, 0), S_RGB(COL2, 1), S_RGB(COL3, 2)); \
+            ppl_snprintfTrunc(buf, LSTR_LENGTH, "rgb(%s,%s,%s)", ppl_numericDisplayDefault(c, COL1, 0), \
+                              ppl_numericDisplayDefault(c, COL2, 1), ppl_numericDisplayDefault(c, COL3, 2)); \
         else if (COL1234SPACE == SW_COLSPACE_HSB) \
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "hsb(%s,%s,%s)", S_RGB(COL1, 0), S_RGB(COL2, 1), S_RGB(COL3, 2)); \
+            ppl_snprintfTrunc(buf, LSTR_LENGTH, "hsb(%s,%s,%s)", ppl_numericDisplayDefault(c, COL1, 0), \
+                              ppl_numericDisplayDefault(c, COL2, 1), ppl_numericDisplayDefault(c, COL3, 2)); \
         else if (COL1234SPACE == SW_COLSPACE_CMYK) \
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "cmyk(%s,%s,%s,%s)", S_RGB(COL1, 0), S_RGB(COL2, 1), S_RGB(COL3, 2), \
-                              S_RGB(COL4, 3)); \
+            ppl_snprintfTrunc(buf, LSTR_LENGTH, "cmyk(%s,%s,%s,%s)", ppl_numericDisplayDefault(c, COL1, 0), \
+                              ppl_numericDisplayDefault(c, COL2, 1), ppl_numericDisplayDefault(c, COL3, 2), \
+                              ppl_numericDisplayDefault(c, COL4, 3)); \
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, NAME1, buf, \
                             ((COLOR == DEFAULT) && (COL1234SPACE == DEF1234SPACE) && (COL1 == DEF1) && \
                              (COL2 == DEF2) && (COL3 == DEF3) && (COL4 == DEF4)), \
@@ -828,15 +828,21 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                                   *(char **) ppl_fetchSettingName(&c->errcontext, c->set->palette_current[j],
                                                                   SW_COLOR_INT, SW_COLOR_STR, sizeof(char *)));
             else if (c->set->paletteS_current[j] == SW_COLSPACE_RGB)
-                ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "rgb(%s,%s,%s)", S_RGB(c->set->palette1_current[j], 0),
-                                  S_RGB(c->set->palette2_current[j], 1), S_RGB(c->set->palette3_current[j], 2));
+                ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "rgb(%s,%s,%s)",
+                                  ppl_numericDisplayDefault(c, c->set->palette1_current[j], 0),
+                                  ppl_numericDisplayDefault(c, c->set->palette2_current[j], 1),
+                                  ppl_numericDisplayDefault(c, c->set->palette3_current[j], 2));
             else if (c->set->paletteS_current[j] == SW_COLSPACE_HSB)
-                ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "hsb(%s,%s,%s)", S_RGB(c->set->palette1_current[j], 0),
-                                  S_RGB(c->set->palette2_current[j], 1), S_RGB(c->set->palette3_current[j], 2));
+                ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "hsb(%s,%s,%s)",
+                                  ppl_numericDisplayDefault(c, c->set->palette1_current[j], 0),
+                                  ppl_numericDisplayDefault(c, c->set->palette2_current[j], 1),
+                                  ppl_numericDisplayDefault(c, c->set->palette3_current[j], 2));
             else if (c->set->paletteS_current[j] == SW_COLSPACE_CMYK)
-                ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "cmyk(%s,%s,%s,%s)", S_RGB(c->set->palette1_current[j], 0),
-                                  S_RGB(c->set->palette2_current[j], 1), S_RGB(c->set->palette3_current[j], 2),
-                                  S_RGB(c->set->palette4_current[j], 3));
+                ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "cmyk(%s,%s,%s,%s)",
+                                  ppl_numericDisplayDefault(c, c->set->palette1_current[j], 0),
+                                  ppl_numericDisplayDefault(c, c->set->palette2_current[j], 1),
+                                  ppl_numericDisplayDefault(c, c->set->palette3_current[j], 2),
+                                  ppl_numericDisplayDefault(c, c->set->palette4_current[j], 3));
             k += strlen(buf + k);
         }
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "palette", buf, !l,

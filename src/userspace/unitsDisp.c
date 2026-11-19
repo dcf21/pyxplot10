@@ -244,13 +244,30 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
 // Routines for printing units
 // -------------------------------------------------------------------
 
-#define UNIT_INSCHEME(X) \
-    (((X).si && (c->set->term_current.UnitScheme == SW_UNITSCH_SI)) || \
-     ((X).cgs && (c->set->term_current.UnitScheme == SW_UNITSCH_CGS)) || \
-     ((X).imperial && (c->set->term_current.UnitScheme == SW_UNITSCH_IMP)) || \
-     ((X).us && (c->set->term_current.UnitScheme == SW_UNITSCH_US)) || \
-     ((X).planck && (c->set->term_current.UnitScheme == SW_UNITSCH_PLK)) || \
-     ((X).ancient && (c->set->term_current.UnitScheme == SW_UNITSCH_ANC)))
+//! unitInScheme - Test whether a unit belongs to the scheme of units which the user has selected (set unit scheme)
+//! \param [in] c - The Pyxplot context
+//! \param [in] u - The unit
+//! \return True if the unit is in the selected scheme
+
+static int unitInScheme(const ppl_context *c, const unit *u) {
+    switch (c->set->term_current.UnitScheme) {
+        case SW_UNITSCH_SI:
+            return u->si;
+        case SW_UNITSCH_CGS:
+            return u->cgs;
+        case SW_UNITSCH_IMP:
+            return u->imperial;
+        case SW_UNITSCH_US:
+            return u->us;
+        case SW_UNITSCH_PLK:
+            return u->planck;
+        case SW_UNITSCH_ANC:
+            return u->ancient;
+        default:
+            return 0;
+    }
+}
+
 
 //! ppl_udFindOptimalNextUnit - Find the unit which best matches some of the remaining physical dimensions of a
 //! quantity, and divide the quantity's dimensions by it. Used to build up a list of units with which to display a
@@ -296,13 +313,13 @@ void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned 
             if ((score <= BestScore) && (!(c->unit_database[i].userSel)) && (((*best)->userSel))) continue;
 
             // A unit in the current scheme always beats one not in current scheme
-            if ((UNIT_INSCHEME(c->unit_database[i])) && (!UNIT_INSCHEME(**best))) {
+            if ((unitInScheme(c, &c->unit_database[i])) && (!unitInScheme(c, *best))) {
                 *best = c->unit_database + i;
                 *pow = power;
                 BestScore = score;
                 continue;
             }
-            if ((!UNIT_INSCHEME(c->unit_database[i])) && (UNIT_INSCHEME(**best))) continue;
+            if ((!unitInScheme(c, &c->unit_database[i])) && (unitInScheme(c, *best))) continue;
 
             // A unit which matches more dimensions wins
             if (score > BestScore) {
@@ -375,13 +392,13 @@ void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const do
                 if ((!(c->unit_database[j].userSel)) && ((UnitList[i]->userSel))) continue;
 
                 // A unit in the current scheme always beats one which is not
-                if ((UNIT_INSCHEME(c->unit_database[j])) && (!UNIT_INSCHEME(*(UnitList[i])))) {
+                if ((unitInScheme(c, &c->unit_database[j])) && (!unitInScheme(c, (UnitList[i])))) {
                     UnitList[i] = c->unit_database + j;
                     in->real = NewValueReal;
                     in->imag = NewValueImag;
                     continue;
                 }
-                if ((!UNIT_INSCHEME(c->unit_database[j])) && (UNIT_INSCHEME(*(UnitList[i])))) continue;
+                if ((!unitInScheme(c, &c->unit_database[j])) && (unitInScheme(c, (UnitList[i])))) continue;
 
                 // Otherwise, a unit with a smaller display value wins
                 if ((NewMagnitude < OldMagnitude) && (NewMagnitude >= 1)) {
@@ -930,4 +947,16 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
 
     (*output)->NUnits = outpos;
     return;
+}
+
+//! ppl_numericDisplayDefault - Render a number as a string, using the number of significant figures and the display
+//! style (natural or LaTeX) which the user has selected
+//! \param [in] c - The Pyxplot context
+//! \param [in] x - The number
+//! \param [in] N - Which of the context's four numeric display buffers (0-3) to write the string into
+//! \return Pointer to the string, which is overwritten by later calls using the same buffer
+
+char *ppl_numericDisplayDefault(ppl_context *c, const double x, const int N) {
+    return ppl_numericDisplay(x, c->numdispBuff[N], c->set->term_current.SignificantFigures,
+                              (c->set->term_current.NumDisplay == SW_DISPLAY_L));
 }

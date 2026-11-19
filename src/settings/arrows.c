@@ -45,7 +45,15 @@
 // -------------------------------------------
 
 
-#define CMPVAL(X, Y) (ppl_unitsDimEqual(&X, &Y) && ppl_dblEqual(X.real, Y.real))
+//! sameValue - Test whether two numerical values are equal, including having the same physical dimensions
+//! \param [in] a - The first value
+//! \param [in] b - The second value
+//! \return True if the values are equal
+
+static int sameValue(const pplObj *a, const pplObj *b) {
+    return ppl_unitsDimEqual(a, b) && ppl_dblEqual(a->real, b->real);
+}
+
 
 //! pplarrow_add - Implement the "set arrow" command, adding a new arrow to a list of arrows, or replacing an
 //! existing arrow with the same ID number
@@ -232,8 +240,8 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
 
 unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarrow_object *b) {
     if (a->id != b->id) return 0;
-    if ((!CMPVAL(a->x0, b->x0)) || (!CMPVAL(a->y0, b->y0)) || (!CMPVAL(a->z0, b->z0))) return 0;
-    if ((!CMPVAL(a->x1, b->x1)) || (!CMPVAL(a->y1, b->y1)) || (!CMPVAL(a->z1, b->z1))) return 0;
+    if ((!sameValue(&a->x0, &b->x0)) || (!sameValue(&a->y0, &b->y0)) || (!sameValue(&a->z0, &b->z0))) return 0;
+    if ((!sameValue(&a->x1, &b->x1)) || (!sameValue(&a->y1, &b->y1)) || (!sameValue(&a->z1, &b->z1))) return 0;
     if ((a->system_x0 != b->system_x0) || (a->system_y0 != b->system_y0) || (a->system_z0 != b->system_z0)) return 0;
     if ((a->system_x1 != b->system_x1) || (a->system_y1 != b->system_y1) || (a->system_z1 != b->system_z1)) return 0;
     if ((a->axis_x0 != b->axis_x0) || (a->axis_y0 != b->axis_y0) || (a->axis_z0 != b->axis_z0)) return 0;
