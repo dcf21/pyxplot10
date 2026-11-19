@@ -1,8 +1,8 @@
                         _       _      PYXPLOT
- _ __  _   ___  ___ __ | | ___ | |_    Version 0.9.3
-| '_ \| | | \ \/ / '_ \| |/ _ \| __|   xx/xx/xxxx
+ _ __  _   ___  ___ __ | | ___ | |_    Version 0.10.0
+| '_ \| | | \ \/ / '_ \| |/ _ \| __|   19/11/2026
 | |_) | |_| |>  <| |_) | | (_) | |_ 
-| .__/ \__, /_/\_\ .__/|_|\___/ \__|   Copyright (C) 2006-2013 Dominic Ford
+| .__/ \__, /_/\_\ .__/|_|\___/ \__|   Copyright (C) 2006-2026 Dominic Ford
 |_|    |___/     |_|                                 2008-2013 Ross Church
 
 For documentation and more information, see <http://www.pyxplot.org.uk>.
@@ -123,7 +123,7 @@ contact your system administrator.
 
 * Unpack the distributed .tar.gz:
 
-tar xvfz pyxplot_0.9.3.tar.gz
+tar xvfz pyxplot_0.10.0.tar.gz
 cd pyxplot
 
 * Run the installation script:

@@ -24,6 +24,18 @@
 \chapter{ChangeLog}
 \index{ChangeLog}
 
+\subsection*{2026 Nov 19: Pyxplot 0.10.0}
+
+Version 0.10.0 is a major refactoring of Pyxplot's source code, which has been reformatted, documented throughout, and made const-correct. It also fixes a number of bugs, including:
+
+\begin{itemize}
+\item Dates displayed and entered in the Hebrew and Islamic calendars were incorrect.
+\item Setting a preferred unit in a configuration file made Pyxplot run out of memory on startup.
+\item The commands {\tt unset unit preferred} and {\tt unset unit of} did not work.
+\item The help text for several functions gave incorrect names.
+\item Several memory errors, including a use-after-free in the {\tt histogram} command.
+\end{itemize}
+
 \subsection*{2012 Sep 19: Pyxplot 0.9.2}
 
 Version 0.9.2 corrects a large number of minor bugs.
