@@ -93,6 +93,14 @@ static char *LatexVarNamesTo[] = {
         "\\upsilon", "\\phi",    "\\chi",   "\\psi",     "\\omega",   "\\Gamma", "\\Delta", "\\Theta", "\\Lambda",
         "\\Xi",      "\\Pi",     "\\Sigma", "\\Upsilon", "\\Phi",     "\\Psi",   "\\Omega", "\\aleph", NULL};
 
+//! ppl_texify_MakeGreek - Render a variable name in LaTeX, converting the names of Greek letters (e.g. alpha) into
+//! LaTeX symbols, and underscores into subscripts
+//! \param [in] in - The variable name
+//! \param [out] out - Character buffer into which to write the LaTeX
+//! \param [in] outlen - The size of the buffer <out>
+//! \param [in|out] mathMode - Flag indicating whether the LaTeX output is currently in math mode
+//! \param [in|out] textRm - Flag indicating whether the LaTeX output is currently in a \textrm block
+
 static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, int *mathMode, int *textRm) {
     int i, ji = 0, jg, a, l, m, k = 0, kno_ = 0;
 
@@ -152,6 +160,12 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
     out[k++] = '\0';
     return;
 }
+
+//! ppl_texify_string - Render a text string in LaTeX, escaping any characters which LaTeX treats as special
+//! \param [in] in - The text string
+//! \param [out] out - Character buffer into which to write the LaTeX
+//! \param [in] inlen - The number of characters of <in> to render, or -1 to render the whole string
+//! \param [in] outlen - The size of the buffer <out>
 
 void ppl_texify_string(const char *in, char *out, const int inlen, const int outlen) {
     int i, j, DoubleQuoteLevel = 0, QuoteLevel = 0;
@@ -215,6 +229,18 @@ void ppl_texify_string(const char *in, char *out, const int inlen, const int out
     out[j++] = '\0';
     return;
 }
+
+//! ppl_texify_generic - Render an algebraic expression in LaTeX, e.g. converting sqrt(x) into \sqrt{x}
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The algebraic expression
+//! \param [in] inlen - The number of characters of <in> to render, or -1 to render the whole expression
+//! \param [out] end - Set to the number of characters of <in> which form part of the expression
+//! \param [out] out - Character buffer into which to write the LaTeX
+//! \param [in] outlen - The size of the buffer <out>
+//! \param [in|out] mm_in - Flag indicating whether the LaTeX output is currently in math mode, or NULL to start
+//! outside math mode
+//! \param [in|out] tr_in - Flag indicating whether the LaTeX output is currently in a \textrm block, or NULL to
+//! start outside one
 
 void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, char *out, const int outlen, int *mm_in,
                         int *tr_in) {

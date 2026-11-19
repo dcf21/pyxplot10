@@ -65,6 +65,11 @@ static int PyxplotRunning = 1; // Flag which we drop in the CSP when the main pr
 
 // Functions to be called from main Pyxplot process
 
+//! pplcsp_init - Fork the Child Support Process (CSP), which runs alongside the main Pyxplot process to manage
+//! external viewers such as GhostView, create the temporary working directory, and clean up after Pyxplot exits.
+//! The main process returns from this function; the CSP never does.
+//! \param [in] context - The Pyxplot context
+
 void pplcsp_init(ppl_context *context) {
     int pid, fail, i;
     struct stat statinfo;
@@ -146,6 +151,10 @@ void pplcsp_init(ppl_context *context) {
     exit(0);
 }
 
+//! pplcsp_checkForGvOutput - Relay any error messages which the CSP has passed back to the main process, e.g. from
+//! a postscript viewer which failed to launch
+//! \param [in] context - The Pyxplot context
+
 void pplcsp_checkForGvOutput(ppl_context *context) {
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
@@ -183,6 +192,10 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
     return;
 }
 
+//! pplcsp_sendCommand - Send a command to the CSP through its command pipe
+//! \param [in] context - The Pyxplot context
+//! \param [in] cmd - The command to send. The first character identifies the command; see pplcsp_processCommand().
+
 void pplcsp_sendCommand(ppl_context *context, const char *cmd) {
     if (PipeMAIN2CSP[1] == 0) return; // Pipe has not yet been opened (Ooops).
     if (write(PipeMAIN2CSP[1], cmd, strlen(cmd)) != strlen(cmd))
@@ -191,6 +204,10 @@ void pplcsp_sendCommand(ppl_context *context, const char *cmd) {
 }
 
 // Functions to be called from the Child Support Process
+
+//! pplcsp_main - The main loop of the CSP, which waits for commands from the main process and for its child
+//! processes to exit, until the main process exits, and then deletes the temporary working directory
+//! \param [in] context - The Pyxplot context
 
 void pplcsp_main(ppl_context *context) {
     int gotPersists = 1;
@@ -221,6 +238,9 @@ void pplcsp_main(ppl_context *context) {
     }
     return;
 }
+
+//! pplcsp_checkForChildExits - SIGCHLD handler in the CSP, which records that a child process may have exited
+//! \param [in] signo - The signal number
 
 void pplcsp_checkForChildExits(const int signo) {
     int i;
@@ -255,6 +275,9 @@ void pplcsp_checkForChildExits(const int signo) {
     return;
 }
 
+//! pplcsp_checkForNewCommands - Read any commands which the main process has sent to the CSP, and process them
+//! \param [in] context - The Pyxplot context
+
 void pplcsp_checkForNewCommands(ppl_context *context) {
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
@@ -287,6 +310,11 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
         }
     return;
 }
+
+//! pplcsp_processCommand - Process a command sent to the CSP by the main process: clearing the display, quitting,
+//! or displaying a postscript file in a viewer in single-window, multi-window or persistent mode
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The command. Its first character identifies the command, and the rest gives its arguments.
 
 void pplcsp_processCommand(ppl_context *context, char *in) {
     char cmd[FNAME_LENGTH];
@@ -342,6 +370,12 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
     }
     return;
 }
+
+//! pplcsp_forkNewGv - Launch a postscript viewer to display a file
+//! \param [in] context - The Pyxplot context
+//! \param [in] fname - The filename of the postscript file to display
+//! \param [in|out] gv_list - The list of viewer processes to add the new process to (may be NULL)
+//! \return The process ID of the viewer, or zero on failure
 
 int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
 #define MAX_CMDARGS 64
@@ -427,6 +461,9 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
     return 0;
 }
 
+//! pplcsp_killAllGvs - Close all of the postscript viewers which the CSP has launched
+//! \param [in] context - The Pyxplot context
+
 void pplcsp_killAllGvs(ppl_context *context) {
     int i;
     if (DEBUG) ppl_log(&context->errcontext, "Killing all ghostview processes.");
@@ -438,6 +475,10 @@ void pplcsp_killAllGvs(ppl_context *context) {
     }
     return;
 }
+
+//! pplcsp_killLatestSinglewindow - Close the postscript viewer most recently launched in single-window mode, so that
+//! it can be replaced by a new one
+//! \param [in] context - The Pyxplot context
 
 void pplcsp_killLatestSinglewindow(ppl_context *context) {
     if (GhostView_pid > 1) {
@@ -459,6 +500,10 @@ void pplcsp_killLatestSinglewindow(ppl_context *context) {
 
 // Facilities for forking helper processes with pipes from the main Pyxplot process
 
+//! pplcsp_checkForHelperExits - SIGCHLD handler in the main process, which reaps helper processes such as LaTeX and
+//! input filters which have exited
+//! \param [in] signo - The signal number
+
 void pplcsp_checkForHelperExits(const int signo) {
     int i;
     char errtext[256];
@@ -478,6 +523,9 @@ void pplcsp_checkForHelperExits(const int signo) {
     return;
 }
 
+//! pplcsp_killAllHelpers - Kill all of the helper processes which the main process has launched
+//! \param [in] context - The Pyxplot context
+
 void pplcsp_killAllHelpers(const ppl_context *context) {
     int i;
     sigset_t sigs;
@@ -494,7 +542,13 @@ void pplcsp_killAllHelpers(const ppl_context *context) {
     return;
 }
 
-// NB: Leaves SIGCHLD blocked
+//! pplcsp_forkSed - Launch sed as a helper process, with pipes connected to its standard input and output. SIGCHLD is
+//! left blocked; the caller must unblock it.
+//! \param [in] context - The Pyxplot context
+//! \param [in] cmd - The sed command to run
+//! \param [out] fstdin - Set to the file descriptor of a pipe to sed's standard input
+//! \param [out] fstdout - Set to the file descriptor of a pipe from sed's standard output
+
 void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) {
     int fd0[2], fd1[2];
     int i, pid;
@@ -563,7 +617,14 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
     return;
 }
 
-// NB: Leaves SIGCHLD blocked
+//! pplcsp_forkLaTeX - Launch LaTeX as a helper process to typeset a file, with pipes connected to its standard input
+//! and output. SIGCHLD is left blocked; the caller must unblock it.
+//! \param [in] context - The Pyxplot context
+//! \param [in] filename - The filename of the LaTeX document to typeset
+//! \param [out] PidOut - Set to the process ID of the LaTeX process
+//! \param [out] fstdin - Set to the file descriptor of a pipe to LaTeX's standard input
+//! \param [out] fstdout - Set to the file descriptor of a pipe from LaTeX's standard output
+
 void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fstdin, int *fstdout) {
     int fd0[2], fd1[2];
     int i, pid;
@@ -632,7 +693,12 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
     return;
 }
 
-// NB: Leaves SIGCHLD blocked
+//! pplcsp_forkInputFilter - Launch an input filter as a helper process, to preprocess a data file. SIGCHLD is left
+//! blocked; the caller must unblock it.
+//! \param [in] context - The Pyxplot context
+//! \param [in] cmd - NULL-terminated argument list of the filter command, the last argument being the data file
+//! \param [out] fstdout - Set to the file descriptor of a pipe from the filter's standard output
+
 void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
     int fd0[2];
     int i, pid;
@@ -694,7 +760,12 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
     return;
 }
 
-// NB: Leaves SIGCHLD blocked
+//! pplcsp_forkKpseWhich - Launch kpsewhich as a helper process, to list the search path for a type of TeX file.
+//! SIGCHLD is left blocked; the caller must unblock it.
+//! \param [in] context - The Pyxplot context
+//! \param [in] ftype - The type of file to search for, e.g. "tfm" or "pfa"
+//! \param [out] fstdout - Set to the file descriptor of a pipe from kpsewhich's standard output
+
 void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout) {
     char CmdLineOpt[128];
     int fd0[2];

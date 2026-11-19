@@ -39,6 +39,10 @@
 
 int cancellationFlag = 0;
 
+//! RunPyxplotOnFile - Run Pyxplot on a script file which pyxplot_watch has found to have changed
+//! \param [in] context - The error-reporting context
+//! \param [in] fname - The filename of the script
+
 void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     char LineBuffer[LSTR_LENGTH];
     int interactive, status;
@@ -65,6 +69,12 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     }
     return;
 }
+
+//! main - Entry point for pyxplot_watch, which watches a list of script files and runs Pyxplot on each of them
+//! whenever it is modified
+//! \param [in] argc - The number of command-line arguments
+//! \param [in] argv - The command-line arguments: options, and the filenames (which may contain wildcards) to watch
+//! \return The exit status of the process
 
 int main(const int argc, char **argv) {
     struct timespec waitperiod, waitedperiod; // A time.h timespec specifier; used for sleeping

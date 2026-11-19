@@ -67,7 +67,11 @@
 #define TBADD2(et, pos) \
     { ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, et, pos, pl->linetxt, ""); }
 
-// Free a node in the multiplot canvas item list
+//! canvas_item_delete - Free an item on the multiplot canvas, including its settings, axes, arrows, labels, plot
+//! items and any data stored with them
+//! \param [in] c - The Pyxplot context
+//! \param [in] ptr - The canvas item to free
+
 static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     int i;
     canvas_itemlist *canvas_items = c->canvas_items;
@@ -138,7 +142,17 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     return;
 }
 
-// Add a new multiplot canvas item to the list above
+//! canvas_itemlist_add - Add a new item to the multiplot canvas, or replace an existing item if the command
+//! specifies an item number to edit. If multiplot mode is off, the canvas is cleared first. The user's current
+//! settings are copied into the new item.
+//! \param [in] c - The Pyxplot context
+//! \param [in] command - The parser output stack of the command which creates the item
+//! \param [in] type - The type of canvas item, one of the CANVAS_* constants
+//! \param [out] output - Set to point to the new canvas item
+//! \param [out] id - Set to the ID number of the new canvas item
+//! \param [in] includeAxes - If true, also copy the user's current axes, arrows and labels into the new item
+//! \return Zero on success, or one on failure
+
 static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, canvas_item **output, int *id,
                                const unsigned char includeAxes) {
     canvas_itemlist *canvas_items;
@@ -246,7 +260,14 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
     return 0;
 }
 
-// Implementation of the clear command. Also called whenever the canvas is to be cleared.
+//! ppl_directive_clear - Implement the clear command, which removes all items from the multiplot canvas. Also
+//! called whenever the canvas is to be cleared.
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \return Zero
+
 int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     canvas_itemlist *canvas_items = c->canvas_items;
     canvas_item *ptr, *next;
@@ -265,7 +286,12 @@ int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput
     return 0;
 }
 
-// Produce a textual representation of the command which would need to be typed to produce any given canvas item
+//! ppl_canvas_item_textify - Write the command which would need to be typed to produce a given canvas item
+//! \param [in] c - The Pyxplot context
+//! \param [in] ptr - The canvas item
+//! \param [out] output - Character buffer into which to write the command
+//! \return Pointer to <output>
+
 char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output) {
     int i, j;
     if (ptr->type == CANVAS_ARROW) // Produce textual representations of arrow commands
@@ -810,7 +836,13 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output) {
     return output;
 }
 
-// Implementation of the list command
+//! ppl_directive_list - Implement the list command, which lists the items on the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \return Zero
+
 int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     canvas_itemlist *canvas_items = c->canvas_items;
     int i;
@@ -829,7 +861,12 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
     return 0;
 }
 
-// Implementation of the delete command
+//! canvas_delete - Mark an item on the multiplot canvas as deleted, so that it is no longer drawn. It can be restored
+//! with the undelete command.
+//! \param [in] c - The Pyxplot context
+//! \param [in] id - The ID number of the item to delete
+//! \return Zero on success, or one if there is no item with that ID number
+
 static int canvas_delete(ppl_context *c, const int id) {
     canvas_itemlist *canvas_items = c->canvas_items;
     canvas_item *ptr = canvas_items->first;
@@ -843,6 +880,14 @@ static int canvas_delete(ppl_context *c, const int id) {
     }
     return 0;
 }
+
+//! ppl_directive_delete - Implement the delete command, which removes items from the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
 
 int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
@@ -876,7 +921,15 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
     return 0;
 }
 
-// Implementation of the undelete command
+//! ppl_directive_undelete - Implement the undelete command, which restores items which have been deleted from the
+//! multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                            const int iterDepth) {
     pplObj *stk = in->stk;
@@ -919,7 +972,15 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     return 0;
 }
 
-// Implementation of the move command
+//! ppl_directive_move - Implement the move command, which moves an item on the multiplot canvas to a new position,
+//! optionally rotating it
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                        const int iterDepth) {
     pplObj *stk = in->stk;
@@ -998,7 +1059,15 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     return 0;
 }
 
-// Implementation of the swap command
+//! ppl_directive_swap - Implement the swap command, which swaps the positions of two items in the multiplot canvas's
+//! drawing order
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                        const int iterDepth) {
     pplObj *stk = in->stk;
@@ -1056,7 +1125,14 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     return 0;
 }
 
-// Implementation of the arrow command
+//! ppl_directive_arrow - Implement the arrow and line commands, which add an arrow or line to the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
@@ -1112,7 +1188,14 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
     return 0;
 }
 
-// Implementation of the box command
+//! ppl_directive_box - Implement the box command, which adds a rectangle to the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
@@ -1191,7 +1274,15 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
     return 0;
 }
 
-// Implementation of the circle command
+//! ppl_directive_circle - Implement the circle and arc commands, which add a circle or circular arc to the multiplot
+//! canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
@@ -1250,7 +1341,15 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
     return 0;
 }
 
-// Implementation of the ellipse command
+//! ppl_directive_ellipse - Implement the ellipse command, which adds an ellipse to the multiplot canvas. The ellipse
+//! may be specified by several different combinations of its centre, foci, axis lengths and eccentricity.
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                           const int iterDepth) {
     pplObj *stk = in->stk;
@@ -1551,7 +1650,14 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     return 0;
 }
 
-// Implementation of the eps command
+//! ppl_directive_eps - Implement the eps command, which adds an encapsulated PostScript image to the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                       const int iterDepth) {
     pplObj *stk = in->stk;
@@ -1643,7 +1749,15 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
     return 0;
 }
 
-// Implementation of the point command
+//! ppl_directive_point - Implement the point command, which adds a point, optionally labelled, to the multiplot
+//! canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
@@ -1700,7 +1814,14 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
     return 0;
 }
 
-// Implementation of the polygon command
+//! ppl_directive_polygon - Implement the polygon command, which adds a polygon to the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                           const int iterDepth) {
     pplObj *stk = in->stk;
@@ -1845,7 +1966,14 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     return 0;
 }
 
-// Implementation of the text command
+//! ppl_directive_text - Implement the text command, which adds a text label to the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
@@ -1934,7 +2062,14 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     return 0;
 }
 
-// Implementation of the image command
+//! ppl_directive_image - Implement the image command, which adds a bitmap image to the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                         const int iterDepth) {
     pplObj *stk = in->stk;
@@ -2067,6 +2202,15 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
 #define STACK_CLEANP \
     while (c->stackPtr > stkLevelOld) { STACK_POPP; }
 
+//! ppl_getPlotFname - Look up the Nth filename matching a wildcard given in a plot command, and store it in a plot
+//! item descriptor
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The filename, which may contain wildcards. The special filenames "", "-" and "--" match only
+//! once.
+//! \param [in] wildcardMatchNumber - The number of the match to return, counting from zero
+//! \param [out] out - The plot item descriptor in which to store the filename
+//! \return Zero on success, or one if there are fewer than <wildcardMatchNumber>+1 matches or an error occurred
+
 static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNumber, canvas_plotdesc *out) {
     int i, C;
     char escaped[FNAME_LENGTH];
@@ -2132,6 +2276,21 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
     }
     return 1;
 }
+
+//! ppl_getPlotData - Read the description of one item in a plot or piechart command (a data file or list of
+//! functions, with modifiers such as "using", "every" and "with"), and append a plot item descriptor to a canvas item
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command
+//! \param [in|out] ci - The canvas item to which to append the plot item
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
+//! \param [in] stkbase - Offset to add to positions in <in->stk> to find this plot item's parameters
+//! \param [in] wildcardMatchNumber - For data files given as wildcards, the number of the matching file to use
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \param [in] dataSpool - Data supplied inline after the command, if any
+//! \param [in] NExpectIn - The number of data columns expected, or zero or less to determine this from the plot
+//! style
+//! \return Zero on success, or one on failure
 
 static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, canvas_item *ci, const int *ptab,
                            int stkbase, const int wildcardMatchNumber, const int iterDepth, parserLine **dataSpool,
@@ -2586,7 +2745,14 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     return 0;
 }
 
-// Implementation of the piechart command
+//! ppl_directive_piechart - Implement the piechart command, which adds a pie chart to the multiplot canvas
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one on failure
+
 int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                            const int iterDepth) {
     pplObj *stk = in->stk;
@@ -2647,7 +2813,16 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
     return 0;
 }
 
-// Implementation of the plot command
+//! ppl_directive_plot - Implement the plot and replot commands, which add a graph to the multiplot canvas, or add
+//! further plot items to the most recent graph
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \param [in] replot - If true, implement the replot command rather than the plot command
+//! \return Zero on success, or one on failure
+
 int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth,
                        const int replot) {
     pplObj *stk = in->stk;

@@ -50,6 +50,10 @@
 #include "userspace/context.h"
 #include "userspace/pplObj_fns.h"
 
+//! _ReadConfig_FetchKey - Read a line of a configuration file, in the format <key=value>, and extract the key
+//! \param [in] line - The line of the configuration file
+//! \param [out] out - Character buffer into which to write the stripped key
+
 static void _ReadConfig_FetchKey(const char *line, char *out) {
     char *scan = out;
     while ((*line != '\0') && ((*(scan) = *(line++)) != '=')) scan++;
@@ -57,6 +61,10 @@ static void _ReadConfig_FetchKey(const char *line, char *out) {
     ppl_strStrip(out, out);
     return;
 }
+
+//! _ReadConfig_FetchValue - Read a line of a configuration file, in the format <key=value>, and extract the value
+//! \param [in] line - The line of the configuration file
+//! \param [out] out - Character buffer into which to write the stripped value
 
 static void _ReadConfig_FetchValue(const char *line, char *out) {
     char *scan = out;
@@ -66,6 +74,10 @@ static void _ReadConfig_FetchValue(const char *line, char *out) {
     ppl_strStrip(out, out);
     return;
 }
+
+//! ppl_readConfigFile - Read a Pyxplot configuration file, applying the settings in each of its sections
+//! \param [in] c - The Pyxplot context
+//! \param [in] ConfigFname - The filename of the configuration file
 
 static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
     char linebuffer[LSTR_LENGTH], setkey[LSTR_LENGTH], setvalue[LSTR_LENGTH], ColorName[SSTR_LENGTH], *StringScan;
@@ -1745,6 +1757,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
     fclose(infile);
     return;
 }
+
+//! ppl_readconfig - Read the user's configuration files, ~/.pyxplotrc and ./.pyxplotrc, if they exist
+//! \param [in] c - The Pyxplot context
 
 void ppl_readconfig(ppl_context *c) {
     int i;

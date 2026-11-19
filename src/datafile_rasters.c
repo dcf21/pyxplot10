@@ -42,6 +42,20 @@
 #include "userspace/pplObjFunc.h"
 #include "userspace/unitsArithmetic.h"
 
+//! ppldata_fromFuncs_checkSpecialRaster - When plotting a function of a histogram or FFT which was created with
+//! the histogram or fft command, choose a raster of sample points at the centres of the bins of the histogram or the
+//! grid points of the Fourier transform, rather than a uniform raster
+//! \param [in] C - The Pyxplot context
+//! \param [in] fnlist - The list of expressions being plotted
+//! \param [in] fnlist_len - The number of expressions in <fnlist>
+//! \param [in] dummyVar - The name of the dummy variable, e.g. "x"
+//! \param [in] min - The lower limit of the plot range, or NULL if unset
+//! \param [in] max - The upper limit of the plot range, or NULL if unset
+//! \param [in] unit - The physical units of the dummy variable
+//! \param [out] raster - Set to point to the special raster, allocated in the current ppl_memAlloc context, if one is
+//! chosen; otherwise left unchanged
+//! \param [out] rasterLen - Set to the number of points in the special raster, if one is chosen
+
 void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, const int fnlist_len, const char *dummyVar,
                                           const double *min, const double *max, const pplObj *unit, double **raster,
                                           int *rasterLen) {

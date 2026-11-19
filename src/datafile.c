@@ -58,6 +58,13 @@
 #include "datafile_rasters.h"
 #include "pplConstants.h"
 
+//! ppldata_NewDataBlock - Allocate a new block of storage for rows of data, to be linked into a data table
+//! \param [in] Ncolumns_real - The number of columns of numerical data
+//! \param [in] Ncolumns_obj - The number of columns of objects other than numbers
+//! \param [in] memContext - The ppl_memAlloc context in which to allocate the storage
+//! \param [in] length - The number of rows of storage to allocate, or -1 to use the default size
+//! \return The new data block, or NULL if memory allocation failed
+
 dataBlock *ppldata_NewDataBlock(const int Ncolumns_real, const int Ncolumns_obj, const int memContext,
                                 const int length) {
     dataBlock *output;
@@ -88,6 +95,13 @@ dataBlock *ppldata_NewDataBlock(const int Ncolumns_real, const int Ncolumns_obj,
     return output;
 }
 
+//! ppldata_NewDataTable - Create a new, empty data table, with an initial block of storage for rows of data
+//! \param [in] Ncolumns_real - The number of columns of numerical data
+//! \param [in] Ncolumns_obj - The number of columns of objects other than numbers
+//! \param [in] memContext - The ppl_memAlloc context in which to allocate the storage
+//! \param [in] length - The number of rows of storage to allocate, or -1 to use the default size
+//! \return The new data table, or NULL if memory allocation failed
+
 dataTable *ppldata_NewDataTable(const int Ncolumns_real, const int Ncolumns_obj, const int memContext,
                                 const int length) {
     dataTable *output;
@@ -108,6 +122,12 @@ dataTable *ppldata_NewDataTable(const int Ncolumns_real, const int Ncolumns_obj,
     return output;
 }
 
+//! ppldata_NewRawDataBlock - Allocate a new block of storage for lines of raw text from a data file, to be linked into
+//! a raw data table. Raw data tables are used when reading data in rows, which must be rotated before the "using"
+//! expressions can be applied.
+//! \param [in] memContext - The ppl_memAlloc context in which to allocate the storage
+//! \return The new raw data block, or NULL if memory allocation failed
+
 rawDataBlock *ppldata_NewRawDataBlock(const int memContext) {
     rawDataBlock *output;
     int blockLength = 1 + DATAFILE_DATABLOCK_BYTES / (sizeof(char *) + sizeof(long int));
@@ -124,6 +144,10 @@ rawDataBlock *ppldata_NewRawDataBlock(const int memContext) {
     return output;
 }
 
+//! ppldata_NewRawDataTable - Create a new, empty raw data table, with an initial block of storage for lines of raw text
+//! \param [in] memContext - The ppl_memAlloc context in which to allocate the storage
+//! \return The new raw data table, or NULL if memory allocation failed
+
 rawDataTable *ppldata_NewRawDataTable(const int memContext) {
     rawDataTable *output;
 
@@ -136,6 +160,11 @@ rawDataTable *ppldata_NewRawDataTable(const int memContext) {
     if (output->first == NULL) return NULL;
     return output;
 }
+
+//! ppldata_DataTable_AddRow - Advance a data table to its next row, allocating a new block of storage if the current
+//! one is full
+//! \param [in] i - The data table
+//! \return Zero on success, or one if memory allocation failed
 
 int ppldata_DataTable_AddRow(dataTable *i) {
     if (i == NULL) return 1;
@@ -153,6 +182,11 @@ int ppldata_DataTable_AddRow(dataTable *i) {
     return 0;
 }
 
+//! ppldata_RawDataTable_AddRow - Advance a raw data table to its next line, allocating a new block of storage if the
+//! current one is full
+//! \param [in] i - The raw data table
+//! \return Zero on success, or one if memory allocation failed
+
 int ppldata_RawDataTable_AddRow(rawDataTable *i) {
     if (i == NULL) return 1;
     if (i->current == NULL) return 1;
@@ -169,6 +203,10 @@ int ppldata_RawDataTable_AddRow(rawDataTable *i) {
     if (i->current == NULL) return 1;
     return 0;
 }
+
+//! ppldata_DataTable_List - Print the contents of a data table, for debugging
+//! \param [in] c - The Pyxplot context
+//! \param [in] i - The data table to print
 
 void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
     dataBlock *blk;
@@ -201,7 +239,18 @@ void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
     }
 }
 
-// on error, returns NULL with error message in errtext.
+//! ppldata_LaunchCoProcess - Open a data file for reading. If its filename matches one of the input filters set with
+//! "set filter", the filter is launched as a helper process and its output is read instead. (The default filters
+//! decompress .gz files and fetch URLs.)
+//! \param [in] c - The Pyxplot context
+//! \param [in] filename - The filename of the data file, which may contain wildcards
+//! \param [in] wildcardMatchNumber - For filenames containing wildcards, the number of the matching file to read,
+//! counting from zero
+//! \param [out] filenameOut - Character buffer into which to write the filename which was opened, after wildcard
+//! expansion
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \return A file handle from which to read the data, or NULL on error, with an error message in <errtext>
+
 FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchNumber, char *filenameOut,
                               char *errtext) {
     FILE *infile;
@@ -336,6 +385,29 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
     return infile;
 }
 
+//! ppldata_UsingConvert - Evaluate a single "using" expression for the current row of data, placing the result on the
+//! top of the stack
+//! \param [in] c - The Pyxplot context
+//! \param [in] input - The "using" expression to evaluate
+//! \param [in] columns_str - Array of the textual contents of each column of the current row of data
+//! \param [in] columns_val - Array of the numerical values of each column of the current row of data
+//! \param [in] Ncols - The number of output columns
+//! \param [in] filename - The filename of the data file
+//! \param [in] file_linenumber - The line number in the data file of the current row of data
+//! \param [in] file_linenumbers - Array of the line numbers in the data file from which each column was read, when
+//! reading data in rows
+//! \param [in] linenumber_count - The number of the current data point within the current block
+//! \param [in] block_count - The number of the current block of data within the current index
+//! \param [in] index_number - The number of the current index within the data file
+//! \param [in] usingRowCol - DATAFILE_COL to read data in columns, or DATAFILE_ROW to read it in rows
+//! \param [in] colHeads - Array of the names of each column, taken from the data file's header (may be NULL)
+//! \param [in] NcolHeads - The number of entries in <colHeads>
+//! \param [in] colUnits - Array of the physical units of each column, taken from the data file's header (may be NULL)
+//! \param [in] NcolUnits - The number of entries in <colUnits>
+//! \param [out] status - Set to one if the expression could not be evaluated, or evaluated to an invalid value
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pplObj *columns_val, const int Ncols,
                           char *filename, long file_linenumber, long *file_linenumbers, const long linenumber_count,
                           const long block_count, const long index_number, const int usingRowCol, char **colHeads,
@@ -433,6 +505,39 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
         if (DEBUG) ppl_log(&c->errcontext, errtext); \
         return; \
     }
+
+//! ppldata_ApplyUsingList - Evaluate all of the "using" expressions, the label expression and the select expression for
+//! the current row of data, and append the result as a new row of the output data table
+//! \param [in] c - The Pyxplot context
+//! \param [in] out - The data table to append the row to
+//! \param [in] usingExprs - Array of the expressions in the "using" modifier, one per output column
+//! \param [in] labelExpr - An expression to evaluate to give a text label for each data point, or NULL
+//! \param [in] selectExpr - An expression to evaluate for each data point, which must be true for the data point to be
+//! included, or NULL
+//! \param [in] continuity - DATAFILE_CONTINUOUS if lines should be drawn between data points in different blocks, or
+//! DATAFILE_DISCONTINUOUS if each block should be drawn separately
+//! \param [in|out] discontinuity - Flag indicating whether a break should be drawn in lines before the next data point.
+//! Set when a data point is rejected by the select expression, if <continuity> is DATAFILE_DISCONTINUOUS.
+//! \param [in] columns_str - Array of the textual contents of each column of the current row of data
+//! \param [in] columns_val - Array of the numerical values of each column of the current row of data
+//! \param [in] Ncols - The number of output columns
+//! \param [in] filename - The filename of the data file
+//! \param [in] file_linenumber - The line number in the data file of the current row of data
+//! \param [in] file_linenumbers - Array of the line numbers in the data file from which each column was read, when
+//! reading data in rows
+//! \param [in] linenumber_count - The number of the current data point within the current block
+//! \param [in] block_count - The number of the current block of data within the current index
+//! \param [in] index_number - The number of the current index within the data file
+//! \param [in] usingRowCol - DATAFILE_COL to read data in columns, or DATAFILE_ROW to read it in rows
+//! \param [in] colHeads - Array of the names of each column, taken from the data file's header (may be NULL)
+//! \param [in] NcolHeads - The number of entries in <colHeads>
+//! \param [in] colUnits - Array of the physical units of each column, taken from the data file's header (may be NULL)
+//! \param [in] NcolUnits - The number of entries in <colUnits>
+//! \param [out] status - Set to a non-zero value if an error occurred
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
+//! suppressed
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs, pplExpr *labelExpr,
                             pplExpr *selectExpr, const int continuity, int *discontinuity, char **columns_str,
@@ -570,6 +675,30 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
     return;
 }
 
+//! ppldata_RotateRawData - Convert a table of raw data read in rows into columns, apply the "using" expressions to each
+//! column in turn, and append the results to an output data table. The raw data table is then emptied.
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Pointer to the raw data table, which is reset to an empty table
+//! \param [in] out - The data table to append the results to
+//! \param [in] usingExprs - Array of the expressions in the "using" modifier, one per output column
+//! \param [in] labelExpr - An expression to evaluate to give a text label for each data point, or NULL
+//! \param [in] selectExpr - An expression to evaluate for each data point, which must be true for the data point to be
+//! included, or NULL
+//! \param [in] continuity - DATAFILE_CONTINUOUS if lines should be drawn between data points in different blocks, or
+//! DATAFILE_DISCONTINUOUS if each block should be drawn separately
+//! \param [in] filename - The filename of the data file
+//! \param [in] block_count - The number of the current block of data within the current index
+//! \param [in] index_number - The number of the current index within the data file
+//! \param [in] colHeads - Array of the names of each column, taken from the data file's header (may be NULL)
+//! \param [in] NcolHeads - The number of entries in <colHeads>
+//! \param [in] colUnits - Array of the physical units of each column, taken from the data file's header (may be NULL)
+//! \param [in] NcolUnits - The number of entries in <colUnits>
+//! \param [out] status - Set to a non-zero value if an error occurred
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
+//! suppressed
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pplExpr **usingExprs, pplExpr *labelExpr,
                            pplExpr *selectExpr, const int continuity, char *filename, const long block_count,
                            const long index_number, char **colHeads, const int NcolHeads, pplObj *colUnits,
@@ -657,11 +786,25 @@ typedef struct ppldata_sorter {
 
 static int ppldata_sort_sortCol;
 
+//! ppldata_sort_cmp - Comparison function for qsort(), used to sort the rows of a data table by the value in the sort
+//! column
+//! \param [in] xv - Pointer to the first row
+//! \param [in] yv - Pointer to the second row
+//! \return -1, 0 or 1 if the first row's sort value is less than, equal to or greater than the second's
+
 static int ppldata_sort_cmp(const void *xv, const void *yv) {
     ppldata_sorter *x = (ppldata_sorter *) xv;
     ppldata_sorter *y = (ppldata_sorter *) yv;
     return pplObjCmpQuiet((void *) &x->data_obj[ppldata_sort_sortCol], (void *) &y->data_obj[ppldata_sort_sortCol]);
 }
+
+//! ppldata_sort - Sort the rows of a data table by the values in one of its columns. Each block of data is sorted
+//! separately, unless the data are continuous between blocks.
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The data table to sort
+//! \param [in] sortCol - The number of the column containing the values to sort by
+//! \param [in] ignoreContinuity - If true, sort all of the blocks together as a single list of data points
+//! \return A new, sorted data table, or <in> if it could not be sorted
 
 dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sortCol, const int ignoreContinuity) {
     int i, io, Nc, Nd, Nr;
@@ -732,6 +875,10 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
     return output;
 }
 
+//! ppldata_fetchFromSpool - Fetch the next line of data supplied inline after a command
+//! \param [in|out] dataSpool - Pointer to the next line of inline data, which is advanced to the following line
+//! \return The text of the line, or NULL if there are no more lines
+
 static char *ppldata_fetchFromSpool(parserLine **dataSpool) {
     char *out;
     if ((dataSpool == NULL) || (*dataSpool == NULL)) return NULL;
@@ -739,6 +886,13 @@ static char *ppldata_fetchFromSpool(parserLine **dataSpool) {
     *dataSpool = (*dataSpool)->next;
     return out;
 }
+
+//! ppldata_autoUsingList - Generate the default "using" expressions 1:2:3:..., for when the user has not supplied any
+//! \param [in] c - The Pyxplot context
+//! \param [out] usingExprs - Array into which to write the compiled expressions
+//! \param [in] Ncols - The number of output columns
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \return Zero on success, or one if the expressions could not be compiled
 
 int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols, char *errtext) {
     int i;
@@ -764,6 +918,40 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
     }
     return 0;
 }
+
+//! ppldata_fromFile - Read data from a file, applying the "using", "every", "index", "select" and "sort" modifiers,
+//! into a data table
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - Set to point to the output data table
+//! \param [in] filename - The filename of the data file, which may contain wildcards, or "--" for data supplied inline
+//! \param [in] wildcardMatchNumber - For filenames containing wildcards, the number of the matching file to read,
+//! counting from zero
+//! \param [out] filenameOut - Character buffer into which to write the filename which was actually read, after wildcard
+//! expansion (optional)
+//! \param [in|out] dataSpool - Lines of data supplied inline after the command, if the filename is "--"
+//! \param [in] indexNo - The index within the data file to read, or -1 to read all indices
+//! \param [in] usingExprs - Array of the expressions in the "using" modifier, one per output column
+//! \param [in] autoUsingExprs - If true, the "using" expressions were not supplied by the user, but generated
+//! automatically
+//! \param [in] Ncols - The number of output columns
+//! \param [in] NusingObjs - The number of output columns which contain objects other than numbers, e.g. strings for
+//! labels
+//! \param [in] labelExpr - An expression to evaluate to give a text label for each data point, or NULL
+//! \param [in] selectExpr - An expression to evaluate for each data point, which must be true for the data point to be
+//! included, or NULL
+//! \param [in] sortBy - An expression by which to sort the data points, or NULL to leave them unsorted
+//! \param [in] usingRowCol - DATAFILE_COL to read data in columns, or DATAFILE_ROW to read it in rows
+//! \param [in] everyList - The six parameters of the "every" modifier: the step between data points, the step between
+//! blocks, the first data point and block, and the last data point and block (-1 for no limit)
+//! \param [in] continuity - DATAFILE_CONTINUOUS if lines should be drawn between data points in different blocks, or
+//! DATAFILE_DISCONTINUOUS if each block should be drawn separately
+//! \param [in] persistent - If true, allocate the output data table in the lowest ppl_memAlloc context, so that it
+//! persists after the current command; otherwise allocate it in the current context
+//! \param [out] status - Set to a non-zero value if an error occurred
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
+//! suppressed
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int wildcardMatchNumber, char *filenameOut,
                       parserLine **dataSpool, const int indexNo, pplExpr **usingExprs, int autoUsingExprs, int Ncols,
@@ -1246,6 +1434,39 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
     return;
 }
 
+//! ppldata_fromFuncs - Sample a list of functions at a raster of points, applying the "using", "select" and "sort"
+//! modifiers, into a data table
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - Set to point to the output data table
+//! \param [in] fnlist - The list of functions (expressions) to sample
+//! \param [in] fnlist_len - The number of functions in <fnlist>
+//! \param [in] rasterX - The values of the first dummy variable at which to sample the functions
+//! \param [in] rasterXlen - The number of values in <rasterX>
+//! \param [in] parametric - If true, the functions are parametric functions of t (or of u and v, if <rasterY> is
+//! given); otherwise they are functions of x (or x and y)
+//! \param [in] unitX - The physical units of the first dummy variable
+//! \param [in] rasterY - The values of the second dummy variable at which to sample the functions, or NULL for
+//! functions of one variable
+//! \param [in] rasterYlen - The number of values in <rasterY>
+//! \param [in] unitY - The physical units of the second dummy variable
+//! \param [in] usingExprs - Array of the expressions in the "using" modifier, one per output column
+//! \param [in] autoUsingExprs - If true, the "using" expressions were not supplied by the user, but generated
+//! automatically
+//! \param [in] Ncols - The number of output columns
+//! \param [in] NusingObjs - The number of output columns which contain objects other than numbers, e.g. strings for
+//! labels
+//! \param [in] labelExpr - An expression to evaluate to give a text label for each data point, or NULL
+//! \param [in] selectExpr - An expression to evaluate for each data point, which must be true for the data point to be
+//! included, or NULL
+//! \param [in] sortBy - An expression by which to sort the data points, or NULL to leave them unsorted
+//! \param [in] continuity - DATAFILE_CONTINUOUS if lines should be drawn between data points in different blocks, or
+//! DATAFILE_DISCONTINUOUS if each block should be drawn separately
+//! \param [out] status - Set to a non-zero value if an error occurred
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
+//! suppressed
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const int fnlist_len, const double *rasterX,
                        const int rasterXlen, int parametric, pplObj *unitX, const double *rasterY, const int rasterYlen,
                        pplObj *unitY, pplExpr **usingExprs, int autoUsingExprs, int Ncols, int NusingObjs,
@@ -1420,6 +1641,30 @@ CANCEL:
     return;
 }
 
+//! ppldata_fromVectors - Read data from a list of vectors, one per column, applying the "using", "select" and "sort"
+//! modifiers, into a data table
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - Set to point to the output data table
+//! \param [in] objList - Array of the vectors
+//! \param [in] objListLen - The number of vectors in <objList>
+//! \param [in] usingExprs - Array of the expressions in the "using" modifier, one per output column
+//! \param [in] autoUsingExprs - If true, the "using" expressions were not supplied by the user, but generated
+//! automatically
+//! \param [in] Ncols - The number of output columns
+//! \param [in] NusingObjs - The number of output columns which contain objects other than numbers, e.g. strings for
+//! labels
+//! \param [in] labelExpr - An expression to evaluate to give a text label for each data point, or NULL
+//! \param [in] selectExpr - An expression to evaluate for each data point, which must be true for the data point to be
+//! included, or NULL
+//! \param [in] sortBy - An expression by which to sort the data points, or NULL to leave them unsorted
+//! \param [in] continuity - DATAFILE_CONTINUOUS if lines should be drawn between data points in different blocks, or
+//! DATAFILE_DISCONTINUOUS if each block should be drawn separately
+//! \param [out] status - Set to a non-zero value if an error occurred
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
+//! suppressed
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const int objListLen, pplExpr **usingExprs,
                          int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr,
                          pplExpr *sortBy, const int continuity, int *status, char *errtext, int *errCount,
@@ -1485,6 +1730,34 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
     // ppldata_DataTable_List(*out);
     return;
 }
+
+//! ppldata_fromCmd - Read the data source specified in a command such as plot, fit or tabulate (a data file, a list of
+//! functions or a list of vectors), together with its modifiers, into a data table
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - Set to point to the output data table
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command
+//! \param [in] wildcardMatchNumber - For filenames containing wildcards, the number of the matching file to read,
+//! counting from zero
+//! \param [out] filenameOut - Character buffer into which to write the filename which was actually read, after wildcard
+//! expansion (optional)
+//! \param [in|out] dataSpool - Lines of data supplied inline after the command, if the filename is "--"
+//! \param [in] ptab - Table mapping parser variable indices onto positions in the parser output stack
+//! \param [in] stkbase - Offset to add to positions in the parser output stack
+//! \param [in] Ncols - The number of output columns expected
+//! \param [in] NusingObjs - The number of output columns which contain objects other than numbers
+//! \param [in] min - Array of the lower limits of the ranges specified for each column
+//! \param [in] minSet - Array of flags indicating which lower limits are set
+//! \param [in] max - Array of the upper limits of the ranges specified for each column
+//! \param [in] maxSet - Array of flags indicating which upper limits are set
+//! \param [in] unitRange - Array of the physical units of the ranges specified for each column
+//! \param [in] persistent - If true, allocate the output data table in the lowest ppl_memAlloc context, so that it
+//! persists after the current command; otherwise allocate it in the current context
+//! \param [out] status - Set to a non-zero value if an error occurred
+//! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
+//! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
+//! suppressed
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, const parserOutput *in,
                      const int wildcardMatchNumber, char *filenameOut, parserLine **dataSpool, const int *ptab,

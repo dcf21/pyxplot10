@@ -34,6 +34,12 @@
 
 int cancellationFlag = 0;
 
+//! main - Entry point for pyxplot_fitshelper, an input filter which converts FITS data files into plain text which
+//! Pyxplot can read
+//! \param [in] argc - The number of command-line arguments
+//! \param [in] argv - The command-line arguments: the filename of the FITS file to convert
+//! \return The exit status of the process
+
 int main(const int argc, char **argv) {
     char help_string[LSTR_LENGTH], version_string[FNAME_LENGTH], version_string_underline[FNAME_LENGTH],
             warntext[FNAME_LENGTH];

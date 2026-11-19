@@ -53,6 +53,10 @@
 #include "pplConstants.h"
 #include "pyxplot.h"
 
+//! ppl_inputInit - Allocate the buffer into which lines of input are read
+//! \param [in|out] context - The Pyxplot context
+//! \return One on success, or zero if memory allocation failed
+
 int ppl_inputInit(ppl_context *context) {
     context->inputLineBufferLen = LSTR_LENGTH;
     context->inputLineBuffer = (char *) malloc(context->inputLineBufferLen);
@@ -62,12 +66,20 @@ int ppl_inputInit(ppl_context *context) {
 sigjmp_buf sigint_destination;
 int sigint_longjmp = 0;
 
+//! ppl_interactiveSigInt - SIGINT handler used during interactive sessions. While waiting for input from readline,
+//! it jumps back to discard the current line; otherwise it sets <cancellationFlag> to interrupt the current command.
+//! \param [in] signo - The signal number
+
 void ppl_interactiveSigInt(const int signo) {
     if (sigint_longjmp) siglongjmp(sigint_destination, 1);
     fprintf(stdout, "\n");
     cancellationFlag = 1;
     return;
 }
+
+//! ppl_interactiveSession - Run an interactive session, reading commands from the terminal (through readline, if
+//! available) and executing them until the user quits
+//! \param [in] context - The Pyxplot context
 
 void ppl_interactiveSession(ppl_context *context) {
     int linenumber = 1;
@@ -173,6 +185,11 @@ void ppl_interactiveSession(ppl_context *context) {
     return;
 }
 
+//! ppl_processScript - Execute the commands in a script file
+//! \param [in] context - The Pyxplot context
+//! \param [in] input - The filename of the script
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+
 void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     int linenumber = 1;
     int status;
@@ -270,6 +287,14 @@ restore:
     return;
 }
 
+//! ppl_processLine - Execute a line of input, which may contain several statements separated by semicolons
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] ps - The parser status, which tracks the progress of compiling multi-line blocks of commands
+//! \param [in] in - The line of input
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one if an error occurred
+
 int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int interactive, const int iterDepth) {
     int i, status = 0;
     char *inputLineBuffer = NULL;
@@ -358,6 +383,15 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
     context->inputLineAddBuffer = NULL;
     return (status != 0);
 }
+
+//! ppl_ProcessStatement - Compile and execute a single statement. If it opens a block of commands, it is stored in
+//! the parser status until the block is complete.
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] ps - The parser status, which tracks the progress of compiling multi-line blocks of commands
+//! \param [in] line - The statement
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return Zero on success, or one if an error occurred
 
 int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, const int interactive,
                          const int iterDepth) {

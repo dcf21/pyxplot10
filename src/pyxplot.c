@@ -69,6 +69,12 @@
 sigjmp_buf ppl_sigjmpToMain;
 sigjmp_buf *ppl_sigjmpFromSigInt = NULL;
 
+//! main - Entry point for Pyxplot. Initialises the context, settings and child support process, then runs each of the
+//! scripts named on the command line, or an interactive session if none are given.
+//! \param [in] argc - The number of command-line arguments
+//! \param [in] argv - The command-line arguments
+//! \return The exit status of the process
+
 int main(const int argc, char **argv) {
     int i, fail = 0;
     int tempdirnumber = 1;
@@ -285,6 +291,10 @@ int main(const int argc, char **argv) {
     ppl_contextFree(context);
     return 0;
 }
+
+//! ppl_sigIntHandle - SIGINT handler used while Pyxplot is starting up, which jumps back to main(). A second SIGINT
+//! terminates the process.
+//! \param [in] signo - The signal number
 
 void ppl_sigIntHandle(const int signo) {
     sigjmp_buf *destination = ppl_sigjmpFromSigInt;
