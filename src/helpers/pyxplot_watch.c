@@ -136,7 +136,7 @@ For the latest information on Pyxplot development, see the project website:\n\
 | '_ \\| | | \\ \\/ / '_ \\| |/ _ \\| __|   %s\n\
 | |_) | |_| |>  <| |_) | | (_) | |_\n\
 | .__/ \\__, /_/\\_\\ .__/|_|\\___/ \\__|   Copyright (C) 2006-2026 Dominic Ford\n\
-|_|    |___/     |_|                                 2008-2012 Ross Church\n\
+|_|    |___/     |_|                                 2008-2013 Ross Church\n\
 \n\
 For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 ",

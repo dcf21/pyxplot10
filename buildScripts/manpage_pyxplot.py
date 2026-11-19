@@ -4,7 +4,7 @@
 # <http://www.pyxplot.org.uk>
 #
 # Copyright (C) 2006-2012 Dominic Ford <coders@pyxplot.org.uk>
-#               2008-2012 Ross Church
+#               2008-2013 Ross Church
 #
 # $Id$
 #
@@ -41,7 +41,7 @@ sys.stdout.write(r"""
 .\" <http://www.pyxplot.org.uk>
 .\"
 .\" Copyright (C) 2006-2012 Dominic Ford <coders@pyxplot.org.uk>
-.\"               2008-2012 Ross Church
+.\"               2008-2013 Ross Church
 .\"
 .\" $Id$
 .\"
