@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -30,23 +30,22 @@
 
 // Contains text messages which pyxplot displays
 
-char ppltxt_version            [SSTR_LENGTH];
-char ppltxt_version_underline  [SSTR_LENGTH];
-char ppltxt_help               [LSTR_LENGTH];
-char ppltxt_welcome            [LSTR_LENGTH];
-char ppltxt_invalid            [LSTR_LENGTH];
-char ppltxt_valid_set_options  [LSTR_LENGTH];
-char ppltxt_set_noword         [LSTR_LENGTH];
-char ppltxt_unset_noword       [LSTR_LENGTH];
-char ppltxt_set                [LSTR_LENGTH];
-char ppltxt_unset              [LSTR_LENGTH];
-char ppltxt_show               [LSTR_LENGTH];
+char ppltxt_version[SSTR_LENGTH];
+char ppltxt_version_underline[SSTR_LENGTH];
+char ppltxt_help[LSTR_LENGTH];
+char ppltxt_welcome[LSTR_LENGTH];
+char ppltxt_invalid[LSTR_LENGTH];
+char ppltxt_valid_set_options[LSTR_LENGTH];
+char ppltxt_set_noword[LSTR_LENGTH];
+char ppltxt_unset_noword[LSTR_LENGTH];
+char ppltxt_set[LSTR_LENGTH];
+char ppltxt_unset[LSTR_LENGTH];
+char ppltxt_show[LSTR_LENGTH];
 
-void ppltxt_init()
-{
-sprintf(ppltxt_version, "Pyxplot %s", VERSION);
+void ppltxt_init() {
+    sprintf(ppltxt_version, "Pyxplot %s", VERSION);
 
-sprintf(ppltxt_help   , "%s\n\
+    sprintf(ppltxt_help, "%s\n\
 %s\n\
 \n\
 Usage: pyxplot <options> <filelist>\n\
@@ -62,27 +61,29 @@ full Users' Guide can be found in the file:\n\
 %s%spyxplot.pdf\n\
 \n\
 Extensive documentation is also available at <http://www.pyxplot.org.uk>, which\n\
-also provides contact information for bug reports.\n", ppltxt_version, ppl_strUnderline(ppltxt_version, ppltxt_version_underline), DOCDIR, PATHLINK);
+also provides contact information for bug reports.\n",
+            ppltxt_version, ppl_strUnderline(ppltxt_version, ppltxt_version_underline), DOCDIR, PATHLINK);
 
-sprintf(ppltxt_welcome, "\n\
+    sprintf(ppltxt_welcome, "\n\
                         _       _      PYXPLOT\n\
  _ __  _   ___  ___ __ | | ___ | |_    Version %s\n\
 | '_ \\| | | \\ \\/ / '_ \\| |/ _ \\| __|   %s\n\
 | |_) | |_| |>  <| |_) | | (_) | |_\n\
-| .__/ \\__, /_/\\_\\ .__/|_|\\___/ \\__|   Copyright (C) 2006-2012 Dominic Ford\n\
+| .__/ \\__, /_/\\_\\ .__/|_|\\___/ \\__|   Copyright (C) 2006-2026 Dominic Ford\n\
 |_|    |___/     |_|                                 2008-2012 Ross Church\n\
 \n\
 For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
-", VERSION, DATE);
+",
+            VERSION, DATE);
 
-sprintf(ppltxt_invalid, "\n\
+    sprintf(ppltxt_invalid, "\n\
  %%s\n\
 /|\\ \n\
  |\n\
 Error: Unrecognised command.\n\
 ");
 
-sprintf(ppltxt_valid_set_options, "\n\
+    sprintf(ppltxt_valid_set_options, "\n\
 'arrow', 'autoscale', 'axescolor', 'axis', 'axisunitstyle', 'backup', 'bar',\n\
 'binorigin', 'binwidth', 'boxfrom', 'boxwidth', 'c1format', 'c1label',\n\
 'calendar', 'clip', 'colmap', 'colkey', 'contours', 'c<n>range', 'data style',\n\
@@ -98,12 +99,13 @@ sprintf(ppltxt_valid_set_options, "\n\
 '[xyz]<n>format', '[xyz]<n>label', '[xyz]<n>range', '<m>[xyz]<n>tics'\n\
 ");
 
-sprintf(ppltxt_set_noword, "\n\
+    sprintf(ppltxt_set_noword, "\n\
 Set options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 %s\n\
-", ppltxt_valid_set_options);
+",
+            ppltxt_valid_set_options);
 
-sprintf(ppltxt_unset_noword, "\n\
+    sprintf(ppltxt_unset_noword, "\n\
 Unset options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 \n\
 'arrow', 'autoscale', 'axescolor', 'axis', 'axisunitstyle', 'backup', 'bar',\n\
@@ -120,17 +122,19 @@ Unset options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 '[xyz]<n>range', '<m>[xyz]<n>tics'\n\
 ");
 
-sprintf(ppltxt_set, "\n\
+    sprintf(ppltxt_set, "\n\
 Error: Invalid set option '%%s'.\n\
 \n\
-%s", ppltxt_set_noword);
+%s",
+            ppltxt_set_noword);
 
-sprintf(ppltxt_unset, "\n\
+    sprintf(ppltxt_unset, "\n\
 Error: Invalid unset option '%%s'.\n\
 \n\
-%s", ppltxt_unset_noword);
+%s",
+            ppltxt_unset_noword);
 
-sprintf(ppltxt_show, "\n\
+    sprintf(ppltxt_show, "\n\
 Valid 'show' options are:\n\
 \n\
 'all', 'arrows', 'axes', 'functions', 'settings', 'labels', 'linestyles',\n\
@@ -148,5 +152,5 @@ or any of the following set options:\n\
 'textcolor', 'texthalign', 'textvalign', 'title', 'trange', 'unit', 'urange',\n\
 'view', 'viewer', 'vrange', 'width', '[xyz]<n>format', '[xyz]<n>label',\n\
 '[xyz]<n>range', '<m>[xyz]<n>tics'\n\
-"); }
-
+");
+}

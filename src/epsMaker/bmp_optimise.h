@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 //               2009-2010 Michael Rutter
@@ -32,10 +32,9 @@
 #include "coreUtils/errorReport.h"
 #include "epsMaker/bmp_image.h"
 
-void ppl_bmp_colour_count (pplerr_context *ec, bitmap_data *image);
+void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image);
 void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image);
-void ppl_bmp_grey_check   (pplerr_context *ec, bitmap_data *image);
-void ppl_bmp_compact      (pplerr_context *ec, bitmap_data *image);
+void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image);
+void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image);
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,22 +25,10 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppl_dollarOp_config  (ppl_context *c,
-  char   **columns_str,
-  pplObj  *columns_val,
-  int      Ncols,
-  char    *filename,
-  long     file_linenumber,
-  long    *file_linenumbers,
-  long     linenumber_count,
-  long     block_count,
-  long     index_number,
-  int      usingRowCol,
-  char    *usingExpr,
-  char   **colHeads,
-  int      NcolHeads,
-  pplObj  *colUnits,
-  int      NcolUnits);
+void ppl_dollarOp_config(ppl_context *c, char **columns_str, pplObj *columns_val, int Ncols, char *filename,
+                         long file_linenumber, long *file_linenumbers, long linenumber_count, long block_count,
+                         long index_number, int usingRowCol, char *usingExpr, char **colHeads, int NcolHeads,
+                         pplObj *colUnits, int NcolUnits);
 
 void ppl_dollarOp_deconfig(ppl_context *c);
 
@@ -49,4 +37,3 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, pplExpr *inExpr, int inExprCharP
 void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *colName);
 
 #endif
-

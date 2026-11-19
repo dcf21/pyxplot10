@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,29 +28,28 @@
 #include "userspace/context.h"
 
 // Functions for acting on pplObjs
-void    pplObjInit     (ppl_context *c);
-pplObj *pplObjNum      (pplObj *in, unsigned char amMalloced, double real, double imag);
-pplObj *pplObjStr      (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, char *str);
-pplObj *pplObjBool     (pplObj *in, unsigned char amMalloced, int stat);
-pplObj *pplObjDate     (pplObj *in, unsigned char amMalloced, double unixTime);
-pplObj *pplObjColor    (pplObj *in, unsigned char amMalloced, int scheme, double c1, double c2, double c3, double c4);
-pplObj *pplObjDict     (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, dict *d);
-pplObj *pplObjModule   (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, unsigned char frozen);
-pplObj *pplObjList     (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, list *l);
-pplObj *pplObjVector   (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, int size);
-pplObj *pplObjMatrix   (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, int size1, int size2);
-pplObj *pplObjFile     (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, FILE *f, int pipe);
-pplObj *pplObjFunc     (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplFunc *f);
-pplObj *pplObjType     (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplType *t);
-pplObj *pplObjNull     (pplObj *in, unsigned char amMalloced);
+void pplObjInit(ppl_context *c);
+pplObj *pplObjNum(pplObj *in, unsigned char amMalloced, double real, double imag);
+pplObj *pplObjStr(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, char *str);
+pplObj *pplObjBool(pplObj *in, unsigned char amMalloced, int stat);
+pplObj *pplObjDate(pplObj *in, unsigned char amMalloced, double unixTime);
+pplObj *pplObjColor(pplObj *in, unsigned char amMalloced, int scheme, double c1, double c2, double c3, double c4);
+pplObj *pplObjDict(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, dict *d);
+pplObj *pplObjModule(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, unsigned char frozen);
+pplObj *pplObjList(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, list *l);
+pplObj *pplObjVector(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, int size);
+pplObj *pplObjMatrix(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, int size1, int size2);
+pplObj *pplObjFile(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, FILE *f, int pipe);
+pplObj *pplObjFunc(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplFunc *f);
+pplObj *pplObjType(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplType *t);
+pplObj *pplObjNull(pplObj *in, unsigned char amMalloced);
 pplObj *pplObjException(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, char *str, int errCode);
-pplObj *pplObjGlobal   (pplObj *in, unsigned char amMalloced);
+pplObj *pplObjGlobal(pplObj *in, unsigned char amMalloced);
 pplObj *pplObjExpression(pplObj *in, unsigned char amMalloced, void *bytecode);
-pplObj *pplObjBytecode (pplObj *in, unsigned char amMalloced, void *parserline);
-pplObj *pplObjZom      (pplObj *in, unsigned char amMalloced);
-pplObj *pplObjUser     (pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplObj *prototype);
-pplObj *pplObjCpy      (pplObj *out, pplObj *in, unsigned char lval, unsigned char outMalloced, unsigned char useMalloc);
+pplObj *pplObjBytecode(pplObj *in, unsigned char amMalloced, void *parserline);
+pplObj *pplObjZom(pplObj *in, unsigned char amMalloced);
+pplObj *pplObjUser(pplObj *in, unsigned char amMalloced, unsigned char auxilMalloced, pplObj *prototype);
+pplObj *pplObjCpy(pplObj *out, pplObj *in, unsigned char lval, unsigned char outMalloced, unsigned char useMalloc);
 
 pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, int deep, unsigned char outMalloced, unsigned char useMalloc);
 #endif
-

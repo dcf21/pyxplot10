@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -29,7 +29,7 @@
 
 void eps_plot_ticking(EPSComm *x, pplset_axis *axis, int AxisUnitStyle, pplset_axis *linkedto);
 void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int OutContext);
-void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, double x, pplObj *xunit, int xyz, int OutContext);
+void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, double x, pplObj *xunit, int xyz,
+                         int OutContext);
 
 #endif
-

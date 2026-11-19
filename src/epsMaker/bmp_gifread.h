@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 //               2009-2010 Michael Rutter
@@ -32,10 +32,9 @@
 #include "coreUtils/errorReport.h"
 #include "epsMaker/bmp_image.h"
 
-void          ppl_bmp_gifread        (pplerr_context *ec, FILE *in, bitmap_data *image);
-int           ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image);
-unsigned long ppl_bmp_de_lzw         (pplerr_context *ec, unsigned char *buff, unsigned char *out, unsigned long len, int cs);
-unsigned int  ppl_bmp_de_lzw_bits    (pplerr_context *ec, unsigned char *c,int st, int len);
+void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image);
+int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image);
+unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned char *out, unsigned long len, int cs);
+unsigned int ppl_bmp_de_lzw_bits(pplerr_context *ec, unsigned char *c, int st, int len);
 
 #endif
-

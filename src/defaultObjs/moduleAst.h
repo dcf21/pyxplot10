@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,15 +25,14 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void pplfunc_Lcdm_age     (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_Lcdm_DA      (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_Lcdm_DL      (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_Lcdm_DM      (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_Lcdm_t       (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_Lcdm_z       (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_moonphase    (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_moonphase(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_sidereal_time(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif
-

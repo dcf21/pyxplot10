@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,9 +26,8 @@
 #include "coreUtils/list.h"
 #include "userspace/pplObj.h"
 
-void ppl_garbageNamespace(dict   *n);
-void ppl_garbageList     (list   *l);
-void ppl_garbageObject   (pplObj *o);
+void ppl_garbageNamespace(dict *n);
+void ppl_garbageList(list *l);
+void ppl_garbageObject(pplObj *o);
 
 #endif
-

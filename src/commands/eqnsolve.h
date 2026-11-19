@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -29,9 +29,8 @@
 double ppl_optimise_RealToLog(double in, int iter, double *norm);
 double ppl_optimise_LogToReal(double in, int iter, double *norm);
 
-void ppl_directive_solve   (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+void ppl_directive_solve(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 void ppl_directive_maximise(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 void ppl_directive_minimise(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 
 #endif
-

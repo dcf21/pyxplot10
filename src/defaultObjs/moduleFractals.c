@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -45,43 +45,38 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
-void pplfunc_julia       (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "julia(z,cz,MaxIter)";
-  CHECK_NEEDLONG(in[2], "MaxIter", "function's third argument must be");
-   {
-    double  y = in[0].imag  ,  x = in[0].real, x2;
-    double cy = in[1].imag  , cx = in[1].real;
-    long MaxIter=(long)(in[2].real), iter;
+void pplfunc_julia(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "julia(z,cz,MaxIter)";
+    CHECK_NEEDLONG(in[2], "MaxIter", "function's third argument must be");
+    {
+        double y = in[0].imag, x = in[0].real, x2;
+        double cy = in[1].imag, cx = in[1].real;
+        long MaxIter = (long) (in[2].real), iter;
 
-    for (iter=0; ((iter<MaxIter)&&((x*x+y*y)<4)); iter++)
-     {
-      x2 = x*x - y*y + cx;
-      y  = 2*x*y     + cy;
-      x  = x2;
-     }
-    OUTPUT.real = (double)iter;
-   }
-  CHECK_OUTPUT_OKAY;
- }
+        for (iter = 0; ((iter < MaxIter) && ((x * x + y * y) < 4)); iter++) {
+            x2 = x * x - y * y + cx;
+            y = 2 * x * y + cy;
+            x = x2;
+        }
+        OUTPUT.real = (double) iter;
+    }
+    CHECK_OUTPUT_OKAY;
+}
 
-void pplfunc_mandelbrot  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "mandelbrot(z,MaxIter)";
-  CHECK_NEEDLONG(in[1], "MaxIter", "function's second argument must be");
-   {
-    double  y = in[0].imag  ,  x = in[0].real, x2;
-    double cy = in[0].imag  , cx = in[0].real;
-    long MaxIter=(long)(in[1].real), iter;
+void pplfunc_mandelbrot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "mandelbrot(z,MaxIter)";
+    CHECK_NEEDLONG(in[1], "MaxIter", "function's second argument must be");
+    {
+        double y = in[0].imag, x = in[0].real, x2;
+        double cy = in[0].imag, cx = in[0].real;
+        long MaxIter = (long) (in[1].real), iter;
 
-    for (iter=0; ((iter<MaxIter)&&((x*x+y*y)<4)); iter++)
-     {
-      x2 = x*x - y*y + cx;
-      y  = 2*x*y     + cy;
-      x  = x2;
-     }
-    OUTPUT.real = (double)iter;
-   }
-  CHECK_OUTPUT_OKAY;
- }
-
+        for (iter = 0; ((iter < MaxIter) && ((x * x + y * y) < 4)); iter++) {
+            x2 = x * x - y * y + cx;
+            y = 2 * x * y + cy;
+            x = x2;
+        }
+        OUTPUT.real = (double) iter;
+    }
+    CHECK_OUTPUT_OKAY;
+}

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,8 +26,7 @@
 #include "settings/settings.h"
 #include "userspace/pplObj.h"
 
-void pplfunc_planck_Bv   (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_planck_Bv(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -48,96 +48,97 @@
 #define CANVAS_TEXT    22011
 
 typedef struct canvas_plotrange {
- double                   min, max;
- pplObj                   unit;
- unsigned char            MinSet, MaxSet;
- unsigned char            AutoMinSet, AutoMaxSet;
- struct canvas_plotrange *next;
+    double min, max;
+    pplObj unit;
+    unsigned char MinSet, MaxSet;
+    unsigned char AutoMinSet, AutoMaxSet;
+    struct canvas_plotrange *next;
 } canvas_plotrange;
 
 typedef struct canvas_plotdesc {
- unsigned char           function, parametric, TRangeSet, VRangeSet, axis1set, axis2set, axis3set, ContinuitySet, IndexSet, EverySet, TitleSet, NoTitleSet;
- int                     NFunctions, axis1xyz, axis2xyz, axis3xyz, axis1, axis2, axis3, index, continuity, UsingRowCols, NUsing;
- long                    EveryList[6];
- withWords               ww;
- char                   *filename, *title;
- pplObj                 *vectors;
- pplExpr               **functions, *label, *SelectCriterion, **UsingList;
- pplObj                  Tmin, Tmax, Vmin, Vmax;
- struct canvas_plotdesc *next;
+    unsigned char function, parametric, TRangeSet, VRangeSet, axis1set, axis2set, axis3set, ContinuitySet, IndexSet,
+            EverySet, TitleSet, NoTitleSet;
+    int NFunctions, axis1xyz, axis2xyz, axis3xyz, axis1, axis2, axis3, index, continuity, UsingRowCols, NUsing;
+    long EveryList[6];
+    withWords ww;
+    char *filename, *title;
+    pplObj *vectors;
+    pplExpr **functions, *label, *SelectCriterion, **UsingList;
+    pplObj Tmin, Tmax, Vmin, Vmax;
+    struct canvas_plotdesc *next;
 
- // used with plot '-' and plot '--' to indicate that data is read only once; otherwise NULL
- dataTable              *PersistentDataTable;
+    // used with plot '-' and plot '--' to indicate that data is read only once; otherwise NULL
+    dataTable *PersistentDataTable;
 
- // Structure members which are used at plot time
- dataTable              *data;
- withWords               ww_final;
- char                   *filenameFinal;
- char                   *TitleFinal;
- int                     TitleFinal_col;
- double                  TitleFinal_xpos, TitleFinal_ypos, TitleFinal_width, TitleFinal_height;
- pplObj                  CRangeUnit;
- unsigned char           CRangeDisplay;
- double                  CMinFinal, CMaxFinal;
- pplset_axis             C1Axis;
- int                     GridXSize, GridYSize;
- double                  PieChart_total;
+    // Structure members which are used at plot time
+    dataTable *data;
+    withWords ww_final;
+    char *filenameFinal;
+    char *TitleFinal;
+    int TitleFinal_col;
+    double TitleFinal_xpos, TitleFinal_ypos, TitleFinal_width, TitleFinal_height;
+    pplObj CRangeUnit;
+    unsigned char CRangeDisplay;
+    double CMinFinal, CMaxFinal;
+    pplset_axis C1Axis;
+    int GridXSize, GridYSize;
+    double PieChart_total;
 } canvas_plotdesc;
 
 typedef struct canvas_item {
- int                 id, type, ArrowType, TransColR, TransColG, TransColB;
- double              xpos, ypos, xpos2, ypos2, rotation;
- char               *text;
- pplExpr            *format;
- unsigned char       deleted, xpos2set, ypos2set, clip, calcbbox, smooth, NoTransparency, CustomTransparency;
- withWords           with_data;
- pplset_graph        settings;
- pplset_axis        *XAxes, *YAxes, *ZAxes;
- pplarrow_object    *arrow_list;
- ppllabel_object    *label_list;
- struct canvas_item *next, *prev;
+    int id, type, ArrowType, TransColR, TransColG, TransColB;
+    double xpos, ypos, xpos2, ypos2, rotation;
+    char *text;
+    pplExpr *format;
+    unsigned char deleted, xpos2set, ypos2set, clip, calcbbox, smooth, NoTransparency, CustomTransparency;
+    withWords with_data;
+    pplset_graph settings;
+    pplset_axis *XAxes, *YAxes, *ZAxes;
+    pplarrow_object *arrow_list;
+    ppllabel_object *label_list;
+    struct canvas_item *next, *prev;
 
- // Parameters which can be used to define ellipses
- double              x1,y1,x2,y2,xc,yc,xf,yf,a,b,ecc,slr,arcfrom,arcto; // Parameters which can be used to define ellipses
- unsigned char       x1set, xcset, xfset, aset, bset, eccset, slrset, arcset;
+    // Parameters which can be used to define ellipses
+    double x1, y1, x2, y2, xc, yc, xf, yf, a, b, ecc, slr, arcfrom,
+            arcto; // Parameters which can be used to define ellipses
+    unsigned char x1set, xcset, xfset, aset, bset, eccset, slrset, arcset;
 
- // Parameters which can be used to define polygons
- double             *polygonPoints;
- int                 NpolygonPoints;
+    // Parameters which can be used to define polygons
+    double *polygonPoints;
+    int NpolygonPoints;
 
- // Parameters which can be used to define plots
- unsigned char       ThreeDim;
- canvas_plotrange   *plotranges;
- canvas_plotdesc    *plotitems;
- dataTable         **plotdata; // used at plot time
- double              PlotLeftMargin, PlotRightMargin, PlotTopMargin, PlotBottomMargin;
- int                 FirstTextID, TitleTextID, LegendTextID, SetLabelTextID, *DatasetTextID;
+    // Parameters which can be used to define plots
+    unsigned char ThreeDim;
+    canvas_plotrange *plotranges;
+    canvas_plotdesc *plotitems;
+    dataTable **plotdata; // used at plot time
+    double PlotLeftMargin, PlotRightMargin, PlotTopMargin, PlotBottomMargin;
+    int FirstTextID, TitleTextID, LegendTextID, SetLabelTextID, *DatasetTextID;
 } canvas_item;
 
 typedef struct canvas_itemlist {
- canvas_item  *first;
- canvas_item  *last;
+    canvas_item *first;
+    canvas_item *last;
 } canvas_itemlist;
 
 
-int ppl_directive_clear   (ppl_context *c, parserLine *pl, parserOutput *in, int interactive);
+int ppl_directive_clear(ppl_context *c, parserLine *pl, parserOutput *in, int interactive);
 char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output);
-int ppl_directive_list    (ppl_context *c, parserLine *pl, parserOutput *in, int interactive);
-int ppl_directive_delete  (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_list(ppl_context *c, parserLine *pl, parserOutput *in, int interactive);
+int ppl_directive_delete(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_undelete(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_move    (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_swap    (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_arrow   (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_box     (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_circle  (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_ellipse (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_eps     (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_move(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_swap(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_eps(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_point   (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_polygon (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_text    (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_image   (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_plot    (ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth, int replot);
+int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_image(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth, int replot);
 
 #endif
-

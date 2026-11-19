@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,13 +26,12 @@
 #include "userspace/pplObj.h"
 
 void pplfunc_setRandomSeed(long i);
-void pplfunc_frandom   (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandom(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_frandombin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomcs (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomg  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomln (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomp  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomt  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomcs(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomg(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomln(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomt(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif
-

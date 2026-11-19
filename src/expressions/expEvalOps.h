@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,10 +25,13 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType, char *errText);
-void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType, char *errText);
-void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType, char *errText);
-void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType, char *errText);
+void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+               char *errText);
+void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+               char *errText);
+void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+               char *errText);
+void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, int invertible, int *status, int *errType,
+               char *errText);
 
 #endif
-

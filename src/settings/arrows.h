@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,13 +26,13 @@
 #include "userspace/pplObj.h"
 
 typedef struct pplarrow_object {
- int        id;
- pplObj     x0       ,y0       ,z0       ,x1       ,y1       ,z1;
- int        system_x0,system_y0,system_z0,system_x1,system_y1,system_z1;
- int        axis_x0  ,axis_y0  ,axis_z0  ,axis_x1  ,axis_y1  ,axis_z1;
- int        pplarrow_style;
- withWords  style;
- struct pplarrow_object *next;
- } pplarrow_object;
+    int id;
+    pplObj x0, y0, z0, x1, y1, z1;
+    int system_x0, system_y0, system_z0, system_x1, system_y1, system_z1;
+    int axis_x0, axis_y0, axis_z0, axis_x1, axis_y1, axis_z1;
+    int pplarrow_style;
+    withWords style;
+    struct pplarrow_object *next;
+} pplarrow_object;
 
 #endif

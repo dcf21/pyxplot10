@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -27,20 +27,23 @@
 #include "stringTools/strConstants.h"
 
 typedef struct traceback {
-  int errPos, errLine, amErrMsgExpr, amErrMsgCmd;
-  long sourceId;
-  char source[FNAME_LENGTH];
-  char context[FNAME_LENGTH];
-  char *linetext;
- } traceback;
+    int errPos, errLine, amErrMsgExpr, amErrMsgCmd;
+    long sourceId;
+    char source[FNAME_LENGTH];
+    char context[FNAME_LENGTH];
+    char *linetext;
+} traceback;
 
 typedef struct errStatus {
-  int  errType, status, tracebackDepth;
-  char errMsgExpr[LSTR_LENGTH]; long sourceIdExpr; int errPosExpr, oldErrPosExpr;
-  char errMsgCmd [LSTR_LENGTH]; long sourceIdCmd;  int errPosCmd , oldErrPosCmd;
-  char errBuff[LSTR_LENGTH];
-  traceback tbLevel[TB_MAXLEVEL];
- } errStatus;
+    int errType, status, tracebackDepth;
+    char errMsgExpr[LSTR_LENGTH];
+    long sourceIdExpr;
+    int errPosExpr, oldErrPosExpr;
+    char errMsgCmd[LSTR_LENGTH];
+    long sourceIdCmd;
+    int errPosCmd, oldErrPosCmd;
+    char errBuff[LSTR_LENGTH];
+    traceback tbLevel[TB_MAXLEVEL];
+} errStatus;
 
 #endif
-

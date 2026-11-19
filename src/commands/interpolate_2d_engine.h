@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,8 +26,9 @@
 #include "settings/settings.h"
 #include "userspace/context.h"
 
-void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, const double *in, const long InSize, const int ColNum, const int NCols, const double x, const double y);
-void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, dataTable *in, pplset_axis *axis_x, pplset_axis *axis_y, unsigned char SampleToEdge, int *XSizeOut, int *YSizeOut);
+void ppl_interp2d_eval(ppl_context *c, double *output, const pplset_graph *sg, const double *in, const long InSize,
+                       const int ColNum, const int NCols, const double x, const double y);
+void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, dataTable *in, pplset_axis *axis_x,
+                       pplset_axis *axis_y, unsigned char SampleToEdge, int *XSizeOut, int *YSizeOut);
 
 #endif
-

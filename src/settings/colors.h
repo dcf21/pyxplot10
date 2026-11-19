@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,14 +25,12 @@
 #include "parser/parser.h"
 #include "userspace/context.h"
 
-int ppl_colorFromDict  (ppl_context *c, parserOutput *in, parserLine *pl, const int *ptab, int stkbase,
-                        int fillColor, int *outcol, int *outcolspace, pplExpr **EXPoutcol,
-                        double *outcol1, double *outcol2, double *outcol3, double *outcol4,
-                        unsigned char *USEcol, unsigned char *USEcol1234);
+int ppl_colorFromDict(ppl_context *c, parserOutput *in, parserLine *pl, const int *ptab, int stkbase, int fillColor,
+                      int *outcol, int *outcolspace, pplExpr **EXPoutcol, double *outcol1, double *outcol2,
+                      double *outcol3, double *outcol4, unsigned char *USEcol, unsigned char *USEcol1234);
 
-int ppl_colorFromObj  (ppl_context *c, const pplObj *col, int *outcol, int *outcolspace, pplExpr **EXPoutcol,
-                        double *outcol1, double *outcol2, double *outcol3, double *outcol4,
-                        unsigned char *USEcol, unsigned char *USEcol1234);
+int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcolspace, pplExpr **EXPoutcol,
+                     double *outcol1, double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
+                     unsigned char *USEcol1234);
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -36,15 +36,14 @@
 #define BMP_ENCODING_FLATE 1102
 #define BMP_ENCODING_DCT   1103
 
-#define BMP_ALLOC(X,Y) { X = (unsigned char *)ppl_memAlloc(Y); }
+#define BMP_ALLOC(X, Y) \
+    { X = (unsigned char *) ppl_memAlloc(Y); }
 
-typedef struct bitmap_data
- {
-  unsigned char *data, *palette, *trans;
-  unsigned long  data_len;
-  int            pal_len, width, height, depth, type, colour, TargetCompression, flags;
-  double         XDPI, YDPI;
- } bitmap_data;
+typedef struct bitmap_data {
+    unsigned char *data, *palette, *trans;
+    unsigned long data_len;
+    int pal_len, width, height, depth, type, colour, TargetCompression, flags;
+    double XDPI, YDPI;
+} bitmap_data;
 
 #endif
-

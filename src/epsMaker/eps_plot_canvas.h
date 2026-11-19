@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -34,8 +34,12 @@
 double eps_plot_axis_GetPosition(double xin, pplset_axis *xa, int xrn, unsigned char AllowOffBounds);
 double eps_plot_axis_InvGetPosition(double xin, pplset_axis *xa);
 int eps_plot_axis_InRange(pplset_axis *xa, double xin);
-void eps_plot_ThreeDimProject(double xap, double yap, double zap, pplset_graph *sg, double origin_x, double origin_y, double width, double height, double zdepth, double *xpos, double *ypos, double *depth);
-void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap, double *yap, double *zap, double *theta_x, double *theta_y, double *theta_z, unsigned char ThreeDim, double xin, double yin, double zin, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn, int zrn, pplset_graph *sg, double origin_x, double origin_y, double width, double height, double zdepth, unsigned char AllowOffBounds);
+void eps_plot_ThreeDimProject(double xap, double yap, double zap, pplset_graph *sg, double origin_x, double origin_y,
+                              double width, double height, double zdepth, double *xpos, double *ypos, double *depth);
+void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap, double *yap, double *zap,
+                          double *theta_x, double *theta_y, double *theta_z, unsigned char ThreeDim, double xin,
+                          double yin, double zin, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn,
+                          int zrn, pplset_graph *sg, double origin_x, double origin_y, double width, double height,
+                          double zdepth, unsigned char AllowOffBounds);
 
 #endif
-

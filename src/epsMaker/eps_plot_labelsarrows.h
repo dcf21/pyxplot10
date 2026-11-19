@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,4 +28,3 @@ void eps_plot_labelsarrows_YieldUpText(EPSComm *x);
 void eps_plot_labelsarrows(EPSComm *x, double origin_x, double origin_y, double width, double height, double zdepth);
 
 #endif
-

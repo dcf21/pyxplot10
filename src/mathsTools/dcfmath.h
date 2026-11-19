@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,18 +26,17 @@
 extern double ppl_machineEpsilon;
 #endif
 
-void   ppl_makeMachineEpsilon();
-double ppl_max      (double x, double y);
-double ppl_min      (double x, double y);
-double ppl_max3     (double x, double y, double z);
-double ppl_min3     (double x, double y, double z);
-int    ppl_sgn      (double x);
-void   ppl_linRaster(double *out, double min, double max, int Nsteps);
-void   ppl_logRaster(double *out, double min, double max, int Nsteps);
-double ppl_degs     (double rad);
-double ppl_rads     (double degrees);
-int    ppl_dblSort  (const void *a, const void *b);
-int    ppl_gcd      (int a, int b);
+void ppl_makeMachineEpsilon();
+double ppl_max(double x, double y);
+double ppl_min(double x, double y);
+double ppl_max3(double x, double y, double z);
+double ppl_min3(double x, double y, double z);
+int ppl_sgn(double x);
+void ppl_linRaster(double *out, double min, double max, int Nsteps);
+void ppl_logRaster(double *out, double min, double max, int Nsteps);
+double ppl_degs(double rad);
+double ppl_rads(double degrees);
+int ppl_dblSort(const void *a, const void *b);
+int ppl_gcd(int a, int b);
 
 #endif
-

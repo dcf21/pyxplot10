@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,9 +28,12 @@
 #include "epsMaker/eps_comm.h"
 #include "userspace/pplObj.h"
 
-int  eps_plot_AddUsingItemsForWithWords(ppl_context *c, withWords *ww, int *NExpect, unsigned char *autoUsingList, pplExpr ***usingList, int *Nusing, int *NObjs, char *errtext);
-void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, double *DataRow, pplObj *ObjRow, int Ncolumns_real, int Ncolumns_obj);
-int  eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, withWords *ww, pplObj *firstValues, int Ncolumns_real, int Ncolumns_obj, int *NDataCols);
+int eps_plot_AddUsingItemsForWithWords(ppl_context *c, withWords *ww, int *NExpect, unsigned char *autoUsingList,
+                                       pplExpr ***usingList, int *Nusing, int *NObjs, char *errtext);
+void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, double *DataRow, pplObj *ObjRow, int Ncolumns_real,
+                                      int Ncolumns_obj);
+int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, withWords *ww, pplObj *firstValues, int Ncolumns_real,
+                                             int Ncolumns_obj, int *NDataCols);
 
 void eps_plot_ReadAccessibleData(EPSComm *x);
 void eps_plot_SampleFunctions(EPSComm *x);
@@ -40,4 +43,3 @@ void eps_plot_RenderEPS(EPSComm *x);
 
 
 #endif
-

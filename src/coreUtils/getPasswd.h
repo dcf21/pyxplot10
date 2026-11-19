@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,9 +25,9 @@
 #include "coreUtils/errorReport.h"
 
 /* Functions defined in ppl_passwd.c */
-char *ppl_unixGetHomeDir       (pplerr_context *context);
-char *ppl_unixGetUserHomeDir   (pplerr_context *context,char *username);
-char *ppl_unixGetIRLName       (pplerr_context *context);
-char *ppl_unixExpandUserHomeDir(pplerr_context *context,char *in, char *cwd, char *out);
+char *ppl_unixGetHomeDir(pplerr_context *context);
+char *ppl_unixGetUserHomeDir(pplerr_context *context, char *username);
+char *ppl_unixGetIRLName(pplerr_context *context);
+char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, char *out);
 
 #endif

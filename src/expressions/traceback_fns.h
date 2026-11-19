@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,9 +25,9 @@
 #include "expressions/traceback.h"
 #include "userspace/context.h"
 
-void ppl_tbClear         (ppl_context *c);
-void ppl_tbAdd           (ppl_context *c, int srcLineN, long srcId, char *srcFname, int cmdOrExpr, int errType, int errPos, char *linetext, char *context);
-void ppl_tbWrite         (ppl_context *c);
+void ppl_tbClear(ppl_context *c);
+void ppl_tbAdd(ppl_context *c, int srcLineN, long srcId, char *srcFname, int cmdOrExpr, int errType, int errPos,
+               char *linetext, char *context);
+void ppl_tbWrite(ppl_context *c);
 
 #endif
-

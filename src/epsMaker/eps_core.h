@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -22,27 +22,27 @@
 #ifndef _PPL_EPS_CORE_H
 #define _PPL_EPS_CORE_H 1
 
-#define IF_NOT_INVISIBLE if (x->CurrentColor[0]!='\0')
+#define IF_NOT_INVISIBLE if (x->CurrentColor[0] != '\0')
 
 #define EPS_STACK_POP \
-  while (x->c->stackPtr>stkLevelOld) \
-   { \
-    x->c->stackPtr--; \
-    ppl_garbageObject(&x->c->stack[x->c->stackPtr]); \
-    if (x->c->stack[x->c->stackPtr].refCount != 0) { ppl_error(&x->c->errcontext,ERR_INTERNAL,-1,-1,"Stack forward reference detected."); } \
-   }
+    while (x->c->stackPtr > stkLevelOld) { \
+        x->c->stackPtr--; \
+        ppl_garbageObject(&x->c->stack[x->c->stackPtr]); \
+        if (x->c->stack[x->c->stackPtr].refCount != 0) { \
+            ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Stack forward reference detected."); \
+        } \
+    }
 
 #include "epsMaker/eps_comm.h"
 
-void eps_core_clear               (EPSComm *x);
-void eps_core_WritePSColor        (EPSComm *x);
-void eps_core_SetColor            (EPSComm *x, withWords *ww, unsigned char WritePS);
-void eps_core_SetFillColor        (EPSComm *x, withWords *ww);
-void eps_core_SwitchTo_FillColor  (EPSComm *x, unsigned char WritePS);
+void eps_core_clear(EPSComm *x);
+void eps_core_WritePSColor(EPSComm *x);
+void eps_core_SetColor(EPSComm *x, withWords *ww, unsigned char WritePS);
+void eps_core_SetFillColor(EPSComm *x, withWords *ww);
+void eps_core_SwitchTo_FillColor(EPSComm *x, unsigned char WritePS);
 void eps_core_SwitchFrom_FillColor(EPSComm *x, unsigned char WritePS);
-void eps_core_SetLinewidth        (EPSComm *x, double lw, int lt, double offset);
-void eps_core_BoundingBox         (EPSComm *x, double xpos, double ypos, double lw);
-void eps_core_PlotBoundingBox     (EPSComm *x, double xpos, double ypos, double lw, unsigned char UpdatePsBB);
+void eps_core_SetLinewidth(EPSComm *x, double lw, int lt, double offset);
+void eps_core_BoundingBox(EPSComm *x, double xpos, double ypos, double lw);
+void eps_core_PlotBoundingBox(EPSComm *x, double xpos, double ypos, double lw, unsigned char UpdatePsBB);
 
 #endif
-

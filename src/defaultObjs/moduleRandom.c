@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -52,69 +52,81 @@
 
 static gsl_rng *rndgen = NULL; // Random number generator
 
-void pplfunc_setRandomSeed(long i)
- {
-  if (rndgen==NULL) rndgen = gsl_rng_alloc(gsl_rng_default);
-  gsl_rng_set(rndgen, i);
-  return;
- }
+void pplfunc_setRandomSeed(long i) {
+    if (rndgen == NULL) rndgen = gsl_rng_alloc(gsl_rng_default);
+    gsl_rng_set(rndgen, i);
+    return;
+}
 
-void pplfunc_frandom   (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  if (rndgen==NULL) { rndgen = gsl_rng_alloc(gsl_rng_default); gsl_rng_set(rndgen, 0); }
-  OUTPUT.real = gsl_rng_uniform(rndgen);
- }
+void pplfunc_frandom(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    if (rndgen == NULL) {
+        rndgen = gsl_rng_alloc(gsl_rng_default);
+        gsl_rng_set(rndgen, 0);
+    }
+    OUTPUT.real = gsl_rng_uniform(rndgen);
+}
 
-void pplfunc_frandombin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "binomial(p,n)";
-  if (rndgen==NULL) { rndgen = gsl_rng_alloc(gsl_rng_default); gsl_rng_set(rndgen, 0); }
-  CHECK_NEEDINT(in[1], "n", "function's second argument must be an integer in the range");
-  OUTPUT.real = gsl_ran_binomial(rndgen, in[0].real, (unsigned int)in[1].real);
-  CHECK_OUTPUT_OKAY;
- }
+void pplfunc_frandombin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "binomial(p,n)";
+    if (rndgen == NULL) {
+        rndgen = gsl_rng_alloc(gsl_rng_default);
+        gsl_rng_set(rndgen, 0);
+    }
+    CHECK_NEEDINT(in[1], "n", "function's second argument must be an integer in the range");
+    OUTPUT.real = gsl_ran_binomial(rndgen, in[0].real, (unsigned int) in[1].real);
+    CHECK_OUTPUT_OKAY;
+}
 
-void pplfunc_frandomcs (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "chisq(nu)";
-  if (rndgen==NULL) { rndgen = gsl_rng_alloc(gsl_rng_default); gsl_rng_set(rndgen, 0); }
-  OUTPUT.real = gsl_ran_chisq(rndgen, in[0].real);
-  CHECK_OUTPUT_OKAY;
- }
+void pplfunc_frandomcs(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "chisq(nu)";
+    if (rndgen == NULL) {
+        rndgen = gsl_rng_alloc(gsl_rng_default);
+        gsl_rng_set(rndgen, 0);
+    }
+    OUTPUT.real = gsl_ran_chisq(rndgen, in[0].real);
+    CHECK_OUTPUT_OKAY;
+}
 
-void pplfunc_frandomg  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "gaussian(sigma)";
-  if (rndgen==NULL) { rndgen = gsl_rng_alloc(gsl_rng_default); gsl_rng_set(rndgen, 0); }
-  OUTPUT.real = gsl_ran_gaussian(rndgen, in[0].real);
-  CHECK_OUTPUT_OKAY;
- }
+void pplfunc_frandomg(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "gaussian(sigma)";
+    if (rndgen == NULL) {
+        rndgen = gsl_rng_alloc(gsl_rng_default);
+        gsl_rng_set(rndgen, 0);
+    }
+    OUTPUT.real = gsl_ran_gaussian(rndgen, in[0].real);
+    CHECK_OUTPUT_OKAY;
+}
 
-void pplfunc_frandomln (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "lognormal(zeta,sigma)";
-  if (rndgen==NULL) { rndgen = gsl_rng_alloc(gsl_rng_default); gsl_rng_set(rndgen, 0); }
-  in++;
-  CHECK_1INPUT_DIMLESS; // THIS IS CORRECT. Only check in[1]
-  in--;
-  OUTPUT.real = gsl_ran_lognormal(rndgen, in[0].real, in[1].real);
-  CHECK_OUTPUT_OKAY;
-  ppl_unitsDimCpy(&OUTPUT, &in[0]);
- }
+void pplfunc_frandomln(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "lognormal(zeta,sigma)";
+    if (rndgen == NULL) {
+        rndgen = gsl_rng_alloc(gsl_rng_default);
+        gsl_rng_set(rndgen, 0);
+    }
+    in++;
+    CHECK_1INPUT_DIMLESS; // THIS IS CORRECT. Only check in[1]
+    in--;
+    OUTPUT.real = gsl_ran_lognormal(rndgen, in[0].real, in[1].real);
+    CHECK_OUTPUT_OKAY;
+    ppl_unitsDimCpy(&OUTPUT, &in[0]);
+}
 
-void pplfunc_frandomp  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "poisson(n)";
-  if (rndgen==NULL) { rndgen = gsl_rng_alloc(gsl_rng_default); gsl_rng_set(rndgen, 0); }
-  OUTPUT.real = gsl_ran_poisson(rndgen, in[0].real);
-  CHECK_OUTPUT_OKAY;
- }
+void pplfunc_frandomp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "poisson(n)";
+    if (rndgen == NULL) {
+        rndgen = gsl_rng_alloc(gsl_rng_default);
+        gsl_rng_set(rndgen, 0);
+    }
+    OUTPUT.real = gsl_ran_poisson(rndgen, in[0].real);
+    CHECK_OUTPUT_OKAY;
+}
 
-void pplfunc_frandomt  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "tdist(nu)";
-  if (rndgen==NULL) { rndgen = gsl_rng_alloc(gsl_rng_default); gsl_rng_set(rndgen, 0); }
-  OUTPUT.real = gsl_ran_tdist(rndgen, in[0].real);
-  CHECK_OUTPUT_OKAY;
- }
-
+void pplfunc_frandomt(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "tdist(nu)";
+    if (rndgen == NULL) {
+        rndgen = gsl_rng_alloc(gsl_rng_default);
+        gsl_rng_set(rndgen, 0);
+    }
+    OUTPUT.real = gsl_ran_tdist(rndgen, in[0].real);
+    CHECK_OUTPUT_OKAY;
+}

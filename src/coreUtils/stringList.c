@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -31,32 +31,28 @@
 
 /* ppl_strSplit(): Split up a string into bits separated by whitespace */
 
-list *ppl_strSplit(char *in)
- {
-  int pos, start, end;
-  char *word;
-  char *text_buffer;
-  list *out;
-  out  = ppl_listInit(0);
-  pos  = 0;
-  text_buffer = (char *)malloc(strlen(in)+1);
-  while (in[pos] != '\0')
-   {
-    // Scan along to find the next word
-    while ((in[pos] <= ' ') && (in[pos] > '\0')) pos++;
-    start = pos;
+list *ppl_strSplit(char *in) {
+    int pos, start, end;
+    char *word;
+    char *text_buffer;
+    list *out;
+    out = ppl_listInit(0);
+    pos = 0;
+    text_buffer = (char *) malloc(strlen(in) + 1);
+    while (in[pos] != '\0') {
+        // Scan along to find the next word
+        while ((in[pos] <= ' ') && (in[pos] > '\0')) pos++;
+        start = pos;
 
-    // Scan along to find the end of this word
-    while ((in[pos] >  ' ') && (in[pos] > '\0')) pos++;
-    end = pos;
+        // Scan along to find the end of this word
+        while ((in[pos] > ' ') && (in[pos] > '\0')) pos++;
+        end = pos;
 
-    if (end>start)
-     {
-      word = ppl_strSlice(in, text_buffer, start, end);
-      ppl_listAppendCpy(out, word, strlen(word)+1);
-     }
-   }
-  free(text_buffer);
-  return out;
- }
-
+        if (end > start) {
+            word = ppl_strSlice(in, text_buffer, start, end);
+            ppl_listAppendCpy(out, word, strlen(word) + 1);
+        }
+    }
+    free(text_buffer);
+    return out;
+}

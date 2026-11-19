@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -24,40 +24,37 @@
 #ifndef _LIST_H
 #define _LIST_H 1
 
-typedef struct listItemS
- {
-  void             *data;
-  struct listItemS *next;
-  struct listItemS *prev;
- } listItem;
+typedef struct listItemS {
+    void *data;
+    struct listItemS *next;
+    struct listItemS *prev;
+} listItem;
 
 
-typedef struct listS
- {
-  struct listItemS *first;
-  struct listItemS *last;
-  int               length, refCount, immutable;
-  int               useMalloc;
-  int               memory_context;
- } list;
+typedef struct listS {
+    struct listItemS *first;
+    struct listItemS *last;
+    int length, refCount, immutable;
+    int useMalloc;
+    int memory_context;
+} list;
 
 typedef listItem listIterator;
 
-list         *ppl_listInit       (int useMalloc);
-int           ppl_listFree       (list *in);
-int           ppl_listLen        (list *in);
-list         *ppl_listCpy        (list *in, int useMalloc, int itemSize);
-int           ppl_listAppend     (list *in, void *item);
-int           ppl_listAppendCpy  (list *in, void *item, int size);
-int           ppl_listInsertCpy  (list *in, int N, void *item, int size);
-int           ppl_listRemove     (list *in, void *item);
-int           ppl_listRemoveAll  (list *in, void *item);
-void         *ppl_listGetItem    (list *in, int   N);
-void         *ppl_listPop        (list *in);
-void         *ppl_listPopItem    (list *in, int   N);
-void         *ppl_listLast       (list *in);
+list *ppl_listInit(int useMalloc);
+int ppl_listFree(list *in);
+int ppl_listLen(list *in);
+list *ppl_listCpy(list *in, int useMalloc, int itemSize);
+int ppl_listAppend(list *in, void *item);
+int ppl_listAppendCpy(list *in, void *item, int size);
+int ppl_listInsertCpy(list *in, int N, void *item, int size);
+int ppl_listRemove(list *in, void *item);
+int ppl_listRemoveAll(list *in, void *item);
+void *ppl_listGetItem(list *in, int N);
+void *ppl_listPop(list *in);
+void *ppl_listPopItem(list *in, int N);
+void *ppl_listLast(list *in);
 listIterator *ppl_listIterateInit(list *in);
-void         *ppl_listIterate    (listIterator **in);
+void *ppl_listIterate(listIterator **in);
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 //               2009-2010 Michael Rutter
@@ -38,67 +38,57 @@
 
 #define LINELEN 56
 
-unsigned int ppl_bmp_A85(pplerr_context *ec, FILE* fout, unsigned char* in, int len)
- {
-  int           i, j;
-  unsigned int  tmp, t, line, length=0;
-  unsigned int  pow85[] = {52200625,614125,7225,85,1}; // powers of 85
-  unsigned char out[LINELEN/4*5+4], *outp;
+unsigned int ppl_bmp_A85(pplerr_context *ec, FILE *fout, unsigned char *in, int len) {
+    int i, j;
+    unsigned int tmp, t, line, length = 0;
+    unsigned int pow85[] = {52200625, 614125, 7225, 85, 1}; // powers of 85
+    unsigned char out[LINELEN / 4 * 5 + 4], *outp;
 
-  while (len>0)
-   {
-    line = (len>LINELEN) ? LINELEN : len;
-    len  = len-line;
-    outp = out;
-    for (i=0; i<(line&0xfffc); i+=4) // encode groups of four bytes
-     {
-      tmp=0;
-      for(j=0; j<4; j++)
-       {
-        tmp  = tmp<<8;
-        tmp += *(in++);
-       }
-      if (tmp)
-       {
-        for (j=0; j<4; j++)
-         {
-          t    = tmp/pow85[j];
-          tmp -= t*pow85[j];
-          *(outp++) = t+'!';
-         }
-        *(outp++)=tmp+'!';
-       }
-      else
-       *(outp++)='z'; // zero is encoded as "z", not "!"
-     }
+    while (len > 0) {
+        line = (len > LINELEN) ? LINELEN : len;
+        len = len - line;
+        outp = out;
+        for (i = 0; i < (line & 0xfffc); i += 4) // encode groups of four bytes
+        {
+            tmp = 0;
+            for (j = 0; j < 4; j++) {
+                tmp = tmp << 8;
+                tmp += *(in++);
+            }
+            if (tmp) {
+                for (j = 0; j < 4; j++) {
+                    t = tmp / pow85[j];
+                    tmp -= t * pow85[j];
+                    *(outp++) = t + '!';
+                }
+                *(outp++) = tmp + '!';
+            } else *(outp++) = 'z'; // zero is encoded as "z", not "!"
+        }
 
-    if (line&0x3) // Deal with any final group of <4 bytes
-     {
-      i   = line&0xfffc;
-      tmp = 0;
-      for (j=0; j<4; j++)
-       {
-        tmp = tmp<<8;
-        if ((i+j)<line) tmp+=*(in++);
-       }
-      for (j=0; j<((line&0x3)+1); j++)
-       {
-        t    = tmp/pow85[j];
-        tmp -= t*pow85[j];
-        *(outp++)=t+'!';
-       }
-     }
+        if (line & 0x3) // Deal with any final group of <4 bytes
+        {
+            i = line & 0xfffc;
+            tmp = 0;
+            for (j = 0; j < 4; j++) {
+                tmp = tmp << 8;
+                if ((i + j) < line) tmp += *(in++);
+            }
+            for (j = 0; j < ((line & 0x3) + 1); j++) {
+                t = tmp / pow85[j];
+                tmp -= t * pow85[j];
+                *(outp++) = t + '!';
+            }
+        }
 
-    *outp=0;
+        *outp = 0;
 
-    // Assist things which parse DSC comments by ensuring that any line which
-    // would start %! or %% has a space prefixed.
+        // Assist things which parse DSC comments by ensuring that any line which
+        // would start %! or %% has a space prefixed.
 
-    if ((out[0]=='%')&&((out[1]=='%')||(out[1]=='!'))) length += fprintf(fout," %s\n",out);
-    else                                               length += fprintf(fout,"%s\n" ,out);
-   }
+        if ((out[0] == '%') && ((out[1] == '%') || (out[1] == '!'))) length += fprintf(fout, " %s\n", out);
+        else length += fprintf(fout, "%s\n", out);
+    }
 
-  length += fprintf(fout,"~>\n");
-  return length;
- }
-
+    length += fprintf(fout, "~>\n");
+    return length;
+}

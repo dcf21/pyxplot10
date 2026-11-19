@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 //               2009-2010 Michael Rutter
@@ -32,7 +32,6 @@
 #include <stdio.h>
 #include "coreUtils/errorReport.h"
 
-unsigned int ppl_bmp_A85(pplerr_context *ec, FILE* fout, unsigned char* in, int len);
+unsigned int ppl_bmp_A85(pplerr_context *ec, FILE *fout, unsigned char *in, int len);
 
 #endif
-

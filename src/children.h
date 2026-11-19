@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,28 +26,27 @@
 
 // Functions to be called from main Pyxplot process
 
-void  pplcsp_init                  (ppl_context *context);
-void  pplcsp_checkForGvOutput      (ppl_context *context);
-void  pplcsp_sendCommand           (ppl_context *context, char *cmd);
+void pplcsp_init(ppl_context *context);
+void pplcsp_checkForGvOutput(ppl_context *context);
+void pplcsp_sendCommand(ppl_context *context, char *cmd);
 
 // Functions to be called from the Child Support Process
 
-void  pplcsp_main                  (ppl_context *context);
-void  pplcsp_checkForChildExits    (int signo);
-void  pplcsp_checkForNewCommands   (ppl_context *context);
-void  pplcsp_processCommand        (ppl_context *context, char *in);
-int   pplcsp_forkNewGv             (ppl_context *context, char *fname, int *gv_list);
-void  pplcsp_killAllGvs            (ppl_context *context);
-void  pplcsp_killLatestSinglewindow(ppl_context *context);
+void pplcsp_main(ppl_context *context);
+void pplcsp_checkForChildExits(int signo);
+void pplcsp_checkForNewCommands(ppl_context *context);
+void pplcsp_processCommand(ppl_context *context, char *in);
+int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list);
+void pplcsp_killAllGvs(ppl_context *context);
+void pplcsp_killLatestSinglewindow(ppl_context *context);
 
 // Functions for spawning helper processes
 
-void  pplcsp_checkForHelperExits   (int signo);
-void  pplcsp_killAllHelpers        (ppl_context *context);
-void  pplcsp_forkSed               (ppl_context *context, char *cmd, int *fstdin, int *fstdout);
-void  pplcsp_forkLaTeX             (ppl_context *context, char *filename, int *PidOut, int *fstdin, int *fstdout);
-void  pplcsp_forkInputFilter       (ppl_context *context, char **cmd, int *fstdout);
-void  pplcsp_forkKpseWhich         (ppl_context *context, const char *ftype, int *fstdout);
+void pplcsp_checkForHelperExits(int signo);
+void pplcsp_killAllHelpers(ppl_context *context);
+void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout);
+void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fstdin, int *fstdout);
+void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout);
+void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout);
 
 #endif
-

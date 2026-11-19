@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,7 +26,7 @@
 #include "epsMaker/eps_comm.h"
 
 void eps_arrow_RenderEPS(EPSComm *x);
-void eps_primitive_arrow(EPSComm *x, int ArrowType, double x1, double y1, const double *z1, double x2, double y2, const double *z2, withWords *with_data);
+void eps_primitive_arrow(EPSComm *x, int ArrowType, double x1, double y1, const double *z1, double x2, double y2,
+                         const double *z2, withWords *with_data);
 
 #endif
-

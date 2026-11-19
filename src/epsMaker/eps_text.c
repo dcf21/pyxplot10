@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -35,64 +35,66 @@
 #include "epsMaker/eps_text.h"
 #include "epsMaker/eps_settings.h"
 
-void eps_text_YieldUpText(EPSComm *x)
- {
-  CanvasTextItem *i;
+void eps_text_YieldUpText(EPSComm *x) {
+    CanvasTextItem *i;
 
-  x->current->FirstTextID = x->NTextItems;
-  if (x->current->text[0]=='\0') return;
+    x->current->FirstTextID = x->NTextItems;
+    if (x->current->text[0] == '\0') return;
 
-  i = (CanvasTextItem *)ppl_memAlloc(sizeof(CanvasTextItem));
-  if (i==NULL) { ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory"); *(x->status) = 1; return; }
-  i->text              = x->current->text;
-  i->CanvasMultiplotID = x->current->id;
-  ppl_listAppend(x->TextItems, i);
-  x->NTextItems++;
-  return;
- }
+    i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+    if (i == NULL) {
+        ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
+        *(x->status) = 1;
+        return;
+    }
+    i->text = x->current->text;
+    i->CanvasMultiplotID = x->current->id;
+    ppl_listAppend(x->TextItems, i);
+    x->NTextItems++;
+    return;
+}
 
-void eps_text_RenderEPS(EPSComm *x)
- {
-  withWords def, merged;
-  double xgap, ygap, xgap2, ygap2;
-  int pageno;
+void eps_text_RenderEPS(EPSComm *x) {
+    withWords def, merged;
+    double xgap, ygap, xgap2, ygap2;
+    int pageno;
 
-  pageno = x->LaTeXpageno = x->current->FirstTextID;
-  x->LaTeXpageno++;
+    pageno = x->LaTeXpageno = x->current->FirstTextID;
+    x->LaTeXpageno++;
 
-  if (x->current->text[0]=='\0') return;
+    if (x->current->text[0] == '\0') return;
 
-  // Write header at top of postscript
-  fprintf(x->epsbuffer, "%% Canvas item %d [text label]\n", x->current->id);
+    // Write header at top of postscript
+    fprintf(x->epsbuffer, "%% Canvas item %d [text label]\n", x->current->id);
 
-  // Work out text color
-  ppl_withWordsZero(x->c , &def);
-  def.color    = x->current->settings.TextColor;
-  def.color1   = x->current->settings.TextColor1;
-  def.color2   = x->current->settings.TextColor2;
-  def.color3   = x->current->settings.TextColor3;
-  def.color4   = x->current->settings.TextColor4;
-  def.Col1234Space = x->current->settings.TextCol1234Space;
-  def.USEcolor     = (def.color!=0);
-  def.USEcolor1234 = (def.color==0);
-  ppl_withWordsMerge(x->c , &merged, &x->current->with_data, &def, NULL, NULL, NULL, 1);
-  eps_core_SetColor(x, &merged, 1);
+    // Work out text color
+    ppl_withWordsZero(x->c, &def);
+    def.color = x->current->settings.TextColor;
+    def.color1 = x->current->settings.TextColor1;
+    def.color2 = x->current->settings.TextColor2;
+    def.color3 = x->current->settings.TextColor3;
+    def.color4 = x->current->settings.TextColor4;
+    def.Col1234Space = x->current->settings.TextCol1234Space;
+    def.USEcolor = (def.color != 0);
+    def.USEcolor1234 = (def.color == 0);
+    ppl_withWordsMerge(x->c, &merged, &x->current->with_data, &def, NULL, NULL, NULL, 1);
+    eps_core_SetColor(x, &merged, 1);
 
-  // Render text item to eps
-  xgap  = -(x->current->settings.TextHAlign - SW_HALIGN_CENT) * x->current->xpos2;
-  ygap  =  (x->current->settings.TextVAlign - SW_VALIGN_CENT) * x->current->xpos2;
+    // Render text item to eps
+    xgap = -(x->current->settings.TextHAlign - SW_HALIGN_CENT) * x->current->xpos2;
+    ygap = (x->current->settings.TextVAlign - SW_VALIGN_CENT) * x->current->xpos2;
 
-  xgap2 = xgap*cos(x->current->rotation) - ygap*sin(x->current->rotation);
-  ygap2 = xgap*sin(x->current->rotation) + ygap*cos(x->current->rotation);
+    xgap2 = xgap * cos(x->current->rotation) - ygap * sin(x->current->rotation);
+    ygap2 = xgap * sin(x->current->rotation) + ygap * cos(x->current->rotation);
 
-  canvas_EPSRenderTextItem(x, NULL, pageno, x->current->xpos + xgap2, x->current->ypos + ygap2,
-      x->current->settings.TextHAlign, x->current->settings.TextVAlign, x->CurrentColor, x->current->settings.FontSize, x->current->rotation, NULL, NULL);
+    canvas_EPSRenderTextItem(x, NULL, pageno, x->current->xpos + xgap2, x->current->ypos + ygap2,
+                             x->current->settings.TextHAlign, x->current->settings.TextVAlign, x->CurrentColor,
+                             x->current->settings.FontSize, x->current->rotation, NULL, NULL);
 
-  // Free with words
-  ppl_withWordsDestroy(x->c, &merged);
+    // Free with words
+    ppl_withWordsDestroy(x->c, &merged);
 
-  // Final newline at end of canvas item
-  fprintf(x->epsbuffer, "\n");
-  return;
- }
-
+    // Final newline at end of canvas item
+    fprintf(x->epsbuffer, "\n");
+    return;
+}

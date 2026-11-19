@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,18 +26,17 @@
 #include "userspace/pplObj.h"
 
 typedef struct ppllabel_object {
- int         id;
- pplObj      x       ,y       ,z;
- int         system_x,system_y,system_z;
- int         axis_x  ,axis_y  ,axis_z;
- char       *text;
- double      fontsize;
- int         fontsizeSet;
- withWords   style;
- double      rotation, gap;
- int         HAlign, VAlign;
- struct ppllabel_object *next;
- } ppllabel_object;
+    int id;
+    pplObj x, y, z;
+    int system_x, system_y, system_z;
+    int axis_x, axis_y, axis_z;
+    char *text;
+    double fontsize;
+    int fontsizeSet;
+    withWords style;
+    double rotation, gap;
+    int HAlign, VAlign;
+    struct ppllabel_object *next;
+} ppllabel_object;
 
 #endif
-

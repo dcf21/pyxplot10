@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -24,10 +24,9 @@
 
 #ifndef _PYXPLOT_C
 #include <setjmp.h>
-extern sigjmp_buf  ppl_sigjmpToMain;
+extern sigjmp_buf ppl_sigjmpToMain;
 extern sigjmp_buf *ppl_sigjmpFromSigInt;
 #endif
-void               ppl_sigIntHandle(int signo);
+void ppl_sigIntHandle(int signo);
 
 #endif
-

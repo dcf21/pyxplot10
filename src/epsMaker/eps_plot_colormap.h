@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,8 +25,10 @@
 #include "settings/settings.h"
 
 void eps_plot_colormap_YieldText(EPSComm *x, dataTable *data, pplset_graph *sg, canvas_plotdesc *pd);
-int  eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int xn, int yn, int zn, pplset_graph *sg, canvas_plotdesc *pd, int pdn, double origin_x, double origin_y, double width, double height, double zdepth);
-int  eps_plot_colormap_DrawScales(EPSComm *x, double origin_x, double origin_y, double width, double height, double zdepth);
+int eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int xn, int yn, int zn, pplset_graph *sg,
+                      canvas_plotdesc *pd, int pdn, double origin_x, double origin_y, double width, double height,
+                      double zdepth);
+int eps_plot_colormap_DrawScales(EPSComm *x, double origin_x, double origin_y, double width, double height,
+                                 double zdepth);
 
 #endif
-

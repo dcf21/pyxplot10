@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,4 +28,3 @@ void ppl_texify_string(char *in, char *out, int inlen, int outlen);
 void ppl_texify_generic(ppl_context *c, char *in, int inlen, int *end, char *out, int outlen, int *mm_in, int *tr_in);
 
 #endif
-

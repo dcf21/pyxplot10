@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -38,9 +38,11 @@
 #define INTERP_BMPG     23009
 #define INTERP_BMPB     23010
 
-void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth, int mode);
-void ppl_spline_evaluate      (ppl_context *c, char *FuncName, splineDescriptor *desc, pplObj *in, pplObj *out, int *status, char *errout);
-void ppl_interp2d_evaluate    (ppl_context *c, const char *FuncName, splineDescriptor *desc, const pplObj *in1, const pplObj *in2, const unsigned char bmp, pplObj *out, int *status, char *errout);
+void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth,
+                               int mode);
+void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc, pplObj *in, pplObj *out, int *status,
+                         char *errout);
+void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescriptor *desc, const pplObj *in1,
+                           const pplObj *in2, const unsigned char bmp, pplObj *out, int *status, char *errout);
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,4 +28,3 @@ void eps_eps_RenderEPS(EPSComm *x);
 void eps_eps_ExtractBBox(EPSComm *x, FILE *in, double *bl, double *bb, double *br, double *bt, unsigned char *GotBox);
 
 #endif
-

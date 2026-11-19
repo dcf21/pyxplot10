@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -24,10 +24,9 @@
 
 #include <gsl/gsl_complex.h>
 
-void airy_ai     (gsl_complex in, gsl_complex *out, int *status, char *errtext);
-void airy_bi     (gsl_complex in, gsl_complex *out, int *status, char *errtext);
+void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errtext);
+void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errtext);
 void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errtext);
 void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errtext);
 
 #endif
-

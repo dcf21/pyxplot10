@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -44,23 +44,22 @@
 #include "stringTools/strConstants.h"
 
 typedef struct pplset_session {
- int   splash, color, color_rep, color_wrn, color_err;
- char  cwd[FNAME_LENGTH];
- char  tempdir[FNAME_LENGTH];
- char  homedir[FNAME_LENGTH];
- } pplset_session;
+    int splash, color, color_rep, color_wrn, color_err;
+    char cwd[FNAME_LENGTH];
+    char tempdir[FNAME_LENGTH];
+    char homedir[FNAME_LENGTH];
+} pplset_session;
 
-typedef struct pplerr_context_s
- {
-  int       error_input_linenumber;
-  long      error_input_sourceId;
-  char      error_input_filename[FNAME_LENGTH];
-  char      error_source[16]; // Identifier of the process producing log messages
-  char      tempErrStr[LSTR_LENGTH];
-  pplset_session session_default;
- } pplerr_context;
+typedef struct pplerr_context_s {
+    int error_input_linenumber;
+    long error_input_sourceId;
+    char error_input_filename[FNAME_LENGTH];
+    char error_source[16]; // Identifier of the process producing log messages
+    char tempErrStr[LSTR_LENGTH];
+    pplset_session session_default;
+} pplerr_context;
 
-void ppl_error_setstreaminfo(pplerr_context *context, int linenumber,char *filename);
+void ppl_error_setstreaminfo(pplerr_context *context, int linenumber, char *filename);
 void ppl_error(pplerr_context *context, int ErrType, int HighlightPos1, int HighlightPos2, char *msg);
 void ppl_fatal(pplerr_context *context, char *file, int line, char *msg);
 void ppl_warning(pplerr_context *context, int ErrType, char *msg);

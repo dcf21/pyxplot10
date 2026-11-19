@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -23,26 +23,32 @@
 #define _EXPCOMPILE_H 1
 
 typedef struct pplExpr {
-  int  refCount;
-  long srcId; int srcLineN; char *srcFname;
-  char *ascii; void *bytecode; int bcLen;
- } pplExpr;
+    int refCount;
+    long srcId;
+    int srcLineN;
+    char *srcFname;
+    char *ascii;
+    void *bytecode;
+    int bcLen;
+} pplExpr;
 
 typedef struct pplTokenCode {
-  unsigned char  state, opcode, precedence;
-  unsigned int   depth;
- } pplTokenCode;
+    unsigned char state, opcode, precedence;
+    unsigned int depth;
+} pplTokenCode;
 
 typedef struct pplExprPStack {
-  unsigned char opType, opcode, precedence;
-  int charpos, outpos;
- } pplExprPStack;
+    unsigned char opType, opcode, precedence;
+    int charpos, outpos;
+} pplExprPStack;
 
 typedef struct pplExprBytecode {
-  int len, charpos, opcode;
-  unsigned char flag;
-  union { int i; double d; } auxil;
- } pplExprBytecode;
+    int len, charpos, opcode;
+    unsigned char flag;
+    union {
+        int i;
+        double d;
+    } auxil;
+} pplExprBytecode;
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -23,17 +23,16 @@
 #define _PPL_EPS_STYLE_H 1
 
 #define N_POINTTYPES 44
-#define N_STARTYPES   9
+#define N_STARTYPES  9
 
 char *eps_LineType(int lt, double lw, double offset);
 
 #ifndef _PPL_EPS_STYLE_C
-extern char   *eps_PointTypes[];
-extern double  eps_PointSize [];
-extern char   *eps_StarTypes [];
-extern double  eps_StarSize  [];
-extern char   *eps_StarCore;
+extern char *eps_PointTypes[];
+extern double eps_PointSize[];
+extern char *eps_StarTypes[];
+extern double eps_StarSize[];
+extern char *eps_StarCore;
 #endif
 
 #endif
-

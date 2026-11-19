@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,14 +25,14 @@
 #include "epsMaker/eps_comm.h"
 #include "epsMaker/eps_settings.h"
 
-#define AB_ENLARGE_FACTOR    2.5
-#define BB_ENLARGE_FACTOR    1.4
-#define MARGIN_HSIZE        (0.012*M_TO_PS)
-#define MARGIN_HSIZE_LEFT   (0.009*M_TO_PS)
+#define AB_ENLARGE_FACTOR 2.5
+#define BB_ENLARGE_FACTOR 1.4
+#define MARGIN_HSIZE      (0.012 * M_TO_PS)
+#define MARGIN_HSIZE_LEFT (0.009 * M_TO_PS)
 
-#define LEGEND_HGAP_MAXIMUM (0.006*M_TO_PS)
-#define LEGEND_VGAP_MAXIMUM (0.003*M_TO_PS)
-#define LEGEND_MARGIN       (0.002*M_TO_PS)
+#define LEGEND_HGAP_MAXIMUM (0.006 * M_TO_PS)
+#define LEGEND_VGAP_MAXIMUM (0.003 * M_TO_PS)
+#define LEGEND_MARGIN       (0.002 * M_TO_PS)
 
 #define MAX_LEGEND_COLUMNS 1024
 
@@ -41,27 +41,33 @@
 // which they will be rendered.
 
 #define YIELD_TEXTITEM(X) \
-  if ((X != NULL) && (X[0]!='\0')) \
-   { \
-    CanvasTextItem *i; \
-    i = (CanvasTextItem *)ppl_memAlloc(sizeof(CanvasTextItem)); \
-    if (i==NULL) { ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (q)."); *(x->status) = 1; return; } \
-    i->text              = X; \
-    i->CanvasMultiplotID = x->current->id; \
-    ppl_listAppend(x->TextItems, i); \
-    x->NTextItems++; \
-   }
+    if ((X != NULL) && (X[0] != '\0')) { \
+        CanvasTextItem *i; \
+        i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem)); \
+        if (i == NULL) { \
+            ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (q)."); \
+            *(x->status) = 1; \
+            return; \
+        } \
+        i->text = X; \
+        i->CanvasMultiplotID = x->current->id; \
+        ppl_listAppend(x->TextItems, i); \
+        x->NTextItems++; \
+    }
 
 #define YIELD_TEXTITEM_CPY(X) \
- { \
-  char *out = (char *)ppl_memAlloc(strlen(X)+1); \
-  if (out==NULL) { ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (r)."); *(x->status) = 1; return; } \
-  strcpy(out, (X)); \
-  YIELD_TEXTITEM(out); \
- }
+    { \
+        char *out = (char *) ppl_memAlloc(strlen(X) + 1); \
+        if (out == NULL) { \
+            ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (r)."); \
+            *(x->status) = 1; \
+            return; \
+        } \
+        strcpy(out, (X)); \
+        YIELD_TEXTITEM(out); \
+    }
 
 void GraphLegend_YieldUpText(EPSComm *x);
 void GraphLegend_Render(EPSComm *x, double width, double height, double zdepth);
 
 #endif
-

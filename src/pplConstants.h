@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -24,23 +24,24 @@
 
 // Context buffer lengths
 
-#define ALGEBRA_MAXLEN     2048 /* Size of buffer for tokenising input expressions */
-#define STACK_DEFAULT      4096 /* Stack size */
-#define CONTEXT_DEPTH       256 /* Maximum number of stacked local namespaces */
+#define ALGEBRA_MAXLEN 2048 /* Size of buffer for tokenising input expressions */
+#define STACK_DEFAULT  4096 /* Stack size */
+#define CONTEXT_DEPTH  256 /* Maximum number of stacked local namespaces */
 
-#define DUMMYVAR_MAXLEN      16 /* Maximum number of characters in a dummy variable name for integration / differentiation */
+#define DUMMYVAR_MAXLEN 16 /* Maximum number of characters in a dummy variable name for integration / differentiation */
 
 #define MAX_RECURSION_DEPTH 128 /* The maximum recursion depth */
 
 // Plot related structure sizes
 
 #define MULTIPLOT_MAXINDEX 32768
-#define PALETTE_LENGTH       512
-#define MAX_PLOTSTYLES       128 // The maximum number of plot styles (e.g. plot sin(x) with style 23) which are be defined. Similar to 'with linestyle 23' in gnuplot
-#define MAX_AXES             128
-#define MAX_CONTOURS         128 // Maximum number of contours in 'set contour'
-#define USING_ITEMS_MAX       64
-#define FUNC_MAXARGS        1024
+#define PALETTE_LENGTH     512
+#define MAX_PLOTSTYLES \
+    128 // The maximum number of plot styles (e.g. plot sin(x) with style 23) which are be defined. Similar to 'with linestyle 23' in gnuplot
+#define MAX_AXES        128
+#define MAX_CONTOURS    128 // Maximum number of contours in 'set contour'
+#define USING_ITEMS_MAX 64
+#define FUNC_MAXARGS    1024
 
 // Axis linear interpolations
 
@@ -48,8 +49,7 @@
 
 // Command-specific options
 
-#define EQNSOLVE_MAXDIMS      16 // Maximum number of via variables when equation solving / fitting
+#define EQNSOLVE_MAXDIMS 16 // Maximum number of via variables when equation solving / fitting
 
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -30,35 +30,37 @@
 #define OUTGOING 1
 
 typedef struct FilledRegionAxisCrossing {
- double x, y, x2, y2;
- double AxisPos;
- listItem *point;
- unsigned char AxisFace, sense, singleton, used;
- int id, twin;
- } FilledRegionAxisCrossing;
+    double x, y, x2, y2;
+    double AxisPos;
+    listItem *point;
+    unsigned char AxisFace, sense, singleton, used;
+    int id, twin;
+} FilledRegionAxisCrossing;
 
 typedef struct FilledRegionPoint {
- double x, y, xa, ya, xap, yap;
- unsigned char inside;
- int FillSideFlip_prv, FillSideFlip_fwd;
- } FilledRegionPoint;
+    double x, y, xa, ya, xap, yap;
+    unsigned char inside;
+    int FillSideFlip_prv, FillSideFlip_fwd;
+} FilledRegionPoint;
 
 typedef struct FilledRegionHandle {
- EPSComm *x;
- pplset_graph *sg;
- pplset_axis *xa, *ya, *za;
- int xrn, yrn, zrn;
- unsigned char ThreeDim;
- double origin_x, origin_y, width, height, zdepth;
- list *points;
- int Naxiscrossings;
- double lastx, lasty, lastxap, lastyap;
- unsigned char first, EverInside;
- } FilledRegionHandle;
+    EPSComm *x;
+    pplset_graph *sg;
+    pplset_axis *xa, *ya, *za;
+    int xrn, yrn, zrn;
+    unsigned char ThreeDim;
+    double origin_x, origin_y, width, height, zdepth;
+    list *points;
+    int Naxiscrossings;
+    double lastx, lasty, lastxap, lastyap;
+    unsigned char first, EverInside;
+} FilledRegionHandle;
 
-FilledRegionHandle *FilledRegion_Init (EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn, int zrn, pplset_graph *sg, unsigned char ThreeDim, double origin_x, double origin_y, double width, double height, double zdepth);
+FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn,
+                                      int zrn, pplset_graph *sg, unsigned char ThreeDim, double origin_x,
+                                      double origin_y, double width, double height, double zdepth);
 void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, double x, double y);
-void FilledRegion_Finish(EPSComm *X, FilledRegionHandle *fr, int linetype, double linewidth, unsigned char StrokeOutline);
+void FilledRegion_Finish(EPSComm *X, FilledRegionHandle *fr, int linetype, double linewidth,
+                         unsigned char StrokeOutline);
 
 #endif
-

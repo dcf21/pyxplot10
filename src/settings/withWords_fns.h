@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -27,14 +27,15 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void  ppl_withWordsZero    (ppl_context *context, withWords *a);
-void  ppl_withWordsFromDict(ppl_context *context, parserOutput *in, parserLine *pl, const int *ptab, int stkbase, withWords *out);
-int   ppl_withWordsCmp     (ppl_context *context, const withWords *a, const withWords *b);
-int   ppl_withWordsCmp_zero(ppl_context *context, const withWords *a);
-void  ppl_withWordsMerge   (ppl_context *context, withWords *out, const withWords *a, const withWords *b, const withWords *c, const withWords *d, const withWords *e, const unsigned char ExpandStyles);
-void  ppl_withWordsPrint   (ppl_context *context, const withWords *defn, char *out);
-void  ppl_withWordsDestroy (ppl_context *context, withWords *a);
-void  ppl_withWordsCpy     (ppl_context *context, withWords *out, const withWords *in);
+void ppl_withWordsZero(ppl_context *context, withWords *a);
+void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, parserLine *pl, const int *ptab, int stkbase,
+                           withWords *out);
+int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *b);
+int ppl_withWordsCmp_zero(ppl_context *context, const withWords *a);
+void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a, const withWords *b,
+                        const withWords *c, const withWords *d, const withWords *e, const unsigned char ExpandStyles);
+void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out);
+void ppl_withWordsDestroy(ppl_context *context, withWords *a);
+void ppl_withWordsCpy(ppl_context *context, withWords *out, const withWords *in);
 
 #endif
-

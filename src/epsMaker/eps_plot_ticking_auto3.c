@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -47,58 +47,56 @@
 #include "epsMaker/eps_plot_ticking_auto2.h"
 #include "epsMaker/eps_plot_ticking_auto3.h"
 
-void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, double UnitMultiplier, unsigned char *AutoTicks, pplset_axis *linkedto)
- {
-  int i, Nticks_maj, Nticks_min, OutContext;
+void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, double UnitMultiplier, unsigned char *AutoTicks,
+                            pplset_axis *linkedto) {
+    int i, Nticks_maj, Nticks_min, OutContext;
 
-  if (DEBUG) ppl_log(&x->c->errcontext,"Using eps_plot_ticking_auto3()");
-  OutContext = ppl_memAlloc_GetMemContext();
+    if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto3()");
+    OutContext = ppl_memAlloc_GetMemContext();
 
-  if (linkedto==NULL) goto FAIL;
-  if (axis->linkusing != NULL) goto FAIL;
-  if (linkedto->PhysicalLengthMinor != axis->PhysicalLengthMinor) goto FAIL;
-  if ((linkedto->TickListStrings==NULL)||(linkedto->MTickListStrings==NULL)) goto FAIL;
+    if (linkedto == NULL) goto FAIL;
+    if (axis->linkusing != NULL) goto FAIL;
+    if (linkedto->PhysicalLengthMinor != axis->PhysicalLengthMinor) goto FAIL;
+    if ((linkedto->TickListStrings == NULL) || (linkedto->MTickListStrings == NULL)) goto FAIL;
 
-  for (Nticks_maj=0; linkedto-> TickListStrings[Nticks_maj]!=NULL; Nticks_maj++);
-  for (Nticks_min=0; linkedto->MTickListStrings[Nticks_min]!=NULL; Nticks_min++);
+    for (Nticks_maj = 0; linkedto->TickListStrings[Nticks_maj] != NULL; Nticks_maj++);
+    for (Nticks_min = 0; linkedto->MTickListStrings[Nticks_min] != NULL; Nticks_min++);
 
-  axis-> TickListPositions = linkedto-> TickListPositions;
-  axis->MTickListPositions = linkedto->MTickListPositions;
+    axis->TickListPositions = linkedto->TickListPositions;
+    axis->MTickListPositions = linkedto->MTickListPositions;
 
-  if (axis->format==NULL)
-   {
-    axis-> TickListStrings = linkedto-> TickListStrings;
-   }
-  else
-   {
-    axis-> TickListStrings   = (char   **)ppl_memAlloc((Nticks_maj+1) * sizeof(char *));
-    if (axis->TickListStrings==NULL) goto FAIL;
+    if (axis->format == NULL) {
+        axis->TickListStrings = linkedto->TickListStrings;
+    } else {
+        axis->TickListStrings = (char **) ppl_memAlloc((Nticks_maj + 1) * sizeof(char *));
+        if (axis->TickListStrings == NULL) goto FAIL;
 
-    for (i=0; i<Nticks_maj; i++)
-     {
-      double xtmpA,xtmp,xtmpB;
-      xtmpA = eps_plot_axis_InvGetPosition(axis->TickListPositions[i]-1e8, axis) * UnitMultiplier;
-      xtmp  = eps_plot_axis_InvGetPosition(axis->TickListPositions[i]    , axis) * UnitMultiplier;
-      xtmpB = eps_plot_axis_InvGetPosition(axis->TickListPositions[i]    , axis) * UnitMultiplier;
-      if ((gsl_finite(xtmpA))&&(gsl_finite(xtmpB))&&(((xtmpA<=0.0)&&(xtmpB>=0.0))||((xtmpA>=0.0)&&(xtmpB<=0.0)))) xtmp=0.0;
-      TickLabelFromFormat(x, &axis->TickListStrings[i], axis->format, xtmp, &axis->DataUnit, axis->xyz, OutContext);
-     }
-    axis->TickListStrings[i] = NULL;
-   }
+        for (i = 0; i < Nticks_maj; i++) {
+            double xtmpA, xtmp, xtmpB;
+            xtmpA = eps_plot_axis_InvGetPosition(axis->TickListPositions[i] - 1e8, axis) * UnitMultiplier;
+            xtmp = eps_plot_axis_InvGetPosition(axis->TickListPositions[i], axis) * UnitMultiplier;
+            xtmpB = eps_plot_axis_InvGetPosition(axis->TickListPositions[i], axis) * UnitMultiplier;
+            if ((gsl_finite(xtmpA)) && (gsl_finite(xtmpB)) &&
+                (((xtmpA <= 0.0) && (xtmpB >= 0.0)) || ((xtmpA >= 0.0) && (xtmpB <= 0.0))))
+                xtmp = 0.0;
+            TickLabelFromFormat(x, &axis->TickListStrings[i], axis->format, xtmp, &axis->DataUnit, axis->xyz,
+                                OutContext);
+        }
+        axis->TickListStrings[i] = NULL;
+    }
 
-  axis->MTickListStrings   = (char   **)ppl_memAlloc((Nticks_min+1) * sizeof(char *));
-  if (axis->MTickListStrings == NULL) goto FAIL;
-  for (i=0; i<Nticks_min; i++) axis->MTickListStrings[i] = "";
-  axis->MTickListStrings[i] = NULL;
+    axis->MTickListStrings = (char **) ppl_memAlloc((Nticks_min + 1) * sizeof(char *));
+    if (axis->MTickListStrings == NULL) goto FAIL;
+    for (i = 0; i < Nticks_min; i++) axis->MTickListStrings[i] = "";
+    axis->MTickListStrings[i] = NULL;
 
-  // Finished
-  goto CLEANUP;
+    // Finished
+    goto CLEANUP;
 
 FAIL:
-  if (DEBUG) ppl_log(&x->c->errcontext,"eps_plot_ticking_auto3() has failed");
-  eps_plot_ticking_auto2(x, axis, UnitMultiplier, AutoTicks, linkedto);
+    if (DEBUG) ppl_log(&x->c->errcontext, "eps_plot_ticking_auto3() has failed");
+    eps_plot_ticking_auto2(x, axis, UnitMultiplier, AutoTicks, linkedto);
 
 CLEANUP:
-  return;
- }
-
+    return;
+}

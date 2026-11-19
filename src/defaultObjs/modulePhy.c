@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -45,42 +45,41 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
-void pplfunc_planck_Bv   (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "Bv(nu,T)";
-  int i;
-  pplObj kelvin;
+void pplfunc_planck_Bv(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "Bv(nu,T)";
+    int i;
+    pplObj kelvin;
 
-  CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a frequency", UNIT_TIME, -1);
-  CHECK_DIMLESS_OR_HAS_UNIT(in[1], "second", "a temperature", UNIT_TEMPERATURE, 1);
-  pplObjNum(&kelvin,0,1,0);
-  kelvin.exponent[UNIT_TEMPERATURE] = 1;
-  kelvin.tempType = 1;
-  ppl_uaDiv(c, &in[1], &kelvin, &kelvin, status, errType, errText); // Convert in[1] into kelvin
-  if (*status) kelvin.real = GSL_NAN;
-  OUTPUT.dimensionless = 0;
-  OUTPUT.exponent[UNIT_MASS]  =  1;
-  OUTPUT.exponent[UNIT_TIME]  = -2;
-  OUTPUT.exponent[UNIT_ANGLE] = -2;
-  OUTPUT.real                 =  2 * GSL_CONST_MKSA_PLANCKS_CONSTANT_H / pow(GSL_CONST_MKSA_SPEED_OF_LIGHT, 2) * pow(in[0].real,3) / expm1(GSL_CONST_MKSA_PLANCKS_CONSTANT_H * in[0].real / GSL_CONST_MKSA_BOLTZMANN / kelvin.real);
-  CHECK_OUTPUT_OKAY;
- }
+    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a frequency", UNIT_TIME, -1);
+    CHECK_DIMLESS_OR_HAS_UNIT(in[1], "second", "a temperature", UNIT_TEMPERATURE, 1);
+    pplObjNum(&kelvin, 0, 1, 0);
+    kelvin.exponent[UNIT_TEMPERATURE] = 1;
+    kelvin.tempType = 1;
+    ppl_uaDiv(c, &in[1], &kelvin, &kelvin, status, errType, errText); // Convert in[1] into kelvin
+    if (*status) kelvin.real = GSL_NAN;
+    OUTPUT.dimensionless = 0;
+    OUTPUT.exponent[UNIT_MASS] = 1;
+    OUTPUT.exponent[UNIT_TIME] = -2;
+    OUTPUT.exponent[UNIT_ANGLE] = -2;
+    OUTPUT.real = 2 * GSL_CONST_MKSA_PLANCKS_CONSTANT_H / pow(GSL_CONST_MKSA_SPEED_OF_LIGHT, 2) * pow(in[0].real, 3) /
+            expm1(GSL_CONST_MKSA_PLANCKS_CONSTANT_H * in[0].real / GSL_CONST_MKSA_BOLTZMANN / kelvin.real);
+    CHECK_OUTPUT_OKAY;
+}
 
-void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText)
- {
-  char *FunctionDescription = "Bvmax(T)";
-  int i;
-  pplObj kelvin;
+void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
+    char *FunctionDescription = "Bvmax(T)";
+    int i;
+    pplObj kelvin;
 
-  CHECK_DIMLESS_OR_HAS_UNIT(in[0] , "first" , "a temperature", UNIT_TEMPERATURE, 1);
-  pplObjNum(&kelvin,0,1,0);
-  kelvin.exponent[UNIT_TEMPERATURE] = 1;
-  kelvin.tempType = 1;
-  ppl_uaDiv(c, &in[0], &kelvin, &kelvin, status, errType, errText); // Convert in into kelvin
-  if (*status) kelvin.real = GSL_NAN;
-  OUTPUT.dimensionless = 0;
-  OUTPUT.exponent[UNIT_TIME] = -1;
-  OUTPUT.real = 2.821439 * GSL_CONST_MKSA_BOLTZMANN / GSL_CONST_MKSA_PLANCKS_CONSTANT_H * kelvin.real; // Wien displacement law
-  CHECK_OUTPUT_OKAY;
- }
-
+    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a temperature", UNIT_TEMPERATURE, 1);
+    pplObjNum(&kelvin, 0, 1, 0);
+    kelvin.exponent[UNIT_TEMPERATURE] = 1;
+    kelvin.tempType = 1;
+    ppl_uaDiv(c, &in[0], &kelvin, &kelvin, status, errType, errText); // Convert in into kelvin
+    if (*status) kelvin.real = GSL_NAN;
+    OUTPUT.dimensionless = 0;
+    OUTPUT.exponent[UNIT_TIME] = -1;
+    OUTPUT.real = 2.821439 * GSL_CONST_MKSA_BOLTZMANN / GSL_CONST_MKSA_PLANCKS_CONSTANT_H *
+            kelvin.real; // Wien displacement law
+    CHECK_OUTPUT_OKAY;
+}

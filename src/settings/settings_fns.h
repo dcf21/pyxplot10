@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,7 +26,6 @@
 #include "userspace/context.h"
 
 // Variable initialisation functions
-void  pplset_makedefault(ppl_context *context);
+void pplset_makedefault(ppl_context *context);
 
 #endif
-

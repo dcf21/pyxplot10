@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -40,83 +40,86 @@
 #include "epsMaker/eps_settings.h"
 #include "epsMaker/eps_style.h"
 
-void eps_point_YieldUpText(EPSComm *x)
- {
-  CanvasTextItem *i;
+void eps_point_YieldUpText(EPSComm *x) {
+    CanvasTextItem *i;
 
-  if (x->current->text != NULL)
-   {
-    x->current->FirstTextID = x->NTextItems;
-    if (x->current->text[0]=='\0') return;
+    if (x->current->text != NULL) {
+        x->current->FirstTextID = x->NTextItems;
+        if (x->current->text[0] == '\0') return;
 
-    i = (CanvasTextItem *)ppl_memAlloc(sizeof(CanvasTextItem));
-    if (i==NULL) { ppl_error(&x->c->errcontext,ERR_MEMORY, -1, -1, "Out of memory"); *(x->status) = 1; return; }
-    i->text              = x->current->text;
-    i->CanvasMultiplotID = x->current->id;
-    ppl_listAppend(x->TextItems, i);
-    x->NTextItems++;
-   }
-  return;
- }
+        i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+        if (i == NULL) {
+            ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
+            *(x->status) = 1;
+            return;
+        }
+        i->text = x->current->text;
+        i->CanvasMultiplotID = x->current->id;
+        ppl_listAppend(x->TextItems, i);
+        x->NTextItems++;
+    }
+    return;
+}
 
-void eps_point_RenderEPS(EPSComm *x)
- {
-  int    pt, lt;
-  double lw, lw_scale, xpos, ypos;
-  withWords ww, ww_default;
-  int pageno;
+void eps_point_RenderEPS(EPSComm *x) {
+    int pt, lt;
+    double lw, lw_scale, xpos, ypos;
+    withWords ww, ww_default;
+    int pageno;
 
-  pageno = x->LaTeXpageno = x->current->FirstTextID;
-  x->LaTeXpageno++;
+    pageno = x->LaTeXpageno = x->current->FirstTextID;
+    x->LaTeXpageno++;
 
-  // Print label at top of postscript description of box
-  fprintf(x->epsbuffer, "%% Canvas item %d [point]\n", x->current->id);
-  eps_core_clear(x);
+    // Print label at top of postscript description of box
+    fprintf(x->epsbuffer, "%% Canvas item %d [point]\n", x->current->id);
+    eps_core_clear(x);
 
-  // Look up position of point
-  xpos =  x->current->xpos  * M_TO_PS;
-  ypos =  x->current->ypos  * M_TO_PS;
+    // Look up position of point
+    xpos = x->current->xpos * M_TO_PS;
+    ypos = x->current->ypos * M_TO_PS;
 
-  // Expand any numbered styles which may appear in the with words we are passed
-  eps_withwords_default(x, &ww_default, &x->current->settings, 0, 0, 0, 0, 0);
-  ppl_withWordsMerge(x->c, &ww, &x->current->with_data, &ww_default, NULL, NULL, NULL, 1);
+    // Expand any numbered styles which may appear in the with words we are passed
+    eps_withwords_default(x, &ww_default, &x->current->settings, 0, 0, 0, 0, 0);
+    ppl_withWordsMerge(x->c, &ww, &x->current->with_data, &ww_default, NULL, NULL, NULL, 1);
 
-  // Display point
-  eps_core_SetColor(x, &ww, 1);
-  IF_NOT_INVISIBLE
-   {
-    // Set linewidth and linetype of point
-    if (ww.USElinewidth) lw_scale = ww.pointlinewidth;
-    else                 lw_scale = x->current->settings.LineWidth;
-    lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
-    lt = 1;
-    eps_core_SetLinewidth(x, lw, lt, 0.0);
-    fprintf(x->epsbuffer, "/ps { %f } def\n", ww.pointsize * EPS_DEFAULT_PS);
+    // Display point
+    eps_core_SetColor(x, &ww, 1);
+    IF_NOT_INVISIBLE {
+        // Set linewidth and linetype of point
+        if (ww.USElinewidth) lw_scale = ww.pointlinewidth;
+        else lw_scale = x->current->settings.LineWidth;
+        lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+        lt = 1;
+        eps_core_SetLinewidth(x, lw, lt, 0.0);
+        fprintf(x->epsbuffer, "/ps { %f } def\n", ww.pointsize * EPS_DEFAULT_PS);
 
-    pt = (ww.pointtype-1) % N_POINTTYPES;
-    while (pt<0) pt+=N_POINTTYPES;
-    x->PointTypesUsed[pt] = 1;
-    fprintf(x->epsbuffer, "%.2f %.2f pt%d\n", xpos, ypos, pt+1);
-    eps_core_BoundingBox(x, xpos, ypos, 2 * ww.pointsize * eps_PointSize[pt] * EPS_DEFAULT_PS);
+        pt = (ww.pointtype - 1) % N_POINTTYPES;
+        while (pt < 0) pt += N_POINTTYPES;
+        x->PointTypesUsed[pt] = 1;
+        fprintf(x->epsbuffer, "%.2f %.2f pt%d\n", xpos, ypos, pt + 1);
+        eps_core_BoundingBox(x, xpos, ypos, 2 * ww.pointsize * eps_PointSize[pt] * EPS_DEFAULT_PS);
 
-    // Label point if it is labelled
-    if ((x->current->text != NULL) && (x->current->text[0]!='\0'))
-     {
-      const double xsp = (x->current->settings.TextVAlign == SW_VALIGN_CENT) ? 1.7 : 1.13;
-      const double ysp = (x->current->settings.TextHAlign == SW_HALIGN_CENT) ? 1.7 : 1.13;
-      canvas_EPSRenderTextItem(x, NULL, pageno,
-              x->current->xpos - (x->current->settings.TextHAlign - SW_HALIGN_CENT) * ww.pointsize * eps_PointSize[pt] * EPS_DEFAULT_PS / M_TO_PS * xsp,
-              x->current->ypos + (x->current->settings.TextVAlign - SW_VALIGN_CENT) * ww.pointsize * eps_PointSize[pt] * EPS_DEFAULT_PS / M_TO_PS * ysp,
-              x->current->settings.TextHAlign, x->current->settings.TextVAlign, x->CurrentColor, x->current->settings.FontSize, 0.0, NULL, NULL);
-     }
-   }
+        // Label point if it is labelled
+        if ((x->current->text != NULL) && (x->current->text[0] != '\0')) {
+            const double xsp = (x->current->settings.TextVAlign == SW_VALIGN_CENT) ? 1.7 : 1.13;
+            const double ysp = (x->current->settings.TextHAlign == SW_HALIGN_CENT) ? 1.7 : 1.13;
+            canvas_EPSRenderTextItem(x, NULL, pageno,
+                                     x->current->xpos -
+                                             (x->current->settings.TextHAlign - SW_HALIGN_CENT) * ww.pointsize *
+                                                     eps_PointSize[pt] * EPS_DEFAULT_PS / M_TO_PS * xsp,
+                                     x->current->ypos +
+                                             (x->current->settings.TextVAlign - SW_VALIGN_CENT) * ww.pointsize *
+                                                     eps_PointSize[pt] * EPS_DEFAULT_PS / M_TO_PS * ysp,
+                                     x->current->settings.TextHAlign, x->current->settings.TextVAlign, x->CurrentColor,
+                                     x->current->settings.FontSize, 0.0, NULL, NULL);
+        }
+    }
 
-  // Free with words
-  ppl_withWordsDestroy(x->c, &ww);
-  ppl_withWordsDestroy(x->c, &ww_default);
+    // Free with words
+    ppl_withWordsDestroy(x->c, &ww);
+    ppl_withWordsDestroy(x->c, &ww_default);
 
-  // Final newline at end of canvas item
-  fprintf(x->epsbuffer, "\n");
-  return;
- }
-
+    // Final newline at end of canvas item
+    fprintf(x->epsbuffer, "\n");
+    return;
+}

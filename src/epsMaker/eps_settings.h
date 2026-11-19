@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -23,20 +23,20 @@
 #define _PPL_EPS_SETTINGS_H 1
 
 // Baseline values of settings used by the eps generation routines
-#define EPS_BASE_DEFAULT_LINEWIDTH ( 0.566929       ) /* 0.2mm in TeX points */
-#define EPS_BASE_DEFAULT_PS        ( 3.0            )
-#define EPS_BASE_ARROW_ANGLE       ( 45.0 *M_PI/180 )
-#define EPS_BASE_ARROW_CONSTRICT   ( 0.2            )
-#define EPS_BASE_ARROW_HEADSIZE    ( 6.0            )
-#define EPS_BASE_AXES_LINEWIDTH    ( 1.0            )
-#define EPS_BASE_AXES_MAJTICKLEN   ( 0.0012         )
-#define EPS_BASE_AXES_MINTICKLEN   ( 0.000848528137 ) /* 0.0012 divided by sqrt(2) */
-#define EPS_BASE_AXES_SEPARATION   ( 0.008          )
-#define EPS_BASE_AXES_TEXTGAP      ( 0.003          )
-#define EPS_BASE_COLORSCALE_MARG   ( 3e-3           )
-#define EPS_BASE_COLORSCALE_WIDTH  ( 4e-3           )
-#define EPS_BASE_GRID_MAJLINEWIDTH ( 1.0            )
-#define EPS_BASE_GRID_MINLINEWIDTH ( 0.5            )
+#define EPS_BASE_DEFAULT_LINEWIDTH (0.566929) /* 0.2mm in TeX points */
+#define EPS_BASE_DEFAULT_PS        (3.0)
+#define EPS_BASE_ARROW_ANGLE       (45.0 * M_PI / 180)
+#define EPS_BASE_ARROW_CONSTRICT   (0.2)
+#define EPS_BASE_ARROW_HEADSIZE    (6.0)
+#define EPS_BASE_AXES_LINEWIDTH    (1.0)
+#define EPS_BASE_AXES_MAJTICKLEN   (0.0012)
+#define EPS_BASE_AXES_MINTICKLEN   (0.000848528137) /* 0.0012 divided by sqrt(2) */
+#define EPS_BASE_AXES_SEPARATION   (0.008)
+#define EPS_BASE_AXES_TEXTGAP      (0.003)
+#define EPS_BASE_COLORSCALE_MARG   (3e-3)
+#define EPS_BASE_COLORSCALE_WIDTH  (4e-3)
+#define EPS_BASE_GRID_MAJLINEWIDTH (1.0)
+#define EPS_BASE_GRID_MINLINEWIDTH (0.5)
 
 // Copies of the values actually used by the eps generation routines, which may have been scaled relative to their baselines
 #ifndef _PPL_EPS_SETTINGS_C
@@ -58,4 +58,3 @@ extern double EPS_GRID_MINLINEWIDTH;
 #endif
 
 #endif
-

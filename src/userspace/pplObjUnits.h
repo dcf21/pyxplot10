@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -22,7 +22,7 @@
 #ifndef _PPLOBJUNITS_H
 #define _PPLOBJUNITS_H 1
 
-#define UNITS_MAX_BASEUNITS   24
+#define UNITS_MAX_BASEUNITS 24
 #define UNITS_MAX           1024
 
 #define UNIT_LENGTH      0
@@ -36,28 +36,25 @@
 #define UNIT_COST        8
 #define UNIT_FIRSTUSER   9
 
-typedef struct unit
- {
-  char         *nameAs, *nameAp, *nameLs, *nameLp, *nameFs, *nameFp, *alt1, *alt2, *alt3, *alt4, *comment, *quantity;
-  double        multiplier, offset;
-  unsigned char si, cgs, imperial, us, planck, ancient, userSel, notToBeCompounded, modified, tempType;
-  int           maxPrefix;
-  int           minPrefix;
-  int           userSelPrefix;
-  double        exponent[UNITS_MAX_BASEUNITS];
- } unit;
+typedef struct unit {
+    char *nameAs, *nameAp, *nameLs, *nameLp, *nameFs, *nameFp, *alt1, *alt2, *alt3, *alt4, *comment, *quantity;
+    double multiplier, offset;
+    unsigned char si, cgs, imperial, us, planck, ancient, userSel, notToBeCompounded, modified, tempType;
+    int maxPrefix;
+    int minPrefix;
+    int userSelPrefix;
+    double exponent[UNITS_MAX_BASEUNITS];
+} unit;
 
 #include "userspace/pplObj.h"
 
-typedef struct PreferredUnit
- {
-  int    NUnits;
-  int    UnitID[UNITS_MAX_BASEUNITS];
-  int    prefix[UNITS_MAX_BASEUNITS];
-  double exponent[UNITS_MAX_BASEUNITS];
-  pplObj value;
-  unsigned char modified;
- } PreferredUnit;
+typedef struct PreferredUnit {
+    int NUnits;
+    int UnitID[UNITS_MAX_BASEUNITS];
+    int prefix[UNITS_MAX_BASEUNITS];
+    double exponent[UNITS_MAX_BASEUNITS];
+    pplObj value;
+    unsigned char modified;
+} PreferredUnit;
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,15 +26,14 @@
 #include "userspace/pplObj.h"
 
 void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_timefromJD      (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_timefromMJD     (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_timefromUnix    (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_timeInterval    (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_timeIntervalStr (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_timenow         (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_timestring      (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_sleep           (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_sleepUntil      (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_timefromJD(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_timefromMJD(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_timefromUnix(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_timeInterval(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_timenow(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_timestring(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_sleep(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_sleepUntil(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif
-

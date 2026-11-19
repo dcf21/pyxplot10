@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -29,8 +29,8 @@
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_BOOL_STR[];
-extern int   SW_BOOL_ACL[];
-extern int   SW_BOOL_INT[];
+extern int SW_BOOL_ACL[];
+extern int SW_BOOL_INT[];
 #endif
 
 // On/Off Switches
@@ -40,8 +40,8 @@ extern int   SW_BOOL_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_ONOFF_STR[];
-extern int   SW_ONOFF_ACL[];
-extern int   SW_ONOFF_INT[];
+extern int SW_ONOFF_ACL[];
+extern int SW_ONOFF_INT[];
 #endif
 
 // Postscript viewers
@@ -59,8 +59,8 @@ extern int   SW_ONOFF_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_COLSPACE_STR[];
-extern int   SW_COLSPACE_ACL[];
-extern int   SW_COLSPACE_INT[];
+extern int SW_COLSPACE_ACL[];
+extern int SW_COLSPACE_INT[];
 #endif
 
 // Plot Style Switches
@@ -103,8 +103,8 @@ extern int   SW_COLSPACE_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_STYLE_STR[];
-extern int   SW_STYLE_ACL[];
-extern int   SW_STYLE_INT[];
+extern int SW_STYLE_ACL[];
+extern int SW_STYLE_INT[];
 #endif
 
 // Systems in which coordinates can be specified in 'set arrow' and 'set label'
@@ -117,8 +117,8 @@ extern int   SW_STYLE_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_SYSTEM_STR[];
-extern int   SW_SYSTEM_ACL[];
-extern int   SW_SYSTEM_INT[];
+extern int SW_SYSTEM_ACL[];
+extern int SW_SYSTEM_INT[];
 #endif
 
 // Arrow types understood by the 'set arrow' command
@@ -129,8 +129,8 @@ extern int   SW_SYSTEM_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_ARROWTYPE_STR[];
-extern int   SW_ARROWTYPE_ACL[];
-extern int   SW_ARROWTYPE_INT[];
+extern int SW_ARROWTYPE_ACL[];
+extern int SW_ARROWTYPE_INT[];
 #endif
 
 // Bitmap types understood by the 'image' command
@@ -142,8 +142,8 @@ extern int   SW_ARROWTYPE_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_BITMAP_STR[];
-extern int   SW_BITMAP_ACL[];
-extern int   SW_BITMAP_INT[];
+extern int SW_BITMAP_ACL[];
+extern int SW_BITMAP_INT[];
 #endif
 
 // Axis unit styles
@@ -154,8 +154,8 @@ extern int   SW_BITMAP_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_AXISUNITSTY_STR[];
-extern int   SW_AXISUNITSTY_ACL[];
-extern int   SW_AXISUNITSTY_INT[];
+extern int SW_AXISUNITSTY_ACL[];
+extern int SW_AXISUNITSTY_INT[];
 #endif
 
 // Terminal Type Switches
@@ -175,29 +175,29 @@ extern int   SW_AXISUNITSTY_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_TERMTYPE_STR[];
-extern int   SW_TERMTYPE_ACL[];
-extern int   SW_TERMTYPE_INT[];
+extern int SW_TERMTYPE_ACL[];
+extern int SW_TERMTYPE_INT[];
 #endif
 
 // Key Position Switches
 
-#define SW_KEYPOS_TR 14001
-#define SW_KEYPOS_TM 14002
-#define SW_KEYPOS_TL 14003
-#define SW_KEYPOS_MR 14004
-#define SW_KEYPOS_MM 14005
-#define SW_KEYPOS_ML 14006
-#define SW_KEYPOS_BR 14007
-#define SW_KEYPOS_BM 14008
-#define SW_KEYPOS_BL 14009
-#define SW_KEYPOS_ABOVE 14010
-#define SW_KEYPOS_BELOW 14011
+#define SW_KEYPOS_TR      14001
+#define SW_KEYPOS_TM      14002
+#define SW_KEYPOS_TL      14003
+#define SW_KEYPOS_MR      14004
+#define SW_KEYPOS_MM      14005
+#define SW_KEYPOS_ML      14006
+#define SW_KEYPOS_BR      14007
+#define SW_KEYPOS_BM      14008
+#define SW_KEYPOS_BL      14009
+#define SW_KEYPOS_ABOVE   14010
+#define SW_KEYPOS_BELOW   14011
 #define SW_KEYPOS_OUTSIDE 14012
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_KEYPOS_STR[];
-extern int   SW_KEYPOS_ACL[];
-extern int   SW_KEYPOS_INT[];
+extern int SW_KEYPOS_ACL[];
+extern int SW_KEYPOS_INT[];
 #endif
 
 // Color key position switches
@@ -209,8 +209,8 @@ extern int   SW_KEYPOS_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_COLKEYPOS_STR[];
-extern int   SW_COLKEYPOS_ACL[];
-extern int   SW_COLKEYPOS_INT[];
+extern int SW_COLKEYPOS_ACL[];
+extern int SW_COLKEYPOS_INT[];
 #endif
 
 // Tick Direction Switches
@@ -221,8 +221,8 @@ extern int   SW_COLKEYPOS_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_TICDIR_STR[];
-extern int   SW_TICDIR_ACL[];
-extern int   SW_TICDIR_INT[];
+extern int SW_TICDIR_ACL[];
+extern int SW_TICDIR_INT[];
 #endif
 
 // Tick Label Text Direction Switches
@@ -233,8 +233,8 @@ extern int   SW_TICDIR_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_TICLABDIR_STR[];
-extern int   SW_TICLABDIR_ACL[];
-extern int   SW_TICLABDIR_INT[];
+extern int SW_TICLABDIR_ACL[];
+extern int SW_TICLABDIR_INT[];
 #endif
 
 // Axis Display Schemes
@@ -246,8 +246,8 @@ extern int   SW_TICLABDIR_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_AXISDISP_STR[];
-extern int   SW_AXISDISP_ACL[];
-extern int   SW_AXISDISP_INT[];
+extern int SW_AXISDISP_ACL[];
+extern int SW_AXISDISP_INT[];
 #endif
 
 // Axis Display Mirroring Schemes
@@ -259,8 +259,8 @@ extern int   SW_AXISDISP_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_AXISMIRROR_STR[];
-extern int   SW_AXISMIRROR_ACL[];
-extern int   SW_AXISMIRROR_INT[];
+extern int SW_AXISMIRROR_ACL[];
+extern int SW_AXISMIRROR_INT[];
 #endif
 
 // Graph Projection Schemes
@@ -270,8 +270,8 @@ extern int   SW_AXISMIRROR_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_PROJ_STR[];
-extern int   SW_PROJ_ACL[];
-extern int   SW_PROJ_INT[];
+extern int SW_PROJ_ACL[];
+extern int SW_PROJ_INT[];
 #endif
 
 // 2D Sampling Methods
@@ -282,8 +282,8 @@ extern int   SW_PROJ_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_SAMPLEMETHOD_STR[];
-extern int   SW_SAMPLEMETHOD_ACL[];
-extern int   SW_SAMPLEMETHOD_INT[];
+extern int SW_SAMPLEMETHOD_ACL[];
+extern int SW_SAMPLEMETHOD_INT[];
 #endif
 
 // Text Horizontal Alignment
@@ -294,8 +294,8 @@ extern int   SW_SAMPLEMETHOD_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_HALIGN_STR[];
-extern int   SW_HALIGN_ACL[];
-extern int   SW_HALIGN_INT[];
+extern int SW_HALIGN_ACL[];
+extern int SW_HALIGN_INT[];
 #endif
 
 // Text Vertical Alignment
@@ -306,8 +306,8 @@ extern int   SW_HALIGN_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_VALIGN_STR[];
-extern int   SW_VALIGN_ACL[];
-extern int   SW_VALIGN_INT[];
+extern int SW_VALIGN_ACL[];
+extern int SW_VALIGN_INT[];
 #endif
 
 // Colors for displaying on terminals
@@ -323,8 +323,8 @@ extern int   SW_VALIGN_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_TERMCOL_STR[];
-extern int   SW_TERMCOL_ACL[];
-extern int   SW_TERMCOL_INT[];
+extern int SW_TERMCOL_ACL[];
+extern int SW_TERMCOL_INT[];
 extern char *SW_TERMCOL_TXT[];
 #endif
 
@@ -339,8 +339,8 @@ extern char *SW_TERMCOL_TXT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_UNITSCH_STR[];
-extern int   SW_UNITSCH_ACL[];
-extern int   SW_UNITSCH_INT[];
+extern int SW_UNITSCH_ACL[];
+extern int SW_UNITSCH_INT[];
 #endif
 
 // Schemes in which we can display numeric results
@@ -351,8 +351,8 @@ extern int   SW_UNITSCH_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_DISPLAY_STR[];
-extern int   SW_DISPLAY_ACL[];
-extern int   SW_DISPLAY_INT[];
+extern int SW_DISPLAY_ACL[];
+extern int SW_DISPLAY_INT[];
 #endif
 
 // Calendars which we can use
@@ -369,8 +369,8 @@ extern int   SW_DISPLAY_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_CALENDAR_STR[];
-extern int   SW_CALENDAR_ACL[];
-extern int   SW_CALENDAR_INT[];
+extern int SW_CALENDAR_ACL[];
+extern int SW_CALENDAR_INT[];
 #endif
 
 // Positions for the labels on piecharts
@@ -382,13 +382,13 @@ extern int   SW_CALENDAR_INT[];
 
 #ifndef _SETTINGTYPES_C
 extern char *SW_PIEKEYPOS_STR[];
-extern int   SW_PIEKEYPOS_ACL[];
-extern int   SW_PIEKEYPOS_INT[];
+extern int SW_PIEKEYPOS_ACL[];
+extern int SW_PIEKEYPOS_INT[];
 #endif
 
 #include "coreUtils/errorReport.h"
 
-void *ppl_fetchSettingName   (pplerr_context *context, int id, int *id_list, void *name_list, const int name_list_size);
-int   ppl_fetchSettingByName (pplerr_context *context, char *name, int *id_list, char **name_list);
+void *ppl_fetchSettingName(pplerr_context *context, int id, int *id_list, void *name_list, const int name_list_size);
+int ppl_fetchSettingByName(pplerr_context *context, char *name, int *id_list, char **name_list);
 
 #endif

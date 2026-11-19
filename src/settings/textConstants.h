@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -32,7 +32,6 @@ extern char ppltxt_unset_noword[];
 extern char ppltxt_set[];
 extern char ppltxt_unset[];
 extern char ppltxt_show[];
-void   ppltxt_init   ();
+void ppltxt_init();
 
 #endif
-

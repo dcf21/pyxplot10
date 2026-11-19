@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -32,56 +32,51 @@
 #include "epsMaker/dvi_font.h"
 
 // Structure to store a DVI operator and the data that goes with it
-typedef struct DVIOperator
- {
-  unsigned char op;
-  unsigned long int ul[10];
-  signed long int sl[2];
-  char *s[2];
- } DVIOperator;
+typedef struct DVIOperator {
+    unsigned char op;
+    unsigned long int ul[10];
+    signed long int sl[2];
+    char *s[2];
+} DVIOperator;
 
 // Structure to store the state of a dvi interpreter that can be pushed onto the stack
-typedef struct dviStackState
- {
-  signed long int h,v,w,x,y,z;
- } dviStackState;
+typedef struct dviStackState {
+    signed long int h, v, w, x, y, z;
+} dviStackState;
 
 // Structure to store a page of postscript
-typedef struct postscriptPage
- {
-  double *boundingBox;  // The current bounding box
-  double *textSizeBox;  // The current text size box (b.box plus oversize text)
-  list *text;           // The big list of strings of postscript
- } postscriptPage;
+typedef struct postscriptPage {
+    double *boundingBox; // The current bounding box
+    double *textSizeBox; // The current text size box (b.box plus oversize text)
+    list *text; // The big list of strings of postscript
+} postscriptPage;
 
 // Structure to store the state of some postscript in the process of being produced
-typedef struct postscriptState
- {
-  list *pages;                      // List of pages of postscript
-  int Npages;                       // The number of pages
-  postscriptPage *currentPage;      // The current page
-  dviStackState *currentPosition;   // The current position in dvi units
- } postscriptState;
+typedef struct postscriptState {
+    list *pages; // List of pages of postscript
+    int Npages; // The number of pages
+    postscriptPage *currentPage; // The current page
+    dviStackState *currentPosition; // The current position in dvi units
+} postscriptState;
 
 // Structure to store the entire internal state of a dvi interpreter
-typedef struct dviInterpreterState
- {
-  dviStackState *state;      // h,v,w,x,y,z;  // Positions
-  unsigned int f;            // Current font
-  dviFontDetails *curFnt;    //       and a pointer to it
-  char *currentString;       // The string, if any, currently being rendered
-  int currentStrlen;         //       and its current length
-  double scale;              // Scale from dvi->ps units
-  list *stack;               // The stack
-  list *fonts;               // The fonts currently defined
-  postscriptState *output;   // The output postscript
-  int special;               // A magic flag for special actions
-  int specialLen;            // Number of characters in special command
-  char *spString;            // String to store special information
-  list *colStack;            // Stack of colour items
-  double *boundingBox;       // Current bounding box
-  double *textSizeBox;       // Current text size box
- } dviInterpreterState;
+typedef struct dviInterpreterState {
+    dviStackState *state; // h,v,w,x,y,z;  // Positions
+    unsigned int f; // Current font
+    dviFontDetails *curFnt; //       and a pointer to it
+    char *currentString; // The string, if any, currently being rendered
+    int currentStrlen; //       and its current length
+    double scale; // Scale from dvi->ps units
+    list *stack; // The stack
+    list *fonts; // The fonts currently defined
+    postscriptState *output; // The output postscript
+    int special; // A magic flag for special actions
+    int specialLen; // Number of characters in special command
+    char *spString; // String to store special information
+    list *colStack; // Stack of colour items
+    double *boundingBox; // Current bounding box
+    double *textSizeBox; // Current text size box
+} dviInterpreterState;
 
 // Functions allowing dvi interpreters to be manipulated
 dviInterpreterState *ReadDviFile(pplerr_context *ec, char *filename, int *status);
@@ -111,7 +106,7 @@ int DisplayDVIOperator(pplerr_context *ec, DVIOperator *op);
 int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp);
 
 // The following definitions are taken from PyX
-#define DVI_CHARMIN       0 // typeset a character and move right (range min)
+#define DVI_CHARMIN     0 // typeset a character and move right (range min)
 #define DVI_CHARMAX     127 // typeset a character and move right (range max)
 #define DVI_SET1234     128 // typeset a character and move right
 #define DVI_SETRULE     132 // typeset a rule and move right
@@ -141,18 +136,18 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp);
 #define DVI_POST        248 // postamble beginning
 #define DVI_POSTPOST    249 // postamble ending
 
-#define DVI_VERSION     2   // dvi version
+#define DVI_VERSION 2 // dvi version
 
 // true and false
 #define DVI_YES 1
-#define DVI_NO 0
+#define DVI_NO  0
 
 // Error states
 
 // Errors related to file operations
-#define DVIE_NOENT   10
-#define DVIE_EOF     11
-#define DVIE_ACCESS  12
+#define DVIE_NOENT  10
+#define DVIE_EOF    11
+#define DVIE_ACCESS 12
 
 // Errors related to malformed/corrupted/missing files
 #define DVIE_CORRUPT 20
@@ -163,4 +158,3 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp);
 #define DVIE_INTERNAL 31
 
 #endif
-

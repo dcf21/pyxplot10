@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,12 +28,13 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void          ppllabel_add         (ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
-void          ppllabel_remove      (ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab, int quiet);
-void          ppllabel_unset       (ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
-unsigned char ppllabel_compare     (ppl_context *context, ppllabel_object *a, ppllabel_object *b);
-void          ppllabel_list_copy   (ppl_context *context, ppllabel_object **out, ppllabel_object **in);
-void          ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist);
-void          ppllabel_print       (ppl_context *context, ppllabel_object  *in, char *out);
+void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
+void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab,
+                     int quiet);
+void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
+unsigned char ppllabel_compare(ppl_context *context, ppllabel_object *a, ppllabel_object *b);
+void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_object **in);
+void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist);
+void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out);
 
 #endif

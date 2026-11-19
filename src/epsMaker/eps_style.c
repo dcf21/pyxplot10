@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,81 +28,91 @@
 #include "epsMaker/eps_style.h"
 
 // Line types
-char *eps_LineType(int lt, double lw, double offset)
- {
-  static char output[256];
-  lt = (lt-1) % 9;
-  while (lt<0) lt+=9;
-  if      (lt==0) sprintf(output, "0 setlinecap [] %.2f setdash", offset);                                   // solid
-  else if (lt==1) sprintf(output, "0 setlinecap [%.2f] %.2f setdash", 2*lw, offset);                         // dashed
-  else if (lt==2) sprintf(output, "1 setlinecap [0 %.2f] %.2f setdash", 2*lw, offset);                       // dotted
-  else if (lt==3) sprintf(output, "1 setlinecap [0 %.2f %.2f %.2f] %.2f setdash", 2*lw, 2*lw, 2*lw, offset); // dash-dotted
-  else if (lt==4) sprintf(output, "0 setlinecap [%.2f %.2f] %.2f setdash", 7*lw, 2*lw, offset);              // long dash
-  else if (lt==5) sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f] %.2f setdash", 7*lw, 2*lw, 2*lw, offset); // long dash - dot
-  else if (lt==6) sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f] %.2f setdash", 7*lw, 2*lw, 2*lw, 2*lw, offset); // long dash - dot dot
-  else if (lt==7) sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f 0 %.2f] %.2f setdash", 7*lw, 2*lw, 2*lw, 2*lw, 2*lw, offset); // long dash - dot dot dot
-  else if (lt==8) sprintf(output, "0 setlinecap [%.2f %.2f %.2f %.2f] %.2f setdash", 7*lw, 2*lw, 2*lw, 2*lw, offset); // long dash - dash
-  return output;
- }
+char *eps_LineType(int lt, double lw, double offset) {
+    static char output[256];
+    lt = (lt - 1) % 9;
+    while (lt < 0) lt += 9;
+    if (lt == 0) sprintf(output, "0 setlinecap [] %.2f setdash", offset); // solid
+    else if (lt == 1) sprintf(output, "0 setlinecap [%.2f] %.2f setdash", 2 * lw, offset); // dashed
+    else if (lt == 2) sprintf(output, "1 setlinecap [0 %.2f] %.2f setdash", 2 * lw, offset); // dotted
+    else if (lt == 3)
+        sprintf(output, "1 setlinecap [0 %.2f %.2f %.2f] %.2f setdash", 2 * lw, 2 * lw, 2 * lw, offset); // dash-dotted
+    else if (lt == 4) sprintf(output, "0 setlinecap [%.2f %.2f] %.2f setdash", 7 * lw, 2 * lw, offset); // long dash
+    else if (lt == 5)
+        sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw,
+                offset); // long dash - dot
+    else if (lt == 6)
+        sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw, 2 * lw,
+                offset); // long dash - dot dot
+    else if (lt == 7)
+        sprintf(output, "1 setlinecap [%.2f %.2f 0 %.2f 0 %.2f 0 %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw, 2 * lw,
+                2 * lw, offset); // long dash - dot dot dot
+    else if (lt == 8)
+        sprintf(output, "0 setlinecap [%.2f %.2f %.2f %.2f] %.2f setdash", 7 * lw, 2 * lw, 2 * lw, 2 * lw,
+                offset); // long dash - dash
+    return output;
+}
 
 // Point types
 // NB the fact that point types 29-42 depend upon point types 1-14 and 15-28, and that this must be accounted for in canvasDraw.c
-char *eps_PointTypes[N_POINTTYPES] = {
-       "/pt1 {newpath 2 copy ps75 sub exch ps75 sub exch moveto ps75 2 mul dup rlineto closepath stroke ps75 add exch ps75 sub exch moveto ps75 2 mul dup -1 mul rlineto closepath stroke } bind def",
-       "/pt2 {newpath ps75 add exch ps75 add exch moveto ps75 -2 mul 0 rlineto 0 ps75 -2 mul rlineto ps75 2 mul 0 rlineto closepath stroke} bind def",
-       "/pt3 {newpath 2 copy exch ps75 1.1 mul add exch moveto ps75 1.1 mul 0 360 arc stroke} bind def",
-       "/pt4 {newpath exch ps 1.183 mul add exch ps75 sub moveto ps -1.183 mul ps 2.049 mul 2 copy rlineto -1 mul rlineto closepath stroke} bind def",
-       "/pt5 {newpath exch ps75 add exch moveto ps75 -1 mul ps 1.3 mul 2 copy 2 copy rlineto -1 mul rlineto -1 mul exch -1 mul exch rlineto closepath stroke} bind def",
-       "/pt6 {newpath exch ps add exch moveto ps -.5 mul ps 0.866 mul rlineto ps -1 mul 0 rlineto ps -.5 mul ps -.866 mul 2 copy rlineto exch -1 mul exch rlineto ps 0 rlineto closepath stroke} bind def",
-       "/pt7 {newpath 2 copy ps add moveto /theta 162 def 4 { 2 copy exch theta cos ps mul add exch theta sin ps mul add lineto /theta theta 72 add def } repeat closepath stroke pop pop} bind def",
-       "/pt8 {newpath exch ps 1.183 mul add exch ps75 add moveto ps -1.183 mul ps -2.049 mul 2 copy rlineto -1 mul rlineto closepath stroke} bind def",
-       "/pt9 {newpath ps 1.183 mul add exch ps75 sub exch moveto ps 2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath stroke} bind def",
-       "/pt10 {newpath ps 1.183 mul add exch ps75 add exch moveto ps -2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath stroke} bind def",
-       "/pt11 {newpath 10 {2 copy} repeat ps add moveto /theta 126 def 5 { exch ps 4 div theta cos mul add exch ps 4 div theta sin mul add lineto /theta theta 36 add def exch ps theta cos mul add exch ps theta sin mul add lineto /theta theta 36 add def } repeat closepath stroke} bind def",
-       "/pt12 {newpath moveto ps75 dup rlineto ps -1.5 mul 0 rlineto ps 1.5 mul dup dup neg rlineto neg 0 rlineto closepath stroke} bind def",
-       "/pt13 {newpath moveto ps75 dup rlineto 0 ps -1.5 mul rlineto ps 1.5 mul neg dup dup neg rlineto 0 exch rlineto closepath stroke} bind def",
-       "/pt14 {newpath 5 {2 copy} repeat /theta 90 def 3 { exch ps theta cos mul add exch ps theta sin mul add moveto lineto stroke /theta theta 120 add def} repeat } bind def",
-       "/pt15 {newpath 2 copy exch ps sub exch moveto ps 2 mul 0 rlineto closepath stroke ps sub moveto 0 ps 2 mul rlineto closepath stroke } bind def",
-       "/pt16 {newpath ps75 add exch ps75 add exch moveto ps75 -2 mul 0 rlineto 0 ps75 -2 mul rlineto ps75 2 mul 0 rlineto closepath fill} bind def",
-       "/pt17 {newpath 2 copy exch ps75 1.1 mul add exch moveto ps75 1.1 mul 0 360 arc fill} bind def",
-       "/pt18 {newpath exch ps 1.183 mul add exch ps75 sub moveto ps -1.183 mul ps 2.049 mul 2 copy rlineto -1 mul rlineto closepath fill} bind def",
-       "/pt19 {newpath exch ps75 add exch moveto ps75 -1 mul ps 1.3 mul 2 copy 2 copy rlineto -1 mul rlineto -1 mul exch -1 mul exch rlineto closepath fill} bind def",
-       "/pt20 {newpath exch ps add exch moveto ps -.5 mul ps 0.866 mul rlineto ps -1 mul 0 rlineto ps -.5 mul ps -.866 mul 2 copy rlineto exch -1 mul exch rlineto ps 0 rlineto closepath fill} bind def",
-       "/pt21 {newpath 2 copy ps add moveto /theta 162 def 4 { 2 copy exch theta cos ps mul add exch theta sin ps mul add lineto /theta theta 72 add def } repeat closepath fill pop pop} bind def",
-       "/pt22 {newpath exch ps 1.183 mul add exch ps75 add moveto ps -1.183 mul ps -2.049 mul 2 copy rlineto -1 mul rlineto closepath fill} bind def",
-       "/pt23 {newpath ps 1.183 mul add exch ps75 sub exch moveto ps 2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath fill} bind def",
-       "/pt24 {newpath ps 1.183 mul add exch ps75 add exch moveto ps -2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath fill} bind def",
-       "/pt25 {newpath 10 {2 copy} repeat ps add moveto /theta 126 def 5 { exch ps 4 div theta cos mul add exch ps 4 div theta sin mul add lineto /theta theta 36 add def exch ps theta cos mul add exch ps theta sin mul add lineto /theta theta 36 add def } repeat closepath fill} bind def",
-       "/pt26 {newpath moveto ps75 dup rlineto ps -1.5 mul 0 rlineto ps 1.5 mul dup dup neg rlineto neg 0 rlineto closepath fill} bind def",
-       "/pt27 {newpath moveto ps75 dup rlineto 0 ps -1.5 mul rlineto ps 1.5 mul neg dup dup neg rlineto 0 exch rlineto closepath fill} bind def",
-       "/pt28 {newpath 5 {2 copy} repeat /theta 270 def 3 { exch ps theta cos mul add exch ps theta sin mul add moveto lineto stroke /theta theta 120 add def} repeat } bind def",
-       "/pt29 {newpath 2 copy pt1 pt15} bind def",
-       "/pt30 {newpath 2 copy pt16 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt2 5 2 roll setrgbcolor} bind def",
-       "/pt31 {newpath 2 copy pt17 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt3 5 2 roll setrgbcolor} bind def",
-       "/pt32 {newpath 2 copy pt18 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt4 5 2 roll setrgbcolor} bind def",
-       "/pt33 {newpath 2 copy pt19 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt5 5 2 roll setrgbcolor} bind def",
-       "/pt34 {newpath 2 copy pt20 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt6 5 2 roll setrgbcolor} bind def",
-       "/pt35 {newpath 2 copy pt21 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt7 5 2 roll setrgbcolor} bind def",
-       "/pt36 {newpath 2 copy pt22 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt8 5 2 roll setrgbcolor} bind def",
-       "/pt37 {newpath 2 copy pt23 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt9 5 2 roll setrgbcolor} bind def",
-       "/pt38 {newpath 2 copy pt24 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt10 5 2 roll setrgbcolor} bind def",
-       "/pt39 {newpath 2 copy pt25 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt11 5 2 roll setrgbcolor} bind def",
-       "/pt40 {newpath 2 copy pt26 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt12 5 2 roll setrgbcolor} bind def",
-       "/pt41 {newpath 2 copy pt27 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt13 5 2 roll setrgbcolor} bind def",
-       "/pt42 {newpath 11 {2 copy} repeat /theta 90 def 6 { exch ps theta cos mul add exch ps theta sin mul add moveto lineto stroke /theta theta 60 add def} repeat } bind def",
-       "/pt43 {newpath 2 copy moveto << /ShadingType 3 /ColorSpace /DeviceRGB /Coords [currentpoint exch ps 0.4 mul sub exch ps 0.3 mul add 0 currentpoint ps] /Function << /FunctionType 2 /Domain [0 1] /C1 [ currentrgbcolor ] /C0 [ 1 1 1 ] /N 1>> >> shfill } bind def",
-       "/pt44 {newpath 2 copy moveto << /ShadingType 3 /ColorSpace /DeviceRGB /Coords [currentpoint exch ps 0.4 mul sub exch ps 0.3 mul add 0 currentpoint ps] /Function << /FunctionType 2 /Domain [0 1] /C1 [ currentrgbcolor ] /C0 [ 1 1 1 ] /N 1>> >> shfill currentrgbcolor 5 3 roll 0 0 0 setrgbcolor ps 0 rmoveto currentpoint exch ps sub exch ps 0 360 arc stroke 5 2 roll setrgbcolor} bind def"
- };
+char
+        *eps_PointTypes[N_POINTTYPES] =
+                {"/pt1 {newpath 2 copy ps75 sub exch ps75 sub exch moveto ps75 2 mul dup rlineto closepath stroke ps75 add exch ps75 sub exch moveto ps75 2 mul dup -1 mul rlineto closepath stroke } bind def",
+                 "/pt2 {newpath ps75 add exch ps75 add exch moveto ps75 -2 mul 0 rlineto 0 ps75 -2 mul rlineto ps75 2 mul 0 rlineto closepath stroke} bind def",
+                 "/pt3 {newpath 2 copy exch ps75 1.1 mul add exch moveto ps75 1.1 mul 0 360 arc stroke} bind def",
+                 "/pt4 {newpath exch ps 1.183 mul add exch ps75 sub moveto ps -1.183 mul ps 2.049 mul 2 copy rlineto -1 mul rlineto closepath stroke} bind def",
+                 "/pt5 {newpath exch ps75 add exch moveto ps75 -1 mul ps 1.3 mul 2 copy 2 copy rlineto -1 mul rlineto -1 mul exch -1 mul exch rlineto closepath stroke} bind def",
+                 "/pt6 {newpath exch ps add exch moveto ps -.5 mul ps 0.866 mul rlineto ps -1 mul 0 rlineto ps -.5 mul ps -.866 mul 2 copy rlineto exch -1 mul exch rlineto ps 0 rlineto closepath stroke} bind def",
+                 "/pt7 {newpath 2 copy ps add moveto /theta 162 def 4 { 2 copy exch theta cos ps mul add exch theta sin ps mul add lineto /theta theta 72 add def } repeat closepath stroke pop pop} bind def",
+                 "/pt8 {newpath exch ps 1.183 mul add exch ps75 add moveto ps -1.183 mul ps -2.049 mul 2 copy rlineto -1 mul rlineto closepath stroke} bind def",
+                 "/pt9 {newpath ps 1.183 mul add exch ps75 sub exch moveto ps 2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath stroke} bind def",
+                 "/pt10 {newpath ps 1.183 mul add exch ps75 add exch moveto ps -2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath stroke} bind def",
+                 "/pt11 {newpath 10 {2 copy} repeat ps add moveto /theta 126 def 5 { exch ps 4 div theta cos mul add exch ps 4 div theta sin mul add lineto /theta theta 36 add def exch ps theta cos mul add exch ps theta sin mul add lineto /theta theta 36 add def } repeat closepath stroke} bind def",
+                 "/pt12 {newpath moveto ps75 dup rlineto ps -1.5 mul 0 rlineto ps 1.5 mul dup dup neg rlineto neg 0 rlineto closepath stroke} bind def",
+                 "/pt13 {newpath moveto ps75 dup rlineto 0 ps -1.5 mul rlineto ps 1.5 mul neg dup dup neg rlineto 0 exch rlineto closepath stroke} bind def",
+                 "/pt14 {newpath 5 {2 copy} repeat /theta 90 def 3 { exch ps theta cos mul add exch ps theta sin mul add moveto lineto stroke /theta theta 120 add def} repeat } bind def",
+                 "/pt15 {newpath 2 copy exch ps sub exch moveto ps 2 mul 0 rlineto closepath stroke ps sub moveto 0 ps 2 mul rlineto closepath stroke } bind def",
+                 "/pt16 {newpath ps75 add exch ps75 add exch moveto ps75 -2 mul 0 rlineto 0 ps75 -2 mul rlineto ps75 2 mul 0 rlineto closepath fill} bind def",
+                 "/pt17 {newpath 2 copy exch ps75 1.1 mul add exch moveto ps75 1.1 mul 0 360 arc fill} bind def",
+                 "/pt18 {newpath exch ps 1.183 mul add exch ps75 sub moveto ps -1.183 mul ps 2.049 mul 2 copy rlineto -1 mul rlineto closepath fill} bind def",
+                 "/pt19 {newpath exch ps75 add exch moveto ps75 -1 mul ps 1.3 mul 2 copy 2 copy rlineto -1 mul rlineto -1 mul exch -1 mul exch rlineto closepath fill} bind def",
+                 "/pt20 {newpath exch ps add exch moveto ps -.5 mul ps 0.866 mul rlineto ps -1 mul 0 rlineto ps -.5 mul ps -.866 mul 2 copy rlineto exch -1 mul exch rlineto ps 0 rlineto closepath fill} bind def",
+                 "/pt21 {newpath 2 copy ps add moveto /theta 162 def 4 { 2 copy exch theta cos ps mul add exch theta sin ps mul add lineto /theta theta 72 add def } repeat closepath fill pop pop} bind def",
+                 "/pt22 {newpath exch ps 1.183 mul add exch ps75 add moveto ps -1.183 mul ps -2.049 mul 2 copy rlineto -1 mul rlineto closepath fill} bind def",
+                 "/pt23 {newpath ps 1.183 mul add exch ps75 sub exch moveto ps 2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath fill} bind def",
+                 "/pt24 {newpath ps 1.183 mul add exch ps75 add exch moveto ps -2.049 mul ps -1.183 mul 2 copy rlineto exch -1 mul exch rlineto closepath fill} bind def",
+                 "/pt25 {newpath 10 {2 copy} repeat ps add moveto /theta 126 def 5 { exch ps 4 div theta cos mul add exch ps 4 div theta sin mul add lineto /theta theta 36 add def exch ps theta cos mul add exch ps theta sin mul add lineto /theta theta 36 add def } repeat closepath fill} bind def",
+                 "/pt26 {newpath moveto ps75 dup rlineto ps -1.5 mul 0 rlineto ps 1.5 mul dup dup neg rlineto neg 0 rlineto closepath fill} bind def",
+                 "/pt27 {newpath moveto ps75 dup rlineto 0 ps -1.5 mul rlineto ps 1.5 mul neg dup dup neg rlineto 0 exch rlineto closepath fill} bind def",
+                 "/pt28 {newpath 5 {2 copy} repeat /theta 270 def 3 { exch ps theta cos mul add exch ps theta sin mul add moveto lineto stroke /theta theta 120 add def} repeat } bind def",
+                 "/pt29 {newpath 2 copy pt1 pt15} bind def",
+                 "/pt30 {newpath 2 copy pt16 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt2 5 2 roll setrgbcolor} bind def",
+                 "/pt31 {newpath 2 copy pt17 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt3 5 2 roll setrgbcolor} bind def",
+                 "/pt32 {newpath 2 copy pt18 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt4 5 2 roll setrgbcolor} bind def",
+                 "/pt33 {newpath 2 copy pt19 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt5 5 2 roll setrgbcolor} bind def",
+                 "/pt34 {newpath 2 copy pt20 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt6 5 2 roll setrgbcolor} bind def",
+                 "/pt35 {newpath 2 copy pt21 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt7 5 2 roll setrgbcolor} bind def",
+                 "/pt36 {newpath 2 copy pt22 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt8 5 2 roll setrgbcolor} bind def",
+                 "/pt37 {newpath 2 copy pt23 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt9 5 2 roll setrgbcolor} bind def",
+                 "/pt38 {newpath 2 copy pt24 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt10 5 2 roll setrgbcolor} bind def",
+                 "/pt39 {newpath 2 copy pt25 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt11 5 2 roll setrgbcolor} bind def",
+                 "/pt40 {newpath 2 copy pt26 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt12 5 2 roll setrgbcolor} bind def",
+                 "/pt41 {newpath 2 copy pt27 currentrgbcolor 0 0 0 setrgbcolor 5 3 roll 2 copy pt13 5 2 roll setrgbcolor} bind def",
+                 "/pt42 {newpath 11 {2 copy} repeat /theta 90 def 6 { exch ps theta cos mul add exch ps theta sin mul add moveto lineto stroke /theta theta 60 add def} repeat } bind def",
+                 "/pt43 {newpath 2 copy moveto << /ShadingType 3 /ColorSpace /DeviceRGB /Coords [currentpoint exch ps 0.4 mul sub exch ps 0.3 mul add 0 currentpoint ps] /Function << /FunctionType 2 /Domain [0 1] /C1 [ currentrgbcolor ] /C0 [ 1 1 1 ] /N 1>> >> shfill } bind def",
+                 "/pt44 {newpath 2 copy moveto << /ShadingType 3 /ColorSpace /DeviceRGB /Coords [currentpoint exch ps 0.4 mul sub exch ps 0.3 mul add 0 currentpoint ps] /Function << /FunctionType 2 /Domain [0 1] /C1 [ currentrgbcolor ] /C0 [ 1 1 1 ] /N 1>> >> shfill currentrgbcolor 5 3 roll 0 0 0 setrgbcolor ps 0 rmoveto currentpoint exch ps sub exch ps 0 360 arc stroke 5 2 roll setrgbcolor} bind def"};
 
-double eps_PointSize[N_POINTTYPES] = {0.75 , 1.0 , 1.0 , 0.75 , 1.183 , 0.75 , 1.3 , 0.75 , 1.183 , 0.75 , 1.3 , 1.0 , 1.0 , 1.183 , 1.183 , 1.183 , 1.2 , 1.0 , 1.0 , 1.0 , 1.0 ,  1.0 , 1.0 , 1.183 , 1.183 , 1.183 , 1.2 , 1.0 , 1.0};
+double eps_PointSize[N_POINTTYPES] = {0.75, 1.0, 1.0, 0.75,  1.183, 0.75,  1.3, 0.75, 1.183, 0.75,
+                                      1.3,  1.0, 1.0, 1.183, 1.183, 1.183, 1.2, 1.0,  1.0,   1.0,
+                                      1.0,  1.0, 1.0, 1.183, 1.183, 1.183, 1.2, 1.0,  1.0};
 
 // -------------------------------------------------
 // Star types
 // -------------------------------------------------
 
-char *eps_StarTypes [N_STARTYPES] = {
-// STAR TYPE 1: ALPHA ORIONIS
-"/st1 {\n\
+char *eps_StarTypes[N_STARTYPES] = {
+        // STAR TYPE 1: ALPHA ORIONIS
+        "/st1 {\n\
    % Inner and outer radii of main and sharp points\n\
    /lmout ps def\n\
    /lmin ps3d def\n\
@@ -162,8 +172,8 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 2: BETA ORIONIS
-"/st2 {\n\
+        // STAR TYPE 2: BETA ORIONIS
+        "/st2 {\n\
    % Inner and outer radii of main and sharp points\n\
    /lmout ps def\n\
    /lmin ps3d def\n\
@@ -224,8 +234,8 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 3: EPSILON ORIONIS
-"/st3 {\n\
+        // STAR TYPE 3: EPSILON ORIONIS
+        "/st3 {\n\
    % Inner and outer radii of main and sharp points\n\
    /lmout ps def\n\
    /lmin ps3d def\n\
@@ -286,8 +296,8 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 4: Q ORIONIS
-"/st4 {                    % q Orionis\n\
+        // STAR TYPE 4: Q ORIONIS
+        "/st4 {                    % q Orionis\n\
    % First do the six main points\n\
    tlw setlinewidth\n\
    /lmin ps3d def\n\
@@ -360,8 +370,8 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 5: M ORIONIS
-"/st5 {\n\
+        // STAR TYPE 5: M ORIONIS
+        "/st5 {\n\
    % First do the six main points\n\
    blw setlinewidth\n\
    /theta angle 90 add def\n\
@@ -399,8 +409,8 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 6: TAU ORIONIS
-"/st6 {\n\
+        // STAR TYPE 6: TAU ORIONIS
+        "/st6 {\n\
    % First do the six main points\n\
    blw setlinewidth\n\
    /theta angle 90 add def\n\
@@ -438,8 +448,8 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 7: PI ORIONIS
-"/st7 {\n\
+        // STAR TYPE 7: PI ORIONIS
+        "/st7 {\n\
    % Do the lines additional to tau (st6)\n\
    /theta angle 90 add def\n\
    6 {\n\
@@ -452,8 +462,8 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 8: GAMMA ORIONIS
-"/st8 {\n\
+        // STAR TYPE 8: GAMMA ORIONIS
+        "/st8 {\n\
    % First do the six main points\n\
    tlw setlinewidth\n\
    /theta angle 90 add def\n\
@@ -553,11 +563,10 @@ char *eps_StarTypes [N_STARTYPES] = {
 } bind def\n\
 ",
 
-// STAR TYPE 9: GENERIC STAR
-"/st9 {newpath 10 {2 copy} repeat ps 10 div add moveto /theta 126 def 5 { exch ps 40 div theta cos mul add exch ps 40 div theta sin mul add lineto /theta theta 36 add def exch ps 10 div theta cos mul add exch ps 10 div theta sin mul add lineto /theta theta 36 add def } repeat closepath fill} bind def"
-      };
+        // STAR TYPE 9: GENERIC STAR
+        "/st9 {newpath 10 {2 copy} repeat ps 10 div add moveto /theta 126 def 5 { exch ps 40 div theta cos mul add exch ps 40 div theta sin mul add lineto /theta theta 36 add def exch ps 10 div theta cos mul add exch ps 10 div theta sin mul add lineto /theta theta 36 add def } repeat closepath fill} bind def"};
 
-double eps_StarSize [N_STARTYPES] = {1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
+double eps_StarSize[N_STARTYPES] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
 char *eps_StarCore = "\n\
 /ps2 { ps 2 mul } bind def\n\
@@ -754,4 +763,3 @@ char *eps_StarCore = "\n\
    grestore\n\
 } bind def\n\
 ";
-

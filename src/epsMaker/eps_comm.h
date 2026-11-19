@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -31,29 +31,28 @@
 #include "canvasItems.h"
 
 typedef struct CanvasTextItem {
-  char *text;
-  int   CanvasMultiplotID;
-  int   LaTeXstartline, LaTeXendline;
- } CanvasTextItem;
+    char *text;
+    int CanvasMultiplotID;
+    int LaTeXstartline, LaTeXendline;
+} CanvasTextItem;
 
 typedef struct EPSComm {
-  ppl_context *c;
-  int iterDepth;
-  canvas_itemlist *itemlist;
-  canvas_item *current;
-  double bb_left, bb_right, bb_top, bb_bottom;
-  unsigned char bb_set;
-  unsigned char PointTypesUsed[N_POINTTYPES], StarTypesUsed[N_STARTYPES];
-  list *TextItems;
-  int NTextItems;
-  dviInterpreterState *dvi;
-  char *EPSFilename, *TeXFilename, *FinalFilename, *title;
-  char  LastPSColor[256], CurrentColor[256], CurrentFillColor[256];
-  double LastLinewidth;
-  int LastLinetype;
-  FILE *epsbuffer;
-  int *status, termtype, LaTeXpageno;
- } EPSComm;
+    ppl_context *c;
+    int iterDepth;
+    canvas_itemlist *itemlist;
+    canvas_item *current;
+    double bb_left, bb_right, bb_top, bb_bottom;
+    unsigned char bb_set;
+    unsigned char PointTypesUsed[N_POINTTYPES], StarTypesUsed[N_STARTYPES];
+    list *TextItems;
+    int NTextItems;
+    dviInterpreterState *dvi;
+    char *EPSFilename, *TeXFilename, *FinalFilename, *title;
+    char LastPSColor[256], CurrentColor[256], CurrentFillColor[256];
+    double LastLinewidth;
+    int LastLinetype;
+    FILE *epsbuffer;
+    int *status, termtype, LaTeXpageno;
+} EPSComm;
 
 #endif
-

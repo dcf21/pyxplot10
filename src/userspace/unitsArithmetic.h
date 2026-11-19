@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -39,4 +39,3 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText);
 
 #endif
-

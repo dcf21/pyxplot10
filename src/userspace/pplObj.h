@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -30,16 +30,16 @@
 #ifndef _PPLOBJ_H
 #define _PPLOBJ_H 1
 
-#define PPLOBJ_NUM   0 /* numeric value */
-#define PPLOBJ_STR   1 /* string value */
-#define PPLOBJ_BOOL  2 /* boolean */
-#define PPLOBJ_DATE  3 /* date/time */
-#define PPLOBJ_COL   4 /* color */
-#define PPLOBJ_DICT  5 /* dictionary */
-#define PPLOBJ_MOD   6 /* module */
-#define PPLOBJ_LIST  7 /* list */
-#define PPLOBJ_VEC   8 /* vector (list of numerical values with common units) */
-#define PPLOBJ_MAT   9 /* matrix */
+#define PPLOBJ_NUM  0 /* numeric value */
+#define PPLOBJ_STR  1 /* string value */
+#define PPLOBJ_BOOL 2 /* boolean */
+#define PPLOBJ_DATE 3 /* date/time */
+#define PPLOBJ_COL  4 /* color */
+#define PPLOBJ_DICT 5 /* dictionary */
+#define PPLOBJ_MOD  6 /* module */
+#define PPLOBJ_LIST 7 /* list */
+#define PPLOBJ_VEC  8 /* vector (list of numerical values with common units) */
+#define PPLOBJ_MAT  9 /* matrix */
 #define PPLOBJ_FILE 10 /* file handle */
 #define PPLOBJ_FUNC 11 /* function */
 #define PPLOBJ_TYPE 12 /* data type */
@@ -51,34 +51,60 @@
 #define PPLOBJ_BYT  18 /* command bytecode (returned from parser for CODEBLOCKs */
 #define PPLOBJ_USER 19 /* user-defined datatype */
 
-typedef struct pplObj
- {
-  double         real, imag;
-  unsigned char  dimensionless, flagComplex, tempType, immutable;
-  unsigned char  amMalloced, auxilMalloced;
-  int            objType, auxilLen;
-  struct pplObj *objPrototype;
-  void          *auxil;
-  double         exponent[UNITS_MAX_BASEUNITS];
-  struct pplObj *self_lval;
-  double        *self_dval;
-  struct pplObj *self_this;
-  int            refCount;
- } pplObj;
+typedef struct pplObj {
+    double real, imag;
+    unsigned char dimensionless, flagComplex, tempType, immutable;
+    unsigned char amMalloced, auxilMalloced;
+    int objType, auxilLen;
+    struct pplObj *objPrototype;
+    void *auxil;
+    double exponent[UNITS_MAX_BASEUNITS];
+    struct pplObj *self_lval;
+    double *self_dval;
+    struct pplObj *self_this;
+    int refCount;
+} pplObj;
 
 #ifndef _PPLOBJ_C
 extern const char *pplObjTypeNames[];
-extern const int   pplObjTypeOrder[];
-extern pplObj     *pplObjPrototypes;
+extern const int pplObjTypeOrder[];
+extern pplObj *pplObjPrototypes;
 #endif
 
 // Structures for describing files and types
-typedef struct pplFile      { int refCount; FILE *file;    int open; int pipe; } pplFile;
-typedef struct pplType      { int refCount; dict *methods; int id;   } pplType;
-typedef struct pplVectorRaw { int refCount; gsl_vector *v; } pplVectorRaw;
-typedef struct pplMatrixRaw { int refCount; gsl_matrix *m; } pplMatrixRaw;
-typedef struct pplVector    { int refCount; gsl_vector *v; gsl_vector_view view; pplVectorRaw *raw; gsl_matrix_view view_m; pplMatrixRaw *rawm; } pplVector;
-typedef struct pplMatrix    { int refCount; gsl_matrix *m; gsl_matrix_view view; int sliceNext; pplMatrixRaw *raw; } pplMatrix;
+typedef struct pplFile {
+    int refCount;
+    FILE *file;
+    int open;
+    int pipe;
+} pplFile;
+typedef struct pplType {
+    int refCount;
+    dict *methods;
+    int id;
+} pplType;
+typedef struct pplVectorRaw {
+    int refCount;
+    gsl_vector *v;
+} pplVectorRaw;
+typedef struct pplMatrixRaw {
+    int refCount;
+    gsl_matrix *m;
+} pplMatrixRaw;
+typedef struct pplVector {
+    int refCount;
+    gsl_vector *v;
+    gsl_vector_view view;
+    pplVectorRaw *raw;
+    gsl_matrix_view view_m;
+    pplMatrixRaw *rawm;
+} pplVector;
+typedef struct pplMatrix {
+    int refCount;
+    gsl_matrix *m;
+    gsl_matrix_view view;
+    int sliceNext;
+    pplMatrixRaw *raw;
+} pplMatrix;
 
 #endif
-

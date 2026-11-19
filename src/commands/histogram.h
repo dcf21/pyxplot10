@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -28,7 +28,7 @@
 #include "userspace/pplObjFunc.h"
 
 void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-void ppl_histogram_evaluate (ppl_context *c, char *FuncName, histogramDescriptor *desc, pplObj *in, pplObj *out, int *status, char *errout);
+void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor *desc, pplObj *in, pplObj *out,
+                            int *status, char *errout);
 
 #endif
-

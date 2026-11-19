@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -31,22 +31,19 @@
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
 
-void ppl_createBackupIfRequired(ppl_context *c, const char *filename)
- {
-  char newname[FNAME_LENGTH];
-  int i,j;
+void ppl_createBackupIfRequired(ppl_context *c, const char *filename) {
+    char newname[FNAME_LENGTH];
+    int i, j;
 
-  if (c->set->term_current.backup == SW_ONOFF_OFF) return; // Backup is switched off
-  if (access(filename, F_OK) != 0) return; // File we're about to write to does not already exist
+    if (c->set->term_current.backup == SW_ONOFF_OFF) return; // Backup is switched off
+    if (access(filename, F_OK) != 0) return; // File we're about to write to does not already exist
 
-  strcpy(newname, filename);
-  i = strlen(filename);
-  for (j=0 ; j<65536 ; j++)
-   {
-    sprintf(newname+i, "~%d",j);
-    if (access(newname, F_OK) != 0) break; // We've found a backup file which does not already exist
-   }
-  rename(filename, newname);
-  return;
- }
-
+    strcpy(newname, filename);
+    i = strlen(filename);
+    for (j = 0; j < 65536; j++) {
+        sprintf(newname + i, "~%d", j);
+        if (access(newname, F_OK) != 0) break; // We've found a backup file which does not already exist
+    }
+    rename(filename, newname);
+    return;
+}

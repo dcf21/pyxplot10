@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,23 +26,23 @@
 
 #include "coreUtils/errorReport.h"
 
-void  ppl_memAlloc_MemoryInit            ( pplerr_context *ec, void(*mem_error_handler)(pplerr_context *,int, int, int, char *) , void(*mem_log_handler)(pplerr_context *,char *) );
-void  ppl_memAlloc_MemoryStop            ();
-int   ppl_memAlloc_DescendIntoNewContext ();
-int   ppl_memAlloc_AscendOutOfContext    (int context);
-void _ppl_memAlloc_SetMemContext         (int context);
-int   ppl_memAlloc_GetMemContext         ();
-void  ppl_memAlloc_FreeAll               (int context);
-void  ppl_memAlloc_Free                  (int context);
+void ppl_memAlloc_MemoryInit(pplerr_context *ec, void (*mem_error_handler)(pplerr_context *, int, int, int, char *),
+                             void (*mem_log_handler)(pplerr_context *, char *));
+void ppl_memAlloc_MemoryStop();
+int ppl_memAlloc_DescendIntoNewContext();
+int ppl_memAlloc_AscendOutOfContext(int context);
+void _ppl_memAlloc_SetMemContext(int context);
+int ppl_memAlloc_GetMemContext();
+void ppl_memAlloc_FreeAll(int context);
+void ppl_memAlloc_Free(int context);
 
-void *ppl_memAlloc                       (int size);
-void *ppl_memAlloc_incontext             (int size, int context);
+void *ppl_memAlloc(int size);
+void *ppl_memAlloc_incontext(int size, int context);
 
 // Allocate memory in 128kb blocks (131072 bytes)
-#define FM_BLOCKSIZE  131072
+#define FM_BLOCKSIZE 131072
 
 // Always align mallocs to 8-byte boundaries; 64-bit processors do double arithmetic twice as fast when word-aligned
-#define SYNCSTEP      8
+#define SYNCSTEP 8
 
 #endif
-

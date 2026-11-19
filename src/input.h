@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,11 +25,10 @@
 #include "parser/parser.h"
 #include "userspace/context.h"
 
-int  ppl_inputInit         (ppl_context *context);
+int ppl_inputInit(ppl_context *context);
 void ppl_interactiveSession(ppl_context *context);
-void ppl_processScript     (ppl_context *context, char *input, int iterDepth);
-int  ppl_processLine       (ppl_context *context, parserStatus *ps, char *in, int interactive, int iterDepth);
-int  ppl_ProcessStatement  (ppl_context *context, parserStatus *ps, char *line, int interactive, int iterDepth);
+void ppl_processScript(ppl_context *context, char *input, int iterDepth);
+int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, int interactive, int iterDepth);
+int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, int interactive, int iterDepth);
 
 #endif
-

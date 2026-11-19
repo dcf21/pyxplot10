@@ -58,20 +58,24 @@ double ppl_getFloat(const char *str, int *Nchars) {
     if (str[pos] == '-') {
         negative = 1;
         pos++;
-    }  /* Deal with negatives */
-    else if (str[pos] == '+') { pos++; }  /* Deal with e.g. 1E+09 */
+    } /* Deal with negatives */
+    else if (str[pos] == '+') {
+        pos++;
+    } /* Deal with e.g. 1E+09 */
 
     if ((str[pos + 0] == '0') && (str[pos + 1] == 'x')) // Hexadecimal
     {
         pos += 2;
         while (1) {
             if ((str[pos] >= '0') && (str[pos] <= '9')) accumulator = ((16 * accumulator) + (((int) str[pos]) - 48));
-            else if ((str[pos] >= 'A') && (str[pos] <= 'F')) accumulator = ((16 * accumulator) + (((int) str[pos]) - 55));
-            else if ((str[pos] >= 'a') && (str[pos] <= 'f')) accumulator = ((16 * accumulator) + (((int) str[pos]) - 87));
+            else if ((str[pos] >= 'A') && (str[pos] <= 'F'))
+                accumulator = ((16 * accumulator) + (((int) str[pos]) - 55));
+            else if ((str[pos] >= 'a') && (str[pos] <= 'f'))
+                accumulator = ((16 * accumulator) + (((int) str[pos]) - 87));
             else break;
             pos++;
         }
-        if (negative == 1) accumulator *= -1;                     /* Deals with negatives */
+        if (negative == 1) accumulator *= -1; /* Deals with negatives */
     } else {
         while (((str[pos] >= '0') && (str[pos] <= '9')) || (str[pos] == '.')) {
             if (str[pos] == '.') {
@@ -83,13 +87,13 @@ double ppl_getFloat(const char *str, int *Nchars) {
             pos++;
         }
 
-        while (decimals != 0)                                         /* Deals with decimals */
+        while (decimals != 0) /* Deals with decimals */
         {
             decimals--;
             accumulator /= 10;
         }
 
-        if (negative == 1) accumulator *= -1;                         /* Deals with negatives */
+        if (negative == 1) accumulator *= -1; /* Deals with negatives */
 
         if ((str[pos] == 'e') || (str[pos] == 'E'))
             accumulator *= pow(10.0, ppl_getFloat(str + pos + 1, &pos2)); /* Deals with exponents */
@@ -124,8 +128,12 @@ int ppl_validFloat(const char *str, int *end) {
         goto VALID_FLOAT_ENDED;
     }
 
-    if (str[pos] == '-') { pos++; }  /* Deal with negatives */
-    else if (str[pos] == '+') { pos++; }  /* Deal with e.g. 1E+09 */
+    if (str[pos] == '-') {
+        pos++;
+    } /* Deal with negatives */
+    else if (str[pos] == '+') {
+        pos++;
+    } /* Deal with e.g. 1E+09 */
 
     if ((str[pos + 0] == '0') && (str[pos + 1] == 'x')) // Hexadecimal
     {
@@ -143,7 +151,9 @@ int ppl_validFloat(const char *str, int *end) {
             if (str[pos] == '.') {
                 if (past_decimal_point) goto VALID_FLOAT_ENDED;
                 else past_decimal_point = 1;
-            } else { had_number = 1; }
+            } else {
+                had_number = 1;
+            }
             pos++;
         }
 
@@ -156,7 +166,7 @@ int ppl_validFloat(const char *str, int *end) {
         }
     }
 
-    VALID_FLOAT_ENDED:
+VALID_FLOAT_ENDED:
     while ((str[pos] != '\0') && (str[pos] <= ' ')) pos++; /* Fast-forward over spaces at end */
     if ((!had_number) || (!expvalid)) return 0;
     if (end == NULL) return 1;
@@ -182,17 +192,18 @@ char *ppl_numericDisplay(const double in, char *output, const int SigFig, const 
         AccLevel = x * (1.0 + pow(10, -SigFig));
         dp_max = (int) (SigFig - log10(x));
         for (decimal_level = 0; decimal_level < dp_max; decimal_level++)
-            if ((x - ((floor(x * pow(10, decimal_level)) / pow(10, decimal_level)) - x)) < AccLevel)break;
+            if ((x - ((floor(x * pow(10, decimal_level)) / pow(10, decimal_level)) - x)) < AccLevel) break;
         snprintf(format, 16, "%%.%df", decimal_level);
         snprintf(output, 128, format, in);
     } else {
-        if (in == 0) { strcpy(output, "0"); }
-        else {
+        if (in == 0) {
+            strcpy(output, "0");
+        } else {
             x = fabs(in);
             x /= pow(10, (int) log10(x));
             AccLevel = x * (1.0 + pow(10, -SigFig));
             for (decimal_level = 0; decimal_level < SigFig; decimal_level++)
-                if ((x - ((floor(x * pow(10, decimal_level)) / pow(10, decimal_level)) - x)) < AccLevel)break;
+                if ((x - ((floor(x * pow(10, decimal_level)) / pow(10, decimal_level)) - x)) < AccLevel) break;
             snprintf(format, 16, "%%.%de", decimal_level);
             snprintf(output, 128, format, in);
             if (latex) // Turn 1e10 into nice latex
@@ -277,9 +288,7 @@ void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength)
                 if (new == NULL) break;
                 *output = new;
             }
-            if ((fscanf(file, "%c", &c) >= 0) && ((((int) c) > 31) || (c == '\t'))) {
-                (*output)[i++] = c;
-            }
+            if ((fscanf(file, "%c", &c) >= 0) && ((((int) c) > 31) || (c == '\t'))) { (*output)[i++] = c; }
         }
         *MaxLenPtr = MaxLength;
         (*output)[i] = '\0';
@@ -287,8 +296,7 @@ void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength)
         char *output_scan = *output;
         while (((int) c != '\n') && (!feof(file)) && (!ferror(file))) {
             if (cancellationFlag) break;
-            if ((fscanf(file, "%c", &c) >= 0) && ((((int) c) > 31) || (c == '\t')) &&
-                (i < MaxLength - 2)) {
+            if ((fscanf(file, "%c", &c) >= 0) && ((((int) c) > 31) || (c == '\t')) && (i < MaxLength - 2)) {
                 i++;
                 *(output_scan++) = c;
             }
@@ -485,7 +493,9 @@ int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin)
                         if ((test[i] > ' ') && (isalnum(test[i]) == 0) && (test[i] != '_')) return -1;
                     return j;
                 } else // Word terminated with more letters
-                { return -1; }
+                {
+                    return -1;
+                }
             }
         } else { // We've hit the end of the test string
             if (candidate[j] <= ' ') // Word terminated with space...
@@ -498,7 +508,9 @@ int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin)
                     if ((test[i] > ' ') && (isalnum(test[i]) == 0) && (test[i] != '_')) return -1;
                 return j;
             } else // Word terminated with more letters
-            { return -1; }
+            {
+                return -1;
+            }
         }
 }
 
@@ -511,7 +523,8 @@ void ppl_strWordWrap(const char *in, char *out, const int width) {
     int WhiteSpace = 1;
     int LastSpace = -1;
     int LineStart = 0;
-    int LineFeeds = 0; // If we meet > 1 linefeed during a period of whitespace, it marks the beginning of a new paragraph
+    int LineFeeds =
+            0; // If we meet > 1 linefeed during a period of whitespace, it marks the beginning of a new paragraph
     int i, j;
     for (i = 0, j = 0; in[i] != '\0'; i++) {
         if ((WhiteSpace == 1) && (in[i] <= ' ')) // Once we've encountered one space, ignore any further whitespaceness
@@ -621,36 +634,26 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
         } else if ((in[inpos] == '\'') || (in[inpos] == '\"')) QuoteType = in[inpos]; // Entering a quoted string
 
         for (btype = 0; btype < 3; btype++) {
-            if (in[inpos] == bopen[btype])  // Entering a nested level of brackets
+            if (in[inpos] == bopen[btype]) // Entering a nested level of brackets
             {
                 BracketLevel[btype]++;
-                if ((idx == btype)
-                    && (BracketLevel[btype] == 1)
-                    && (BracketLevel[(btype + 1) % 3] == 0)
-                    && (BracketLevel[(btype + 2) % 3] == 0)
-                    && (CommaPositions != NULL)
-                    && ((MaxCommaPoses < 0) || (commapos < MaxCommaPoses))
-                        )
+                if ((idx == btype) && (BracketLevel[btype] == 1) && (BracketLevel[(btype + 1) % 3] == 0) &&
+                    (BracketLevel[(btype + 2) % 3] == 0) && (CommaPositions != NULL) &&
+                    ((MaxCommaPoses < 0) || (commapos < MaxCommaPoses)))
                     *(CommaPositions + (commapos++)) = inpos; // Put ( on comma list
-            } else if (in[inpos] == bclose[btype])  // Leaving a nested level of brackets
+            } else if (in[inpos] == bclose[btype]) // Leaving a nested level of brackets
             {
                 BracketLevel[btype]--;
-                if ((idx == btype)
-                    && (BracketLevel[btype] == 0)
-                    && (BracketLevel[(btype + 1) % 3] == 0)
-                    && (BracketLevel[(btype + 2) % 3] == 0)
-                        ) {
+                if ((idx == btype) && (BracketLevel[btype] == 0) && (BracketLevel[(btype + 1) % 3] == 0) &&
+                    (BracketLevel[(btype + 2) % 3] == 0)) {
                     done = 1;
                     break;
                 }
             }
         }
 
-        if ((in[inpos] == ',')
-            && (BracketLevel[idx] == 1)
-            && (BracketLevel[(idx + 1) % 3] == 0)
-            && (BracketLevel[(idx + 2) % 3] == 0)
-                ) // Found a new comma-separated item
+        if ((in[inpos] == ',') && (BracketLevel[idx] == 1) && (BracketLevel[(idx + 1) % 3] == 0) &&
+            (BracketLevel[(idx + 2) % 3] == 0)) // Found a new comma-separated item
         {
             if ((CommaPositions != NULL) && ((MaxCommaPoses < 0) || (commapos < MaxCommaPoses)))
                 *(CommaPositions + (commapos++)) = inpos; // Put , on comma list
@@ -684,8 +687,10 @@ int ppl_strCmpNoCase(const char *a, const char *b) {
             b++;
             continue;
         }
-        if ((*a >= 'a') && (*a <= 'z')) aU = *a - 'a' + 'A'; else aU = *a;
-        if ((*b >= 'a') && (*b <= 'z')) bU = *b - 'a' + 'A'; else bU = *b;
+        if ((*a >= 'a') && (*a <= 'z')) aU = *a - 'a' + 'A';
+        else aU = *a;
+        if ((*b >= 'a') && (*b <= 'z')) bU = *b - 'a' + 'A';
+        else bU = *b;
         if (aU == bU) {
             a++;
             b++;
@@ -783,11 +788,14 @@ int ppl_strWildcardTest(const char *test, const char *wildcard) {
         if (wildcard[j] == '?') {
             mineat++;
             maxeat++;
-        } else { maxeat = 10000; }
+        } else {
+            maxeat = 10000;
+        }
         j++;
     }
 
-    for (k = 0; k < mineat; k++) if (test[i++] == '\0') return 0;
+    for (k = 0; k < mineat; k++)
+        if (test[i++] == '\0') return 0;
 
     for (k = 0; k < maxeat - mineat; k++) {
         if (ppl_strWildcardTest(test + i, wildcard + j)) return 1;

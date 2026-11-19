@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -29,7 +29,8 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, int iterDe
 void canvas_CallLaTeX(EPSComm *x);
 void canvas_MakeEPSBuffer(EPSComm *x);
 void canvas_EPSWrite(EPSComm *x);
-void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, int halign, int valign, char *colstr, double fontsize, double rotate, double *width, double *height);
+void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, int halign, int valign,
+                              char *colstr, double fontsize, double rotate, double *width, double *height);
 void canvas_EPSLandscapify(EPSComm *x, char *transform);
 void canvas_EPSEnlarge(EPSComm *x, char *transform);
 

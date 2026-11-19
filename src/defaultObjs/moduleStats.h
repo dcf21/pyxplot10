@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,22 +25,21 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void pplfunc_binomialPDF  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_binomialCDF  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_chisqPDF     (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_chisqCDF     (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_chisqCDFi    (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_gaussianPDF  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_gaussianCDF  (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_gaussianCDFi (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_lognormalPDF (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_lognormalCDF (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_binomialPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_binomialCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_chisqPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_chisqCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_gaussianCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_poissonPDF   (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_poissonCDF   (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_tdistPDF     (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_tdistCDF     (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_tdistCDFi    (ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_poissonPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_poissonCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_tdistPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_tdistCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_tdistCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif
-

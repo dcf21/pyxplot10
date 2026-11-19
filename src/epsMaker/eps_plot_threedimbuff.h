@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,24 +25,26 @@
 #include "epsMaker/eps_comm.h"
 
 typedef struct ThreeDimBufferItem {
- unsigned char FlagLineSegment, FirstLineSegment;
- int           linetype;
- double        linewidth, offset, pointsize;
- char         *colstr, *psfrag;
- double        depth, LineLength, x0,y0,x1,y1,x2,y2;
- long          LineSegmentID;
- } ThreeDimBufferItem;
+    unsigned char FlagLineSegment, FirstLineSegment;
+    int linetype;
+    double linewidth, offset, pointsize;
+    char *colstr, *psfrag;
+    double depth, LineLength, x0, y0, x1, y1, x2, y2;
+    long LineSegmentID;
+} ThreeDimBufferItem;
 
 #ifndef _PPL_EPS_PLOT_THREEDIMBUFF_C
 extern unsigned char ThreeDimBuffer_ACTIVE;
 #endif
 
 void ThreeDimBuffer_Reset(EPSComm *x);
-int  ThreeDimBuffer_Activate(EPSComm *x);
-int  ThreeDimBuffer_Deactivate(EPSComm *x);
-int  ThreeDimBuffer_writeps(EPSComm *x, double z, int linetype, double linewidth, double offset, double pointsize, char *colstr, char *psfrag);
-int  ThreeDimBuffer_linesegment(EPSComm *x, double z, int linetype, double linewidth, char *colstr, double x0, double y0, double x1, double y1, double x2, double y2, unsigned char FirstSegment, unsigned char broken, double LengthOffset);
-int  ThreeDimBuffer_linepenup(EPSComm *x);
+int ThreeDimBuffer_Activate(EPSComm *x);
+int ThreeDimBuffer_Deactivate(EPSComm *x);
+int ThreeDimBuffer_writeps(EPSComm *x, double z, int linetype, double linewidth, double offset, double pointsize,
+                           char *colstr, char *psfrag);
+int ThreeDimBuffer_linesegment(EPSComm *x, double z, int linetype, double linewidth, char *colstr, double x0, double y0,
+                               double x1, double y1, double x2, double y2, unsigned char FirstSegment,
+                               unsigned char broken, double LengthOffset);
+int ThreeDimBuffer_linepenup(EPSComm *x);
 
 #endif
-

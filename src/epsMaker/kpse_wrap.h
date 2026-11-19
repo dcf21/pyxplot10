@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -24,10 +24,9 @@
 
 #include "userspace/context.h"
 
-void  ppl_kpse_wrap_init    (ppl_context *c);
+void ppl_kpse_wrap_init(ppl_context *c);
 char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s);
 char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s);
 char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s);
 
 #endif
-

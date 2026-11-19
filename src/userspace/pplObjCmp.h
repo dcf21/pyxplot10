@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -33,7 +33,7 @@ void pplcol_RGBtoCMYK(double ri, double gi, double bi, double *co, double *mo, d
 void pplcol_HSBtoCMYK(double hi, double si, double bi, double *co, double *mo, double *yo, double *ko);
 
 int pplObjCmpQuiet(const void *a, const void *b);
-int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int *errType, char *errText, int iterDepth);
+int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int *errType, char *errText,
+              int iterDepth);
 
 #endif
-

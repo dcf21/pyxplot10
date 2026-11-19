@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,10 +26,9 @@
 #include "epsMaker/eps_comm.h"
 
 void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source);
-int  eps_plot_LinkedAxisLinkUsing(EPSComm *x, pplset_axis *out, pplset_axis *in);
+int eps_plot_LinkedAxisLinkUsing(EPSComm *x, pplset_axis *out, pplset_axis *in);
 void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode);
 
 void eps_plot_LinkUsingBackPropagate(EPSComm *x, double val, pplset_axis *target, pplset_axis *source);
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -22,9 +22,8 @@
 #ifndef _PAPERSIZES_H
 #define _PAPERSIZES_H 1
 
-void ppl_PaperSizeInit  ();
+void ppl_PaperSizeInit();
 void ppl_PaperSizeByName(char *name, double *height, double *width);
-void ppl_GetPaperName   (char *name, double *height, double *width);
+void ppl_GetPaperName(char *name, double *height, double *width);
 
 #endif
-

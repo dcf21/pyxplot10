@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -26,7 +26,7 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, int fnlist_len, char *dummyVar, double *min, double *max, pplObj *unit, double **raster, int *rasterLen);
+void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, int fnlist_len, char *dummyVar, double *min,
+                                          double *max, pplObj *unit, double **raster, int *rasterLen);
 
 #endif
-

@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -47,47 +47,42 @@
 #define PPL_FUNC_FFT        32057
 #define PPL_FUNC_SUBROUTINE 32058
 
-typedef struct functionDescriptor
- {
-  int     functionType, refCount;
-  int     minArgs , maxArgs;
-  void   *functionPtr; // Can be any of the structures below
-  char   *argList;
-  pplObj *min, *max; // Range of values over which this function definition can be used; used in function splicing
-  unsigned char *minActive, *maxActive, numOnly, notNan, realOnly, dimlessOnly, needSelfThis;
-  struct functionDescriptor *next; // A linked list of spliced alternative function definitions
-  char   *LaTeX;
-  char   *description, *descriptionShort;
- } pplFunc;
+typedef struct functionDescriptor {
+    int functionType, refCount;
+    int minArgs, maxArgs;
+    void *functionPtr; // Can be any of the structures below
+    char *argList;
+    pplObj *min, *max; // Range of values over which this function definition can be used; used in function splicing
+    unsigned char *minActive, *maxActive, numOnly, notNan, realOnly, dimlessOnly, needSelfThis;
+    struct functionDescriptor *next; // A linked list of spliced alternative function definitions
+    char *LaTeX;
+    char *description, *descriptionShort;
+} pplFunc;
 
-typedef struct splineDescriptor
- {
-  gsl_spline       *splineObj;
-  gsl_interp_accel *accelerator;
-  pplObj            unitX, unitY, unitZ;
-  long              sizeX, sizeY;
-  unsigned char     logInterp;
-  char             *filename, *splineType;
- } splineDescriptor;
+typedef struct splineDescriptor {
+    gsl_spline *splineObj;
+    gsl_interp_accel *accelerator;
+    pplObj unitX, unitY, unitZ;
+    long sizeX, sizeY;
+    unsigned char logInterp;
+    char *filename, *splineType;
+} splineDescriptor;
 
-typedef struct histogramDescriptor
- {
-  long int      Nbins;
-  double       *bins;
-  double       *binvals;
-  unsigned char log;
-  pplObj        unit;
-  char         *filename;
- } histogramDescriptor;
+typedef struct histogramDescriptor {
+    long int Nbins;
+    double *bins;
+    double *binvals;
+    unsigned char log;
+    pplObj unit;
+    char *filename;
+} histogramDescriptor;
 
-typedef struct FFTDescriptor
- {
-  int           Ndims;
-  int           XSize[USING_ITEMS_MAX];
-  fftw_complex *datagrid;
-  pplObj        range[USING_ITEMS_MAX], invRange[USING_ITEMS_MAX], outputUnit;
-  double        normalisation;
- } FFTDescriptor;
+typedef struct FFTDescriptor {
+    int Ndims;
+    int XSize[USING_ITEMS_MAX];
+    fftw_complex *datagrid;
+    pplObj range[USING_ITEMS_MAX], invRange[USING_ITEMS_MAX], outputUnit;
+    double normalisation;
+} FFTDescriptor;
 
 #endif
-

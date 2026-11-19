@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -41,140 +41,125 @@
 #include "datafile.h"
 #include "pplConstants.h"
 
-#define TBADD(et) ppl_tbAdd(c,inExpr->srcLineN,inExpr->srcId,inExpr->srcFname,0,et,inExprCharPos,inExpr->ascii,"")
+#define TBADD(et) \
+    ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, et, inExprCharPos, inExpr->ascii, "")
 
 #define STACK_POP \
-   { \
-    c->stackPtr--; \
-    ppl_garbageObject(&c->stack[context->stackPtr]); \
-    if (c->stack[c->stackPtr].refCount != 0) { strcpy(c->errStat.errBuff,"Stack forward reference detected."); TBADD(ERR_INTERNAL); goto cleanup; } \
-   }
-
-void ppl_dollarOp_config  (ppl_context *c,
-  char   **columns_str,
-  pplObj  *columns_val,
-  int      Ncols,
-  char    *filename,
-  long     file_linenumber,
-  long    *file_linenumbers,
-  long     linenumber_count,
-  long     block_count,
-  long     index_number,
-  int      usingRowCol,
-  char    *usingExpr,
-  char   **colHeads,
-  int      NcolHeads,
-  pplObj  *colUnits,
-  int      NcolUnits)
- {
-  c->dollarStat.columns_str      = columns_str;
-  c->dollarStat.columns_val      = columns_val;
-  c->dollarStat.Ncols            = Ncols;
-  c->dollarStat.filename         = filename;
-  c->dollarStat.file_linenumber  = file_linenumber;
-  c->dollarStat.file_linenumbers = file_linenumbers;
-  c->dollarStat.linenumber_count = linenumber_count;
-  c->dollarStat.block_count      = block_count;
-  c->dollarStat.index_number     = index_number;
-  c->dollarStat.usingRowCol      = usingRowCol;
-  c->dollarStat.usingExpr        = usingExpr;
-  c->dollarStat.colHeads         = colHeads;
-  c->dollarStat.NcolHeads        = NcolHeads;
-  c->dollarStat.colUnits         = colUnits;
-  c->dollarStat.NcolUnits        = NcolUnits;
-  c->dollarStat.warntxt[0]       = '\0';
-  return;
- }
-
-void ppl_dollarOp_deconfig(ppl_context *c)
- {
-  c->dollarStat.columns_str      = NULL;
-  c->dollarStat.columns_val      = NULL;
-  c->dollarStat.Ncols            = -1;
-  c->dollarStat.filename         = NULL;
-  c->dollarStat.file_linenumber  = -1;
-  c->dollarStat.file_linenumbers = NULL;
-  c->dollarStat.linenumber_count = -1;
-  c->dollarStat.block_count      = -1;
-  c->dollarStat.index_number     = -1;
-  c->dollarStat.usingRowCol      = -1;
-  c->dollarStat.usingExpr        = NULL;
-  c->dollarStat.colHeads         = NULL;
-  c->dollarStat.NcolHeads        = -1;
-  c->dollarStat.colUnits         = NULL;
-  c->dollarStat.NcolUnits        = -1;
-  c->dollarStat.warntxt[0]       = '\0';
-  return;
- }
-
-void ppl_dollarOp_fetchColByNum(ppl_context *c, pplExpr *inExpr, int inExprCharPos, int colNum)
- {
-  pplObj *out = &c->stack[c->stackPtr-1];
-  pplObjNum(out, 0, 0, 0);
-  out->refCount = 1;
-
-  if ((colNum<-3)||(colNum>c->dollarStat.Ncols))
-   {
-    sprintf(c->dollarStat.warntxt,"%s:%ld: In the expression <%s>, the requested %s number %d does not exist %son line %ld.",
-              c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
-             (c->dollarStat.usingRowCol==DATAFILE_COL)?"column":"row", colNum,
-             (c->dollarStat.usingRowCol==DATAFILE_COL)?"":"in the block commencing ", c->dollarStat.file_linenumber);
-    sprintf(c->errStat.errBuff,"No %s with number %d.", (c->dollarStat.usingRowCol==DATAFILE_COL)?"column":"row", colNum);
-    TBADD(ERR_RANGE);
-    return;
-   }
-
-  if      (colNum==-3) out->real = c->dollarStat.file_linenumber;
-  else if (colNum==-2) out->real = c->dollarStat.index_number;
-  else if (colNum==-1) out->real = c->dollarStat.block_count;
-  else if (c->dollarStat.columns_val != NULL) pplObjCpy(out, &c->dollarStat.columns_val[colNum], 0, 0, 1);
-  else if (colNum== 0) out->real = c->dollarStat.linenumber_count;
-  else
-   {
-    char *s = c->dollarStat.columns_str[colNum-1];
-    int j=-1;
-    if ( (!ppl_validFloat(s,&j)) || (j<1) || ((s[j]!='\0')&&(s[j]!=',')&&(s[j-1]>' ')) )
-     {
-      char *str;
-      int   j=0;
-      while ((s[j]>' ')&&(s[j]!=',')) j++;
-      str = (char *)malloc(j+1);
-      if (str==NULL) return;
-      strncpy(str, s, j);
-      str[j] = '\0';
-      pplObjStr(out, 0, 1, str);
-     }
-    else
-     {
-      if ((colNum>0)&&(colNum<=c->dollarStat.NcolUnits))
-       {
-        ppl_unitsDimCpy(out, &c->dollarStat.colUnits[colNum-1]);
-        out->real = ppl_getFloat(s,&j) * c->dollarStat.colUnits[colNum-1].real;
-       }
-      else
-       {
-        out->real = ppl_getFloat(s,&j);
-       }
-     }
-   }
-  return;
- }
-
-void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *colName)
- {
-  int i;
-  for (i=0; i<c->dollarStat.NcolHeads; i++)
-   if (strcmp(colName, c->dollarStat.colHeads[i])==0)
-    {
-     ppl_dollarOp_fetchColByNum(c, inExpr, inExprCharPos, i);
-     return;
+    { \
+        c->stackPtr--; \
+        ppl_garbageObject(&c->stack[context->stackPtr]); \
+        if (c->stack[c->stackPtr].refCount != 0) { \
+            strcpy(c->errStat.errBuff, "Stack forward reference detected."); \
+            TBADD(ERR_INTERNAL); \
+            goto cleanup; \
+        } \
     }
-  sprintf(c->dollarStat.warntxt,"%s:%ld: In the expression <%s>, the requested %s named '%s' does not exist %son line %ld.",
-              c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
-             (c->dollarStat.usingRowCol==DATAFILE_COL)?"column":"row", colName,
-             (c->dollarStat.usingRowCol==DATAFILE_COL)?"":"in the block commencing ", c->dollarStat.file_linenumber);
-  sprintf(c->errStat.errBuff,"No %s with name '%s'.", (c->dollarStat.usingRowCol==DATAFILE_COL)?"column":"row", colName);
-  TBADD(ERR_DICTKEY);
-  return;
- }
 
+void ppl_dollarOp_config(ppl_context *c, char **columns_str, pplObj *columns_val, int Ncols, char *filename,
+                         long file_linenumber, long *file_linenumbers, long linenumber_count, long block_count,
+                         long index_number, int usingRowCol, char *usingExpr, char **colHeads, int NcolHeads,
+                         pplObj *colUnits, int NcolUnits) {
+    c->dollarStat.columns_str = columns_str;
+    c->dollarStat.columns_val = columns_val;
+    c->dollarStat.Ncols = Ncols;
+    c->dollarStat.filename = filename;
+    c->dollarStat.file_linenumber = file_linenumber;
+    c->dollarStat.file_linenumbers = file_linenumbers;
+    c->dollarStat.linenumber_count = linenumber_count;
+    c->dollarStat.block_count = block_count;
+    c->dollarStat.index_number = index_number;
+    c->dollarStat.usingRowCol = usingRowCol;
+    c->dollarStat.usingExpr = usingExpr;
+    c->dollarStat.colHeads = colHeads;
+    c->dollarStat.NcolHeads = NcolHeads;
+    c->dollarStat.colUnits = colUnits;
+    c->dollarStat.NcolUnits = NcolUnits;
+    c->dollarStat.warntxt[0] = '\0';
+    return;
+}
+
+void ppl_dollarOp_deconfig(ppl_context *c) {
+    c->dollarStat.columns_str = NULL;
+    c->dollarStat.columns_val = NULL;
+    c->dollarStat.Ncols = -1;
+    c->dollarStat.filename = NULL;
+    c->dollarStat.file_linenumber = -1;
+    c->dollarStat.file_linenumbers = NULL;
+    c->dollarStat.linenumber_count = -1;
+    c->dollarStat.block_count = -1;
+    c->dollarStat.index_number = -1;
+    c->dollarStat.usingRowCol = -1;
+    c->dollarStat.usingExpr = NULL;
+    c->dollarStat.colHeads = NULL;
+    c->dollarStat.NcolHeads = -1;
+    c->dollarStat.colUnits = NULL;
+    c->dollarStat.NcolUnits = -1;
+    c->dollarStat.warntxt[0] = '\0';
+    return;
+}
+
+void ppl_dollarOp_fetchColByNum(ppl_context *c, pplExpr *inExpr, int inExprCharPos, int colNum) {
+    pplObj *out = &c->stack[c->stackPtr - 1];
+    pplObjNum(out, 0, 0, 0);
+    out->refCount = 1;
+
+    if ((colNum < -3) || (colNum > c->dollarStat.Ncols)) {
+        sprintf(c->dollarStat.warntxt,
+                "%s:%ld: In the expression <%s>, the requested %s number %d does not exist %son line %ld.",
+                c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
+                (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colNum,
+                (c->dollarStat.usingRowCol == DATAFILE_COL) ? "" : "in the block commencing ",
+                c->dollarStat.file_linenumber);
+        sprintf(c->errStat.errBuff, "No %s with number %d.",
+                (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colNum);
+        TBADD(ERR_RANGE);
+        return;
+    }
+
+    if (colNum == -3) out->real = c->dollarStat.file_linenumber;
+    else if (colNum == -2) out->real = c->dollarStat.index_number;
+    else if (colNum == -1) out->real = c->dollarStat.block_count;
+    else if (c->dollarStat.columns_val != NULL) pplObjCpy(out, &c->dollarStat.columns_val[colNum], 0, 0, 1);
+    else if (colNum == 0) out->real = c->dollarStat.linenumber_count;
+    else {
+        char *s = c->dollarStat.columns_str[colNum - 1];
+        int j = -1;
+        if ((!ppl_validFloat(s, &j)) || (j < 1) || ((s[j] != '\0') && (s[j] != ',') && (s[j - 1] > ' '))) {
+            char *str;
+            int j = 0;
+            while ((s[j] > ' ') && (s[j] != ',')) j++;
+            str = (char *) malloc(j + 1);
+            if (str == NULL) return;
+            strncpy(str, s, j);
+            str[j] = '\0';
+            pplObjStr(out, 0, 1, str);
+        } else {
+            if ((colNum > 0) && (colNum <= c->dollarStat.NcolUnits)) {
+                ppl_unitsDimCpy(out, &c->dollarStat.colUnits[colNum - 1]);
+                out->real = ppl_getFloat(s, &j) * c->dollarStat.colUnits[colNum - 1].real;
+            } else {
+                out->real = ppl_getFloat(s, &j);
+            }
+        }
+    }
+    return;
+}
+
+void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *colName) {
+    int i;
+    for (i = 0; i < c->dollarStat.NcolHeads; i++)
+        if (strcmp(colName, c->dollarStat.colHeads[i]) == 0) {
+            ppl_dollarOp_fetchColByNum(c, inExpr, inExprCharPos, i);
+            return;
+        }
+    sprintf(c->dollarStat.warntxt,
+            "%s:%ld: In the expression <%s>, the requested %s named '%s' does not exist %son line %ld.",
+            c->dollarStat.filename, c->dollarStat.file_linenumber, c->dollarStat.usingExpr,
+            (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row", colName,
+            (c->dollarStat.usingRowCol == DATAFILE_COL) ? "" : "in the block commencing ",
+            c->dollarStat.file_linenumber);
+    sprintf(c->errStat.errBuff, "No %s with name '%s'.", (c->dollarStat.usingRowCol == DATAFILE_COL) ? "column" : "row",
+            colName);
+    TBADD(ERR_DICTKEY);
+    return;
+}

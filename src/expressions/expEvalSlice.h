@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -25,8 +25,8 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppl_sliceItem (ppl_context *context, int getPtr, int *status, int *errType, char *errText);
-void ppl_sliceRange(ppl_context *context, int minset, int min, int maxset, int max, int *status, int *errType, char *errText);
+void ppl_sliceItem(ppl_context *context, int getPtr, int *status, int *errType, char *errText);
+void ppl_sliceRange(ppl_context *context, int minset, int min, int maxset, int max, int *status, int *errType,
+                    char *errText);
 
 #endif
-
