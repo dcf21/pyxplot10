@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -19,33 +19,54 @@
 
 // ----------------------------------------------------------------------------
 
-#ifndef _ASCIIDOUBLE_H
-#define _ASCIIDOUBLE_H 1
+#ifndef ASCIIDOUBLE_H
+#define ASCIIDOUBLE_H 1
 
 #include <stdio.h>
 
+double ppl_getFloat(const char *str, int *Nchars);
+
+int ppl_validFloat(const char *str, int *end);
+
+char *ppl_numericDisplay(double in, char *output, int SigFig, int latex);
+
 unsigned char ppl_dblEqual(double a, double b);
+
 unsigned char ppl_dblApprox(double a, double b, double err);
 
-double ppl_getFloat                 (const char *str, int *Nchars);
-int    ppl_validFloat               (const char *str, int *end);
-char  *ppl_numericDisplay           (double in, char *output, int SigFig, int latex);
-void   ppl_file_readline            (FILE *file, char **output, int *MaxLenPtr, int MaxLength);
-void   ppl_getWord                  (char *out, const char *in, int max);
-char  *ppl_nextWord                 (char *in);
-char  *ppl_friendlyTimestring       ();
-char  *ppl_strStrip                 (const char *in, char *out);
-char  *ppl_strUpper                 (const char *in, char *out);
-char  *ppl_strLower                 (const char *in, char *out);
-char  *ppl_strUnderline             (const char *in, char *out);
-char  *ppl_strRemoveCompleteLine    (char *in, char *out);
-char  *ppl_strSlice                 (const char *in, char *out, int start, int end);
-char  *ppl_strCommaSeparatedListScan(char **inscan, char *out);
-int    ppl_strAutocomplete          (const char *candidate, char *test, int Nmin);
-void   ppl_strWordWrap              (const char *in, char *out, int width);
-void   ppl_strBracketMatch          (const char *in, char open, char close, int *CommaPositions, int *Nargs, int *ClosingBracketPos, int MaxCommaPoses);
-int    ppl_strCmpNoCase             (const char *a, const char *b);
-char  *ppl_strEscapify              (const char *in, char *out);
-int    ppl_strWildcardTest          (const char *test, const char *wildcard);
-#endif
+void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength);
 
+void ppl_getWord(char *out, const char *in, int max);
+
+char *ppl_nextWord(char *in);
+
+char *ppl_friendlyTimestring();
+
+char *ppl_strStrip(const char *in, char *out);
+
+char *ppl_strUpper(const char *in, char *out);
+
+char *ppl_strLower(const char *in, char *out);
+
+char *ppl_strUnderline(const char *in, char *out);
+
+char *ppl_strRemoveCompleteLine(char *in, char *out);
+
+char *ppl_strSlice(const char *in, char *out, int start, int end);
+
+char *ppl_strCommaSeparatedListScan(char **inscan, char *out);
+
+int ppl_strAutocomplete(const char *candidate, const char *test, int Nmin);
+
+void ppl_strWordWrap(const char *in, char *out, int width);
+
+void ppl_strBracketMatch(const char *in, char open, char close, int *CommaPositions, int *Nargs, int *ClosingBracketPos,
+                         int MaxCommaPoses);
+
+int ppl_strCmpNoCase(const char *a, const char *b);
+
+char *ppl_strEscapify(const char *in, char *out);
+
+int ppl_strWildcardTest(const char *test, const char *wildcard);
+
+#endif

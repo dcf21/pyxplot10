@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -19,8 +19,8 @@
 
 // ----------------------------------------------------------------------------
 
-#ifndef _STRCONSTANTS_H
-#define _STRCONSTANTS_H 1
+#ifndef STR_CONSTANTS_H
+#define STR_CONSTANTS_H 1
 
 #define LSTR_LENGTH  32768
 #define FNAME_LENGTH  4096

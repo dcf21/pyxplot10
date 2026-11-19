@@ -3,7 +3,7 @@
 // The code in this file is part of Pyxplot
 // <http://www.pyxplot.org.uk>
 //
-// Copyright (C) 2006-2013 Dominic Ford <coders@pyxplot.org.uk>
+// Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 //               2008-2013 Ross Church
 //
 // $Id$
@@ -147,7 +147,7 @@ void ppl_warning(pplerr_context *context, int ErrType, char *msg)
     // When processing scripts, print error location
     if ((context->error_input_linenumber != -1) && (strcmp(context->error_input_filename, "") !=  0))
      {
-      snprintf(temp_stringB+i, BLEN+i, "%s:%d:", context->error_input_filename, context->error_input_linenumber);
+      snprintf(temp_stringB+i, BLEN-i, "%s:%d:", context->error_input_filename, context->error_input_linenumber);
       i += strlen(temp_stringB+i);
       if ((ErrType != ERR_STACKED)&&(i<BLEN-2)) { temp_stringB[i++] = ' '; temp_stringB[i] = '\0'; }
      }
