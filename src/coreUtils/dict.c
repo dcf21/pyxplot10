@@ -33,6 +33,13 @@
 
 void _ppl_dictRemoveEngine(dict *in, dictItem *ptr);
 
+//! ppl_dictInit - Create a new, empty dictionary. Dictionaries are stored as linked lists sorted alphabetically by
+//! key, with a binary tree of key hashes to speed up lookups.
+//! \param [in] useMalloc - If true, the dictionary and its items are allocated with malloc(), and must be freed with
+//! ppl_dictFree(). If false, they are allocated in the current ppl_memAlloc context, and are freed when that context
+//! is freed.
+//! \return The new dictionary, or NULL if memory allocation failed
+
 dict *ppl_dictInit(const int useMalloc) {
     dict *out;
     if (useMalloc) out = (dict *) malloc(sizeof(dict));
@@ -49,6 +56,9 @@ dict *ppl_dictInit(const int useMalloc) {
     return out;
 }
 
+//! ppl_dictFreeTree - Recursively free a binary tree of dictionary key hashes
+//! \param [in] i - The root of the tree to free
+
 void ppl_dictFreeTree(dictHash *i) {
     if (i == NULL) return;
     ppl_dictFreeTree(i->next);
@@ -56,6 +66,11 @@ void ppl_dictFreeTree(dictHash *i) {
     free(i);
     return;
 }
+
+//! ppl_dictFree - Free a dictionary, including the keys and data stored in each item. Has no effect on dictionaries
+//! which were not created with <useMalloc> set.
+//! \param [in] in - The dictionary to free
+//! \return Zero
 
 int ppl_dictFree(dict *in) {
     dictItem *ptr, *ptrnext;
@@ -73,6 +88,11 @@ int ppl_dictFree(dict *in) {
     return 0;
 }
 
+//! ppl_dictHash - Compute the djb2 hash of a string, used to index dictionary keys
+//! \param [in] str - The string to hash
+//! \param [in] strLen - The number of characters of <str> to hash, or -1 to hash the whole string
+//! \return The hash value
+
 int ppl_dictHash(const char *str, const int strLen) {
     unsigned int hash = 5381;
     int c, i = 0;
@@ -84,6 +104,14 @@ int ppl_dictHash(const char *str, const int strLen) {
 }
 
 #define alloc(X) (in->useMalloc ? malloc(X) : ppl_memAlloc_incontext(X, in->memory_context))
+
+//! ppl_dictHashAdd - Add an entry to a dictionary's binary tree of key hashes. If an entry with the same hash
+//! already exists for the same key it is updated; if it exists for a different key, the tree is left unchanged and
+//! lookups of the new key fall back to a linear search.
+//! \param [in] in - The dictionary to update
+//! \param [in] str - The key of the new item
+//! \param [in] hash - The hash of <str>, as returned by ppl_dictHash()
+//! \param [in] item - The dictionary item which the hash should point to
 
 static void ppl_dictHashAdd(dict *in, const char *str, const int hash, dictItem *item) {
     dictHash **ptr = &in->hashTree;
@@ -109,6 +137,15 @@ static void ppl_dictHashAdd(dict *in, const char *str, const int hash, dictItem 
     (*ptr)->next = NULL;
 }
 
+//! ppl_dictHashLookup - Look up a key in a dictionary's binary tree of key hashes
+//! \param [in] in - The dictionary to search
+//! \param [in] str - The key to search for
+//! \param [in] slen - The number of characters of <str> to compare, or zero or less to compare the whole string
+//! \param [in] hash - The hash of the key, as returned by ppl_dictHash()
+//! \param [out] clash - Set to one if an entry with the same hash but a different key was found, in which case the
+//! caller must fall back to a linear search; zero otherwise
+//! \return The matching dictionary item, or NULL if none was found
+
 static dictItem *ppl_dictHashLookup(dict *in, const char *str, int slen, const int hash, int *clash) {
     dictHash **ptr = &in->hashTree;
 
@@ -126,6 +163,13 @@ static dictItem *ppl_dictHashLookup(dict *in, const char *str, int slen, const i
     }
     return NULL;
 }
+
+//! ppl_dictHashRemove - Remove a key from a dictionary's binary tree of key hashes
+//! \param [in] in - The dictionary to update
+//! \param [in] str - The key to remove
+//! \param [in] hash - The hash of the key, as returned by ppl_dictHash()
+//! \param [out] clash - Set to one if an entry with the same hash but a different key was found; zero otherwise
+//! \return The dictionary item which the removed hash entry pointed to, or NULL if none was found
 
 static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, int *clash) {
     dictHash **ptr = &in->hashTree;
@@ -172,10 +216,21 @@ static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, i
     return NULL;
 }
 
+//! ppl_dictLen - Return the number of items in a dictionary
+//! \param [in] in - The dictionary to query (may be NULL)
+//! \return The number of items in the dictionary, or zero if <in> is NULL
+
 int ppl_dictLen(const dict *in) {
     if (in == NULL) return 0;
     return in->length;
 }
+
+//! ppl_dictAppend - Add an item to a dictionary, overwriting any existing item with the same key. The item is not
+//! copied; the dictionary stores the pointer.
+//! \param [in] in - The dictionary to add to
+//! \param [in] key - The key under which to store the item. This is copied.
+//! \param [in] item - Pointer to the data to store
+//! \return Zero on success, or one if memory allocation failed
 
 int ppl_dictAppend(dict *in, const char *key, void *item) {
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
@@ -215,6 +270,13 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
     }
     return 0;
 }
+
+//! ppl_dictAppendCpy - Add a copy of an item to a dictionary, overwriting any existing item with the same key
+//! \param [in] in - The dictionary to add to
+//! \param [in] key - The key under which to store the item. This is copied.
+//! \param [in] item - Pointer to the data to copy into the dictionary
+//! \param [in] size - The number of bytes of data to copy
+//! \return Zero on success, or one if memory allocation failed
 
 int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int size) {
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
@@ -268,12 +330,23 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
     return 0;
 }
 
+//! ppl_dictLookup - Look up a key in a dictionary
+//! \param [in] in - The dictionary to search
+//! \param [in] key - The key to search for
+//! \return The data pointer stored under <key>, or NULL if it was not found
+
 void *ppl_dictLookup(dict *in, const char *key) {
     int hash;
     if (key == NULL) return NULL;
     hash = ppl_dictHash(key, -1);
     return ppl_dictLookupHash(in, key, hash);
 }
+
+//! ppl_dictLookupHash - Look up a key in a dictionary, where the hash of the key has already been computed
+//! \param [in] in - The dictionary to search
+//! \param [in] key - The key to search for
+//! \param [in] hash - The hash of <key>, as returned by ppl_dictHash()
+//! \return The data pointer stored under <key>, or NULL if it was not found
 
 void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
     int clash;
@@ -298,6 +371,16 @@ void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
     }
     return NULL;
 }
+
+//! ppl_dictLookupWithWildcard - Look up the alphanumeric name at the start of a string in a dictionary. If it is not
+//! found, also try matching the names of functions such as diff_d and int_d, which are followed by the name of a
+//! dummy variable, e.g. int_dx.
+//! \param [in] in - The dictionary to search
+//! \param [in] key - The string whose leading alphanumeric word is to be looked up
+//! \param [out] SubsString - Character buffer into which the name of the dummy variable is written, if a wildcard
+//! function name was matched; otherwise set to an empty string
+//! \param [in] SubsMaxLen - The size of the buffer <SubsString>
+//! \param [out] ptrout - Set to the matching dictionary item, or NULL if none was found
 
 void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int SubsMaxLen, dictItem **ptrout) {
     int hash, clash, i, k, keylen;
@@ -365,6 +448,11 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
     return;
 }
 
+//! ppl_dictContains - Test whether a dictionary contains a key
+//! \param [in] in - The dictionary to search
+//! \param [in] key - The key to search for
+//! \return One if the key is present, zero otherwise
+
 int ppl_dictContains(dict *in, const char *key) {
     int hash, clash;
     dictItem *ptr;
@@ -384,6 +472,11 @@ int ppl_dictContains(dict *in, const char *key) {
     }
     return 0;
 }
+
+//! ppl_dictRemoveKey - Remove the item with a specified key from a dictionary
+//! \param [in] in - The dictionary to update
+//! \param [in] key - The key to remove
+//! \return Zero if an item was removed, or one if the key was not found
 
 int ppl_dictRemoveKey(dict *in, const char *key) {
     int hash, clash;
@@ -413,6 +506,11 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
     return 1;
 }
 
+//! ppl_dictRemove - Remove the first item in a dictionary which points to a specified piece of data
+//! \param [in] in - The dictionary to update
+//! \param [in] item - The data pointer to search for
+//! \return Zero if an item was removed, or one if no matching item was found
+
 int ppl_dictRemove(dict *in, const void *item) {
     dictItem *ptr;
     if (in == NULL) return 1;
@@ -423,6 +521,10 @@ int ppl_dictRemove(dict *in, const void *item) {
     }
     return 1;
 }
+
+//! _ppl_dictRemoveEngine - Unlink an item from a dictionary's linked list, freeing it if the dictionary uses malloc()
+//! \param [in] in - The dictionary to update
+//! \param [in] ptr - The dictionary item to remove
 
 void _ppl_dictRemoveEngine(dict *in, dictItem *ptr) {
     if (in == NULL) return;
@@ -443,15 +545,30 @@ void _ppl_dictRemoveEngine(dict *in, dictItem *ptr) {
     return;
 }
 
+//! ppl_dictRemoveAll - Remove all items in a dictionary which point to a specified piece of data
+//! \param [in] in - The dictionary to update
+//! \param [in] item - The data pointer to search for
+//! \return Zero
+
 int ppl_dictRemoveAll(dict *in, void *item) {
     while (!ppl_dictRemove(in, item));
     return 0;
 }
 
+//! ppl_dictIterateInit - Begin iterating over the items in a dictionary, in alphabetical order of key
+//! \param [in] in - The dictionary to iterate over
+//! \return An iterator pointing to the first item, to pass to ppl_dictIterate(), or NULL if the dictionary is empty
+
 dictIterator *ppl_dictIterateInit(const dict *in) {
     if (in == NULL) return NULL;
     return in->first;
 }
+
+//! ppl_dictIterate - Return the data stored in the dictionary item an iterator points to, and advance the iterator
+//! to the next item
+//! \param [in|out] in - Pointer to the iterator, which is advanced to the next item
+//! \param [out] key - Set to point to the key of the current item
+//! \return The data pointer stored in the current item, or NULL if the iterator has reached the end
 
 void *ppl_dictIterate(dictIterator **in, char **key) {
     void *out;

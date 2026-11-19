@@ -61,6 +61,9 @@ long long _fastmalloc_malloccount;
 
 static int _fastmalloc_initialised = 0;
 
+//! fastmalloc_init - Initialise the fastmalloc pool allocator, which serves small allocations out of 128 kB blocks
+//! that are freed en masse when an allocation context is freed. Has no effect if already initialised.
+
 void fastmalloc_init() {
     int i;
     if (_fastmalloc_initialised == 1) return;
@@ -79,6 +82,10 @@ void fastmalloc_init() {
     _fastmalloc_initialised = 1;
 }
 
+//! fastmalloc_freeall - Free all memory allocated by fastmalloc in a specified allocation context, and in all deeper
+//! contexts
+//! \param [in] context - The shallowest allocation context to free
+
 void fastmalloc_freeall(const int context) {
     int i;
     void *ptr, *ptr2;
@@ -96,6 +103,10 @@ void fastmalloc_freeall(const int context) {
     return;
 }
 
+//! fastmalloc_free - Free all memory allocated by fastmalloc in a specified allocation context, but not in deeper
+//! contexts
+//! \param [in] context - The allocation context to free
+
 void fastmalloc_free(const int context) {
     void *ptr, *ptr2;
     ptr = _fastmalloc_firstblocklist[context];
@@ -109,6 +120,8 @@ void fastmalloc_free(const int context) {
     _fastmalloc_currentblock_alloc_ptr[context] = 0;
     return;
 }
+
+//! fastmalloc_close - Free all memory allocated by fastmalloc, and shut down the allocator
 
 void fastmalloc_close() {
     if (_fastmalloc_initialised == 0) return;
@@ -125,6 +138,11 @@ void fastmalloc_close() {
     _fastmalloc_initialised = 0;
     return;
 }
+
+//! fastmalloc - Allocate memory in a specified allocation context. Allocations are aligned to SYNCSTEP bytes.
+//! \param [in] context - The allocation context in which to allocate the memory
+//! \param [in] size - The number of bytes to allocate
+//! \return Pointer to the allocated memory, or NULL on failure
 
 void *fastmalloc(int context, int size) {
     void *ptr, *out;
@@ -189,7 +207,11 @@ void *fastmalloc(int context, int size) {
 // These provide simple wrapper for fastmalloc which keep track of the current memory allocation context
 // --------------------------------------------------------
 
-// ppl_memAlloc_MemoryInit() -- Call this before using any ppl_memAlloc_memory functions.
+//! ppl_memAlloc_MemoryInit - Initialise the ppl_memAlloc memory management system. This must be called before any
+//! other ppl_memAlloc functions are used. Allocation starts in context zero.
+//! \param [in] ec - The error-reporting context to pass to the error and log handlers
+//! \param [in] mem_error_handler - Function to call to report errors, with the same signature as ppl_error()
+//! \param [in] mem_log_handler - Function to call to write log messages, with the same signature as ppl_log()
 
 void ppl_memAlloc_MemoryInit(pplerr_context *ec, void (*mem_error_handler)(pplerr_context *, int, int, int, char *),
                              void (*mem_log_handler)(pplerr_context *, char *)) {
@@ -204,7 +226,7 @@ void ppl_memAlloc_MemoryInit(pplerr_context *ec, void (*mem_error_handler)(ppler
     return;
 }
 
-// ppl_memAlloc_MemoryStop() -- Call this when ppl_memAlloc_memory is finished with and should be cleaned up
+//! ppl_memAlloc_MemoryStop - Free all memory allocated by ppl_memAlloc, and shut down the memory management system
 
 void ppl_memAlloc_MemoryStop() {
     if (MEMDEBUG1) (*mem_log)(errcontext, "Shutting down memory management system.");
@@ -213,8 +235,9 @@ void ppl_memAlloc_MemoryStop() {
     return;
 }
 
-// ppl_memAlloc_DescendIntoNewContext() -- Create a new memory allocation context for future calls to ppl_memAlloc()
-//  [returns the context number of the allocation context which has been assigned to future ppl_memAlloc calls]
+//! ppl_memAlloc_DescendIntoNewContext - Create a new allocation context, one level deeper than the current one, and
+//! make it the current context for future calls to ppl_memAlloc()
+//! \return The number of the new allocation context, or -1 on failure
 
 int ppl_memAlloc_DescendIntoNewContext() {
     if (ppl_memAlloc_mem_context < 0) {
@@ -234,8 +257,10 @@ int ppl_memAlloc_DescendIntoNewContext() {
     return ppl_memAlloc_mem_context;
 }
 
-// ppl_memAlloc_AscendOutOfContext() -- Call when the current memory allocation context is finished with and can be freed.
-//   [call with the number of the allocation context which is to be freed. Returns the number of the current allocation context after the freeing operation.]
+//! ppl_memAlloc_AscendOutOfContext - Free all memory allocated in a specified allocation context and any deeper
+//! contexts, and make the context above it the current context
+//! \param [in] context - The allocation context to free, as returned by ppl_memAlloc_DescendIntoNewContext()
+//! \return The number of the current allocation context after freeing, or -1 on failure
 
 int ppl_memAlloc_AscendOutOfContext(const int context) {
     if (ppl_memAlloc_mem_context < 0) {
@@ -259,7 +284,8 @@ int ppl_memAlloc_AscendOutOfContext(const int context) {
     return ppl_memAlloc_mem_context;
 }
 
-// _ppl_memAlloc_SetMemContext() -- PRIVATE FUNCTION.
+//! _ppl_memAlloc_SetMemContext - Set the current allocation context. Private to the memory management system.
+//! \param [in] context - The number of the allocation context to make current
 
 void _ppl_memAlloc_SetMemContext(int context) {
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
@@ -271,13 +297,16 @@ void _ppl_memAlloc_SetMemContext(int context) {
     return;
 }
 
-// ppl_memAlloc_GetMemContext() -- Returns the number of the current memory allocation context.
+//! ppl_memAlloc_GetMemContext - Return the number of the current allocation context
+//! \return The number of the current allocation context, or -1 if memory management is not initialised
 
 int ppl_memAlloc_GetMemContext() {
     return ppl_memAlloc_mem_context;
 }
 
-// ppl_memAlloc_FreeAll() -- Free all memory which has been allocated in the specified allocation context, and in deeper levels.
+//! ppl_memAlloc_FreeAll - Free all memory allocated in a specified allocation context and in all deeper contexts.
+//! The current context is not changed.
+//! \param [in] context - The shallowest allocation context to free
 
 void ppl_memAlloc_FreeAll(int context) {
     static int latch = 0;
@@ -301,7 +330,9 @@ void ppl_memAlloc_FreeAll(int context) {
     return;
 }
 
-// ppl_memAlloc_Free() -- Free all memory which has been allocated in the specified allocation context, but not in deeper levels.
+//! ppl_memAlloc_Free - Free all memory allocated in a specified allocation context, but not in deeper contexts.
+//! The current context is not changed.
+//! \param [in] context - The allocation context to free
 
 void ppl_memAlloc_Free(int context) {
     static int latch = 0;
@@ -324,7 +355,10 @@ void ppl_memAlloc_Free(int context) {
     return;
 }
 
-// memAalloc() -- Malloc some memory in the present allocation context.
+//! ppl_memAlloc - Allocate memory in the current allocation context. It is freed when that context is freed, and
+//! must not be passed to free().
+//! \param [in] size - The number of bytes to allocate
+//! \return Pointer to the allocated memory, or NULL on failure
 
 void *ppl_memAlloc(int size) {
     void *out;
@@ -347,7 +381,11 @@ void *ppl_memAlloc(int size) {
     return out;
 }
 
-// ppl_memAlloc_incontext() -- Malloc some memory in the specified context. Use sparingly.
+//! ppl_memAlloc_incontext - Allocate memory in a specified allocation context, rather than the current one. It is
+//! freed when that context is freed, and must not be passed to free().
+//! \param [in] size - The number of bytes to allocate
+//! \param [in] context - The allocation context in which to allocate the memory
+//! \return Pointer to the allocated memory, or NULL on failure
 
 void *ppl_memAlloc_incontext(int size, int context) {
     void *out;

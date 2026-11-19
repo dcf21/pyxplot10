@@ -19,7 +19,7 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for getting information out of /etc/passwd
+// Functions for making backup copies of files before they are overwritten
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,6 +30,11 @@
 #include "pplConstants.h"
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
+
+//! ppl_createBackupIfRequired - If the user has enabled backups, and a file we are about to overwrite already exists,
+//! rename the existing file to <filename~N>, where N is the lowest integer for which no such file already exists.
+//! \param [in] c - The Pyxplot context, used to determine whether backups are enabled
+//! \param [in] filename - The path of the file which is about to be overwritten
 
 void ppl_createBackupIfRequired(const ppl_context *c, const char *filename) {
     char newname[FNAME_LENGTH];

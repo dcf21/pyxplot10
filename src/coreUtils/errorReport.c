@@ -35,6 +35,12 @@
 static char temp_stringA[BLEN + 1], temp_stringB[BLEN + 1], temp_stringC[BLEN + 1], temp_stringD[BLEN + 1],
         temp_stringE[BLEN + 1];
 
+//! ppl_error_setstreaminfo - Record the source of the input currently being processed, so that error messages can
+//! report the filename and line number where they occurred
+//! \param [in|out] context - The error-reporting context to update. It is also given a new unique source ID.
+//! \param [in] linenumber - The line number currently being processed, or -1 if not processing a file
+//! \param [in] filename - The name of the file currently being processed, or NULL to leave it unchanged
+
 void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, const char *filename) {
     static long sourceId = 0;
     context->error_input_sourceId = sourceId++;
@@ -45,6 +51,15 @@ void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, cons
     }
     return;
 }
+
+//! ppl_error - Report an error to the user on stderr, prefixed with the location in the input where it occurred and
+//! the type of error. If the terminal supports colour, the message is coloured, and up to two character positions
+//! within it can be highlighted in reverse video.
+//! \param [in] context - The error-reporting context
+//! \param [in] ErrType - The type of error, one of the ERR_* constants. ERR_PREFORMED messages are printed verbatim.
+//! \param [in] HighlightPos1 - One-indexed position of the first character in <msg> to highlight, or -1 for none
+//! \param [in] HighlightPos2 - One-indexed position of the second character in <msg> to highlight, or -1 for none
+//! \param [in] msg - The error message, or NULL to use the message in <context->tempErrStr>
 
 void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
     unsigned char ApplyHighlighting, reverse = 0;
@@ -173,6 +188,12 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
     return;
 }
 
+//! ppl_fatal - Report a fatal internal error, and terminate the process
+//! \param [in] context - The error-reporting context
+//! \param [in] file - The source code file in which the error occurred
+//! \param [in] line - The line number in the source code file where the error occurred
+//! \param [in] msg - The error message, or NULL to use the message in <context->tempErrStr>
+
 void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
     char introline[FNAME_LENGTH];
     if (msg == NULL) msg = context->tempErrStr;
@@ -187,6 +208,13 @@ void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
     if (DEBUG) ppl_log(context, "Terminating with error condition 1.");
     exit(1);
 }
+
+//! ppl_warning - Report a warning to the user on stderr, prefixed with the location in the input where it occurred
+//! and the type of warning
+//! \param [in] context - The error-reporting context
+//! \param [in] ErrType - The type of warning, one of the ERR_* constants. ERR_PREFORMED messages are printed
+//! verbatim.
+//! \param [in] msg - The warning message, or NULL to use the message in <context->tempErrStr>
 
 void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
     int i = 0;
@@ -277,6 +305,10 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
     return;
 }
 
+//! ppl_report - Print a report-level message to the user on stdout, coloured if the terminal supports it
+//! \param [in] context - The error-reporting context
+//! \param [in] msg - The message, or NULL to use the message in <context->tempErrStr>
+
 void ppl_report(pplerr_context *context, char *msg) {
     if (msg == NULL) msg = context->tempErrStr;
     if (msg != temp_stringA) {
@@ -300,6 +332,11 @@ void ppl_report(pplerr_context *context, char *msg) {
     fputs(temp_stringC, stdout);
     return;
 }
+
+//! ppl_log - Write a message to the log file <pyxplot.PID.log> in the current working directory, prefixed with a
+//! timestamp and the name of the process that produced it
+//! \param [in] context - The error-reporting context
+//! \param [in] msg - The message, or NULL to use the message in <context->tempErrStr>
 
 void ppl_log(pplerr_context *context, char *msg) {
     static FILE *logfile = NULL;

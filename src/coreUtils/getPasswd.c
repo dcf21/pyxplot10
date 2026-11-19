@@ -30,6 +30,11 @@
 #include "coreUtils/errorReport.h"
 #include "pplConstants.h"
 
+//! UnixGetPwEntry - Look up the current user's entry in the password database
+//! \param [in] context - The error-reporting context (unused)
+//! \return Pointer to the current user's passwd structure, which is a static buffer owned by the C library, or NULL
+//! if the current user has no entry
+
 struct passwd *UnixGetPwEntry(const pplerr_context *context) {
     int uid;
     struct passwd *ptr;
@@ -41,6 +46,11 @@ struct passwd *UnixGetPwEntry(const pplerr_context *context) {
     endpwent();
     return (ptr);
 }
+
+//! ppl_unixGetHomeDir - Return the path of the current user's home directory. If the user has no entry in the
+//! password database, a warning is issued and /home/<login name> is guessed.
+//! \param [in] context - The error-reporting context, used to issue warnings and fatal errors
+//! \return The path of the current user's home directory, stored in a buffer which must not be freed
 
 char *ppl_unixGetHomeDir(pplerr_context *context) {
     struct passwd *ptr;
@@ -60,6 +70,12 @@ char *ppl_unixGetHomeDir(pplerr_context *context) {
     return ptr->pw_dir;
 }
 
+//! ppl_unixGetUserHomeDir - Return the path of a named user's home directory
+//! \param [in] context - The error-reporting context (unused)
+//! \param [in] username - The login name of the user whose home directory we are to look up
+//! \return The path of the user's home directory, stored in a static buffer owned by the C library, or NULL if no
+//! such user exists
+
 char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username) {
     struct passwd *ptr;
     setpwent(); // Ditto memory leak comment above
@@ -69,6 +85,11 @@ char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username
     if (ptr == NULL) return NULL;
     return ptr->pw_dir;
 }
+
+//! ppl_unixGetIRLName - Return the current user's real name, taken from the GECOS field of the password database,
+//! with any text after the first comma removed
+//! \param [in] context - The error-reporting context; its <tempErrStr> buffer is used to hold the result
+//! \return The user's real name, or their login name if it could not be found. Overwritten by subsequent calls.
 
 char *ppl_unixGetIRLName(pplerr_context *context) {
     struct passwd *ptr;
@@ -81,7 +102,14 @@ char *ppl_unixGetIRLName(pplerr_context *context) {
     return context->tempErrStr;
 }
 
-// Expand out filenames line ~dcf21/script.ppl
+//! ppl_unixExpandUserHomeDir - Expand a filename into an absolute path, expanding ~ and ~user into the relevant home
+//! directories, and prefixing relative paths with the current working directory
+//! \param [in] context - The error-reporting context
+//! \param [in] in - The filename to expand, e.g. ~dcf21/script.ppl
+//! \param [in] cwd - The current working directory
+//! \param [out] out - Character buffer into which to write the expanded path (at least FNAME_LENGTH bytes)
+//! \return Pointer to <out>
+
 char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, char *out) {
     char UserName[1024];
     char *scan_in, *scan_out;

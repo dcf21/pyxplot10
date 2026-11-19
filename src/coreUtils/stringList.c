@@ -29,7 +29,10 @@
 
 #include "list.h"
 
-/* ppl_strSplit(): Split up a string into bits separated by whitespace */
+//! ppl_strSplit - Split up a string into words separated by whitespace
+//! \param [in] in - The input string to split
+//! \return A list of the words in <in>, each stored as a null-terminated string. The list is allocated in the
+//! current ppl_memAlloc context.
 
 list *ppl_strSplit(char *in) {
     int pos, start, end;
