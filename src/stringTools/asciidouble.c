@@ -277,32 +277,37 @@ unsigned char ppl_dblApprox(const double a, const double b, const double err) {
 //! if <MaxLenPtr> is NULL.
 
 void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength) {
-    char c = '\x07';
+    char *const fixedBuffer = *output;
     int i = 0;
 
-    if (MaxLenPtr != NULL) {
-        MaxLength = *MaxLenPtr;
-        while (((int) c != '\n') && (!feof(file)) && (!ferror(file))) {
-            if (cancellationFlag) break;
+    if (MaxLenPtr != NULL) MaxLength = *MaxLenPtr;
+
+    // Read the file one character at a time with getc(), which is much faster than calling fscanf() per character
+    while (!cancellationFlag) {
+        const int ch = getc(file);
+        // Characters are tested as signed chars, so control characters and bytes above 127 are both dropped
+        const char c = (char) ch;
+        if ((ch == EOF) || (c == '\n')) break;
+        if ((((int) c) <= 31) && (c != '\t')) continue;
+        if (MaxLenPtr != NULL) {
+            // Grow the malloced buffer as needed, leaving room for the null terminator
             if (i > MaxLength - 4) {
-                char *new = realloc(*output, MaxLength *= 2);
-                if (new == NULL) break;
-                *output = new;
+                char *const grown = realloc(*output, MaxLength * 2);
+                if (grown == NULL) break;
+                *output = grown;
+                MaxLength *= 2;
             }
-            if ((fscanf(file, "%c", &c) >= 0) && ((((int) c) > 31) || (c == '\t'))) { (*output)[i++] = c; }
+            (*output)[i++] = c;
+        } else if (i < MaxLength - 2) {
+            // Fixed-size buffer: truncate long lines, but keep reading to the end of the line
+            fixedBuffer[i++] = c;
         }
+    }
+    if (MaxLenPtr != NULL) {
         *MaxLenPtr = MaxLength;
         (*output)[i] = '\0';
     } else {
-        char *output_scan = *output;
-        while (((int) c != '\n') && (!feof(file)) && (!ferror(file))) {
-            if (cancellationFlag) break;
-            if ((fscanf(file, "%c", &c) >= 0) && ((((int) c) > 31) || (c == '\t')) && (i < MaxLength - 2)) {
-                i++;
-                *(output_scan++) = c;
-            }
-        }
-        *output_scan = '\0';
+        fixedBuffer[i] = '\0';
     }
 }
 
