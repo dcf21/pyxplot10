@@ -60,81 +60,38 @@
 #include "pplConstants.h"
 
 
-#define SHOW_HIGHLIGHT(modified) \
-    if (interactive != \
-        0) /* On interactive sessions, highlight those settings which have been manually set by the user */ \
-    { \
-        if (modified == 0) \
-            ppl_snprintfTrunc(out + i, outLen - i, "%s", \
-                              *(char **) ppl_fetchSettingName(&c->errcontext, c->errcontext.session_default.color_wrn, \
-                                                              SW_TERMCOL_INT, SW_TERMCOL_TXT, sizeof(char *))); \
-        else \
-            ppl_snprintfTrunc(out + i, outLen - i, "%s", \
-                              *(char **) ppl_fetchSettingName(&c->errcontext, c->errcontext.session_default.color_rep, \
-                                                              SW_TERMCOL_INT, SW_TERMCOL_TXT, sizeof(char *))); \
-        i += strlen(out + i); \
-    }
+//! showHighlight - On interactive sessions, start highlighting a setting, in one colour if it has been changed by
+//! the user and in another if it still has its default value
+//! \param [in] c - The Pyxplot context
+//! \param [in,out] out - The buffer to which the show command's output is being written
+//! \param [in] outLen - The size of the buffer <out>
+//! \param [in,out] i - The position in <out> at which to write
+//! \param [in] interactive - True if the session is interactive
+//! \param [in] unchanged - True if the setting still has its default value
 
-#define SHOW_DEHIGHLIGHT \
-    if (interactive != \
-        0) /* On interactive sessions, highlight those settings which have been manually set by the user */ \
-    { \
-        ppl_snprintfTrunc(out + i, outLen - i, "%s", \
-                          *(char **) ppl_fetchSettingName(&c->errcontext, SW_TERMCOL_NOR, SW_TERMCOL_INT, \
-                                                          SW_TERMCOL_TXT, sizeof(char *))); \
-        i += strlen(out + i); \
-    }
+static void showHighlight(ppl_context *c, char *out, const size_t outLen, int *i, const int interactive,
+                          const int unchanged) {
+    const int colour =
+            (unchanged == 0) ? c->errcontext.session_default.color_wrn : c->errcontext.session_default.color_rep;
+    if (interactive == 0) return;
+    ppl_strAppendf(
+            out, outLen, i, "%s",
+            *(char **) ppl_fetchSettingName(&c->errcontext, colour, SW_TERMCOL_INT, SW_TERMCOL_TXT, sizeof(char *)));
+}
 
-#define SHOW_TICKS(T, TD, U, UD, amLog, amLogD, A, B) \
-    ppl_snprintfTrunc(buf2, FNAME_LENGTH, \
-                      "Sets where the major ticks are placed along the %c%d axis, and how they appear", A, B); \
-    ppl_snprintfTrunc( \
-            buf, LSTR_LENGTH, "%s ", \
-            *(char **) ppl_fetchSettingName(&c->errcontext, T.tickDir, SW_TICDIR_INT, SW_TICDIR_STR, sizeof(char *))); \
-    m = strlen(buf); \
-    if ((!T.tickStepSet) && (T.tickList == NULL)) { \
-        ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "autofreq"); \
-    } else if (T.tickList == NULL) { \
-        if (T.tickMinSet) { \
-            U.real = T.tickMin; \
-            ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "%s", ppl_unitsNumericDisplay(c, &(U), 0, 0, 0)); \
-            m += strlen(buf + m); \
-        } \
-        if (T.tickStepSet) { \
-            U.real = T.tickStep; \
-            if (amLog == SW_BOOL_FALSE) \
-                ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "%s%s", (T.tickMinSet) ? ", " : "", \
-                                  ppl_unitsNumericDisplay(c, &(U), 0, 0, 0)); \
-            else \
-                ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "%s%s", (T.tickMinSet) ? ", " : "", \
-                                  ppl_numericDisplay(T.tickStep, c->numdispBuff[0], \
-                                                     c->set->term_current.SignificantFigures, \
-                                                     (c->set->term_current.NumDisplay == SW_DISPLAY_L))); \
-            m += strlen(buf + m); \
-        } \
-        if (T.tickMaxSet) { \
-            U.real = T.tickMax; \
-            ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, ", %s", ppl_unitsNumericDisplay(c, &(U), 0, 0, 0)); \
-            m += strlen(buf + m); \
-        } \
-    } else { \
-        ppl_strAppendChar(buf, LSTR_LENGTH, &m, '('); \
-        for (n = 0; T.tickStrs[n] != NULL; n++) { \
-            ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "%s", (n == 0) ? "" : ", "); \
-            m += strlen(buf + m); \
-            U.real = T.tickList[n]; \
-            ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "%s", ppl_unitsNumericDisplay(c, &(U), 0, 0, 0)); \
-            m += strlen(buf + m); \
-            if (T.tickStrs[n][0] != '\xFF') { \
-                ppl_strAppendChar(buf, LSTR_LENGTH, &m, ' '); \
-                ppl_strEscapify(T.tickStrs[n], buf + m, LSTR_LENGTH - m); \
-                m += strlen(buf + m); \
-            } \
-        } \
-        ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, ")"); \
-    } \
-    ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, temp1, buf, \
-                        (T.tickDir == TD.tickDir) && (pplaxis_cmpTics(c, &T, &TD, &U, &UD, amLog, amLogD)), buf2);
+//! showDehighlight - On interactive sessions, stop highlighting a setting
+//! \param [in] c - The Pyxplot context
+//! \param [in,out] out - The buffer to which the show command's output is being written
+//! \param [in] outLen - The size of the buffer <out>
+//! \param [in,out] i - The position in <out> at which to write
+//! \param [in] interactive - True if the session is interactive
+
+static void showDehighlight(ppl_context *c, char *out, const size_t outLen, int *i, const int interactive) {
+    if (interactive == 0) return;
+    ppl_strAppendf(out, outLen, i, "%s",
+                   *(char **) ppl_fetchSettingName(&c->errcontext, SW_TERMCOL_NOR, SW_TERMCOL_INT, SW_TERMCOL_TXT,
+                                                   sizeof(char *)));
+}
 
 //! ppl_directive_show3 - Write the value of a single setting, in the syntax of the set command that would set it
 //! \param [in] c - The Pyxplot context
@@ -155,7 +112,7 @@ static void ppl_directive_show3(ppl_context *c, char *out, const size_t outLen, 
                                 char *setting_value, const int modified, char *description) {
     int i = 0;
 
-    SHOW_HIGHLIGHT(modified);
+    showHighlight(c, out, outLen, &i, interactive, modified);
 
     ppl_snprintfTrunc(out + i, outLen - i, "set %*s", (int) strlen(itemSet), itemSetShow ? itemSet : "");
     i += strlen(out + i); // Start off with a set command
@@ -181,8 +138,147 @@ static void ppl_directive_show3(ppl_context *c, char *out, const size_t outLen, 
     ppl_snprintfTrunc(out + i, outLen - i, "%s", "\n");
     i += strlen(out + i); // and a linefeed
 
-    SHOW_DEHIGHLIGHT;
+    showDehighlight(c, out, outLen, &i, interactive);
     return;
+}
+
+//! showColorSetting - The value of a colour setting, which is either a named colour, or given by its components
+typedef struct showColorSetting {
+    int color; // A named colour (COLOR_*), or zero if the colour is given by its components
+    int space; // The colour space of the components (SW_COLSPACE_*)
+    double c1, c2, c3, c4; // The components
+} showColorSetting;
+
+//! showColor - Write a line of the output of the show command describing a colour setting
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - The buffer into which to write the line
+//! \param [in] outLen - The size of the buffer <out>
+//! \param [in] itemSet - The text inserted after "set" to identify the plot item the setting applies to, if any
+//! \param [in] interactive - True if the session is interactive
+//! \param [out] buf - A buffer of LSTR_LENGTH bytes to use as workspace
+//! \param [in] cur - The current value of the setting
+//! \param [in] def - The default value of the setting
+//! \param [in] name - The name of the setting
+//! \param [in] description - A description of the setting
+
+static void showColor(ppl_context *c, char *out, const size_t outLen, char *itemSet, const int interactive, char *buf,
+                      const showColorSetting cur, const showColorSetting def, char *name, char *description) {
+    if (cur.color > 0)
+        ppl_snprintfTrunc(
+                buf, LSTR_LENGTH, "%s",
+                *(char **) ppl_fetchSettingName(&c->errcontext, cur.color, SW_COLOR_INT, SW_COLOR_STR, sizeof(char *)));
+    else if (cur.space == SW_COLSPACE_RGB)
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "rgb(%s,%s,%s)", ppl_numericDisplayDefault(c, cur.c1, 0),
+                          ppl_numericDisplayDefault(c, cur.c2, 1), ppl_numericDisplayDefault(c, cur.c3, 2));
+    else if (cur.space == SW_COLSPACE_HSB)
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "hsb(%s,%s,%s)", ppl_numericDisplayDefault(c, cur.c1, 0),
+                          ppl_numericDisplayDefault(c, cur.c2, 1), ppl_numericDisplayDefault(c, cur.c3, 2));
+    else if (cur.space == SW_COLSPACE_CMYK)
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "cmyk(%s,%s,%s,%s)", ppl_numericDisplayDefault(c, cur.c1, 0),
+                          ppl_numericDisplayDefault(c, cur.c2, 1), ppl_numericDisplayDefault(c, cur.c3, 2),
+                          ppl_numericDisplayDefault(c, cur.c4, 3));
+    ppl_directive_show3(c, out, outLen, itemSet, 1, interactive, name, buf,
+                        (cur.color == def.color) && (cur.space == def.space) && (cur.c1 == def.c1) &&
+                                (cur.c2 == def.c2) && (cur.c3 == def.c3) && (cur.c4 == def.c4),
+                        description);
+}
+
+//! showTicks - Write a line of the output of the show command describing the tick settings of an axis
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - The buffer into which to write the line
+//! \param [in] outLen - The size of the buffer <out>
+//! \param [in] itemSet - The text inserted after "set" to identify the plot item the setting applies to, if any
+//! \param [in] interactive - True if the session is interactive
+//! \param [in] name - The name of the setting, e.g. x1tics
+//! \param [out] buf - A buffer of LSTR_LENGTH bytes to use as workspace
+//! \param [out] buf2 - A buffer of FNAME_LENGTH bytes to use as workspace
+//! \param [in] T - The tick settings
+//! \param [in] TD - The default tick settings
+//! \param [in,out] U - The physical unit of the axis; its value is overwritten while formatting tick positions
+//! \param [in] UD - The default physical unit of the axis
+//! \param [in] amLog - Whether the axis is logarithmic
+//! \param [in] amLogD - Whether the axis is logarithmic by default
+//! \param [in] axisLetter - The letter of the axis, e.g. 'x'
+//! \param [in] axisNumber - The number of the axis, e.g. 1
+
+static void showTicks(ppl_context *c, char *out, const size_t outLen, char *itemSet, const int interactive, char *name,
+                      char *buf, char *buf2, const pplset_tics *T, const pplset_tics *TD, pplObj *U, const pplObj *UD,
+                      const int amLog, const int amLogD, const char axisLetter, const int axisNumber) {
+    int m, n;
+    ppl_snprintfTrunc(buf2, FNAME_LENGTH,
+                      "Sets where the major ticks are placed along the %c%d axis, and how they appear", axisLetter,
+                      axisNumber);
+    ppl_snprintfTrunc(
+            buf, LSTR_LENGTH, "%s ",
+            *(char **) ppl_fetchSettingName(&c->errcontext, T->tickDir, SW_TICDIR_INT, SW_TICDIR_STR, sizeof(char *)));
+    m = strlen(buf);
+    if ((!T->tickStepSet) && (T->tickList == NULL)) {
+        ppl_strAppendf(buf, LSTR_LENGTH, &m, "autofreq");
+    } else if (T->tickList == NULL) {
+        // Ticks at regular intervals: min, step, max
+        if (T->tickMinSet) {
+            U->real = T->tickMin;
+            ppl_strAppendf(buf, LSTR_LENGTH, &m, "%s", ppl_unitsNumericDisplay(c, U, 0, 0, 0));
+        }
+        if (T->tickStepSet) {
+            U->real = T->tickStep;
+            ppl_strAppendf(buf, LSTR_LENGTH, &m, "%s%s", (T->tickMinSet) ? ", " : "",
+                           (amLog == SW_BOOL_FALSE) ? ppl_unitsNumericDisplay(c, U, 0, 0, 0)
+                                                    : ppl_numericDisplayDefault(c, T->tickStep, 0));
+        }
+        if (T->tickMaxSet) {
+            U->real = T->tickMax;
+            ppl_strAppendf(buf, LSTR_LENGTH, &m, ", %s", ppl_unitsNumericDisplay(c, U, 0, 0, 0));
+        }
+    } else {
+        // A list of tick positions, each optionally with a label
+        ppl_strAppendChar(buf, LSTR_LENGTH, &m, '(');
+        for (n = 0; T->tickStrs[n] != NULL; n++) {
+            U->real = T->tickList[n];
+            ppl_strAppendf(buf, LSTR_LENGTH, &m, "%s%s", (n == 0) ? "" : ", ", ppl_unitsNumericDisplay(c, U, 0, 0, 0));
+            if (T->tickStrs[n][0] != '\xFF') {
+                ppl_strAppendChar(buf, LSTR_LENGTH, &m, ' ');
+                ppl_strEscapify(T->tickStrs[n], buf + m, LSTR_LENGTH - m);
+                m += strlen(buf + m);
+            }
+        }
+        ppl_strAppendf(buf, LSTR_LENGTH, &m, ")");
+    }
+    ppl_directive_show3(c, out, outLen, itemSet, 1, interactive, name, buf,
+                        (T->tickDir == TD->tickDir) && (pplaxis_cmpTics(c, T, TD, U, UD, amLog, amLogD)), buf2);
+}
+
+//! showColorRange - Write a line of the output of the show command describing the range of a colour axis
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - The buffer into which to write the line
+//! \param [in] outLen - The size of the buffer <out>
+//! \param [in] itemSet - The text inserted after "set" to identify the plot item the setting applies to, if any
+//! \param [in] interactive - True if the session is interactive
+//! \param [out] buf - A buffer of LSTR_LENGTH bytes to use as workspace
+//! \param [in] sg - The graph settings
+//! \param [in] C - The index of the colour axis (0-3, for c1 to c4)
+
+static void showColorRange(ppl_context *c, char *out, const size_t outLen, char *itemSet, const int interactive,
+                           char *buf, const pplset_graph *sg, const int C) {
+    const pplset_graph *def = &c->set->graph_default;
+    char name[16];
+    ppl_snprintfTrunc(name, sizeof(name), "c%drange", C + 1);
+    ppl_snprintfTrunc(
+            buf, LSTR_LENGTH, "[%s:%s] %s %s",
+            (sg->Cminauto[C] == SW_BOOL_TRUE) ? "*" : ppl_unitsNumericDisplay(c, (pplObj *) &(sg->Cmin[C]), 0, 0, 0),
+            (sg->Cmaxauto[C] == SW_BOOL_TRUE) ? "*" : ppl_unitsNumericDisplay(c, (pplObj *) &(sg->Cmax[C]), 1, 0, 0),
+            (sg->Crenorm[C] == SW_BOOL_TRUE) ? "renormalise" : "norenormalise",
+            (sg->Creverse[C] == SW_BOOL_TRUE) ? "reverse" : "noreverse");
+    ppl_directive_show3(
+            c, out, outLen, itemSet, 1, interactive, name, buf,
+            (def->Cminauto[C] == sg->Cminauto[C]) && (def->Cmaxauto[C] == sg->Cmaxauto[C]) &&
+                    ((sg->Cminauto[C] == SW_BOOL_TRUE) ||
+                     ((def->Cmin[C].real == sg->Cmin[C].real) && ppl_unitsDimEqual(&(def->Cmin[C]), &(sg->Cmin[C])))) &&
+                    ((sg->Cmaxauto[C] == SW_BOOL_TRUE) ||
+                     ((def->Cmax[C].real == sg->Cmax[C].real) && ppl_unitsDimEqual(&(def->Cmax[C]), &(sg->Cmax[C])))) &&
+                    (def->Crenorm[C] == sg->Crenorm[C]) && (def->Creverse[C] == sg->Creverse[C]),
+            "The range of values represented by different colors in the colormap plot style, and by "
+            "contours in the contourmap plot style");
 }
 
 //! ppl_directive_show2 - Display the settings matching one word of a show command, e.g. "settings" or "xrange"
@@ -202,7 +298,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                                pplarrow_object **al, ppllabel_object **ll, pplset_axis *xa, pplset_axis *ya,
                                pplset_axis *za) {
     char *out, *buf, *buf2, *bufp, *bufp2, temp1[32], temp2[32];
-    int i = 0, p = 0, j, k, l, m, n;
+    int i = 0, p = 0, j, k, l, m;
     unsigned char unchanged;
     unit *ud = c->unit_database;
     int outLen = 8 * LSTR_LENGTH;
@@ -232,33 +328,13 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     out[0] = buf[0] = '\0';
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "axescolour", 1) >= 0) ||
         (ppl_strAutocomplete(word, "axescolor", 1) >= 0)) {
-#define SHOW_COLOR(COLOR, COL1234SPACE, COL1, COL2, COL3, COL4, DEFAULT, DEF1234SPACE, DEF1, DEF2, DEF3, DEF4, NAME1, \
-                   NAME2) \
-    { \
-        if (COLOR > 0) \
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", \
-                              *(char **) ppl_fetchSettingName(&c->errcontext, COLOR, SW_COLOR_INT, SW_COLOR_STR, \
-                                                              sizeof(char *))); \
-        else if (COL1234SPACE == SW_COLSPACE_RGB) \
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "rgb(%s,%s,%s)", ppl_numericDisplayDefault(c, COL1, 0), \
-                              ppl_numericDisplayDefault(c, COL2, 1), ppl_numericDisplayDefault(c, COL3, 2)); \
-        else if (COL1234SPACE == SW_COLSPACE_HSB) \
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "hsb(%s,%s,%s)", ppl_numericDisplayDefault(c, COL1, 0), \
-                              ppl_numericDisplayDefault(c, COL2, 1), ppl_numericDisplayDefault(c, COL3, 2)); \
-        else if (COL1234SPACE == SW_COLSPACE_CMYK) \
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "cmyk(%s,%s,%s,%s)", ppl_numericDisplayDefault(c, COL1, 0), \
-                              ppl_numericDisplayDefault(c, COL2, 1), ppl_numericDisplayDefault(c, COL3, 2), \
-                              ppl_numericDisplayDefault(c, COL4, 3)); \
-        ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, NAME1, buf, \
-                            ((COLOR == DEFAULT) && (COL1234SPACE == DEF1234SPACE) && (COL1 == DEF1) && \
-                             (COL2 == DEF2) && (COL3 == DEF3) && (COL4 == DEF4)), \
-                            NAME2); \
-    }
-
-        SHOW_COLOR(sg->AxesColor, sg->AxesCol1234Space, sg->AxesColor1, sg->AxesColor2, sg->AxesColor3, sg->AxesColor4,
-                   c->set->graph_default.AxesColor, c->set->graph_default.AxesCol1234Space,
-                   c->set->graph_default.AxesColor1, c->set->graph_default.AxesColor2, c->set->graph_default.AxesColor3,
-                   c->set->graph_default.AxesColor4, "axesColor", "The color used to draw graph axes");
+        showColor(c, out + i, outLen - i, itemSet, interactive, buf,
+                  (showColorSetting) {sg->AxesColor, sg->AxesCol1234Space, sg->AxesColor1, sg->AxesColor2,
+                                      sg->AxesColor3, sg->AxesColor4},
+                  (showColorSetting) {c->set->graph_default.AxesColor, c->set->graph_default.AxesCol1234Space,
+                                      c->set->graph_default.AxesColor1, c->set->graph_default.AxesColor2,
+                                      c->set->graph_default.AxesColor3, c->set->graph_default.AxesColor4},
+                  "axesColor", "The color used to draw graph axes");
         i += strlen(out + i);
         p = 1;
     }
@@ -409,8 +485,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         int showMinor = 0;
         if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c1tics", 1) >= 0)) {
             ppl_snprintfTrunc(temp1, sizeof(temp1), "c1tics");
-            SHOW_TICKS(sg->ticsC, c->set->graph_default.ticsC, sg->unitC, c->set->graph_default.unitC, sg->Clog[0],
-                       c->set->graph_default.Clog[0], 'c', 1);
+            showTicks(c, out + i, outLen - i, itemSet, interactive, temp1, buf, buf2, &(sg->ticsC),
+                      &(c->set->graph_default.ticsC), &(sg->unitC), &(c->set->graph_default.unitC), sg->Clog[0],
+                      c->set->graph_default.Clog[0], 'c', 1);
             i += strlen(out + i);
             p = 1;
             showMinor = 1; // If we've shown major tics, also show minor ticks too.
@@ -418,8 +495,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "mc1tics", 1) >= 0) ||
             showMinor) {
             ppl_snprintfTrunc(temp1, sizeof(temp1), "mc1tics");
-            SHOW_TICKS(sg->ticsCM, c->set->graph_default.ticsCM, sg->unitC, c->set->graph_default.unitC, sg->Clog[0],
-                       c->set->graph_default.Clog[0], 'c', 1);
+            showTicks(c, out + i, outLen - i, itemSet, interactive, temp1, buf, buf2, &(sg->ticsCM),
+                      &(c->set->graph_default.ticsCM), &(sg->unitC), &(c->set->graph_default.unitC), sg->Clog[0],
+                      c->set->graph_default.Clog[0], 'c', 1);
             i += strlen(out + i);
             p = 1;
         }
@@ -531,38 +609,24 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         p = 1;
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c1range", 1) >= 0)) {
-#define SHOW_CRANGE(C, X) \
-    ppl_snprintfTrunc(buf, LSTR_LENGTH, "[%s:%s] %s %s", \
-                      (sg->Cminauto[C] == SW_BOOL_TRUE) ? "*" : ppl_unitsNumericDisplay(c, &(sg->Cmin[C]), 0, 0, 0), \
-                      (sg->Cmaxauto[C] == SW_BOOL_TRUE) ? "*" : ppl_unitsNumericDisplay(c, &(sg->Cmax[C]), 1, 0, 0), \
-                      (sg->Crenorm[C] == SW_BOOL_TRUE) ? "renormalise" : "norenormalise", \
-                      (sg->Creverse[C] == SW_BOOL_TRUE) ? "reverse" : "noreverse"); \
-    ppl_directive_show3( \
-            c, out + i, outLen - i, itemSet, 1, interactive, "c" X "range", buf, \
-            (c->set->graph_default.Cminauto[C] == sg->Cminauto[C]) && \
-                    (c->set->graph_default.Cmaxauto[C] == sg->Cmaxauto[C]) && \
-                    ((sg->Cminauto[C] == SW_BOOL_TRUE) || \
-                     ((c->set->graph_default.Cmin[C].real == sg->Cmin[C].real) && \
-                      ppl_unitsDimEqual(&(c->set->graph_default.Cmin[C]), &(sg->Cmin[C])))) && \
-                    ((sg->Cmaxauto[C] == SW_BOOL_TRUE) || \
-                     ((c->set->graph_default.Cmax[C].real == sg->Cmax[C].real) && \
-                      ppl_unitsDimEqual(&(c->set->graph_default.Cmax[C]), &(sg->Cmax[C])))) && \
-                    (c->set->graph_default.Crenorm[C] == sg->Crenorm[C]) && \
-                    (c->set->graph_default.Creverse[C] == sg->Creverse[C]), \
-            "The range of values represented by different colors in the colormap plot style, and by contours in the contourmap plot style"); \
-    i += strlen(out + i); \
-    p = 1;
-
-        SHOW_CRANGE(0, "1");
+        showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 0);
+        i += strlen(out + i);
+        p = 1;
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c2range", 1) >= 0)) {
-        SHOW_CRANGE(1, "2");
+        showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 1);
+        i += strlen(out + i);
+        p = 1;
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c3range", 1) >= 0)) {
-        SHOW_CRANGE(2, "3");
+        showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 2);
+        i += strlen(out + i);
+        p = 1;
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c4range", 1) >= 0)) {
-        SHOW_CRANGE(3, "4");
+        showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 3);
+        i += strlen(out + i);
+        p = 1;
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "logscale", 1) >= 0) ||
         (ppl_strAutocomplete(word, "linearscale", 1) >= 0)) {
@@ -672,21 +736,25 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "gridmajcolor", 1) >= 0) ||
         (ppl_strAutocomplete(word, "gridmajcolor", 1) >= 0)) {
-        SHOW_COLOR(sg->GridMajColor, sg->GridMajCol1234Space, sg->GridMajColor1, sg->GridMajColor2, sg->GridMajColor3,
-                   sg->GridMajColor4, c->set->graph_default.GridMajColor, c->set->graph_default.GridMajCol1234Space,
-                   c->set->graph_default.GridMajColor1, c->set->graph_default.GridMajColor2,
-                   c->set->graph_default.GridMajColor3, c->set->graph_default.GridMajColor4, "gridMajColor",
-                   "The color of the major gridlines on graphs");
+        showColor(c, out + i, outLen - i, itemSet, interactive, buf,
+                  (showColorSetting) {sg->GridMajColor, sg->GridMajCol1234Space, sg->GridMajColor1, sg->GridMajColor2,
+                                      sg->GridMajColor3, sg->GridMajColor4},
+                  (showColorSetting) {c->set->graph_default.GridMajColor, c->set->graph_default.GridMajCol1234Space,
+                                      c->set->graph_default.GridMajColor1, c->set->graph_default.GridMajColor2,
+                                      c->set->graph_default.GridMajColor3, c->set->graph_default.GridMajColor4},
+                  "gridMajColor", "The color of the major gridlines on graphs");
         i += strlen(out + i);
         p = 1;
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "gridmincolour", 1) >= 0) ||
         (ppl_strAutocomplete(word, "gridmincolor", 1) >= 0)) {
-        SHOW_COLOR(sg->GridMinColor, sg->GridMinCol1234Space, sg->GridMinColor1, sg->GridMinColor2, sg->GridMinColor3,
-                   sg->GridMinColor4, c->set->graph_default.GridMinColor, c->set->graph_default.GridMinCol1234Space,
-                   c->set->graph_default.GridMinColor1, c->set->graph_default.GridMinColor2,
-                   c->set->graph_default.GridMinColor3, c->set->graph_default.GridMinColor4, "gridMinColor",
-                   "The color of the minor gridlines on graphs");
+        showColor(c, out + i, outLen - i, itemSet, interactive, buf,
+                  (showColorSetting) {sg->GridMinColor, sg->GridMinCol1234Space, sg->GridMinColor1, sg->GridMinColor2,
+                                      sg->GridMinColor3, sg->GridMinColor4},
+                  (showColorSetting) {c->set->graph_default.GridMinColor, c->set->graph_default.GridMinCol1234Space,
+                                      c->set->graph_default.GridMinColor1, c->set->graph_default.GridMinColor2,
+                                      c->set->graph_default.GridMinColor3, c->set->graph_default.GridMinColor4},
+                  "gridMinColor", "The color of the minor gridlines on graphs");
         i += strlen(out + i);
         p = 1;
     }
@@ -1074,10 +1142,13 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "textcolour", 1) >= 0) ||
         (ppl_strAutocomplete(word, "textcolor", 1) >= 0)) {
-        SHOW_COLOR(sg->TextColor, sg->TextCol1234Space, sg->TextColor1, sg->TextColor2, sg->TextColor3, sg->TextColor4,
-                   c->set->graph_default.TextColor, c->set->graph_default.TextCol1234Space,
-                   c->set->graph_default.TextColor1, c->set->graph_default.TextColor2, c->set->graph_default.TextColor3,
-                   c->set->graph_default.TextColor4, "textColor", "Selects the color of text labels");
+        showColor(c, out + i, outLen - i, itemSet, interactive, buf,
+                  (showColorSetting) {sg->TextColor, sg->TextCol1234Space, sg->TextColor1, sg->TextColor2,
+                                      sg->TextColor3, sg->TextColor4},
+                  (showColorSetting) {c->set->graph_default.TextColor, c->set->graph_default.TextCol1234Space,
+                                      c->set->graph_default.TextColor1, c->set->graph_default.TextColor2,
+                                      c->set->graph_default.TextColor3, c->set->graph_default.TextColor4},
+                  "textColor", "Selects the color of text labels");
         i += strlen(out + i);
         p = 1;
     }
@@ -1519,8 +1590,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
 
                 if (l || (ppl_strAutocomplete(word, temp1, 1) >= 0) ||
                     ((j == 1) && (ppl_strAutocomplete(word, temp2, 1) >= 0))) {
-                    SHOW_TICKS(axisPtr->tics, axisPtrDef->tics, axisPtr->unit, axisPtrDef->unit, axisPtr->log,
-                               axisPtrDef->log, "xyzc"[k], j);
+                    showTicks(c, out + i, outLen - i, itemSet, interactive, temp1, buf, buf2, &(axisPtr->tics),
+                              &(axisPtrDef->tics), &(axisPtr->unit), &(axisPtrDef->unit), axisPtr->log, axisPtrDef->log,
+                              "xyzc"[k], j);
                     i += strlen(out + i);
                     p = 1;
                     m = 1; // If we've shown major tics, also show minor ticks too.
@@ -1530,8 +1602,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                 ppl_snprintfTrunc(temp2, sizeof(temp2), "m%ctics", "xyzc"[k]);
                 if (l || m || (ppl_strAutocomplete(word, temp1, 1) >= 0) ||
                     ((j == 1) && (ppl_strAutocomplete(word, temp2, 1) >= 0))) {
-                    SHOW_TICKS(axisPtr->ticsM, axisPtrDef->ticsM, axisPtr->unit, axisPtrDef->unit, axisPtr->log,
-                               axisPtrDef->log, "xyzc"[k], j);
+                    showTicks(c, out + i, outLen - i, itemSet, interactive, temp1, buf, buf2, &(axisPtr->ticsM),
+                              &(axisPtrDef->ticsM), &(axisPtr->unit), &(axisPtrDef->unit), axisPtr->log,
+                              axisPtrDef->log, "xyzc"[k], j);
                     i += strlen(out + i);
                     p = 1;
                 }
@@ -1544,11 +1617,11 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             pplarrow_object *ai;
             pplarrow_object *ai_default_prev = c->set->pplarrow_list_default;
             pplarrow_object *ai_default = c->set->pplarrow_list_default;
-            SHOW_HIGHLIGHT(1);
+            showHighlight(c, out, outLen, &i, interactive, 1);
             ppl_snprintfTrunc(out + i, outLen - i, "\n# Numbered arrows:\n\n");
             i += strlen(out + i);
             p = 1;
-            SHOW_DEHIGHLIGHT;
+            showDehighlight(c, out, outLen, &i, interactive);
             for (ai = *al; ai != NULL; ai = ai->next) {
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
@@ -1588,11 +1661,11 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             ppllabel_object *li;
             ppllabel_object *li_default_prev = c->set->ppllabel_list_default;
             ppllabel_object *li_default = c->set->ppllabel_list_default;
-            SHOW_HIGHLIGHT(1);
+            showHighlight(c, out, outLen, &i, interactive, 1);
             ppl_snprintfTrunc(out + i, outLen - i, "\n# Numbered text labels:\n\n");
             i += strlen(out + i);
             p = 1;
-            SHOW_DEHIGHLIGHT;
+            showDehighlight(c, out, outLen, &i, interactive);
             for (li = *ll; li != NULL; li = li->next) {
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
@@ -1628,11 +1701,11 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
 
     // Show numbered styles
     if ((ppl_strAutocomplete(word, "styles", 1) >= 0) || (ppl_strAutocomplete(word, "linestyles", 1) >= 0)) {
-        SHOW_HIGHLIGHT(1);
+        showHighlight(c, out, outLen, &i, interactive, 1);
         ppl_snprintfTrunc(out + i, outLen - i, "\n# Numbered styles:\n\n");
         i += strlen(out + i);
         p = 1;
-        SHOW_DEHIGHLIGHT;
+        showDehighlight(c, out, outLen, &i, interactive);
         for (j = 0; j < MAX_PLOTSTYLES; j++) {
             if (ppl_withWordsCmp_zero(c, &(c->set->plot_styles[j]))) continue;
             if (i > outLen - 1024) {
@@ -1659,13 +1732,13 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             pplObj *item;
             dictIterator *di = ppl_dictIterateInit(c->namespaces[l]);
             if ((word[0] == 'u') && (l < 1)) break; // Don't show default variables as user variables
-            SHOW_HIGHLIGHT(1);
+            showHighlight(c, out, outLen, &i, interactive, 1);
             if (l > 1) ppl_snprintfTrunc(out + i, outLen - i, "\n# Local variables:\n\n");
             else if (l == 1) ppl_snprintfTrunc(out + i, outLen - i, "\n# Global variables:\n\n");
             else ppl_snprintfTrunc(out + i, outLen - i, "\n# Default variables:\n\n");
             i += strlen(out + i);
             p = 1;
-            SHOW_DEHIGHLIGHT;
+            showDehighlight(c, out, outLen, &i, interactive);
             while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
                 if ((item->objType == PPLOBJ_ZOM) || (item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_FUNC))
                     continue;
@@ -1674,14 +1747,14 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     i += strlen(out + i);
                     break;
                 }
-                SHOW_HIGHLIGHT((l == 0));
+                showHighlight(c, out, outLen, &i, interactive, (l == 0));
                 ppl_snprintfTrunc(out + i, outLen - i, "%s = ", key);
                 i += strlen(out + i);
                 pplObjPrint(c, item, key, out + i, 600, 0, 1);
                 i += strlen(out + i);
                 ppl_snprintfTrunc(out + i, outLen - i, "\n");
                 i += strlen(out + i);
-                SHOW_DEHIGHLIGHT;
+                showDehighlight(c, out, outLen, &i, interactive);
             }
         }
     }
@@ -1691,11 +1764,11 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         char *key;
         pplObj *item;
         dictIterator *di = ppl_dictIterateInit(c->namespaces[0]);
-        SHOW_HIGHLIGHT(1);
+        showHighlight(c, out, outLen, &i, interactive, 1);
         ppl_snprintfTrunc(out + i, outLen - i, "\n# System-defined functions:\n\n");
         i += strlen(out + i);
         p = 1;
-        SHOW_DEHIGHLIGHT;
+        showDehighlight(c, out, outLen, &i, interactive);
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             if (item->objType != PPLOBJ_FUNC) continue;
             if (i > outLen - 1024) {
@@ -1703,12 +1776,12 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                 i += strlen(out + i);
                 break;
             }
-            SHOW_HIGHLIGHT(1);
+            showHighlight(c, out, outLen, &i, interactive, 1);
             pplObjPrint(c, item, key, out + i, 600, 0, 1);
             i += strlen(out + i);
             ppl_snprintfTrunc(out + i, outLen - i, "\n");
             i += strlen(out + i);
-            SHOW_DEHIGHLIGHT;
+            showDehighlight(c, out, outLen, &i, interactive);
         }
     }
 
@@ -1720,12 +1793,12 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             char *key;
             pplObj *item;
             dictIterator *di = ppl_dictIterateInit(c->namespaces[l]);
-            SHOW_HIGHLIGHT(1);
+            showHighlight(c, out, outLen, &i, interactive, 1);
             if (l > 1) ppl_snprintfTrunc(out + i, outLen - i, "\n# Local functions:\n\n");
             else ppl_snprintfTrunc(out + i, outLen - i, "\n# Global functions:\n\n");
             i += strlen(out + i);
             p = 1;
-            SHOW_DEHIGHLIGHT;
+            showDehighlight(c, out, outLen, &i, interactive);
             while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
                 if (item->objType != PPLOBJ_FUNC) continue;
                 if (i > outLen - 1024) {
@@ -1733,23 +1806,23 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     i += strlen(out + i);
                     break;
                 }
-                SHOW_HIGHLIGHT(0);
+                showHighlight(c, out, outLen, &i, interactive, 0);
                 pplObjPrint(c, item, key, out + i, 600, 0, 1);
                 i += strlen(out + i);
                 ppl_snprintfTrunc(out + i, outLen - i, "\n");
                 i += strlen(out + i);
-                SHOW_DEHIGHLIGHT;
+                showDehighlight(c, out, outLen, &i, interactive);
             }
         }
     }
 
     // Show list of recognised units
     if (ppl_strAutocomplete(word, "units", 5) >= 0) {
-        SHOW_HIGHLIGHT(1);
+        showHighlight(c, out, outLen, &i, interactive, 1);
         ppl_snprintfTrunc(out + i, outLen - i, "\n# Recognised physical units:\n\n");
         i += strlen(out + i);
         p = 1;
-        SHOW_DEHIGHLIGHT;
+        showDehighlight(c, out, outLen, &i, interactive);
         l = -1;
         do {
             m = -1;
@@ -1764,7 +1837,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             l = m;
             if (m != -1) {
                 k = 0;
-                SHOW_HIGHLIGHT((ud[m].modified == 0));
+                showHighlight(c, out, outLen, &i, interactive, (ud[m].modified == 0));
 
 #define SHOW_ALL_UNIT_NAMES 0
 
@@ -1821,7 +1894,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                 }
                 ppl_snprintfTrunc(out + i, outLen - i, ".\n");
                 i += strlen(out + i);
-                SHOW_DEHIGHLIGHT;
+                showDehighlight(c, out, outLen, &i, interactive);
             }
         } while (m != -1);
     }
