@@ -463,9 +463,9 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
             int lOP; \
             v = ppl_expEval(x->c, (pplExpr *) sg->MaskExpr, &lOP, 1, x->iterDepth + 1); \
             if (x->c->errStat.status) { \
-                sprintf(x->c->errcontext.tempErrStr, "Could not evaluate mask expression <%s>.", \
-                        ((pplExpr *) sg->MaskExpr)->ascii); \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL); \
+                ppl_snprintfTrunc(msg, sizeof(msg), "Could not evaluate mask expression <%s>.", \
+                                  ((pplExpr *) sg->MaskExpr)->ascii); \
+                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
                 ppl_tbWrite(x->c); \
                 ppl_tbClear(x->c); \
                 return 1; \
@@ -488,16 +488,17 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
             unsigned char d1, d2; \
             v = ppl_expEval(x->c, (pplExpr *) sg->ColMapExpr, &lOP, 1, x->iterDepth + 1); \
             if (x->c->errStat.status) { \
-                sprintf(x->c->errcontext.tempErrStr, "Could not evaluate color expression <%s>.", \
-                        ((pplExpr *) sg->ColMapExpr)->ascii); \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL); \
+                ppl_snprintfTrunc(msg, sizeof(msg), "Could not evaluate color expression <%s>.", \
+                                  ((pplExpr *) sg->ColMapExpr)->ascii); \
+                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
                 ppl_tbWrite(x->c); \
                 ppl_tbClear(x->c); \
                 return 1; \
             } \
-            lOP = ppl_colorFromObj(x->c, v, &outcol, &colspace, NULL, comp, comp + 1, comp + 2, comp + 3, &d1, &d2); \
+            lOP = ppl_colorFromObj(x->c, v, &outcol, &colspace, NULL, comp, comp + 1, comp + 2, comp + 3, &d1, &d2, \
+                                   msg); \
             if (lOP) { \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, NULL); \
+                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
                 return 1; \
             } \
             if (outcol != 0) { \
@@ -634,17 +635,17 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 \
             if (j != 0) { \
                 if (DEBUG) { \
-                    sprintf(x->c->errcontext.tempErrStr, "zlib returned error code %d\n", j); \
-                    ppl_log(&x->c->errcontext, NULL); \
+                    ppl_snprintfTrunc(msg, sizeof(msg), "zlib returned error code %d\n", j); \
+                    ppl_log(&x->c->errcontext, msg); \
                 } \
                 img.TargetCompression = BMP_ENCODING_NULL; /* Give up trying to compress data */ \
                 break; \
             } \
             if (DEBUG) { \
-                sprintf(x->c->errcontext.tempErrStr, \
-                        "zlib has completed compression. Before flate: %ld bytes. After flate: %ld bytes.", \
-                        img.data_len, (long) zlen); \
-                ppl_log(&x->c->errcontext, NULL); \
+                ppl_snprintfTrunc(msg, sizeof(msg), \
+                                  "zlib has completed compression. Before flate: %ld bytes. After flate: %ld bytes.", \
+                                  img.data_len, (long) zlen); \
+                ppl_log(&x->c->errcontext, msg); \
             } \
             if (zlen >= img.data_len) { \
                 if (DEBUG) { \
@@ -715,6 +716,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 
 int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double origin_y, const double width,
                                  const double height, const double zdepth) {
+    char msg[PPL_MSG_LENGTH];
     int i, j, k;
     long p;
     double xmin, xmax, ymin, ymax;

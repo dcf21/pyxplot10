@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "expressions/traceback_fns.h"
+#include "coreUtils/errorReport.h"
 #include "stringTools/asciidouble.h"
 #include "stringTools/strConstants.h"
 #include "userspace/context.h"
@@ -110,9 +111,10 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
 //! \param [in] c - The Pyxplot context
 
 void ppl_tbWrite(ppl_context *c) {
+    char msg[LSTR_LENGTH];
     int i = 0, j, k;
-    char *out = c->errcontext.tempErrStr;
-    int outLen = LSTR_LENGTH;
+    char *out = msg;
+    int outLen = sizeof(msg);
     int h1 = -1, h2 = -1;
     out[i] = out[outLen - 1] = '\0';
     outLen--;
@@ -167,7 +169,7 @@ void ppl_tbWrite(ppl_context *c) {
     }
     i += strlen(out + i);
     snprintf(out + i, outLen - i, "\n");
-    ppl_error(&c->errcontext, ERR_PREFORMED, -1, -1, NULL);
+    ppl_error(&c->errcontext, ERR_PREFORMED, -1, -1, msg);
 
     for (j = c->errStat.tracebackDepth - 1; j >= 0; j--) {
         i = 0;
@@ -191,7 +193,7 @@ void ppl_tbWrite(ppl_context *c) {
             snprintf(out + i, outLen - i, ":\n %s", t->linetext);
             h1 = i + 3 + t->errPos;
         } else snprintf(out + i, outLen - i, (j == 0) ? ":" : ".");
-        ppl_error(&c->errcontext, ERR_PREFORMED, h1, -1, NULL);
+        ppl_error(&c->errcontext, ERR_PREFORMED, h1, -1, msg);
     }
 
     i = 1;
@@ -227,6 +229,6 @@ void ppl_tbWrite(ppl_context *c) {
             h2 = -1;
         }
     }
-    ppl_error(&c->errcontext, ERR_PREFORMED, h1, h2, NULL);
+    ppl_error(&c->errcontext, ERR_PREFORMED, h1, h2, msg);
     return;
 }

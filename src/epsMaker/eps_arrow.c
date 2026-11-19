@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "coreUtils/memAlloc.h"
+#include "stringTools/asciidouble.h"
 #include "coreUtils/errorReport.h"
 #include "settings/withWords_fns.h"
 #include "settings/settingTypes.h"
@@ -81,6 +82,7 @@ void eps_arrow_RenderEPS(EPSComm *x) {
 
 void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, const double *z1, double x2, double y2,
                          const double *z2, withWords *with_data) {
+    char msg[PPL_MSG_LENGTH];
     int lt;
     double lw, lw_scale, x3, y3, x4, y4, x5, y5, xstart, ystart, xend, yend, direction;
     const unsigned char ThreeDim = (z1 != NULL) && (z2 != NULL);
@@ -133,11 +135,12 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                         cos(EPS_ARROW_ANGLE / 2);
 
         IF_NOT_INVISIBLE {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
                     x4, y4, x3, y3, x1, y1, x5, y5);
-            if (!ThreeDim) fprintf(x->epsbuffer, "%s", x->c->errcontext.tempErrStr);
-            else ThreeDimBuffer_writeps(x, *z1, lt, lw, 0.0, 1, last_colstr, x->c->errcontext.tempErrStr);
+            if (!ThreeDim) fprintf(x->epsbuffer, "%s", msg);
+            else ThreeDimBuffer_writeps(x, *z1, lt, lw, 0.0, 1, last_colstr, msg);
             eps_core_PlotBoundingBox(x, x3, y3, lw, 1);
             eps_core_PlotBoundingBox(x, x5, y5, lw, 1);
         }
@@ -166,11 +169,12 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                 EPS_ARROW_HEADSIZE * lw_scale * cos(direction) * (1.0 - EPS_ARROW_CONSTRICT) * cos(EPS_ARROW_ANGLE / 2);
 
         IF_NOT_INVISIBLE {
-            sprintf(x->c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
                     x4, y4, x3, y3, x2, y2, x5, y5);
-            if (!ThreeDim) fprintf(x->epsbuffer, "%s", x->c->errcontext.tempErrStr);
-            else ThreeDimBuffer_writeps(x, *z2, lt, lw, 0.0, 1, last_colstr, x->c->errcontext.tempErrStr);
+            if (!ThreeDim) fprintf(x->epsbuffer, "%s", msg);
+            else ThreeDimBuffer_writeps(x, *z2, lt, lw, 0.0, 1, last_colstr, msg);
             eps_core_PlotBoundingBox(x, x3, y3, lw, 1);
             eps_core_PlotBoundingBox(x, x5, y5, lw, 1);
         }
@@ -190,11 +194,11 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
             const int Nsteps = 100;
             double path = 0.0, element = hypot(xend - xstart, yend - ystart) / Nsteps;
             for (i = 0; i < Nsteps; i++) {
-                sprintf(x->c->errcontext.tempErrStr, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nstroke\n",
-                        xstart + (xend - xstart) / Nsteps * i, ystart + (yend - ystart) / Nsteps * i,
-                        xstart + (xend - xstart) / Nsteps * (i + 1), ystart + (yend - ystart) / Nsteps * (i + 1));
-                ThreeDimBuffer_writeps(x, *z1 + (*z2 - *z1) / Nsteps * i, lt, lw, path, 1, last_colstr,
-                                       x->c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nstroke\n",
+                                  xstart + (xend - xstart) / Nsteps * i, ystart + (yend - ystart) / Nsteps * i,
+                                  xstart + (xend - xstart) / Nsteps * (i + 1),
+                                  ystart + (yend - ystart) / Nsteps * (i + 1));
+                ThreeDimBuffer_writeps(x, *z1 + (*z2 - *z1) / Nsteps * i, lt, lw, path, 1, last_colstr, msg);
                 path += element;
             }
         }

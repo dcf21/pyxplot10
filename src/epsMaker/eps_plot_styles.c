@@ -262,19 +262,21 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsi
 #define UUAU(XYZ, XYZN, X, Y) \
     do { \
         if ((X->HardUnitSet) && (!ppl_unitsDimEqual(&X->HardUnit, &(Y)))) { \
-            sprintf(x->c->errcontext.tempErrStr, \
+            ppl_snprintfTrunc( \
+                    msg, sizeof(msg), \
                     "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> as compared to range of axis, which has units of <%s>.", \
                     "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &(Y), NULL, NULL, 0, 1, 0), \
                     ppl_printUnit(x->c, &X->HardUnit, NULL, NULL, 1, 1, 0)); \
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL); \
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg); \
             return 1; \
         } \
         if ((X->DataUnitSet) && (!ppl_unitsDimEqual(&X->DataUnit, &(Y)))) { \
-            sprintf(x->c->errcontext.tempErrStr, \
+            ppl_snprintfTrunc( \
+                    msg, sizeof(msg), \
                     "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> and <%s>.", \
                     "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &X->DataUnit, NULL, NULL, 0, 1, 0), \
                     ppl_printUnit(x->c, &(Y), NULL, NULL, 1, 1, 0)); \
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, NULL); \
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg); \
             return 1; \
         } \
         if (!X->DataUnitSet) { \
@@ -305,6 +307,7 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsi
 int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, unsigned char ThreeDim, pplset_axis *a1,
                                 pplset_axis *a2, pplset_axis *a3, pplset_graph *sg, int xyz1, int xyz2, int xyz3,
                                 int n1, int n2, int n3, int id) {
+    char msg[PPL_MSG_LENGTH];
     int i, j, Ncolumns;
     double z;
     double ptAx, ptBx = 0, ptCx = 0, lasty = 0;
@@ -999,7 +1002,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                      pplset_axis *a2, pplset_axis *a3, int xn, int yn, const int zn, pplset_graph *sg,
                      canvas_plotdesc *pd, const double origin_x, const double origin_y, const double width,
                      const double height, const double zdepth) {
-    char msg[PPL_MSG_LENGTH];
+    char msg[LSTR_LENGTH];
     int i, j, Ncolumns, Ncol_obj, pt = 0, xrn, yrn, zrn;
     double xpos, ypos, depth, xap, yap, zap, scale_x, scale_y, scale_z;
     char epsbuff[FNAME_LENGTH], *last_colstr = NULL;
@@ -1008,7 +1011,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     dataBlock *blk;
 
     if ((data == NULL) || (data->Nrows < 1)) {
-        char *output = x->c->errcontext.tempErrStr;
+        char *output = msg;
         int i = 0;
         sprintf(output + i, "plotted item");
         i += strlen(output + i);
@@ -1021,7 +1024,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                 for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
                 {
                     output[i++] = (j != 0) ? ':' : ' ';
-                    pplObjPrint(x->c, &pd->vectors[j], NULL, output + i, ppl_min(250, LSTR_LENGTH - i), 0, 0);
+                    pplObjPrint(x->c, &pd->vectors[j], NULL, output + i, ppl_min(250, sizeof(msg) - i), 0, 0);
                     i += strlen(output + i);
                 }
             }
@@ -1033,7 +1036,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                 i += strlen(output + i);
             }
         sprintf(output + i, " produced no data.");
-        ppl_warning(&x->c->errcontext, ERR_NUMERICAL, NULL);
+        ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
         return 0; // No data present
     }
 

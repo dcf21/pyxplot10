@@ -476,9 +476,9 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
         (*errCount)--;
 #define COUNTERR_END \
     if (*errCount == 0) { \
-        sprintf(c->errcontext.tempErrStr, "%s:%ld: Too many errors: no more errors will be shown.", filename, \
-                file_linenumber); \
-        ppl_warning(&c->errcontext, ERR_STACKED, NULL); \
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s:%ld: Too many errors: no more errors will be shown.", filename, \
+                          file_linenumber); \
+        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
     } \
     }
 
@@ -547,6 +547,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                             const long index_number, const int usingRowCol, char **colHeads, const int NcolHeads,
                             pplObj *colUnits, const int NcolUnits, int *status, char *errtext, int *errCount,
                             const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     ppl_context *context = c;
     const int stkLevelOld = c->stackPtr;
     const int nUsing = out->Ncolumns_real + out->Ncolumns_obj;
@@ -1147,8 +1148,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     }
                 }
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Total of %ld column headings read.", itemsOnLine);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld column headings read.", itemsOnLine);
+                    ppl_log(&c->errcontext, msg);
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Column heading %d: %s", k, columnHeadings[k]);
                         ppl_log(&c->errcontext, msg);
@@ -1198,8 +1199,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     }
                 }
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Total of %ld row headings read.", itemsOnLine);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld row headings read.", itemsOnLine);
+                    ppl_log(&c->errcontext, msg);
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Row heading %d: %s", k, rowHeadings[k]);
                         ppl_log(&c->errcontext, msg);
@@ -1261,8 +1262,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     }
                 }
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Total of %ld column units read.", itemsOnLine);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld column units read.", itemsOnLine);
+                    ppl_log(&c->errcontext, msg);
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Column unit %d: %s", k,
                                           ppl_unitsNumericDisplay(c, columnUnits + k, 0, 0, 0));
@@ -1324,8 +1325,8 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     }
                 }
                 if (DEBUG) {
-                    sprintf(c->errcontext.tempErrStr, "Total of %ld row units read.", itemsOnLine);
-                    ppl_log(&c->errcontext, NULL);
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld row units read.", itemsOnLine);
+                    ppl_log(&c->errcontext, msg);
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Row unit %d: %s", k,
                                           ppl_unitsNumericDisplay(c, rowUnits + k, 0, 0, 0));
@@ -2187,13 +2188,13 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
     // Print using items to log file
     if (DEBUG) {
         int logi = 0, logj;
-        sprintf(c->errcontext.tempErrStr + logi, "Using ");
-        logi += strlen(c->errcontext.tempErrStr + logi);
+        ppl_snprintfTrunc(msg + logi, sizeof(msg) - (logi), "Using ");
+        logi += strlen(msg + logi);
         for (logj = 0; logj < Nusing; logj++) {
-            if (logj == 0) c->errcontext.tempErrStr[logi++] = ':';
-            sprintf(c->errcontext.tempErrStr + logi, "%s", usingExprs[logj]->ascii);
+            if (logj == 0) msg[logi++] = ':';
+            ppl_snprintfTrunc(msg + logi, sizeof(msg) - (logi), "%s", usingExprs[logj]->ascii);
         }
-        ppl_log(&c->errcontext, NULL);
+        ppl_log(&c->errcontext, msg);
     }
 
     // Check that number of using items matches number required

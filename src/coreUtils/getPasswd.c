@@ -91,18 +91,20 @@ char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username
 
 //! ppl_unixGetIRLName - Return the current user's real name, taken from the GECOS field of the password database,
 //! with any text after the first comma removed
-//! \param [in] context - The error-reporting context; its <tempErrStr> buffer is used to hold the result
-//! \return The user's real name, or their login name if it could not be found. Overwritten by subsequent calls.
+//! \param [in] context - The error-reporting context
+//! \return The user's real name, stored in a static buffer which is overwritten by subsequent calls, or their login
+//! name if it could not be found
 
 char *ppl_unixGetIRLName(pplerr_context *context) {
+    static char name[FNAME_LENGTH];
     struct passwd *ptr;
     int i;
     ptr = UnixGetPwEntry(context);
     if (ptr == NULL) return getlogin(); // In case of failure, return user's login.
-    strcpy(context->tempErrStr, ptr->pw_gecos);
-    for (i = 0; context->tempErrStr[i] != '\0'; i++)
-        if (context->tempErrStr[i] == ',') context->tempErrStr[i] = '\0'; // Remove commas from in-real-life name
-    return context->tempErrStr;
+    snprintf(name, FNAME_LENGTH, "%s", ptr->pw_gecos);
+    for (i = 0; name[i] != '\0'; i++)
+        if (name[i] == ',') name[i] = '\0'; // Remove commas from in-real-life name
+    return name;
 }
 
 //! ppl_unixExpandUserHomeDir - Expand a filename into an absolute path, expanding ~ and ~user into the relevant home

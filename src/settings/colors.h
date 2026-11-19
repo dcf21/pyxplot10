@@ -32,6 +32,6 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
 
 int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcolspace, pplExpr **EXPoutcol,
                      double *outcol1, double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
-                     unsigned char *USEcol1234);
+                     unsigned char *USEcol1234, char *errText);
 
 #endif

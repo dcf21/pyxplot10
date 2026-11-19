@@ -637,9 +637,9 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
 
     // Fetch data
     ppldata_fromCmd(c, &data, pl, in, 0, NULL, dataSpool, PARSE_TABLE_foreachdatum_, 0, Nvars, Nvars, min, minSet, max,
-                    maxSet, unit, 0, &status, c->errcontext.tempErrStr, &errCount, iterDepth);
+                    maxSet, unit, 0, &status, msg, &errCount, iterDepth);
     if (status || cancellationFlag) {
-        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
         goto cleanup;
     }
 

@@ -54,8 +54,8 @@
         errCount--;
 #define COUNTEDERR2 \
     if (errCount == 0) { \
-        sprintf(c->errcontext.tempErrStr, "%s: Too many errors: no more errors will be shown.", filenameOut); \
-        ppl_warning(&c->errcontext, ERR_STACKED, NULL); \
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s: Too many errors: no more errors will be shown.", filenameOut); \
+        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
     } \
     }
 

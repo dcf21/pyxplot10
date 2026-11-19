@@ -28,6 +28,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/errorReport.h"
+#include "stringTools/asciidouble.h"
 #include "expressions/expCompile_fns.h"
 #include "expressions/traceback_fns.h"
 #include "parser/cmdList.h"
@@ -65,11 +66,12 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
                       unsigned char *USEcol1234) {
     int pos = ptab[fillColor ? PARSE_INDEX_fillcolor : PARSE_INDEX_color];
     pplObj *col = &in->stk[stkbase + pos];
+    char msg[PPL_MSG_LENGTH];
     int s;
     if (pos < 0) return 0;
-    s = ppl_colorFromObj(c, col, outcol, outcolspace, EXPoutcol, outcol1, outcol2, outcol3, outcol4, USEcol,
-                         USEcol1234);
-    if (s) ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, NULL);
+    s = ppl_colorFromObj(c, col, outcol, outcolspace, EXPoutcol, outcol1, outcol2, outcol3, outcol4, USEcol, USEcol1234,
+                         msg);
+    if (s) ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, msg);
     return s;
 }
 
@@ -86,12 +88,13 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
 //! \param [out] outcol4 - Set to the fourth component of the color (CMYK only)
 //! \param [out] USEcol - Set to true if <outcol> was set
 //! \param [out] USEcol1234 - Set to true if the color components <outcol1>...<outcol4> were set
-//! \return Zero on success, or one if the object did not describe a valid color, in which case an error message is
-//! left in <c->errcontext.tempErrStr>
+//! \param [out] errText - Character buffer of at least PPL_MSG_LENGTH bytes, into which an error message is written
+//! if the object did not describe a valid color (may be NULL)
+//! \return Zero on success, or one if the object did not describe a valid color
 
 int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcolspace, pplExpr **EXPoutcol,
                      double *outcol1, double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
-                     unsigned char *USEcol1234) {
+                     unsigned char *USEcol1234, char *errText) {
     switch (col->objType) {
         case PPLOBJ_ZOM: // no color specified
             return 0;
@@ -188,8 +191,10 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
         case PPLOBJ_EXP: // color expressed as an expression via %C
         {
             if (EXPoutcol == NULL) {
-                sprintf(c->errcontext.tempErrStr,
-                        "Colour specified as expression via %%C token, but no pointer given for output of this expression.");
+                if (errText != NULL)
+                    ppl_snprintfTrunc(
+                            errText, PPL_MSG_LENGTH,
+                            "Colour specified as expression via %%C token, but no pointer given for output of this expression.");
                 return 1;
             }
             if (*EXPoutcol == NULL) pplExpr_free(*EXPoutcol);
@@ -200,7 +205,9 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
             return 0;
         }
         default: {
-            sprintf(c->errcontext.tempErrStr, "Colour specified as wrong type of object (type %d).", col->objType);
+            if (errText != NULL)
+                ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "Colour specified as wrong type of object (type %d).",
+                                  col->objType);
             return 1;
         }
     }

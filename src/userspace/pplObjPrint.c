@@ -53,6 +53,7 @@
 
 void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const int outlen, const int internal,
                  const int modIterDepth) {
+    char msg[SSTR_LENGTH];
     int t;
     const int NSigFigs = c->set->term_current.SignificantFigures;
     const int typeable = c->set->term_current.NumDisplay;
@@ -79,8 +80,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 int status = 0;
                 int year, month, day, hour, minute;
                 double second;
-                ppl_fromUnixTime(c, o->real, &year, &month, &day, &hour, &minute, &second, &status,
-                                 c->errcontext.tempErrStr);
+                ppl_fromUnixTime(c, o->real, &year, &month, &day, &hour, &minute, &second, &status, msg);
                 snprintf(out, outlen, "time.fromCalendar(%d,%d,%d,%d,%d,%.4f,\"UTC\")", year, month, day, hour, minute,
                          second);
             } else {
@@ -89,7 +89,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 double offset;
                 ppl_calendarTimezoneSet(c, 0, NULL);
                 ppl_calendarTimezoneOffset(c, o->real, timezone, &offset);
-                ppl_dateString(c, out, o->real + offset, NULL, timezone, &status, c->errcontext.tempErrStr);
+                ppl_dateString(c, out, o->real + offset, NULL, timezone, &status, msg);
                 ppl_calendarTimezoneUnset(c);
             }
             break;

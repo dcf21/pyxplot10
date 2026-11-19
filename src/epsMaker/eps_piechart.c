@@ -66,8 +66,8 @@
         errCount--;
 #define COUNTERR_END \
     if (errCount == 0) { \
-        sprintf(c->errcontext.tempErrStr, "Too many errors: no more errors will be shown."); \
-        ppl_warning(&c->errcontext, ERR_STACKED, NULL); \
+        ppl_snprintfTrunc(msg, sizeof(msg), "Too many errors: no more errors will be shown."); \
+        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
     } \
     }
 
@@ -141,7 +141,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         int end = 0, ep = 0, es = 0;
         char ascii[] = "\"Item %d\"%($0)";
         pplExpr *exptmp = NULL;
-        ppl_expCompile(c, 0, 0, "", ascii, &end, 1, 0, 0, &exptmp, &ep, &es, c->errcontext.tempErrStr);
+        ppl_expCompile(c, 0, 0, "", ascii, &end, 1, 0, 0, &exptmp, &ep, &es, msg);
         if (es || c->errStat.status) {
             ppl_tbClear(c);
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (C)");
@@ -158,8 +158,8 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     }
 
     if (eps_plot_AddUsingItemsForWithWords(c, &pd->ww_final, &NExpect, &autoUsingList, &UsingList, &NUsing, &nObjs,
-                                           c->errcontext.tempErrStr)) {
-        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                                           msg)) {
+        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
         *(x->status) = 1;
         return;
     } // Add extra using items for, e.g. "linewidth $3".
@@ -174,7 +174,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         if (pd->PersistentDataTable == NULL)
             ppldata_fromFile(c, x->current->plotdata, pd->filename, 0, NULL, NULL, pd->index, UsingList, autoUsingList,
                              NExpect, nObjs, LabelExpr, pd->SelectCriterion, NULL, pd->UsingRowCols, pd->EveryList,
-                             pd->continuity, 0, &status, c->errcontext.tempErrStr, &errCount, x->iterDepth + 1);
+                             pd->continuity, 0, &status, msg, &errCount, x->iterDepth + 1);
         else x->current->plotdata[0] = pd->PersistentDataTable;
     } else if (pd->vectors != NULL) {
         if (DEBUG) {
@@ -182,8 +182,8 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
             ppl_log(&c->errcontext, msg);
         }
         ppldata_fromVectors(c, x->current->plotdata, pd->vectors, pd->NFunctions, UsingList, autoUsingList, NExpect,
-                            nObjs, LabelExpr, pd->SelectCriterion, NULL, pd->continuity, &status,
-                            c->errcontext.tempErrStr, &errCount, x->iterDepth + 1);
+                            nObjs, LabelExpr, pd->SelectCriterion, NULL, pd->continuity, &status, msg, &errCount,
+                            x->iterDepth + 1);
     } else {
         double *rX = ordinate_raster;
         int rXl = x->current->settings.samples;
@@ -197,10 +197,10 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
                                              &x->current->settings.Tmax.real, uX, &rX, &rXl);
         ppldata_fromFuncs(c, x->current->plotdata, pd->functions, pd->NFunctions, rX, rXl, 1, uX, NULL, 0, NULL,
                           UsingList, autoUsingList, NExpect, nObjs, LabelExpr, pd->SelectCriterion, NULL,
-                          pd->continuity, &status, c->errcontext.tempErrStr, &errCount, x->iterDepth + 1);
+                          pd->continuity, &status, msg, &errCount, x->iterDepth + 1);
     }
     if (status) {
-        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
         x->current->plotdata[0] = NULL;
     }
 
@@ -253,7 +253,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
         char ascii[] = "\"%.0f\\%% %s\"%(percentage,label)";
         int end = 0, ep = 0, es = 0;
         pplExpr *exptmp = NULL;
-        ppl_expCompile(c, 0, 0, "", ascii, &end, 1, 0, 0, &exptmp, &ep, &es, c->errcontext.tempErrStr);
+        ppl_expCompile(c, 0, 0, "", ascii, &end, 1, 0, 0, &exptmp, &ep, &es, msg);
         if (es || c->errStat.status) {
             ppl_tbClear(c);
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (E)");

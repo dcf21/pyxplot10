@@ -216,8 +216,8 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
 #define PS_POINT(X, Y) \
     { \
         if (DEBUG) { \
-            sprintf(fr->x->c->errcontext.tempErrStr, "Hopping to (%e,%e).", X, Y); \
-            ppl_log(&fr->x->c->errcontext, NULL); \
+            ppl_snprintfTrunc(msg, sizeof(msg), "Hopping to (%e,%e).", X, Y); \
+            ppl_log(&fr->x->c->errcontext, msg); \
         } \
         if (first_subpath) { \
             fprintf(fr->x->epsbuffer, "newpath "); \
@@ -452,6 +452,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
 
 void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int linetype, const double linewidth,
                          const unsigned char StrokeOutline) {
+    char msg[PPL_MSG_LENGTH];
     unsigned char f1, f2, first_point = 1, first_subpath = 1;
     int i, j, k, kn, l, NCrossings, i1, i2;
     double lastx, lasty, lastxap, lastyap;

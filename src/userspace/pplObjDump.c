@@ -41,13 +41,27 @@
 #include "userspace/pplObjPrint.h"
 #include "userspace/unitsDisp.h"
 
+//! pplObjDump_escaped - Write a string to a file in quoted, escaped form, followed by a suffix
+//! \param [in] output - The file handle to write to
+//! \param [in] str - The string to write
+//! \param [in] suffix - Text to write after the escaped string
+
+static void pplObjDump_escaped(FILE *output, const char *str, const char *suffix) {
+    // Each character escapes to at most two characters, plus two quotation marks and a null terminator
+    char *buffer = (char *) malloc(2 * strlen(str) + 3);
+    if (buffer == NULL) return;
+    ppl_strEscapify(str, buffer);
+    fprintf(output, "%s%s", buffer, suffix);
+    free(buffer);
+}
+
 //! pplObjDump - Write an object to a file, in a format which Pyxplot can read back in to recreate the object
 //! \param [in] c - The Pyxplot context
 //! \param [in] o - The object to write
 //! \param [in] output - The file handle to write to
 
 void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
-    char *buffer = c->errcontext.tempErrStr;
+    char msg[SSTR_LENGTH];
     int t;
     const int NSigFigs = 17;
 
@@ -62,8 +76,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             fprintf(output, "%s", ppl_unitsNumericDisplay(c, o, 0, SW_DISPLAY_T, NSigFigs));
             break;
         case PPLOBJ_STR:
-            ppl_strEscapify(o->auxil, buffer);
-            fprintf(output, "%s", buffer);
+            pplObjDump_escaped(output, o->auxil, "");
             break;
         case PPLOBJ_BOOL:
             if (o->real == 0) fprintf(output, "false");
@@ -73,8 +86,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             int status = 0;
             int year, month, day, hour, minute;
             double second;
-            ppl_fromUnixTime(c, o->real, &year, &month, &day, &hour, &minute, &second, &status,
-                             c->errcontext.tempErrStr);
+            ppl_fromUnixTime(c, o->real, &year, &month, &day, &hour, &minute, &second, &status, msg);
             fprintf(output, "time.fromCalendar(%d,%d,%d,%d,%d,%.12f)", year, month, day, hour, minute, second);
         } break;
         case PPLOBJ_COL: {
@@ -123,8 +135,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
                 if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                     continue; // Hide globals and zombies
                 if (!first) fprintf(output, ",");
-                ppl_strEscapify(key, buffer);
-                fprintf(output, "%s:", buffer);
+                pplObjDump_escaped(output, key, ":");
                 pplObjDump(c, item, output);
                 first = 0;
             }
@@ -144,8 +155,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
                 if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                     continue; // Hide globals and zombies
                 if (!first) fprintf(output, ",");
-                ppl_strEscapify(key, buffer);
-                fprintf(output, "%s:", buffer);
+                pplObjDump_escaped(output, key, ":");
                 pplObjDump(c, item, output);
                 first = 0;
             }
@@ -220,8 +230,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
         }
         case PPLOBJ_EXC: {
             fprintf(output, "types.exception(");
-            ppl_strEscapify(o->auxil, buffer);
-            fprintf(output, "%s", buffer);
+            pplObjDump_escaped(output, o->auxil, "");
             fprintf(output, ")");
             break;
         }

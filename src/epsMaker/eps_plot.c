@@ -201,12 +201,13 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
 
     if (ww->EXPfillcolor != NULL) {
         ppl_colorFromObj(c, &ObjRow[j--], &ww->fillcolor, &ww->FillCol1234Space, &ww->EXPfillcolor, &ww->fillcolor1,
-                         &ww->fillcolor2, &ww->fillcolor3, &ww->fillcolor4, &ww->USEfillcolor, &ww->USEfillcolor1234);
+                         &ww->fillcolor2, &ww->fillcolor3, &ww->fillcolor4, &ww->USEfillcolor, &ww->USEfillcolor1234,
+                         NULL);
     }
 
     if (ww->EXPcolor != NULL) {
         ppl_colorFromObj(c, &ObjRow[j--], &ww->color, &ww->Col1234Space, &ww->EXPcolor, &ww->color1, &ww->color2,
-                         &ww->color3, &ww->color4, &ww->USEcolor, &ww->USEcolor1234);
+                         &ww->color3, &ww->color4, &ww->USEcolor, &ww->USEcolor1234, NULL);
     }
 
     if (ww->EXPpointtype != NULL) {
@@ -242,10 +243,11 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
 
 #define WWCUID(X) \
     if (!firstValues[i].dimensionless) { \
-        sprintf(c->errcontext.tempErrStr, \
+        ppl_snprintfTrunc( \
+                msg, sizeof(msg), \
                 "The expression specified for the %s should have been dimensionless, but instead had units of <%s>. Cannot plot this dataset.", \
                 X, ppl_printUnit(c, firstValues + i, NULL, NULL, 0, 1, 0)); \
-        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL); \
+        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
         return 1; \
     } \
     i--; \
@@ -263,6 +265,7 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
 
 int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, const withWords *ww, pplObj *firstValues,
                                              const int Ncolumns, const int Ncolumns_obj, int *NDataCols) {
+    char msg[PPL_MSG_LENGTH];
     int i = Ncolumns - 1;
 
     if (ww->linespoints == SW_STYLE_CONTOURMAP) return 0; // Contourplot evaluate expressions in terms of c1
@@ -327,8 +330,8 @@ static void TriSwap(double *a, double *b) {
         errCount--;
 #define COUNTERR_END \
     if (errCount == 0) { \
-        sprintf(c->errcontext.tempErrStr, "Too many errors: no more errors will be shown."); \
-        ppl_warning(&c->errcontext, ERR_STACKED, NULL); \
+        ppl_snprintfTrunc(msg, sizeof(msg), "Too many errors: no more errors will be shown."); \
+        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
     } \
     }
 
@@ -628,8 +631,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
             }
 
             if (eps_plot_AddUsingItemsForWithWords(c, &pd->ww_final, &NExpect, &autoUsingList, &UsingList, &NUsing,
-                                                   &nObjs, c->errcontext.tempErrStr)) {
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                                                   &nObjs, msg)) {
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 *(x->status) = 1;
                 return;
             } // Add extra using items for, e.g. "linewidth $3".
@@ -648,8 +651,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                         char *fnameFinal, tmp[FNAME_LENGTH] = "";
                         ppldata_fromFile(c, x->current->plotdata + i, pd->filename, 0, tmp, NULL, pd->index, UsingList,
                                          autoUsingList, NExpect, nObjs, pd->label, pd->SelectCriterion, NULL,
-                                         pd->UsingRowCols, pd->EveryList, pd->continuity, 0, &status,
-                                         c->errcontext.tempErrStr, &errCount, x->iterDepth + 1);
+                                         pd->UsingRowCols, pd->EveryList, pd->continuity, 0, &status, msg, &errCount,
+                                         x->iterDepth + 1);
                         fnameFinal = (char *) ppl_memAlloc(strlen(tmp) + 1);
                         if (fnameFinal != NULL) strcpy(fnameFinal, tmp);
                         pd->filenameFinal = fnameFinal;
@@ -662,7 +665,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                     }
                     ppldata_fromVectors(c, x->current->plotdata + i, pd->vectors, pd->NFunctions, UsingList,
                                         autoUsingList, NExpect, nObjs, pd->label, pd->SelectCriterion, NULL,
-                                        pd->continuity, &status, c->errcontext.tempErrStr, &errCount, x->iterDepth + 1);
+                                        pd->continuity, &status, msg, &errCount, x->iterDepth + 1);
                 }
             } else {
                 int Nsamples, Nsamples2, USE_T_or_uv;
@@ -742,13 +745,13 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                 }
                 ppldata_fromFuncs(c, x->current->plotdata + i, pd->functions, pd->NFunctions, special_raster, Nsamples,
                                   1, raster_unit, special_raster2, Nsamples2, raster2_unit, UsingList, autoUsingList,
-                                  NExpect, nObjs, pd->label, pd->SelectCriterion, NULL, pd->continuity, &status,
-                                  c->errcontext.tempErrStr, &errCount, x->iterDepth + 1);
+                                  NExpect, nObjs, pd->label, pd->SelectCriterion, NULL, pd->continuity, &status, msg,
+                                  &errCount, x->iterDepth + 1);
                 pd->GridXSize = Nsamples;
                 pd->GridYSize = Nsamples2;
             }
             if (status) {
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 x->current->plotdata[i] = NULL;
             } else {
                 // Update axes to reflect usage
@@ -848,8 +851,8 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             }
 
             if (eps_plot_AddUsingItemsForWithWords(c, &pd->ww_final, &NExpect, &autoUsingList, &UsingList, &NUsing,
-                                                   &nObjs, c->errcontext.tempErrStr)) {
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL);
+                                                   &nObjs, msg)) {
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 *(x->status) = 1;
                 return;
             } // Add extra using items for, e.g. "linewidth $3".

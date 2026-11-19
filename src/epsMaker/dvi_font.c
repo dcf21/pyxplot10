@@ -372,13 +372,13 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     tfm->np = buff[11];
 
     if (DEBUG) {
-        sprintf(ec->tempErrStr, "TFM: ");
-        j = strlen(ec->tempErrStr);
+        ppl_snprintfTrunc(msg, sizeof(msg), "TFM: ");
+        j = strlen(msg);
         for (i = 0; i < 12; i++) {
-            sprintf(ec->tempErrStr + j, "%s:%lu  ", tit[i], buff[i]);
-            j += strlen(ec->tempErrStr + j);
+            ppl_snprintfTrunc(msg + j, sizeof(msg) - (j), "%s:%lu  ", tit[i], buff[i]);
+            j += strlen(msg + j);
         }
-        ppl_log(ec, NULL);
+        ppl_log(ec, msg);
     }
 
     // We should have lf=6+lh+(ec-bc+1)+nw+nh+nd+ni+nl+nk+ne+np

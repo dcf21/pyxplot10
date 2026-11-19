@@ -602,10 +602,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     CRenorm = (sg->Crenorm[0] == SW_BOOL_TRUE);
 
     // If no data present, stop now
-    if ((CMin == 0) && (CMax == 0)) {
-        sprintf(x->c->errcontext.tempErrStr, "No data supplied to determine range for variable c1");
-        return 0;
-    }
+    if ((CMin == 0) && (CMax == 0)) return 0;
 
     // Output result to debugging output
     if (DEBUG) {

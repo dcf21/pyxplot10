@@ -105,8 +105,15 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
         pplObj *val = ppl_expEval(c, expr, &lastOpAssign, 1, iterDepth + 1);
         if (c->errStat.status) return; // On error, stop
         if (!lastOpAssign) {
-            pplObjPrint(c, val, NULL, c->errcontext.tempErrStr, LSTR_LENGTH, 0, 0);
-            ppl_report(&c->errcontext, NULL);
+            // Print the result, in a heap buffer to keep this recursive function's stack frame small
+            char *out = (char *) malloc(LSTR_LENGTH);
+            if (out == NULL) {
+                ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            } else {
+                pplObjPrint(c, val, NULL, out, LSTR_LENGTH, 0, 0);
+                ppl_report(&c->errcontext, out);
+                free(out);
+            }
         }
 
         // set ans

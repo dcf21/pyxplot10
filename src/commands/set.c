@@ -187,52 +187,58 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
             } /* if only one number given, it is increment */ \
 \
             if ((gotStart && gotIncr && !amLog) && (!ppl_unitsDimEqual(objstart, objincr))) { \
-                sprintf(c->errcontext.tempErrStr, \
+                ppl_snprintfTrunc( \
+                        msg, sizeof(msg), \
                         "Start value for axis ticks has conflicting units with step size. Units of the start value are <%s>; units of the step size are <%s>.", \
                         ppl_printUnit(c, objstart, NULL, NULL, 0, 1, 0), \
                         ppl_printUnit(c, objincr, NULL, NULL, 1, 1, 0)); \
-                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, NULL); \
+                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
                 return; \
             } \
             if ((gotStart && gotEnd) && (!ppl_unitsDimEqual(objstart, objend))) { \
-                sprintf(c->errcontext.tempErrStr, \
+                ppl_snprintfTrunc( \
+                        msg, sizeof(msg), \
                         "Start value for axis ticks has conflicting units with end value. Units of the start value are <%s>; units of the end value are <%s>.", \
                         ppl_printUnit(c, objstart, NULL, NULL, 0, 1, 0), \
                         ppl_printUnit(c, objend, NULL, NULL, 1, 1, 0)); \
-                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, NULL); \
+                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
                 return; \
             } \
             if (amLog && (!objincr->dimensionless)) { \
-                sprintf(c->errcontext.tempErrStr, \
+                ppl_snprintfTrunc( \
+                        msg, sizeof(msg), \
                         "Invalid step size for axis ticks. On a log axis, step size should be a dimensionless multiplier; supplied step size has units of <%s>.", \
                         ppl_printUnit(c, objincr, NULL, NULL, 0, 1, 0)); \
-                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, NULL); \
+                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
                 return; \
             } \
             if (gotStart && (!gsl_finite(start))) { \
-                sprintf(c->errcontext.tempErrStr, \
-                        "Invalid starting value for axis ticks. Value supplied is not finite."); \
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL); \
+                ppl_snprintfTrunc(msg, sizeof(msg), \
+                                  "Invalid starting value for axis ticks. Value supplied is not finite."); \
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg); \
                 return; \
             } \
             if (gotIncr && (!gsl_finite(incr))) { \
-                sprintf(c->errcontext.tempErrStr, "Invalid step size for axis ticks. Value supplied is not finite."); \
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL); \
+                ppl_snprintfTrunc(msg, sizeof(msg), \
+                                  "Invalid step size for axis ticks. Value supplied is not finite."); \
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg); \
                 return; \
             } \
             if (gotEnd && (!gsl_finite(end))) { \
-                sprintf(c->errcontext.tempErrStr, "Invalid end value for axis ticks. Value supplied is not finite."); \
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, NULL); \
+                ppl_snprintfTrunc(msg, sizeof(msg), \
+                                  "Invalid end value for axis ticks. Value supplied is not finite."); \
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg); \
                 return; \
             } \
             if ((!amLog) || (gotStart)) { \
                 pplObj *o = amLog ? objstart : objincr; \
                 if ((US) && (!ppl_unitsDimEqual(o, &(U)))) { \
-                    sprintf(c->errcontext.tempErrStr, \
+                    ppl_snprintfTrunc( \
+                            msg, sizeof(msg), \
                             "Tick positions supplied to the '%s' command have units of <%s>, which conflicts with the axis range which has units of <%s>.", \
                             cmd, ppl_printUnit(c, o, NULL, NULL, 0, 1, 0), \
                             ppl_printUnit(c, &(U), NULL, NULL, 1, 1, 0)); \
-                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, NULL); \
+                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
                     return; \
                 } \
                 if (!ppl_unitsDimEqual(o, &(U))) { \
@@ -264,38 +270,41 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
                     ox = tmp; \
                 } \
                 if (ox->objType != PPLOBJ_NUM) { \
-                    sprintf(c->errcontext.tempErrStr, \
-                            "Ticks can only be set at numeric values; supplied value is of type <%s>.", \
-                            pplObjTypeNames[ox->objType]); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL); \
+                    ppl_snprintfTrunc(msg, sizeof(msg), \
+                                      "Ticks can only be set at numeric values; supplied value is of type <%s>.", \
+                                      pplObjTypeNames[ox->objType]); \
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
                     return; \
                 } \
                 if ((ol->objType != PPLOBJ_ZOM) && (ol->objType != PPLOBJ_STR)) { \
-                    sprintf(c->errcontext.tempErrStr, "Ticks labels must be strings; supplied value is of type <%s>.", \
-                            pplObjTypeNames[ol->objType]); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL); \
+                    ppl_snprintfTrunc(msg, sizeof(msg), \
+                                      "Ticks labels must be strings; supplied value is of type <%s>.", \
+                                      pplObjTypeNames[ol->objType]); \
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
                     return; \
                 } \
                 if (!gsl_finite(ox->real)) { \
-                    sprintf(c->errcontext.tempErrStr, \
+                    ppl_snprintfTrunc( \
+                            msg, sizeof(msg), \
                             "Ticks can only be set at finite numeric values; supplied value is not finite."); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL); \
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
                     return; \
                 } \
                 if (ox->flagComplex) { \
-                    sprintf(c->errcontext.tempErrStr, \
-                            "Ticks can only be set at real numeric values; supplied value is complex."); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL); \
+                    ppl_snprintfTrunc(msg, sizeof(msg), \
+                                      "Ticks can only be set at real numeric values; supplied value is complex."); \
+                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
                     return; \
                 } \
                 if (i == 0) { \
                     first = ox; \
                     if ((US) && (!ppl_unitsDimEqual(first, &(U)))) { \
-                        sprintf(c->errcontext.tempErrStr, \
+                        ppl_snprintfTrunc( \
+                                msg, sizeof(msg), \
                                 "Tick positions supplied to the '%s' command have units of <%s>, which conflicts with the axis range which has units of <%s>.", \
                                 cmd, ppl_printUnit(c, first, NULL, NULL, 0, 1, 0), \
                                 ppl_printUnit(c, &(U), NULL, NULL, 1, 1, 0)); \
-                        ppl_error(&c->errcontext, ERR_UNIT, -1, -1, NULL); \
+                        ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
                         return; \
                     } \
                     if (!ppl_unitsDimEqual(first, &(U))) { \
@@ -303,11 +312,12 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
                         U = *first; \
                     } \
                 } else if (!ppl_unitsDimEqual(first, ox)) { \
-                    sprintf(c->errcontext.tempErrStr, \
+                    ppl_snprintfTrunc( \
+                            msg, sizeof(msg), \
                             "Tick positions supplied to the '%s' command must all have the same physical units; supplied list has multiple units, including <%s> and <%s>.", \
                             cmd, ppl_printUnit(c, first, NULL, NULL, 0, 1, 0), \
                             ppl_printUnit(c, ox, NULL, NULL, 1, 1, 0)); \
-                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, NULL); \
+                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
                     return; \
                 } \
                 i++; \
@@ -332,8 +342,8 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
                 label = (ol->objType == PPLOBJ_STR) ? ((char *) ol->auxil) : ("\xFF"); \
                 (T).tickStrs[i] = (char *) malloc(strlen(label) + 1); \
                 if ((T).tickStrs[i] == NULL) { \
-                    sprintf(c->errcontext.tempErrStr, "Out of memory."); \
-                    ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, NULL); \
+                    ppl_snprintfTrunc(msg, sizeof(msg), "Out of memory."); \
+                    ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, msg); \
                     return; \
                 } \
                 strcpy((T).tickStrs[i], label); \
@@ -1042,18 +1052,20 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             unsigned char useCol, use1234;
             if (strcmp(setoption, "axescolor") == 0)
                 ppl_colorFromObj(c, &command[PARSE_set_axescolor_color], &sg->AxesColor, &sg->AxesCol1234Space, NULL,
-                                 &sg->AxesColor1, &sg->AxesColor2, &sg->AxesColor3, &sg->AxesColor4, &useCol, &use1234);
+                                 &sg->AxesColor1, &sg->AxesColor2, &sg->AxesColor3, &sg->AxesColor4, &useCol, &use1234,
+                                 NULL);
             if (strcmp(setoption, "gridmajcolor") == 0)
                 ppl_colorFromObj(c, &command[PARSE_set_gridmajcolor_color], &sg->GridMajColor, &sg->GridMajCol1234Space,
                                  NULL, &sg->GridMajColor1, &sg->GridMajColor2, &sg->GridMajColor3, &sg->GridMajColor4,
-                                 &useCol, &use1234);
+                                 &useCol, &use1234, NULL);
             if (strcmp(setoption, "gridmincolor") == 0)
                 ppl_colorFromObj(c, &command[PARSE_set_gridmincolor_color], &sg->GridMinColor, &sg->GridMinCol1234Space,
                                  NULL, &sg->GridMinColor1, &sg->GridMinColor2, &sg->GridMinColor3, &sg->GridMinColor4,
-                                 &useCol, &use1234);
+                                 &useCol, &use1234, NULL);
             if (strcmp(setoption, "textcolor") == 0)
                 ppl_colorFromObj(c, &command[PARSE_set_textcolor_color], &sg->TextColor, &sg->TextCol1234Space, NULL,
-                                 &sg->TextColor1, &sg->TextColor2, &sg->TextColor3, &sg->TextColor4, &useCol, &use1234);
+                                 &sg->TextColor1, &sg->TextColor2, &sg->TextColor3, &sg->TextColor4, &useCol, &use1234,
+                                 NULL);
         }
     } else if (strcmp_set && (strcmp(setoption, "grid") == 0)) /* set grid */
     {
@@ -1684,7 +1696,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 c->set->palette_current[count] = -1;
                 ppl_colorFromObj(c, co, &c->set->palette_current[count], &c->set->paletteS_current[count], NULL,
                                  &c->set->palette1_current[count], &c->set->palette2_current[count],
-                                 &c->set->palette3_current[count], &c->set->palette4_current[count], &d1, &d2);
+                                 &c->set->palette3_current[count], &c->set->palette4_current[count], &d1, &d2, NULL);
                 count++;
             }
             c->set->palette_current[count] = -1;
@@ -1729,7 +1741,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 c->set->palette_current[i] = -1;
                 ppl_colorFromObj(c, o, &c->set->palette_current[i], &c->set->paletteS_current[i], NULL,
                                  &c->set->palette1_current[i], &c->set->palette2_current[i],
-                                 &c->set->palette3_current[i], &c->set->palette4_current[i], &d1, &d2);
+                                 &c->set->palette3_current[i], &c->set->palette4_current[i], &d1, &d2, NULL);
             }
             c->set->palette_current[i] = -1;
         }

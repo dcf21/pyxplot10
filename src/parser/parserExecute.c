@@ -55,11 +55,12 @@
 //! \param [in] in - The compiled command line to print
 
 void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
-    char *t = c->errcontext.tempErrStr;
+    char msg[PPL_MSG_LENGTH];
+    char *t = msg;
     parserAtom *a = in->firstAtom;
 
     sprintf(t, "Parser line -- stack length %d\nOriginal line was: %s", in->stackLen, in->linetxt);
-    ppl_report(&c->errcontext, NULL);
+    ppl_report(&c->errcontext, msg);
     if (in->containsMacros) ppl_report(&c->errcontext, "Contains macros.");
 
     for (a = in->firstAtom; a != NULL; a = a->next) {
@@ -67,14 +68,14 @@ void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
             int i = 0;
             sprintf(t + i, "Set %4d to literal of type %2d -- ", a->stackOutPos, a->literal->objType);
             i = strlen(t + i);
-            pplObjPrint(c, a->literal, NULL, t + i, LSTR_LENGTH - i, 0, 0);
+            pplObjPrint(c, a->literal, NULL, t + i, sizeof(msg) - i, 0, 0);
             i += strlen(t + i);
             sprintf(t + i, ".");
         } else {
             const int i = 0;
             sprintf(t + i, "Set %4d to expression -- %s.", a->stackOutPos, a->expr->ascii);
         }
-        ppl_report(&c->errcontext, NULL);
+        ppl_report(&c->errcontext, msg);
     }
 
     ppl_report(&c->errcontext, "---------------");

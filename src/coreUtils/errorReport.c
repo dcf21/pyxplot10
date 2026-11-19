@@ -59,13 +59,13 @@ void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, cons
 //! \param [in] ErrType - The type of error, one of the ERR_* constants. ERR_PREFORMED messages are printed verbatim.
 //! \param [in] HighlightPos1 - One-indexed position of the first character in <msg> to highlight, or -1 for none
 //! \param [in] HighlightPos2 - One-indexed position of the second character in <msg> to highlight, or -1 for none
-//! \param [in] msg - The error message, or NULL to use the message in <context->tempErrStr>
+//! \param [in] msg - The error message (NULL is treated as an empty message)
 
 void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
     unsigned char ApplyHighlighting, reverse = 0;
     int i = 0, j;
 
-    if (msg == NULL) msg = context->tempErrStr;
+    if (msg == NULL) msg = "";
     ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
@@ -192,11 +192,11 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
 //! \param [in] context - The error-reporting context
 //! \param [in] file - The source code file in which the error occurred
 //! \param [in] line - The line number in the source code file where the error occurred
-//! \param [in] msg - The error message, or NULL to use the message in <context->tempErrStr>
+//! \param [in] msg - The error message (NULL is treated as an empty message)
 
 void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
     char introline[FNAME_LENGTH];
-    if (msg == NULL) msg = context->tempErrStr;
+    if (msg == NULL) msg = "";
     if (msg != temp_stringE) {
         ppl_snprintfTrunc(temp_stringE, BLEN, "%s", msg);
         temp_stringE[BLEN - 1] = '\0';
@@ -215,12 +215,12 @@ void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
 //! \param [in] context - The error-reporting context
 //! \param [in] ErrType - The type of warning, one of the ERR_* constants. ERR_PREFORMED messages are printed
 //! verbatim.
-//! \param [in] msg - The warning message, or NULL to use the message in <context->tempErrStr>
+//! \param [in] msg - The warning message (NULL is treated as an empty message)
 
 void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
     int i = 0;
 
-    if (msg == NULL) msg = context->tempErrStr;
+    if (msg == NULL) msg = "";
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN - 1] = '\0';
@@ -308,10 +308,10 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
 
 //! ppl_report - Print a report-level message to the user on stdout, coloured if the terminal supports it
 //! \param [in] context - The error-reporting context
-//! \param [in] msg - The message, or NULL to use the message in <context->tempErrStr>
+//! \param [in] msg - The message (NULL is treated as an empty message)
 
 void ppl_report(pplerr_context *context, char *msg) {
-    if (msg == NULL) msg = context->tempErrStr;
+    if (msg == NULL) msg = "";
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN - 1] = '\0';
@@ -337,7 +337,7 @@ void ppl_report(pplerr_context *context, char *msg) {
 //! ppl_log - Write a message to the log file <pyxplot.PID.log> in the current working directory, prefixed with a
 //! timestamp and the name of the process that produced it
 //! \param [in] context - The error-reporting context
-//! \param [in] msg - The message, or NULL to use the message in <context->tempErrStr>
+//! \param [in] msg - The message (NULL is treated as an empty message)
 
 void ppl_log(pplerr_context *context, char *msg) {
     static FILE *logfile = NULL;
@@ -357,7 +357,7 @@ void ppl_log(pplerr_context *context, char *msg) {
         setvbuf(logfile, NULL, _IOLBF, 0); // Set log file to be line-buffered, so that log file is always up-to-date
     }
 
-    if (msg == NULL) msg = context->tempErrStr;
+    if (msg == NULL) msg = "";
     if (msg != temp_stringD) {
         ppl_snprintfTrunc(temp_stringD, BLEN, "%s", msg);
         temp_stringD[BLEN - 1] = '\0';

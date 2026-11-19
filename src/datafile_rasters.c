@@ -59,12 +59,13 @@
 void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, const int fnlist_len, const char *dummyVar,
                                           const double *min, const double *max, const pplObj *unit, double **raster,
                                           int *rasterLen) {
+    char msg[LSTR_LENGTH];
     int i, j, pos, commaPos = 0, bracketLevel = 0, containsOperator = 0, containsDummy = 0, NWords = 0, outputContext,
                    contextRough = -1;
     int dummyArgNo = 0;
     char newWord = 1, fail = 0;
     char c;
-    char *buf = C->errcontext.tempErrStr;
+    char *buf = msg;
     char *currentFnName = "", *dummyInFunction = NULL;
     list *bracketStack, *bracketCommaPos;
     pplObj *funcObjPtr = NULL;

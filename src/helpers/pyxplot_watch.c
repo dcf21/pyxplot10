@@ -44,13 +44,14 @@ int cancellationFlag = 0;
 //! \param [in] fname - The filename of the script
 
 void RunPyxplotOnFile(pplerr_context *context, char *fname) {
+    char msg[PPL_MSG_LENGTH];
     char LineBuffer[LSTR_LENGTH];
     int interactive, status;
 
     interactive = ((isatty(STDIN_FILENO) == 1) && (context->session_default.splash == SW_ONOFF_ON));
 
     if (interactive) {
-        sprintf(LineBuffer, "[%s] Running %s.", ppl_strStrip(ppl_friendlyTimestring(), context->tempErrStr), fname);
+        sprintf(LineBuffer, "[%s] Running %s.", ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
         ppl_report(context, LineBuffer);
     }
 
@@ -58,13 +59,13 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     status = system(LineBuffer);
 
     if (status && !interactive) {
-        sprintf(LineBuffer, "[%s] Encountered problem in script file %s.",
-                ppl_strStrip(ppl_friendlyTimestring(), context->tempErrStr), fname);
+        sprintf(LineBuffer, "[%s] Encountered problem in script file %s.", ppl_strStrip(ppl_friendlyTimestring(), msg),
+                fname);
         ppl_error(context, ERR_PREFORMED, -1, -1, LineBuffer);
     }
 
     if (interactive) {
-        sprintf(LineBuffer, "[%s] Finished %s.", ppl_strStrip(ppl_friendlyTimestring(), context->tempErrStr), fname);
+        sprintf(LineBuffer, "[%s] Finished %s.", ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
         ppl_report(context, LineBuffer);
     }
     return;

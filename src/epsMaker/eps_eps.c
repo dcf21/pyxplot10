@@ -189,8 +189,8 @@ void eps_eps_RenderEPS(EPSComm *x) {
         *(x->status) = 1;
         return;
     }
-    while (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, inf) != NULL)
-        if (fputs(x->c->errcontext.tempErrStr, x->epsbuffer) == EOF) {
+    while (fgets(msg, FNAME_LENGTH, inf) != NULL)
+        if (fputs(msg, x->epsbuffer) == EOF) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Error while reading EPS file '%s'.", filename);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;
@@ -228,6 +228,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
 
 void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, double *br, double *bt,
                          unsigned char *GotBox) {
+    char msg[PPL_MSG_LENGTH];
     const char BBoxStr[] = "%%BoundingBox:";
     const char HRBBoxStr[] = "%%HiResBoundingBox:";
     int bbox_i = 0, hrbbox_i = 0, j, bbox_len, hrbbox_len, i;
@@ -253,23 +254,23 @@ void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, dou
 
         if (bbox_i == bbox_len) {
             bbox_i = 0;
-            if (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, in) != NULL) // Read %%BoundingBox: . . . .
+            if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%BoundingBox: . . . .
             {
                 i = 0;
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                blt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                blt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                bbt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                bbt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                brt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                brt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                btt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                btt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
                 *bl = blt;
@@ -282,23 +283,23 @@ void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, dou
 
         if (hrbbox_i == hrbbox_len) {
             hrbbox_i = 0;
-            if (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, in) != NULL) // Read %%HiResBoundingBox: . . . .
+            if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%HiResBoundingBox: . . . .
             {
                 i = 0;
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                blt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                blt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                bbt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                bbt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                brt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                brt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
-                while ((x->c->errcontext.tempErrStr[i] <= ' ') && (x->c->errcontext.tempErrStr[i] != '\0')) i++;
-                btt = ppl_getFloat(x->c->errcontext.tempErrStr + i, &j);
+                while ((msg[i] <= ' ') && (msg[i] != '\0')) i++;
+                btt = ppl_getFloat(msg + i, &j);
                 if (j <= 0) continue;
                 else i += j; // If j<=0, bad bounding box
                 *bl = blt;

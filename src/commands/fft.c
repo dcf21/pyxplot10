@@ -35,6 +35,7 @@
 #endif
 
 #include "commands/fft.h"
+#include "coreUtils/errorReport.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/expCompile_fns.h"
 #include "expressions/expEval.h"
@@ -59,7 +60,7 @@
         c->stackPtr--; \
         ppl_garbageObject(&c->stack[c->stackPtr]); \
         if (c->stack[c->stackPtr].refCount != 0) { \
-            sprintf(c->errcontext.tempErrStr, "Stack forward reference detected."); \
+            ppl_snprintfTrunc(msg, sizeof(msg), "Stack forward reference detected."); \
             TBADD2(ERR_INTERNAL, 0); \
             return; \
         } \
@@ -75,8 +76,8 @@
         errCount--;
 #define COUNTEDERR2 \
     if (errCount == 0) { \
-        sprintf(c->errcontext.tempErrStr, "%s: Too many errors: no more errors will be shown.", filenameOut); \
-        ppl_warning(&c->errcontext, ERR_STACKED, NULL); \
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s: Too many errors: no more errors will be shown.", filenameOut); \
+        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
     } \
     }
 
@@ -277,6 +278,7 @@ static void fftwindow_blackman(pplObj *x, const int Ndim, int *Npos, int *Nstep)
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     dataTable *data;
     dataBlock *blk;

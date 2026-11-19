@@ -845,6 +845,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output) {
 //! \return Zero
 
 int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
+    char msg[LSTR_LENGTH];
     canvas_itemlist *canvas_items = c->canvas_items;
     int i;
     canvas_item *ptr;
@@ -853,10 +854,10 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
     if (canvas_items == NULL) return 0;
     ptr = canvas_items->first;
     while (ptr != NULL) {
-        sprintf(c->errcontext.tempErrStr, "%5d  %s", ptr->id, (ptr->deleted) ? "[deleted] " : "");
-        i = strlen(c->errcontext.tempErrStr);
-        ppl_canvas_item_textify(c, ptr, c->errcontext.tempErrStr + i);
-        ppl_report(&c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%5d  %s", ptr->id, (ptr->deleted) ? "[deleted] " : "");
+        i = strlen(msg);
+        ppl_canvas_item_textify(c, ptr, msg + i);
+        ppl_report(&c->errcontext, msg);
         ptr = ptr->next;
     }
     return 0;
@@ -869,12 +870,13 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
 //! \return Zero on success, or one if there is no item with that ID number
 
 static int canvas_delete(ppl_context *c, const int id) {
+    char msg[PPL_MSG_LENGTH];
     canvas_itemlist *canvas_items = c->canvas_items;
     canvas_item *ptr = canvas_items->first;
     while ((ptr != NULL) && (ptr->id != id)) ptr = ptr->next;
     if (ptr == NULL) {
-        sprintf(c->errcontext.tempErrStr, "There is no multiplot item with ID %d.", id);
-        ppl_warning(&c->errcontext, ERR_GENERIC, 0);
+        ppl_snprintfTrunc(msg, sizeof(msg), "There is no multiplot item with ID %d.", id);
+        ppl_warning(&c->errcontext, ERR_GENERIC, msg);
         return 1;
     } else {
         ptr->deleted = 1;
@@ -933,6 +935,7 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
 
 int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                            const int iterDepth) {
+    char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
 
@@ -952,8 +955,8 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
         ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != id)) ptr = ptr->next;
         if (ptr == NULL) {
-            sprintf(c->errcontext.tempErrStr, "There is no multiplot item with ID %d.", id);
-            ppl_warning(&c->errcontext, ERR_GENERIC, 0);
+            ppl_snprintfTrunc(msg, sizeof(msg), "There is no multiplot item with ID %d.", id);
+            ppl_warning(&c->errcontext, ERR_GENERIC, msg);
             return 1;
         } else {
             ptr->deleted = 0;
@@ -1849,7 +1852,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
         return 1;
     }
     if (Npts < 2) {
-        printf(c->errcontext.tempErrStr, "A minimum of two points are required to specify the outline of a polygon.");
+        printf(msg, "A minimum of two points are required to specify the outline of a polygon.");
         goto fail;
     }
     for (i = 0; i < Npts; i++) {
@@ -1868,14 +1871,14 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
                         break;
                     }
                 if (p < 0) {
-                    printf(c->errcontext.tempErrStr,
+                    printf(msg,
                            "Point %d of polygon should have specified as a position vector; supplied position had wrong units.",
                            i + 1);
                     goto fail;
                 }
             }
             if (l != 2) {
-                printf(c->errcontext.tempErrStr,
+                printf(msg,
                        "Point %d of polygon should have specified as a two-component position vector; supplied vector had %d components.",
                        i + 1, l);
                 goto fail;
@@ -1888,7 +1891,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
             list *l = (list *) item->auxil;
             pplObj *xo[2];
             if (ppl_listLen(l) != 2) {
-                printf(c->errcontext.tempErrStr,
+                printf(msg,
                        "Point %d of polygon should have specified as a two-component position vector; supplied vector had %d components.",
                        i + 1, ppl_listLen(l));
                 goto fail;
@@ -1896,13 +1899,13 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
             for (j = 0; j < 2; j++) {
                 xo[j] = (pplObj *) ppl_listGetItem(l, j);
                 if (xo[j]->objType != PPLOBJ_NUM) {
-                    printf(c->errcontext.tempErrStr,
+                    printf(msg,
                            "Point %d of polygon should have specified as a position vector; supplied object had type <%s>.",
                            i + 1, pplObjTypeNames[xo[j]->objType]);
                     goto fail;
                 }
                 if (xo[j]->flagComplex) {
-                    printf(c->errcontext.tempErrStr,
+                    printf(msg,
                            "Point %d of polygon should have specified as a position vector; supplied object was complex.",
                            i + 1);
                     goto fail;
@@ -1915,7 +1918,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
                             break;
                         }
                     if (p < 0) {
-                        printf(c->errcontext.tempErrStr,
+                        printf(msg,
                                "Point %d of polygon should have specified as a position vector; supplied position had wrong units.",
                                i + 1);
                         goto fail;
@@ -1925,11 +1928,12 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
             x = xo[0]->real * m;
             y = xo[1]->real * m;
         } else {
-            sprintf(c->errcontext.tempErrStr,
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
                     "Point %d of polygon should have specified as a vector or a list; supplied object was of type <%s>.",
                     i + 1, pplObjTypeNames[item->objType]);
         fail:
-            ppl_error(&c->errcontext, ERR_TYPE, -1, -1, NULL);
+            ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
             free(ptList);
             return 1;
         }
@@ -2195,8 +2199,8 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
         c->stackPtr--; \
         ppl_garbageObject(&c->stack[c->stackPtr]); \
         if (c->stack[c->stackPtr].refCount != 0) { \
-            strcpy(c->errcontext.tempErrStr, "Stack forward reference detected."); \
-            ppl_error(&c->errcontext, ERR_STACKED, -1, -1, NULL); \
+            strcpy(msg, "Stack forward reference detected."); \
+            ppl_error(&c->errcontext, ERR_STACKED, -1, -1, msg); \
             free(new); \
             return 1; \
         } \
@@ -3079,19 +3083,21 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 const int xyz3 = got3 ? ((int) round(stk[pos + PARSE_replot_axis_3_0plot_list].exponent[0])) : -1;
                 //int n3 = got3?((int)round(stk[pos+PARSE_replot_axis_3_0plot_list].real       )):-1;
                 if (got1 || got2 || got3) {
-                    c->errcontext.tempErrStr[0] = '\0';
+                    msg[0] = '\0';
                     if ((!ptr->ThreeDim) && (!(got1 && got2 && !got3)))
-                        sprintf(c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "The axes clause in the plot command must contain two perpendicular axes to produce a two-dimensional plot.");
                     else if (ptr->ThreeDim && (!(got1 && got2 && got3)))
-                        sprintf(c->errcontext.tempErrStr,
+                        ppl_snprintfTrunc(
+                                msg, sizeof(msg),
                                 "The axes clause in the plot command must contain three perpendicular axes to produce a three-dimensional plot.");
                     else if (((!ptr->ThreeDim) && (((xyz1 != 0) && (xyz2 != 0)) || ((xyz1 != 1) && (xyz2 != 1)))) ||
                              ((ptr->ThreeDim) && ((xyz1 == xyz2) || (xyz2 == xyz3))))
-                        sprintf(c->errcontext.tempErrStr,
-                                "The axes clause in the plot command may not list multiple parallel axes.");
-                    if (c->errcontext.tempErrStr[0] != '\0') {
-                        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg),
+                                          "The axes clause in the plot command may not list multiple parallel axes.");
+                    if (msg[0] != '\0') {
+                        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         canvas_delete(c, id);
                         return 1;
                     }

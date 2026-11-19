@@ -587,7 +587,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     for (i = 0; i < NArgs; i++) {
         int end = 0, ep = 0, es = 0;
         ppl_expCompile(c, 0, 0, "", format + start + CommaPositions[i] + 1, &end, 0, 0, 0, &formatExp[i], &ep, &es,
-                       c->errcontext.tempErrStr);
+                       msg);
         if (es || c->errStat.status) {
             ppl_tbClear(c);
             goto FAIL;
@@ -911,8 +911,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
     // Debugging lines
     if (DEBUG && (VarName[0] != 'z')) {
-        sprintf(x->c->errcontext.tempErrStr, "Potential ticks for %s axis (NArgs = %d)", VarName, NArgs);
-        ppl_log(&x->c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Potential ticks for %s axis (NArgs = %d)", VarName, NArgs);
+        ppl_log(&x->c->errcontext, msg);
         for (i = 0; i < NArgs; i++) {
             ppl_snprintfTrunc(msg, sizeof(msg),
                               "Argument %d: id %d score %d StringArg %d ContinuousArg %d Vetoed %d NValueChanges %d", i,
@@ -920,8 +920,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                               (int) args[i].ContinuousArg, (int) args[i].vetoed, args[i].NValueChanges);
             ppl_log(&x->c->errcontext, msg);
         }
-        sprintf(x->c->errcontext.tempErrStr, "Number of potential ticks: %d", NPotTicks);
-        ppl_log(&x->c->errcontext, NULL);
+        ppl_snprintfTrunc(msg, sizeof(msg), "Number of potential ticks: %d", NPotTicks);
+        ppl_log(&x->c->errcontext, msg);
         for (i = 0; ((i < NPotTicks) && (i < 50)); i++) {
             ppl_snprintfTrunc(msg, sizeof(msg),
                               "Tick %7d: Arg %3d DivOfThrow %4d OoM %10d DivOfOoM %3d IntervalNum %3d TargetVal %12.3e",
@@ -1181,27 +1181,28 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
                         // Print results of options 2A and 2B
                         if (DEBUG) {
-                            sprintf(x->c->errcontext.tempErrStr,
+                            ppl_snprintfTrunc(
+                                    msg, sizeof(msg),
                                     "Option 2A -- %d major ticks and %d minor ticks. Option 2B -- %d major ticks and %d minor ticks.",
                                     Nticks_new_accepted, Nticks_new_accepted_minor, Nticks_2B_best,
                                     Nticks_2B_minor_best);
-                            ppl_log(&x->c->errcontext, NULL);
-                            sprintf(x->c->errcontext.tempErrStr, "Option 2A Major: ");
-                            TickScheme_sprintf(x->c->errcontext.tempErrStr + strlen(x->c->errcontext.tempErrStr),
-                                               PotTickList, NPotTicks, TickOrder, TicksAcceptedNew, 1);
-                            ppl_log(&x->c->errcontext, NULL);
-                            sprintf(x->c->errcontext.tempErrStr, "Option 2A Minor: ");
-                            TickScheme_sprintf(x->c->errcontext.tempErrStr + strlen(x->c->errcontext.tempErrStr),
-                                               PotTickList, NPotTicks, TickOrder, TicksAcceptedNew, 1);
-                            ppl_log(&x->c->errcontext, NULL);
-                            sprintf(x->c->errcontext.tempErrStr, "Option 2B Major: ");
-                            TickScheme_sprintf(x->c->errcontext.tempErrStr + strlen(x->c->errcontext.tempErrStr),
-                                               PotTickList, NPotTicks, TickOrder, TicksAcceptedNew2B, 1);
-                            ppl_log(&x->c->errcontext, NULL);
-                            sprintf(x->c->errcontext.tempErrStr, "Option 2B Minor: ");
-                            TickScheme_sprintf(x->c->errcontext.tempErrStr + strlen(x->c->errcontext.tempErrStr),
-                                               PotTickList, NPotTicks, TickOrder, TicksAcceptedNew2B, 2);
-                            ppl_log(&x->c->errcontext, NULL);
+                            ppl_log(&x->c->errcontext, msg);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "Option 2A Major: ");
+                            TickScheme_sprintf(msg + strlen(msg), PotTickList, NPotTicks, TickOrder, TicksAcceptedNew,
+                                               1);
+                            ppl_log(&x->c->errcontext, msg);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "Option 2A Minor: ");
+                            TickScheme_sprintf(msg + strlen(msg), PotTickList, NPotTicks, TickOrder, TicksAcceptedNew,
+                                               1);
+                            ppl_log(&x->c->errcontext, msg);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "Option 2B Major: ");
+                            TickScheme_sprintf(msg + strlen(msg), PotTickList, NPotTicks, TickOrder, TicksAcceptedNew2B,
+                                               1);
+                            ppl_log(&x->c->errcontext, msg);
+                            ppl_snprintfTrunc(msg, sizeof(msg), "Option 2B Minor: ");
+                            TickScheme_sprintf(msg + strlen(msg), PotTickList, NPotTicks, TickOrder, TicksAcceptedNew2B,
+                                               2);
+                            ppl_log(&x->c->errcontext, msg);
                         }
 
                         // If not making progress, abort

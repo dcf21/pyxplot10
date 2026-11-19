@@ -177,20 +177,21 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 
         // Print out debugging report
         if (DEBUG) {
-            sprintf(x->c->errcontext.tempErrStr, "Determined range for axis %c%d of plot %d. Usage was [",
-                    "xyzc"[axis->xyz], axis->axis_n, axis->canvas_id);
-            i = strlen(x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Determined range for axis %c%d of plot %d. Usage was [",
+                              "xyzc"[axis->xyz], axis->axis_n, axis->canvas_id);
+            i = strlen(msg);
             if (axis->MinUsedSet) {
-                sprintf(x->c->errcontext.tempErrStr + i, "%f", axis->MinUsed);
-                i += strlen(x->c->errcontext.tempErrStr + i);
-            } else x->c->errcontext.tempErrStr[i++] = '*';
-            x->c->errcontext.tempErrStr[i++] = ':';
+                ppl_snprintfTrunc(msg + i, sizeof(msg) - (i), "%f", axis->MinUsed);
+                i += strlen(msg + i);
+            } else msg[i++] = '*';
+            msg[i++] = ':';
             if (axis->MaxUsedSet) {
-                sprintf(x->c->errcontext.tempErrStr + i, "%f", axis->MaxUsed);
-                i += strlen(x->c->errcontext.tempErrStr + i);
-            } else x->c->errcontext.tempErrStr[i++] = '*';
-            sprintf(x->c->errcontext.tempErrStr + i, "]. Final range was [%f:%f].", axis->MinFinal, axis->MaxFinal);
-            ppl_log(&x->c->errcontext, NULL);
+                ppl_snprintfTrunc(msg + i, sizeof(msg) - (i), "%f", axis->MaxUsed);
+                i += strlen(msg + i);
+            } else msg[i++] = '*';
+            ppl_snprintfTrunc(msg + i, sizeof(msg) - (i), "]. Final range was [%f:%f].", axis->MinFinal,
+                              axis->MaxFinal);
+            ppl_log(&x->c->errcontext, msg);
         }
 
         // Flip axis range if it is reversed
@@ -446,6 +447,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 //! \param [in] OutContext - The ppl_memAlloc context in which to allocate the label
 
 void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int OutContext) {
+    char msg[PPL_MSG_LENGTH];
     int SF = X->c->set->term_current.SignificantFigures;
     double ApproxMargin;
 
@@ -453,7 +455,7 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
     if (ApproxMargin < 1e-15) ApproxMargin = 1e-15;
 
     if ((fabs(x) < DBL_MIN * 100) || ((fabs(x) > 1e-3) && (fabs(x) < 1e5))) {
-        sprintf(X->c->errcontext.tempErrStr, "%s", ppl_numericDisplay(x, X->c->numdispBuff[0], SF, 1));
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s", ppl_numericDisplay(x, X->c->numdispBuff[0], SF, 1));
     } else {
         double e, m;
         unsigned char sgn = 0;
@@ -468,16 +470,16 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
             m = 1;
         } // Avoid 10 x 10^2
         if (ppl_dblApprox(m, 1, pow(10, -SF + 1)))
-            sprintf(X->c->errcontext.tempErrStr, "%s%d^{%s}", sgn ? "-" : "", (int) log_base,
-                    ppl_numericDisplay(e, X->c->numdispBuff[0], SF, 1));
+            ppl_snprintfTrunc(msg, sizeof(msg), "%s%d^{%s}", sgn ? "-" : "", (int) log_base,
+                              ppl_numericDisplay(e, X->c->numdispBuff[0], SF, 1));
         else
-            sprintf(X->c->errcontext.tempErrStr, "%s%s\\times %d^{%s}", sgn ? "-" : "",
-                    ppl_numericDisplay(m, X->c->numdispBuff[0], SF, 1), (int) log_base,
-                    ppl_numericDisplay(e, X->c->numdispBuff[1], SF, 1));
+            ppl_snprintfTrunc(msg, sizeof(msg), "%s%s\\times %d^{%s}", sgn ? "-" : "",
+                              ppl_numericDisplay(m, X->c->numdispBuff[0], SF, 1), (int) log_base,
+                              ppl_numericDisplay(e, X->c->numdispBuff[1], SF, 1));
     }
-    *output = (char *) ppl_memAlloc_incontext(strlen(X->c->errcontext.tempErrStr) + 3, OutContext);
+    *output = (char *) ppl_memAlloc_incontext(strlen(msg) + 3, OutContext);
     if ((*output) == NULL) return;
-    sprintf(*output, "$%s$", X->c->errcontext.tempErrStr);
+    sprintf(*output, "$%s$", msg);
     return;
 }
 

@@ -413,9 +413,9 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
             out->DataUnitSet = 1;
         }
         if (!ppl_unitsDimEqual(&out->DataUnit, outVal)) {
-            sprintf(X->c->errcontext.tempErrStr, "Error encountered whilst evaluating axis linkage expression: %s",
-                    olu->ascii);
-            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst evaluating axis linkage expression: %s",
+                              olu->ascii);
+            ppl_error(&X->c->errcontext, ERR_GENERIC, -1, -1, msg);
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
                     "Axis linkage function produces axis values with dimensions of <%s> whilst data plotted on this axis has dimensions of <%s>.",

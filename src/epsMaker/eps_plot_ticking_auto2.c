@@ -303,11 +303,10 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                 if (!major) {
                     if (DEBUG) {
                         int tmp;
-                        sprintf(x->c->errcontext.tempErrStr, "Trying minor tick scheme: ");
-                        tmp = strlen(x->c->errcontext.tempErrStr);
-                        TickScheme2_sprintf(x->c->errcontext.tempErrStr + tmp, LSTR_LENGTH - tmp, UnitMultiplier,
-                                            TL_trial, TL_trial_len);
-                        ppl_log(&x->c->errcontext, NULL);
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Trying minor tick scheme: ");
+                        tmp = strlen(msg);
+                        TickScheme2_sprintf(msg + tmp, sizeof(msg) - tmp, UnitMultiplier, TL_trial, TL_trial_len);
+                        ppl_log(&x->c->errcontext, msg);
                     }
                     for (j = 0; axis->TickListStrings[j] != NULL; j++) {
                         OverlayMatch = 0;

@@ -54,7 +54,7 @@
         c->stackPtr--; \
         ppl_garbageObject(&c->stack[c->stackPtr]); \
         if (c->stack[c->stackPtr].refCount != 0) { \
-            sprintf(c->errcontext.tempErrStr, "Stack forward reference detected."); \
+            ppl_snprintfTrunc(msg, sizeof(msg), "Stack forward reference detected."); \
             TBADD2(ERR_INTERNAL, 0); \
             return; \
         } \
@@ -70,8 +70,8 @@
         errCount--;
 #define COUNTEDERR2 \
     if (errCount == 0) { \
-        sprintf(c->errcontext.tempErrStr, "%s: Too many errors: no more errors will be shown.", filenameOut); \
-        ppl_warning(&c->errcontext, ERR_STACKED, NULL); \
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s: Too many errors: no more errors will be shown.", filenameOut); \
+        ppl_warning(&c->errcontext, ERR_STACKED, msg); \
     } \
     }
 

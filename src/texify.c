@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "coreUtils/memAlloc.h"
+#include "coreUtils/errorReport.h"
 #include "mathsTools/dcfmath.h"
 #include "expressions/expCompile_fns.h"
 #include "expressions/expEval.h"
@@ -244,6 +245,7 @@ void ppl_texify_string(const char *in, char *out, const int inlen, const int out
 
 void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, char *out, const int outlen, int *mm_in,
                         int *tr_in) {
+    char msg[PPL_MSG_LENGTH];
     pplTokenCode *tokenBuff;
     const int allowCommaOperator = (inlen < 0);
     const int equalsAllowed = 1;
@@ -327,7 +329,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             upos = ei + 1; // position of unit name
             val.refCount = 1;
             val.amMalloced = 0;
-            ppl_unitsStringEvaluate(c, in + upos, &val, &q, &errpos, c->errcontext.tempErrStr);
+            ppl_unitsStringEvaluate(c, in + upos, &val, &q, &errpos, msg);
             if (errpos >= 0) continue;
             if (in[upos + q] != ')') continue;
             ei = ei + (1 + q);
@@ -372,7 +374,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 val.refCount = 1;
                 val.amMalloced = 0;
                 pplObjNum(&val, 0, 0, 0);
-                ppl_uaPow(c, &c->stack[sp1], &c->stack[sp2], &val, &stat, &errpos, c->errcontext.tempErrStr);
+                ppl_uaPow(c, &c->stack[sp1], &c->stack[sp2], &val, &stat, &errpos, msg);
                 if ((stat) || (errpos >= 0)) continue;
                 memcpy(&c->stack[sp1], &val, sizeof(pplObj));
                 for (; i < ei; i++) { stkpos[i] = sp1; }
@@ -397,9 +399,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 val.refCount = 1;
                 val.amMalloced = 0;
                 pplObjNum(&val, 0, 0, 0);
-                if (in[i] == '*')
-                    ppl_uaMul(c, &c->stack[sp1], &c->stack[sp2], &val, &stat, &errpos, c->errcontext.tempErrStr);
-                else ppl_uaDiv(c, &c->stack[sp1], &c->stack[sp2], &val, &stat, &errpos, c->errcontext.tempErrStr);
+                if (in[i] == '*') ppl_uaMul(c, &c->stack[sp1], &c->stack[sp2], &val, &stat, &errpos, msg);
+                else ppl_uaDiv(c, &c->stack[sp1], &c->stack[sp2], &val, &stat, &errpos, msg);
                 if ((stat) || (errpos >= 0)) continue;
                 memcpy(&c->stack[sp1], &val, sizeof(pplObj));
                 for (; i < ei; i++) { stkpos[i] = sp1; }

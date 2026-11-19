@@ -69,14 +69,15 @@
 //! \return Zero on success, or one on failure
 
 static int filecopy(EPSComm *x, const char *in, const char *out) {
+    char msg[PPL_MSG_LENGTH];
     int status = 0, n;
     FILE *fi, *fo;
     ppl_createBackupIfRequired(x->c, out);
     fi = fopen(in, "rb");
     fo = fopen(out, "wb");
     if ((fo == NULL) || (fi == NULL)) status = 1;
-    while ((!status) && ((n = fread((void *) x->c->errcontext.tempErrStr, 1, FNAME_LENGTH, fi)) > 0))
-        if (fwrite((void *) x->c->errcontext.tempErrStr, 1, n, fo) < n) status = 1;
+    while ((!status) && ((n = fread((void *) msg, 1, FNAME_LENGTH, fi)) > 0))
+        if (fwrite((void *) msg, 1, n, fo) < n) status = 1;
     if (fi != NULL) fclose(fi);
     if (fo != NULL) fclose(fo);
     return status;
@@ -84,15 +85,15 @@ static int filecopy(EPSComm *x, const char *in, const char *out) {
 
 // Run ghostscript to convert postscript output into bitmap graphics
 #define BITMAP_TERMINAL_CLEANUP(X, Y, CanInvert) \
-    if (system(c->errcontext.tempErrStr) != 0) /* Run ghostscript */ \
+    if (system(msg) != 0) /* Run ghostscript */ \
     { \
         ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, \
                   "Error encountered whilst using " X " to generate " Y " output"); \
     } else { \
         char *src = GSOutputTemp; \
         if ((CanInvert) && (c->set->term_current.TermInvert == SW_ONOFF_ON)) { \
-            sprintf(c->errcontext.tempErrStr, "%s %s -negate %s", CONVERT_COMMAND, GSOutputTemp, GSOutputTemp2); \
-            if (system(c->errcontext.tempErrStr) != 0) /* Run convert to negate image */ \
+            ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -negate %s", CONVERT_COMMAND, GSOutputTemp, GSOutputTemp2); \
+            if (system(msg) != 0) /* Run convert to negate image */ \
             { \
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, \
                           "Error encountered whilst using ImageMagick to generate negated " Y " output"); \
@@ -102,8 +103,8 @@ static int filecopy(EPSComm *x, const char *in, const char *out) {
         } \
         if (filecopy(&comm, src, comm.FinalFilename) != 0) /* Move ghostscript output to desire target file */ \
         { \
-            sprintf(c->errcontext.tempErrStr, "Could not write output to file '%s'", comm.FinalFilename); \
-            ppl_error(&c->errcontext, ERR_FILE, -1, -1, NULL); \
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not write output to file '%s'", comm.FinalFilename); \
+            ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg); \
         } \
         remove(src); /* Delete temporary files */ \
     } \
@@ -398,14 +399,14 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                 else if (termtype == SW_TERMTYPE_X11P) CSPCommand = 2;
             }
             if (c->set->term_current.viewer == SW_VIEWER_GV)
-                sprintf(c->errcontext.tempErrStr, "%d%s %swatch %s\n", CSPCommand, GHOSTVIEW_COMMAND, GHOSTVIEW_OPT,
-                        comm.EPSFilename);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%d%s %swatch %s\n", CSPCommand, GHOSTVIEW_COMMAND, GHOSTVIEW_OPT,
+                                  comm.EPSFilename);
             else if (c->set->term_current.viewer == SW_VIEWER_GGV)
-                sprintf(c->errcontext.tempErrStr, "%d%s --watch %s\n", CSPCommand, GGV_COMMAND, comm.EPSFilename);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%d%s --watch %s\n", CSPCommand, GGV_COMMAND, comm.EPSFilename);
             else
-                sprintf(c->errcontext.tempErrStr, "%d%s %s\n", CSPCommand, c->set->term_current.ViewerCmd,
-                        comm.EPSFilename);
-            pplcsp_sendCommand(c, c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%d%s %s\n", CSPCommand, c->set->term_current.ViewerCmd,
+                                  comm.EPSFilename);
+            pplcsp_sendCommand(c, msg);
 
             // Pause after launching an X11 ghostview viewer to give stderr error messages a moment to come back to us
             for (i = 0; i < 7; i++) {
@@ -417,55 +418,59 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         }
     } else if (termtype == SW_TERMTYPE_PDF) // PDF terminal
     {
-        sprintf(c->errcontext.tempErrStr, "%s %s -sDEVICE=pdfwrite -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
-                GHOSTSCRIPT_STANDARD_FLAGS, GSOutputTemp, comm.EPSFilename);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=pdfwrite -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
+                          GHOSTSCRIPT_STANDARD_FLAGS, GSOutputTemp, comm.EPSFilename);
         BITMAP_TERMINAL_CLEANUP("ghostscript", "pdf", 0);
     } else if (termtype == SW_TERMTYPE_PNG) // PNG terminal
     {
-        sprintf(c->errcontext.tempErrStr, "%s %s -sDEVICE=%s -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
-                GHOSTSCRIPT_STANDARD_FLAGS,
-                (c->set->term_current.TermTransparent == SW_ONOFF_ON) ? "pngalpha" : "png16m",
-                (int) floor(c->set->term_current.dpi),
-                (c->set->term_current.TermAntiAlias == SW_ONOFF_ON) ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
-                                                                    : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
-                GSOutputTemp, comm.EPSFilename);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=%s -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
+                          GHOSTSCRIPT_STANDARD_FLAGS,
+                          (c->set->term_current.TermTransparent == SW_ONOFF_ON) ? "pngalpha" : "png16m",
+                          (int) floor(c->set->term_current.dpi),
+                          (c->set->term_current.TermAntiAlias == SW_ONOFF_ON)
+                                  ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
+                                  : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
+                          GSOutputTemp, comm.EPSFilename);
         BITMAP_TERMINAL_CLEANUP("ghostscript", "png", 1)
     } else if (termtype == SW_TERMTYPE_JPG) // JPEG terminal
     {
-        sprintf(c->errcontext.tempErrStr, "%s %s -sDEVICE=jpeg -dJPEGQ=100 -r%d %s -sOutputFile=%s %s",
-                GHOSTSCRIPT_COMMAND, GHOSTSCRIPT_STANDARD_FLAGS, (int) floor(c->set->term_current.dpi),
-                (c->set->term_current.TermAntiAlias == SW_ONOFF_ON) ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
-                                                                    : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
-                GSOutputTemp, comm.EPSFilename);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=jpeg -dJPEGQ=100 -r%d %s -sOutputFile=%s %s",
+                          GHOSTSCRIPT_COMMAND, GHOSTSCRIPT_STANDARD_FLAGS, (int) floor(c->set->term_current.dpi),
+                          (c->set->term_current.TermAntiAlias == SW_ONOFF_ON)
+                                  ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
+                                  : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
+                          GSOutputTemp, comm.EPSFilename);
         BITMAP_TERMINAL_CLEANUP("ghostscript", "jpeg", 1)
     } else if (termtype == SW_TERMTYPE_GIF) // GIF terminal
     {
-        sprintf(c->errcontext.tempErrStr, "%s -density %d %s %s %s %s", CONVERT_COMMAND,
-                (int) floor(c->set->term_current.dpi),
+        ppl_snprintfTrunc(
+                msg, sizeof(msg), "%s -density %d %s %s %s %s", CONVERT_COMMAND, (int) floor(c->set->term_current.dpi),
                 (c->set->term_current.TermTransparent == SW_ONOFF_ON) ? "-alpha activate" : "-alpha deactivate",
                 (c->set->term_current.TermAntiAlias == SW_ONOFF_ON) ? "-antialias" : "+antialias", comm.EPSFilename,
                 GSOutputTemp);
         BITMAP_TERMINAL_CLEANUP("ImageMagick", "gif", 1);
     } else if (termtype == SW_TERMTYPE_BMP) // BMP terminal
     {
-        sprintf(c->errcontext.tempErrStr, "%s %s -sDEVICE=bmp16m -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
-                GHOSTSCRIPT_STANDARD_FLAGS, (int) floor(c->set->term_current.dpi),
-                (c->set->term_current.TermAntiAlias == SW_ONOFF_ON) ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
-                                                                    : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
-                GSOutputTemp, comm.EPSFilename);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=bmp16m -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
+                          GHOSTSCRIPT_STANDARD_FLAGS, (int) floor(c->set->term_current.dpi),
+                          (c->set->term_current.TermAntiAlias == SW_ONOFF_ON)
+                                  ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
+                                  : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
+                          GSOutputTemp, comm.EPSFilename);
         BITMAP_TERMINAL_CLEANUP("ghostscript", "bmp", 1)
     } else if (termtype == SW_TERMTYPE_TIF) // TIF terminal
     {
-        sprintf(c->errcontext.tempErrStr, "%s %s -sDEVICE=tiff24nc -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
-                GHOSTSCRIPT_STANDARD_FLAGS, (int) floor(c->set->term_current.dpi),
-                (c->set->term_current.TermAntiAlias == SW_ONOFF_ON) ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
-                                                                    : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
-                GSOutputTemp, comm.EPSFilename);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=tiff24nc -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
+                          GHOSTSCRIPT_STANDARD_FLAGS, (int) floor(c->set->term_current.dpi),
+                          (c->set->term_current.TermAntiAlias == SW_ONOFF_ON)
+                                  ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
+                                  : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
+                          GSOutputTemp, comm.EPSFilename);
         BITMAP_TERMINAL_CLEANUP("ghostscript", "tif", 1)
     } else if (termtype == SW_TERMTYPE_SVG) // SVG terminal
     {
-        sprintf(c->errcontext.tempErrStr, "%s %s -sDEVICE=svg -sOutputFile=%s %s > /dev/null 2> /dev/null",
-                GHOSTSCRIPT_COMMAND, GHOSTSCRIPT_STANDARD_FLAGS, GSOutputTemp, comm.EPSFilename);
+        ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=svg -sOutputFile=%s %s > /dev/null 2> /dev/null",
+                          GHOSTSCRIPT_COMMAND, GHOSTSCRIPT_STANDARD_FLAGS, GSOutputTemp, comm.EPSFilename);
         BITMAP_TERMINAL_CLEANUP("ghostscript", "svg", 0)
     }
 
@@ -488,7 +493,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void canvas_CallLaTeX(EPSComm *x) {
-    char msg[PPL_MSG_LENGTH];
+    char msg[LSTR_LENGTH];
     int linecount = 1, i, j, pid, LatexStatus, LatexStdIn, LatexOut;
     char filename[FNAME_LENGTH], *str_buffer;
     FILE *output;
@@ -615,9 +620,9 @@ void canvas_CallLaTeX(EPSComm *x) {
                             strcpy(ErrMsg, TempErrMsg);
                             ErrLineNo = (int) ppl_getFloat(TempErrLineNo, NULL);
                             if (DEBUG) {
-                                sprintf(x->c->errcontext.tempErrStr, "Received LaTeX error on line %d of file <%s>",
-                                        ErrLineNo, ErrFilename);
-                                ppl_log(&x->c->errcontext, x->c->errcontext.tempErrStr);
+                                ppl_snprintfTrunc(msg, sizeof(msg), "Received LaTeX error on line %d of file <%s>",
+                                                  ErrLineNo, ErrFilename);
+                                ppl_log(&x->c->errcontext, msg);
                                 ppl_snprintfTrunc(msg, sizeof(msg), "Error message: <%s>", ErrMsg);
                                 ppl_log(&x->c->errcontext, msg);
                             }
@@ -686,31 +691,32 @@ void canvas_CallLaTeX(EPSComm *x) {
                 ppl_listIterate(&ListIter);
             }
             if (SuspectTextItem == NULL)
-                sprintf(x->c->errcontext.tempErrStr, "LaTeX error encountered in an unidentifiable canvas item.");
+                ppl_snprintfTrunc(msg, sizeof(msg), "LaTeX error encountered in an unidentifiable canvas item.");
             else if (ExactHit)
-                sprintf(x->c->errcontext.tempErrStr, "LaTeX error encountered in text string in canvas item %d.",
-                        SuspectTextItem->CanvasMultiplotID);
+                ppl_snprintfTrunc(msg, sizeof(msg), "LaTeX error encountered in text string in canvas item %d.",
+                                  SuspectTextItem->CanvasMultiplotID);
             else
-                sprintf(x->c->errcontext.tempErrStr,
-                        "LaTeX error encountered at the end of text string in canvas item %d.",
-                        SuspectTextItem->CanvasMultiplotID);
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, x->c->errcontext.tempErrStr);
-            sprintf(x->c->errcontext.tempErrStr, "Error was: %s",
-                    ErrMsg); // Output the actual error which LaTeX returned to us
-            ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, x->c->errcontext.tempErrStr);
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "LaTeX error encountered at the end of text string in canvas item %d.",
+                                  SuspectTextItem->CanvasMultiplotID);
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Error was: %s",
+                              ErrMsg); // Output the actual error which LaTeX returned to us
+            ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
             if (SuspectTextItem != NULL) {
                 canvas_item *ptr = ((canvas_itemlist *) x->c->canvas_items)
                                            ->first; // Cycle through all canvas items to find the culprit
                 for (ptr = ((canvas_itemlist *) x->c->canvas_items)->first;
                      ((ptr != NULL) && (ptr->id != SuspectTextItem->CanvasMultiplotID)); ptr = ptr->next);
                 if (ptr != NULL) {
-                    sprintf(x->c->errcontext.tempErrStr,
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
                             "\nInput Pyxplot command was:\n\n"); // Now tell the user what Pyxplot command produced the culprit
-                    i = strlen(x->c->errcontext.tempErrStr);
-                    ppl_canvas_item_textify(x->c, ptr, x->c->errcontext.tempErrStr + i);
-                    i += strlen(x->c->errcontext.tempErrStr + i);
-                    strcpy(x->c->errcontext.tempErrStr + i, "\n");
-                    ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, x->c->errcontext.tempErrStr);
+                    i = strlen(msg);
+                    ppl_canvas_item_textify(x->c, ptr, msg + i);
+                    i += strlen(msg + i);
+                    strcpy(msg + i, "\n");
+                    ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
                 } // Then output the LaTeX string which produced the error
                 ppl_snprintfTrunc(msg, sizeof(msg), "\nOffending input to LaTeX was:\n\n%s\n", SuspectTextItem->text);
                 ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
@@ -722,9 +728,9 @@ void canvas_CallLaTeX(EPSComm *x) {
             ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
         } else // Case 3: Error in another file which the user seems to have imported
         {
-            sprintf(x->c->errcontext.tempErrStr, "LaTeX error encountered in imported file <%s> on line %d.",
-                    ErrFilename, ErrLineNo);
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, x->c->errcontext.tempErrStr);
+            ppl_snprintfTrunc(msg, sizeof(msg), "LaTeX error encountered in imported file <%s> on line %d.",
+                              ErrFilename, ErrLineNo);
+            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
             ppl_snprintfTrunc(msg, sizeof(msg), "Error was: %s", ErrMsg);
             ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
         }
@@ -825,7 +831,7 @@ void canvas_EPSWrite(EPSComm *x) {
     fprintf(epsout, "%%%%Creator: (Pyxplot %s -- executing %s:%d)\n", VERSION, x->c->errcontext.error_input_filename,
             x->c->errcontext.error_input_linenumber);
     fprintf(epsout, "%%%%Title: (%s)\n", x->title);
-    fprintf(epsout, "%%%%CreationDate: (%s)\n", ppl_strStrip(ppl_friendlyTimestring(), x->c->errcontext.tempErrStr));
+    fprintf(epsout, "%%%%CreationDate: (%s)\n", ppl_strStrip(ppl_friendlyTimestring(), msg));
     if (x->c->set->term_current.TermType == SW_TERMTYPE_PS) fprintf(epsout, "%%%%Pages: 1\n");
     fprintf(epsout, "%%%%DocumentData: Clean7Bit\n");
     if (x->c->set->term_current.landscape == SW_ONOFF_ON) fprintf(epsout, "%%%%Orientation: Landscape\n");
@@ -877,8 +883,8 @@ void canvas_EPSWrite(EPSComm *x) {
                 fclose(epsout);
                 return;
             }
-            while (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, PFAfile) != NULL)
-                if (fputs(x->c->errcontext.tempErrStr, epsout) == EOF) {
+            while (fgets(msg, FNAME_LENGTH, PFAfile) != NULL)
+                if (fputs(msg, epsout) == EOF) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Error while writing to file '%s'.", x->EPSFilename);
                     ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
                     *(x->status) = 1;
@@ -953,8 +959,8 @@ void canvas_EPSWrite(EPSComm *x) {
     // Copy contents of eps buffer into postscript output
     fflush(x->epsbuffer);
     rewind(x->epsbuffer);
-    while (fgets(x->c->errcontext.tempErrStr, FNAME_LENGTH, x->epsbuffer) != NULL)
-        if (fputs(x->c->errcontext.tempErrStr, epsout) == EOF) {
+    while (fgets(msg, FNAME_LENGTH, x->epsbuffer) != NULL)
+        if (fputs(msg, epsout) == EOF) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Error while writing to file '%s'.", x->EPSFilename);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             *(x->status) = 1;

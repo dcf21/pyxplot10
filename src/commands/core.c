@@ -438,22 +438,22 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutput *in) {
+    char msg[LSTR_LENGTH];
     pplObj *stk = in->stk;
     int pos = PARSE_print_0print_list;
     int i = 0;
     int gotItems = 0;
-    c->errcontext.tempErrStr[i] = '\0';
+    msg[i] = '\0';
 
     while (stk[pos].objType == PPLOBJ_NUM) {
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
-        pplObjPrint(c, stk + pos + PARSE_print_expression_0print_list, NULL, c->errcontext.tempErrStr + i,
-                    LSTR_LENGTH - i, 0, 0);
-        c->errcontext.tempErrStr[LSTR_LENGTH - 1] = '\0';
-        i += strlen(c->errcontext.tempErrStr + i);
+        pplObjPrint(c, stk + pos + PARSE_print_expression_0print_list, NULL, msg + i, sizeof(msg) - i, 0, 0);
+        msg[sizeof(msg) - 1] = '\0';
+        i += strlen(msg + i);
         gotItems = 1;
     }
-    ppl_report(&c->errcontext, NULL);
+    ppl_report(&c->errcontext, msg);
 
     // set ans
     if (gotItems) {
@@ -482,6 +482,7 @@ void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutpu
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput *in) {
+    char msg[PPL_MSG_LENGTH];
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
     int pos = PARSE_save_filename;
@@ -503,7 +504,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
         return;
     }
     fprintf(outfile, "# Command script saved by Pyxplot %s\n# Timestamp: %s\n", VERSION,
-            ppl_strStrip(ppl_friendlyTimestring(), c->errcontext.tempErrStr));
+            ppl_strStrip(ppl_friendlyTimestring(), msg));
     fprintf(outfile, "# User: %s\n\n", ppl_unixGetIRLName(&c->errcontext));
 
     endpos = history_length;

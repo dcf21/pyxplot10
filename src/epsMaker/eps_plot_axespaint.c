@@ -29,6 +29,7 @@
 #include <gsl/gsl_math.h>
 
 #include "coreUtils/memAlloc.h"
+#include "coreUtils/errorReport.h"
 
 #include "epsMaker/canvasDraw.h"
 #include "settings/settings.h"
@@ -109,6 +110,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                         const unsigned char Lr, const double x1, const double y1, const double *z1, const double x2,
                         const double y2, const double *z2, const double theta_a, const double theta_b,
                         double *OutputWidth, const unsigned char PrintLabels) {
+    char msg[PPL_MSG_LENGTH];
     int i, l, m, lt;
     double TickMaxHeight = 0.0, height, width, theta_axis;
     int HALIGN, VALIGN, HALIGN_THIS, VALIGN_THIS;
@@ -247,11 +249,11 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                 if (last_colstr != NULL) {
                                     strcpy(last_colstr, x->CurrentColor);
-                                    sprintf(x->c->errcontext.tempErrStr,
-                                            "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", tic_x2, tic_y2,
-                                            tic_x3, tic_y3);
+                                    ppl_snprintfTrunc(msg, sizeof(msg),
+                                                      "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", tic_x2,
+                                                      tic_y2, tic_x3, tic_y3);
                                     ThreeDimBuffer_writeps(x, *z1 + (*z2 - *z1) * TLP[l], lt, lw, 0.0, 1, last_colstr,
-                                                           x->c->errcontext.tempErrStr);
+                                                           msg);
                                 }
                             }
                             eps_core_PlotBoundingBox(x, tic_x2, tic_y2, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1);

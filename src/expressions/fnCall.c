@@ -180,7 +180,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         int i1, i2;
                         pplObjColor(out, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
                         ppl_colorFromObj(context, &args[0], &i1, &i2, NULL, &out->exponent[8], &out->exponent[9],
-                                         &out->exponent[10], &out->exponent[11], &d1, &d2);
+                                         &out->exponent[10], &out->exponent[11], &d1, &d2, NULL);
                         out->exponent[2] = i1;
                         out->exponent[0] = i2;
                     } else {

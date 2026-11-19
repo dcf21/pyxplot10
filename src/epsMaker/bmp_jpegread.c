@@ -102,10 +102,10 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
                 }
             }
             if (DEBUG) {
-                sprintf(ec->tempErrStr, "JPEG version %d.%02d", (int) buff[5], (int) buff[6]);
-                ppl_log(ec, NULL);
-                sprintf(ec->tempErrStr, "JFIF thumbnail size %dx%d", (int) buff[12], (int) buff[13]);
-                ppl_log(ec, NULL);
+                ppl_snprintfTrunc(msg, sizeof(msg), "JPEG version %d.%02d", (int) buff[5], (int) buff[6]);
+                ppl_log(ec, msg);
+                ppl_snprintfTrunc(msg, sizeof(msg), "JFIF thumbnail size %dx%d", (int) buff[12], (int) buff[13]);
+                ppl_log(ec, msg);
                 if (image->XDPI) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "DPI: %.1fx%.1f", image->XDPI, image->YDPI);
                     ppl_log(ec, msg);
@@ -116,8 +116,8 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         }
 
         if (DEBUG && ((type == 0xe1) && (!strcmp((char *) buff, "Exif")))) {
-            sprintf(ec->tempErrStr, "Exif JPEG file");
-            ppl_log(ec, NULL);
+            ppl_snprintfTrunc(msg, sizeof(msg), "Exif JPEG file");
+            ppl_log(ec, msg);
             ppl_snprintfTrunc(msg, sizeof(msg), "Exif APP1 entry length 0x%x", len + 2);
             ppl_log(ec, msg);
         }

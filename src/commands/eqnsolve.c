@@ -146,6 +146,7 @@ static char *printParameterValues(MMComm *data, char *output) {
 //! \return The value of the cost function, or NaN if the expressions could not be evaluated
 
 static double MultiMinSlave(const gsl_vector *x, void *params) {
+    char msg[LSTR_LENGTH];
     pplObj output1, output2, *tmp;
     int i, lastOpAssign;
     unsigned char squareroot = 0;
@@ -178,7 +179,7 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
             data->warnExprNo = 1;
             data->warnPos = c->errStat.errPosExpr;
             ppl_snprintfTrunc(data->warntext, LSTR_LENGTH, "An algebraic error was encountered at %s: %s",
-                              printParameterValues(data, c->errcontext.tempErrStr), c->errStat.errMsgExpr);
+                              printParameterValues(data, msg), c->errStat.errMsgExpr);
             ppl_tbClear(c);
             return GSL_NAN;
         }
@@ -203,7 +204,7 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
                 data->warnExprNo = 2;
                 data->warnPos = c->errStat.errPosExpr;
                 ppl_snprintfTrunc(data->warntext, LSTR_LENGTH, "An algebraic error was encountered at %s: %s",
-                                  printParameterValues(data, c->errcontext.tempErrStr), c->errStat.errMsgExpr);
+                                  printParameterValues(data, msg), c->errStat.errMsgExpr);
                 ppl_tbClear(c);
                 return GSL_NAN;
             }

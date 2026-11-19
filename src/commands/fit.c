@@ -805,10 +805,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     gsl_linalg_LU_decomp(hessian_lu, perm, &sgn);
     gsl_linalg_LU_invert(hessian_lu, perm, hessian_inv);
     matrixPrint(c, hessian_inv, dataComm.NParams, scratchPad);
-    sprintf(c->errcontext.tempErrStr,
+    ppl_snprintfTrunc(
+            msg, sizeof(msg),
             "\n# Covariance matrix of probability distribution:\n# ----------------------------------------------\n\ncovariance = %s",
             scratchPad);
-    ppl_report(&c->errcontext, NULL);
+    ppl_report(&c->errcontext, msg);
 
     // Calculate the standard deviation of each parameter
     for (i = 0; i < dataComm.NParams; i++) {
@@ -845,8 +846,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             dummyTemp.flagComplex = 0; // Apply appropriate unit to standard deviation, which is currently just a double
             if (c->set->term_current.NumDisplay != SW_DISPLAY_L) {
                 sprintf(scratchPad, "sigma_%s", fitVars[i]);
-                sprintf(c->errcontext.tempErrStr, "%22s = %s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
+                ppl_snprintfTrunc(msg, sizeof(msg), "%22s = %s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0));
             } else {
                 sprintf(scratchPad, "$\\sigma_\\textrm{");
                 j = strlen(scratchPad);
@@ -855,10 +856,10 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     scratchPad[j++] = fitVars[i][k];
                 }
                 scratchPad[j++] = '\0';
-                sprintf(c->errcontext.tempErrStr, "%33s} = %s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%33s} = %s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 0, 0, 0) + 1);
             }
-            ppl_report(&c->errcontext, NULL);
+            ppl_report(&c->errcontext, msg);
         } else {
             if (c->set->term_current.NumDisplay != SW_DISPLAY_L) {
                 dummyTemp.real = stdDev[2 * i];
@@ -923,11 +924,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         dummyTemp.refCount = 1;
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             if (c->set->term_current.NumDisplay != SW_DISPLAY_L)
-                sprintf(c->errcontext.tempErrStr, "%16s = (%s +/- %s) %s", fitVars[i],
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0),
-                        ppl_numericDisplay(stdDev[i] * tmp3, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                           0),
-                        cptr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%16s = (%s +/- %s) %s", fitVars[i],
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0),
+                                  ppl_numericDisplay(stdDev[i] * tmp3, c->numdispBuff[0],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  cptr);
             else {
                 scratchPad[0] = '$';
                 for (j = 1, k = 0; fitVars[i][k] != '\0'; k++) {
@@ -935,23 +936,23 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     scratchPad[j++] = fitVars[i][k];
                 }
                 scratchPad[j++] = '\0';
-                sprintf(c->errcontext.tempErrStr, "%17s = (%s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0) + 1);
-                j = strlen(c->errcontext.tempErrStr) - 1; // Remove final $
-                sprintf(c->errcontext.tempErrStr + j, "\\pm%s)%s$",
-                        ppl_numericDisplay(stdDev[i] * tmp3, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                           0),
-                        cptr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%17s = (%s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0) + 1);
+                j = strlen(msg) - 1; // Remove final $
+                ppl_snprintfTrunc(msg + j, sizeof(msg) - (j), "\\pm%s)%s$",
+                                  ppl_numericDisplay(stdDev[i] * tmp3, c->numdispBuff[0],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  cptr);
             }
         } else {
             if (c->set->term_current.NumDisplay == SW_DISPLAY_T)
-                sprintf(c->errcontext.tempErrStr, "%16s = (%s +/- %s +/- %s*sqrt(-1))%s", fitVars[i],
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0),
-                        ppl_numericDisplay(stdDev[2 * i] * tmp3, c->numdispBuff[0],
-                                           c->set->term_current.SignificantFigures, 0),
-                        ppl_numericDisplay(stdDev[2 * i + 1] * tmp3, c->numdispBuff[2],
-                                           c->set->term_current.SignificantFigures, 0),
-                        cptr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%16s = (%s +/- %s +/- %s*sqrt(-1))%s", fitVars[i],
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0),
+                                  ppl_numericDisplay(stdDev[2 * i] * tmp3, c->numdispBuff[0],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  ppl_numericDisplay(stdDev[2 * i + 1] * tmp3, c->numdispBuff[2],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  cptr);
             else if (c->set->term_current.NumDisplay == SW_DISPLAY_L) {
                 scratchPad[0] = '$';
                 for (j = 1, k = 0; fitVars[i][k] != '\0'; k++) {
@@ -959,25 +960,25 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     scratchPad[j++] = fitVars[i][k];
                 }
                 scratchPad[j++] = '\0';
-                sprintf(c->errcontext.tempErrStr, "%17s = (%s", scratchPad,
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0) + 1);
-                j = strlen(c->errcontext.tempErrStr) - 1; // Remove final $
-                sprintf(c->errcontext.tempErrStr + j, "\\pm %s\\pm %si)%s$",
-                        ppl_numericDisplay(stdDev[2 * i] * tmp3, c->numdispBuff[0],
-                                           c->set->term_current.SignificantFigures, 0),
-                        ppl_numericDisplay(stdDev[2 * i + 1] * tmp3, c->numdispBuff[2],
-                                           c->set->term_current.SignificantFigures, 0),
-                        cptr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%17s = (%s", scratchPad,
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0) + 1);
+                j = strlen(msg) - 1; // Remove final $
+                ppl_snprintfTrunc(msg + j, sizeof(msg) - (j), "\\pm %s\\pm %si)%s$",
+                                  ppl_numericDisplay(stdDev[2 * i] * tmp3, c->numdispBuff[0],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  ppl_numericDisplay(stdDev[2 * i + 1] * tmp3, c->numdispBuff[2],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  cptr);
             } else
-                sprintf(c->errcontext.tempErrStr, "%16s = (%s +/- %s +/- %si) %s", fitVars[i],
-                        ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0),
-                        ppl_numericDisplay(stdDev[2 * i] * tmp3, c->numdispBuff[0],
-                                           c->set->term_current.SignificantFigures, 0),
-                        ppl_numericDisplay(stdDev[2 * i + 1] * tmp3, c->numdispBuff[2],
-                                           c->set->term_current.SignificantFigures, 0),
-                        cptr);
+                ppl_snprintfTrunc(msg, sizeof(msg), "%16s = (%s +/- %s +/- %si) %s", fitVars[i],
+                                  ppl_unitsNumericDisplay(c, &dummyTemp, 1, 0, 0),
+                                  ppl_numericDisplay(stdDev[2 * i] * tmp3, c->numdispBuff[0],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  ppl_numericDisplay(stdDev[2 * i + 1] * tmp3, c->numdispBuff[2],
+                                                     c->set->term_current.SignificantFigures, 0),
+                                  cptr);
         }
-        ppl_report(&c->errcontext, NULL);
+        ppl_report(&c->errcontext, msg);
     }
 
     // We're finished... can now free dataTable
