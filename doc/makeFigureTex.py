@@ -3,7 +3,7 @@
 # The code in this file is part of PyXPlot
 # <http://www.pyxplot.org.uk>
 #
-# Copyright (C) 2006-2012 Dominic Ford <coders@pyxplot.org.uk>
+# Copyright (C) 2006-2026 Dominic Ford <coders@pyxplot.org.uk>
 #
 # $Id$
 #
