@@ -52,7 +52,7 @@
 
 #include "defaultObjs/moduleColor.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 #define GAMMA_FUDGE 0.45
 
@@ -224,10 +224,11 @@ static int constrain_rgb(double *r, double *g, double *b) {
 
 void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "wavelength(lambda,norm)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double p0, wi, wj, x, y, z, r, g, b, norm;
     int i, j;
 
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a wavelength", UNIT_LENGTH, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "a wavelength", UNIT_LENGTH, 1)) return;
     if (!in[1].dimensionless) {
         *status = 1;
         *errType = ERR_UNIT;

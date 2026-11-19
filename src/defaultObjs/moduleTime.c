@@ -42,7 +42,7 @@
 
 #include "defaultObjs/moduleTime.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 //! pplfunc_timefromUnix - Implement the function time.fromUnix(t) in the time module, which creates a date object from
 //! the specified unix time
@@ -56,8 +56,9 @@
 
 void pplfunc_timefromUnix(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromUnix(t)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_timefromJD - Implement the function time.fromJD(t) in the time module, which creates a date object from the
@@ -72,8 +73,9 @@ void pplfunc_timefromUnix(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_timefromJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromJD(t)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, 86400.0 * (in[0].real - 2440587.5));
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_timefromMJD - Implement the function time.fromMJD(t) in the time module, which creates a date object from
@@ -88,8 +90,9 @@ void pplfunc_timefromJD(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_timefromMJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromMJD(t)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, 86400.0 * (in[0].real - 40587.0));
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_timefromCalendar - Implement the function time.fromCalendar(year,month,day,hour,min,sec) in the time module,
@@ -104,19 +107,20 @@ void pplfunc_timefromMJD(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "fromCalendar(year,month,day,hour,min,sec)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double t, offset;
-    CHECK_NEEDSREAL(in[0], "year");
-    CHECK_NEEDSREAL(in[1], "month");
-    CHECK_NEEDSREAL(in[2], "day");
-    CHECK_NEEDSREAL(in[3], "hour");
-    CHECK_NEEDSREAL(in[4], "min");
-    CHECK_NEEDSREAL(in[5], "sec");
-    CHECK_NEEDSINT(in[0], "year", "function's first input (year) must be an integer");
-    CHECK_NEEDINT(in[1], "month", "function's second input (month) must be an integer");
-    CHECK_NEEDINT(in[2], "day", "function's third input (day) must be an integer");
-    CHECK_NEEDINT(in[3], "hour", "function's fourth input (hours) must be an integer");
-    CHECK_NEEDINT(in[4], "min", "function's fifth input (minutes) must be an integer");
-    CHECK_NEEDINT(in[5], "sec", "function's sixth input (seconds) must be an integer");
+    if (ppl_funcCheckRealDimensionlessFinite(&call, &in[0], "year")) return;
+    if (ppl_funcCheckRealDimensionlessFinite(&call, &in[1], "month")) return;
+    if (ppl_funcCheckRealDimensionlessFinite(&call, &in[2], "day")) return;
+    if (ppl_funcCheckRealDimensionlessFinite(&call, &in[3], "hour")) return;
+    if (ppl_funcCheckRealDimensionlessFinite(&call, &in[4], "min")) return;
+    if (ppl_funcCheckRealDimensionlessFinite(&call, &in[5], "sec")) return;
+    if (ppl_funcCheckSignedInt(&call, &in[0], "year", "function's first input (year) must be an integer")) return;
+    if (ppl_funcCheckInt(&call, &in[1], "month", "function's second input (month) must be an integer")) return;
+    if (ppl_funcCheckInt(&call, &in[2], "day", "function's third input (day) must be an integer")) return;
+    if (ppl_funcCheckInt(&call, &in[3], "hour", "function's fourth input (hours) must be an integer")) return;
+    if (ppl_funcCheckInt(&call, &in[4], "min", "function's fifth input (minutes) must be an integer")) return;
+    if (ppl_funcCheckInt(&call, &in[5], "sec", "function's sixth input (seconds) must be an integer")) return;
     if ((nArgs > 6) && (in[6].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -132,7 +136,7 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
     ppl_calendarTimezoneOffset(c, t, NULL, &offset);
     ppl_calendarTimezoneUnset(c);
     pplObjDate(&OUTPUT, 0, t - offset);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_timeInterval - Implement the function time.interval(t2,t1) in the time module, which returns the numerical
@@ -164,7 +168,7 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *stat
         return;
     }
     pplObjNum(&OUTPUT, 0, in[0].real - in[1].real, 0);
-    CLEANUP_APPLYUNIT(UNIT_TIME);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_TIME);
 }
 
 //! pplfunc_timeIntervalStr - Implement the function time.intervalStr(t2,t1,<s>) in the time module, which returns a
@@ -262,8 +266,9 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
 
 void pplfunc_timenow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "now()";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, (double) time(NULL));
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_timestring - Implement the function time.string(t,<s>) in the time module, which returns a string
@@ -340,8 +345,9 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
 void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "sleep(t)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a time", UNIT_TIME, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "a time", UNIT_TIME, 1)) return;
     waitperiod.tv_sec = floor(in[0].real);
     waitperiod.tv_nsec = fmod(in[0].real * 1e9, 1e9);
     for (i = 0; i < 1e6; i++)

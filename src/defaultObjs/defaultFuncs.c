@@ -19,6 +19,7 @@
 
 // ----------------------------------------------------------------------------
 
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -63,10 +64,256 @@
 
 #include "defaultObjs/airyFuncs.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 #include "defaultObjs/zetaRiemann.h"
 
 #include "texify.h"
+
+// ----------------------------------------------------------------------------
+// Helper functions used by built-in functions to check their arguments and set their results (see
+// defaultFuncsChecks.h)
+// ----------------------------------------------------------------------------
+
+//! funcFail - Report that a built-in function cannot return a result, either as an error, or (if the user has not
+//! asked for explicit errors) by returning NaN
+//! \param [in] f - The call to the built-in function
+//! \param [in] errType - The type of error, one of the ERR_* constants
+//! \param [in] alwaysError - If true, report an error even if the user has not asked for explicit errors
+//! \param [in] format - printf-style format string for the error message
+static void funcFail(pplFuncCall *f, const int errType, const int alwaysError, const char *format, ...)
+        __attribute__((format(printf, 4, 5)));
+
+static void funcFail(pplFuncCall *f, const int errType, const int alwaysError, const char *format, ...) {
+    va_list args;
+    if (alwaysError || (f->c->set->term_current.ExplicitErrors == SW_ONOFF_ON)) {
+        *f->status = 1;
+        *f->errType = errType;
+        va_start(args, format);
+        vsnprintf(f->errText, LSTR_LENGTH, format, args);
+        va_end(args);
+        f->errText[LSTR_LENGTH - 1] = '\0';
+    } else {
+        ppl_funcNullOutput(f);
+    }
+}
+
+//! ppl_funcNullOutput - Set the result of a built-in function to NaN
+//! \param [in] f - The call to the built-in function
+
+void ppl_funcNullOutput(pplFuncCall *f) {
+    pplObj *out = &f->in[-1];
+    out->real = GSL_NAN;
+    out->imag = 0;
+    out->flagComplex = 0;
+}
+
+//! ppl_funcUndefined - Report that a built-in function is not defined at the requested point
+//! \param [in] f - The call to the built-in function
+
+void ppl_funcUndefined(pplFuncCall *f) {
+    funcFail(f, ERR_RANGE, 0, "The function %s is not defined at the requested point in parameter space.",
+             f->description);
+}
+
+//! ppl_funcNeedsRealArguments - Report that a built-in function was passed complex arguments, which it cannot accept
+//! \param [in] f - The call to the built-in function
+
+void ppl_funcNeedsRealArguments(pplFuncCall *f) {
+    funcFail(f, ERR_RANGE, 0, "The function %s only accepts real arguments; the supplied arguments are complex.",
+             f->description);
+}
+
+//! ppl_funcCheckOutput - Check that the result of a built-in function is finite, and is real unless complex
+//! arithmetic is enabled
+//! \param [in] f - The call to the built-in function
+//! \return Zero if the result is acceptable, or nonzero if it is not (and has been reported)
+
+int ppl_funcCheckOutput(pplFuncCall *f) {
+    const pplObj *out = &f->in[-1];
+    if ((!gsl_finite(out->real)) || (!gsl_finite(out->imag)) ||
+        ((out->flagComplex) && (f->c->set->term_current.ComplexNumbers == SW_ONOFF_OFF))) {
+        ppl_funcUndefined(f);
+        return 1;
+    }
+    return 0;
+}
+
+//! ppl_funcCheckFinite - Check that the first <nArgs> arguments of a built-in function are finite, and are real
+//! unless complex arithmetic is enabled
+//! \param [in] f - The call to the built-in function
+//! \param [in] nArgs - The number of arguments to check
+//! \return Zero if the arguments are acceptable, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckFinite(pplFuncCall *f, const int nArgs) {
+    int i;
+    for (i = 0; i < nArgs; i++) {
+        const pplObj *x = &f->in[i];
+        if (((f->c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && x->flagComplex) || (!gsl_finite(x->real)) ||
+            (!gsl_finite(x->imag))) {
+            funcFail(f, ERR_RANGE, 0, "The function %s has received a non-finite input.", f->description);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+//! ppl_funcCheckDimensionless - Check that the first <nArgs> arguments of a built-in function are dimensionless
+//! \param [in] f - The call to the built-in function
+//! \param [in] nArgs - The number of arguments to check
+//! \return Zero if the arguments are dimensionless, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckDimensionless(pplFuncCall *f, const int nArgs) {
+    ppl_context *c = f->c;
+    const pplObj *in = f->in;
+    int i;
+    for (i = 0; (i < nArgs) && in[i].dimensionless; i++);
+    if (i == nArgs) return 0;
+    if (nArgs == 1)
+        funcFail(f, ERR_UNIT, 1,
+                 "The %s function can only act upon dimensionless inputs. Supplied input has dimensions of <%s>.",
+                 f->description, ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
+    else if (nArgs == 2)
+        funcFail(f, ERR_UNIT, 1,
+                 "The %s function can only act upon dimensionless inputs. Supplied inputs have dimensions of <%s> and "
+                 "<%s>.",
+                 f->description, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0),
+                 ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0));
+    else if (nArgs == 3)
+        funcFail(f, ERR_UNIT, 1,
+                 "The %s function can only act upon dimensionless inputs. Supplied inputs have dimensions of <%s>, "
+                 "<%s> and <%s>.",
+                 f->description, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0),
+                 ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0), ppl_printUnit(c, &in[2], NULL, NULL, 2, 1, 0));
+    else funcFail(f, ERR_UNIT, 1, "The %s function can only act upon dimensionless inputs.", f->description);
+    return 1;
+}
+
+//! ppl_funcCheckDimensionsMatch - Check that the first two arguments of a built-in function have the same dimensions
+//! \param [in] f - The call to the built-in function
+//! \return Zero if the dimensions match, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckDimensionsMatch(pplFuncCall *f) {
+    ppl_context *c = f->c;
+    const pplObj *in = f->in;
+    if ((in[0].dimensionless && in[1].dimensionless) || ppl_unitsDimEqual(&in[0], &in[1])) return 0;
+    funcFail(f, ERR_UNIT, 1,
+             "The %s function can only act upon inputs with matching dimensions. Supplied inputs have dimensions of "
+             "<%s> and <%s>.",
+             f->description, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0),
+             ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0));
+    return 1;
+}
+
+//! ppl_funcCheckLong - Check that an argument of a built-in function is a real number in the range 0 <= x < LONG_MAX
+//! \param [in] f - The call to the built-in function
+//! \param [in] x - The argument to check
+//! \param [in] var - The name of the argument, used in error messages
+//! \param [in] description - What the argument must be, e.g. "function's argument must be an integer"
+//! \return Zero if the argument is acceptable, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckLong(pplFuncCall *f, const pplObj *x, const char *var, const char *description) {
+    if ((!x->flagComplex) && (x->real >= 0) && (x->real < LONG_MAX)) return 0;
+    funcFail(f, ERR_RANGE, 0, "The %s %s in the range 0 <= %s < %ld.", f->description, description, var, LONG_MAX);
+    return 1;
+}
+
+//! ppl_funcCheckInt - Check that an argument of a built-in function is a real number in the range 0 <= x < INT_MAX
+//! \param [in] f - The call to the built-in function
+//! \param [in] x - The argument to check
+//! \param [in] var - The name of the argument, used in error messages
+//! \param [in] description - What the argument must be, e.g. "function's argument must be an integer"
+//! \return Zero if the argument is acceptable, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckInt(pplFuncCall *f, const pplObj *x, const char *var, const char *description) {
+    if ((!x->flagComplex) && (x->real >= 0) && (x->real < INT_MAX)) return 0;
+    funcFail(f, ERR_RANGE, 0, "The %s %s in the range 0 <= %s < %d.", f->description, description, var, INT_MAX);
+    return 1;
+}
+
+//! ppl_funcCheckSignedInt - Check that an argument of a built-in function is in the range INT_MIN < x < INT_MAX
+//! \param [in] f - The call to the built-in function
+//! \param [in] x - The argument to check
+//! \param [in] var - The name of the argument, used in error messages
+//! \param [in] description - What the argument must be, e.g. "function's argument must be an integer"
+//! \return Zero if the argument is acceptable, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckSignedInt(pplFuncCall *f, const pplObj *x, const char *var, const char *description) {
+    if ((x->real > INT_MIN) && (x->real < INT_MAX)) return 0;
+    funcFail(f, ERR_RANGE, 0, "The %s %s in the range %d <= %s < %d.", f->description, description, INT_MIN, var,
+             INT_MAX);
+    return 1;
+}
+
+//! ppl_funcCheckRealDimensionlessFinite - Check that an argument of a built-in function is real, dimensionless and
+//! finite
+//! \param [in] f - The call to the built-in function
+//! \param [in] x - The argument to check
+//! \param [in] var - The name of the argument, used in error messages
+//! \return Zero if the argument is acceptable, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckRealDimensionlessFinite(pplFuncCall *f, const pplObj *x, const char *var) {
+    if (x->flagComplex) {
+        funcFail(f, ERR_TYPE, 0, "The %s requires real arguments; argument %s is complex.", f->description, var);
+        return 1;
+    }
+    if (!x->dimensionless) {
+        funcFail(f, ERR_TYPE, 0, "The %s requires dimensionless arguments; argument %s has dimensions of <%s>.",
+                 f->description, var, ppl_printUnit(f->c, x, NULL, NULL, 1, 1, 0));
+        return 1;
+    }
+    if ((!gsl_finite(x->real)) || (!gsl_finite(x->imag))) {
+        funcFail(f, ERR_TYPE, 0, "The %s requires finite arguments; argument %s is not finite.", f->description, var);
+        return 1;
+    }
+    return 0;
+}
+
+//! ppl_funcCheckUnit - Check that an argument of a built-in function is either dimensionless, or has dimensions of a
+//! given power of one base unit, e.g. length
+//! \param [in] f - The call to the built-in function
+//! \param [in] x - The argument to check
+//! \param [in] description - A description of the argument, e.g. "first", used in error messages
+//! \param [in] unitName - A description of the dimensions required, e.g. "a length", used in error messages
+//! \param [in] unit - The base unit, e.g. UNIT_LENGTH
+//! \param [in] power - The power of the base unit required
+//! \return Zero if the argument is acceptable, or nonzero if not (and this has been reported)
+
+int ppl_funcCheckUnit(pplFuncCall *f, const pplObj *x, const char *description, const char *unitName, const int unit,
+                      const int power) {
+    int i;
+    if (x->dimensionless) return 0;
+    for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+        if (x->exponent[i] != power * (i == unit)) {
+            funcFail(f, ERR_UNIT, 1,
+                     "The %s argument to the %s function must be %s. Supplied input has dimensions of <%s>.",
+                     description, f->description, unitName, ppl_printUnit(f->c, x, NULL, NULL, 1, 1, 0));
+            return 1;
+        }
+    return 0;
+}
+
+//! ppl_funcSetComplexOutput - Set the result of a built-in function to a GSL complex number, marking it as real if
+//! its imaginary part is zero
+//! \param [out] out - The result of the built-in function
+//! \param [in] z - The value to set
+
+void ppl_funcSetComplexOutput(pplObj *out, const gsl_complex z) {
+    out->real = GSL_REAL(z);
+    out->imag = GSL_IMAG(z);
+    out->flagComplex = !ppl_dblEqual(out->imag, 0);
+    if (!out->flagComplex) out->imag = 0.0;
+}
+
+//! ppl_funcSetOutputUnit - Give the result of a built-in function the dimensions of a base unit. Angles are left
+//! dimensionless if the user has asked for angles to be dimensionless (set unit angle nodimensionless).
+//! \param [in] c - The Pyxplot context
+//! \param [out] out - The result of the built-in function
+//! \param [in] unit - The base unit, e.g. UNIT_ANGLE
+
+void ppl_funcSetOutputUnit(ppl_context *c, pplObj *out, const int unit) {
+    out->dimensionless = ((unit == UNIT_ANGLE) && (c->set->term_current.UnitAngleDimless == SW_ONOFF_ON));
+    if (!out->dimensionless) out->exponent[unit] = 1;
+}
 
 
 //! ppl_addMagicFunction - Add a "magic" function, such as diff_d or int_d, to a namespace. Magic functions are
@@ -181,15 +428,14 @@ void ppl_addSystemMethod(dict *n, char *name, const int minArgs, const int maxAr
 
 void pplfunc_abs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "abs(z)";
-    IF_1COMPLEX {
-        OUTPUT.real = hypot(in[0].real, in[0].imag);
-    }
-    ELSE_REAL {
-        OUTPUT.real = fabs(in[0].real);
-    }
-    ENDIF;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if ((in[0].flagComplex)) {
+        { OUTPUT.real = hypot(in[0].real, in[0].imag); }
+    } else {
+        { OUTPUT.real = fabs(in[0].real); }
+    };
     ppl_unitsDimCpy(&OUTPUT, in);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_acos - Implement the function acos(z) in the default namespace, which returns the arccosine of z
@@ -203,18 +449,19 @@ void pplfunc_abs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_acos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acos(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_arccos(z);
-    }
-    ELSE_REAL {
-        z = gsl_complex_arccos_real(in[0].real);
-    }
-    ENDIF;
-    CLEANUP_GSLCOMPLEX;
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_arccos(z);
+        }
+    } else {
+        { z = gsl_complex_arccos_real(in[0].real); }
+    };
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_acosh - Implement the function acosh(z) in the default namespace, which returns the hyperbolic arccosine of
@@ -229,16 +476,17 @@ void pplfunc_acos(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_acosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acosh(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_arccosh(z);
-    }
-    ELSE_REAL {
-        z = gsl_complex_arccosh_real(in[0].real);
-    }
-    ENDIF;
-    CHECK_OUTPUT_OKAY;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_arccosh(z);
+        }
+    } else {
+        { z = gsl_complex_arccosh_real(in[0].real); }
+    };
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_acot - Implement the function acot(z) in the default namespace, which returns the arccotangent of z
@@ -252,12 +500,13 @@ void pplfunc_acosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_acot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acot(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_arccot(z);
-    CLEANUP_GSLCOMPLEX;
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_acoth - Implement the function acoth(z) in the default namespace, which returns the hyperbolic arccotangent
@@ -272,11 +521,12 @@ void pplfunc_acot(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_acoth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acoth(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_arccoth(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_acsc - Implement the function acsc(z) in the default namespace, which returns the arccosecant of z
@@ -290,18 +540,19 @@ void pplfunc_acoth(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_acsc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acsc(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_arccsc(z);
-    }
-    ELSE_REAL {
-        z = gsl_complex_arccsc_real(in[0].real);
-    }
-    ENDIF;
-    CLEANUP_GSLCOMPLEX;
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_arccsc(z);
+        }
+    } else {
+        { z = gsl_complex_arccsc_real(in[0].real); }
+    };
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_acsch - Implement the function acsch(z) in the default namespace, which returns the hyperbolic arccosecant
@@ -316,11 +567,12 @@ void pplfunc_acsc(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_acsch(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "acsch(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_arccsch(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_airy_ai - Implement the function airy_ai(z) in the default namespace, which returns the Airy function Ai
@@ -335,6 +587,7 @@ void pplfunc_acsch(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_airy_ai(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_ai(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
     airy_ai(zi, &z, status, errText);
@@ -342,8 +595,8 @@ void pplfunc_airy_ai(ppl_context *c, pplObj *in, const int nArgs, int *status, i
         *errType = ERR_NUMERICAL;
         return;
     }
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_airy_ai_diff - Implement the function airy_ai_diff(z) in the default namespace, which returns the first
@@ -358,6 +611,7 @@ void pplfunc_airy_ai(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_ai_diff(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
     airy_ai_diff(zi, &z, status, errText);
@@ -365,8 +619,8 @@ void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
         *errType = ERR_NUMERICAL;
         return;
     }
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_airy_bi - Implement the function airy_bi(z) in the default namespace, which returns the Airy function Bi
@@ -381,6 +635,7 @@ void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_airy_bi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_bi(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
     airy_bi(zi, &z, status, errText);
@@ -388,8 +643,8 @@ void pplfunc_airy_bi(ppl_context *c, pplObj *in, const int nArgs, int *status, i
         *errType = ERR_NUMERICAL;
         return;
     }
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_airy_bi_diff - Implement the function airy_bi_diff(z) in the default namespace, which returns the first
@@ -404,6 +659,7 @@ void pplfunc_airy_bi(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "airy_bi_diff(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
     airy_bi_diff(zi, &z, status, errText);
@@ -411,8 +667,8 @@ void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
         *errType = ERR_NUMERICAL;
         return;
     }
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_arg - Implement the function arg(z) in the default namespace, which returns the argument of the complex
@@ -427,11 +683,12 @@ void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_arg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "arg(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     OUTPUT.real = gsl_complex_arg(z);
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_asec - Implement the function asec(z) in the default namespace, which returns the arcsecant of z
@@ -445,18 +702,19 @@ void pplfunc_arg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_asec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asec(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_arcsec(z);
-    }
-    ELSE_REAL {
-        z = gsl_complex_arcsec_real(in[0].real);
-    }
-    ENDIF;
-    CLEANUP_GSLCOMPLEX;
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_arcsec(z);
+        }
+    } else {
+        { z = gsl_complex_arcsec_real(in[0].real); }
+    };
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_asech - Implement the function asech(z) in the default namespace, which returns the hyperbolic arcsecant of
@@ -471,11 +729,12 @@ void pplfunc_asec(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_asech(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asech(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_arcsech(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_asin - Implement the function asin(z) in the default namespace, which returns the arcsine of z
@@ -489,18 +748,19 @@ void pplfunc_asech(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_asin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asin(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_arcsin(z);
-    }
-    ELSE_REAL {
-        z = gsl_complex_arcsin_real(in[0].real);
-    }
-    ENDIF;
-    CLEANUP_GSLCOMPLEX;
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_arcsin(z);
+        }
+    } else {
+        { z = gsl_complex_arcsin_real(in[0].real); }
+    };
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_asinh - Implement the function asinh(z) in the default namespace, which returns the hyperbolic arcsine of z
@@ -514,11 +774,12 @@ void pplfunc_asin(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_asinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "asinh(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_arcsinh(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_atan - Implement the function atan(z) in the default namespace, which returns the arctangent of z
@@ -532,12 +793,13 @@ void pplfunc_asinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_atan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atan(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_arctan(z);
-    CLEANUP_GSLCOMPLEX;
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_atanh - Implement the function atanh(z) in the default namespace, which returns the hyperbolic arctangent of
@@ -552,17 +814,18 @@ void pplfunc_atan(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_atanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atanh(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_arctanh(z);
-    }
-    ELSE_REAL {
-        z = gsl_complex_arctanh_real(in[0].real);
-    }
-    ENDIF;
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_arctanh(z);
+        }
+    } else {
+        { z = gsl_complex_arctanh_real(in[0].real); }
+    };
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_atan2 - Implement the function atan2(x,y) in the default namespace, which returns the arctangent of x/y.
@@ -578,10 +841,11 @@ void pplfunc_atanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_atan2(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "atan2(x,y)";
-    CHECK_2INPUT_DIMMATCH;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = atan2(in[0].real, in[1].real);
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_besseli - Implement the function besseli(l,x) in the default namespace, which evaluates the lth regular
@@ -596,9 +860,10 @@ void pplfunc_atan2(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_besseli(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besseli(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_il_scaled((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_besselI - Implement the function besselI(l,x) in the default namespace, which evaluates the lth regular
@@ -613,9 +878,10 @@ void pplfunc_besseli(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_besselI(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselI(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_In((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_besselj - Implement the function besselj(l,x) in the default namespace, which evaluates the lth regular
@@ -630,9 +896,10 @@ void pplfunc_besselI(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_besselj(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselj(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_jl((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_besselJ - Implement the function besselJ(l,x) in the default namespace, which evaluates the lth regular
@@ -647,9 +914,10 @@ void pplfunc_besselj(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_besselJ(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselJ(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_Jn((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_besselk - Implement the function besselk(l,x) in the default namespace, which evaluates the lth irregular
@@ -664,9 +932,10 @@ void pplfunc_besselJ(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_besselk(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselk(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_kl_scaled((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_besselK - Implement the function besselK(l,x) in the default namespace, which evaluates the lth irregular
@@ -681,9 +950,10 @@ void pplfunc_besselk(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_besselK(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselK(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_Kn((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_bessely - Implement the function bessely(l,x) in the default namespace, which evaluates the lth irregular
@@ -698,9 +968,10 @@ void pplfunc_besselK(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_bessely(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "bessely(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_yl((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_besselY - Implement the function besselY(l,x) in the default namespace, which evaluates the lth irregular
@@ -715,9 +986,10 @@ void pplfunc_bessely(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_besselY(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "besselY(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function can only evaluate integer-order Bessel functions");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_Yn((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_beta - Implement the function beta(a,b) in the default namespace, which evaluates the beta function B(a,b)
@@ -731,8 +1003,9 @@ void pplfunc_besselY(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_beta(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "beta(a,b)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_beta(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_call - Implement the function call(f,a) in the default namespace, which calls the function f with the
@@ -838,8 +1111,9 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_ceil(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ceil(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = ceil(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_chr - Implement the function chr(x) in the default namespace, which returns the character with ASCII code x
@@ -853,8 +1127,9 @@ void pplfunc_ceil(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_chr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chr(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     char *out;
-    CHECK_NEEDINT(in[0], "s", "function can only evaluate integer ASCII codes");
+    if (ppl_funcCheckInt(&call, &in[0], "s", "function can only evaluate integer ASCII codes")) return;
     out = (char *) malloc(2);
     if (out == NULL) {
         *status = 1;
@@ -922,9 +1197,10 @@ void pplfunc_cmyk(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_conjugate(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "conjugate(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     memcpy(&OUTPUT, in, sizeof(pplObj));
     OUTPUT.imag *= -1;
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_copy - Implement the function copy(x) in the default namespace, which returns a copy of the data structure
@@ -953,19 +1229,19 @@ void pplfunc_copy(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_cos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cos(x)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_cos(z);
-        CLEANUP_GSLCOMPLEX;
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_cos(z);
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = cos(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = cos(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_cosh - Implement the function cosh(x) in the default namespace, which returns the hyperbolic cosine of x. x
@@ -980,19 +1256,19 @@ void pplfunc_cos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_cosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cosh(x)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_cosh(z);
-        CLEANUP_GSLCOMPLEX;
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_cosh(z);
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = cosh(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = cosh(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_cot - Implement the function cot(x) in the default namespace, which returns the cotangent of x. If x is
@@ -1007,13 +1283,13 @@ void pplfunc_cosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_cot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "cot(x)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_cot(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_coth - Implement the function coth(x) in the default namespace, which returns the hyperbolic cotangent of x.
@@ -1028,13 +1304,13 @@ void pplfunc_cot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_coth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "coth(x)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_coth(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_cross - Implement the function cross(a,b) in the default namespace, which returns the vector cross product
@@ -1117,13 +1393,13 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_csc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "csc(x)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_csc(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_csch - Implement the function csch(x) in the default namespace, which returns the hyperbolic cosecant of x.
@@ -1138,13 +1414,13 @@ void pplfunc_csc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_csch(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "csch(x)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_csch(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_deepcopy - Implement the function deepcopy(x) in the default namespace, which returns a deep copy of the
@@ -1173,10 +1449,10 @@ void pplfunc_deepcopy(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_degrees(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "degrees(x)";
-    int i;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     OUTPUT.real = ppl_degs(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_ellK - Implement the function ellipticintK(k) in the default namespace, which evaluates the complete
@@ -1191,8 +1467,9 @@ void pplfunc_degrees(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_ellK(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintK(k)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_ellint_Kcomp(in[0].real, GSL_PREC_DOUBLE);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_ellE - Implement the function ellipticintE(k) in the default namespace, which evaluates the complete
@@ -1207,8 +1484,9 @@ void pplfunc_ellK(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_ellE(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintE(k)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_ellint_Ecomp(in[0].real, GSL_PREC_DOUBLE);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_ellP - Implement the function ellipticintP(k,n) in the default namespace, which evaluates the complete
@@ -1223,8 +1501,9 @@ void pplfunc_ellE(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_ellP(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ellipticintP(k,n)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_ellint_Pcomp(in[0].real, in[1].real, GSL_PREC_DOUBLE);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_erf - Implement the function erf(x) in the default namespace, which evaluates the error function at x
@@ -1238,8 +1517,9 @@ void pplfunc_ellP(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_erf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "erf(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_erf(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_erfc - Implement the function erfc(x) in the default namespace, which evaluates the complimentary error
@@ -1254,8 +1534,9 @@ void pplfunc_erf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_erfc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "erfc(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_erfc(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_eval - Implement the function eval(s) in the default namespace, which evaluates the string expression s and
@@ -1325,19 +1606,19 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_exp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "exp(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "dimensionless or an angle", UNIT_ANGLE, 1);
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_exp(z);
-        CLEANUP_GSLCOMPLEX;
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "dimensionless or an angle", UNIT_ANGLE, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_exp(z);
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = exp(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = exp(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_expm1 - Implement the function expm1(x) in the default namespace, which accurately evaluates exp(x)-1
@@ -1351,10 +1632,10 @@ void pplfunc_exp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_expm1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "expm1(x)";
-    int i;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "dimensionless or an angle", UNIT_ANGLE, 1);
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "dimensionless or an angle", UNIT_ANGLE, 1)) return;
     OUTPUT.real = expm1(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_expint - Implement the function expint(n,x) in the default namespace, which evaluates the integral of
@@ -1369,9 +1650,10 @@ void pplfunc_expm1(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_expint(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "expint(n,x)";
-    CHECK_NEEDSINT(in[0], "n", "function's first argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckSignedInt(&call, &in[0], "n", "function's first argument must be")) return;
     OUTPUT.real = gsl_sf_expint_En((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_factors - Implement the function factors(x) in the default namespace, which returns a list of the factors of
@@ -1389,7 +1671,8 @@ void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     list *l;
     int i, n = (int) in[0].real;
     char *FunctionDescription = "factors(x)";
-    CHECK_NEEDINT(in[0], "x", "function's argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1437,8 +1720,9 @@ void pplfunc_finite(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_floor(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "floor(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = floor(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_gamma - Implement the function gamma(x) in the default namespace, which evaluates the gamma function at x
@@ -1452,8 +1736,9 @@ void pplfunc_floor(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_gamma(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gamma(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_gamma(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_gcd - Implement the function gcd(x,...) in the default namespace, which returns the greatest common divisor
@@ -1468,15 +1753,16 @@ void pplfunc_gamma(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_gcd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gcd(x,...)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int i, out;
     for (i = 0; i < nArgs; i++) {
         if (round(in[i].real) < 1) in[i].real = -1;
-        CHECK_NEEDINT(in[i], "x", "function's requires arguments to be");
+        if (ppl_funcCheckInt(&call, &in[i], "x", "function's requires arguments to be")) return;
     }
     out = ppl_gcd((int) round(in[0].real), (int) round(in[1].real));
     for (i = 2; i < nArgs; i++) out = ppl_gcd(out, (int) round(in[i].real));
     OUTPUT.real = out;
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_globals - Implement the function globals() in the default namespace, which returns a dictionary of all
@@ -1520,8 +1806,9 @@ void pplfunc_gray(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_heaviside(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "heaviside(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (in[0].real >= 0) OUTPUT.real = 1.0;
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_hsb - Implement the function hsb(h,s,b) in the default namespace, which returns a color with specified hue,
@@ -1550,8 +1837,9 @@ void pplfunc_hsb(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_0F1(c,x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_0F1(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_hyperg_1F1 - Implement the function hyperg_1F1(a,b,x) in the default namespace, which evaluates the
@@ -1566,8 +1854,9 @@ void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_hyperg_1F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_1F1(a,b,x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_1F1(in[0].real, in[1].real, in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_hyperg_2F0 - Implement the function hyperg_2F0(a,b,x) in the default namespace, which evaluates the
@@ -1582,8 +1871,9 @@ void pplfunc_hyperg_1F1(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_2F0(a,b,x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_2F0(in[0].real, in[1].real, in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_hyperg_2F1 - Implement the function hyperg_2F1(a,b,c,x) in the default namespace, which evaluates the Gauss
@@ -1598,8 +1888,9 @@ void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_hyperg_2F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_2F1(a,b,c,x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_2F1(in[0].real, in[1].real, in[2].real, in[3].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_hyperg_U - Implement the function hyperg_U(a,b,x) in the default namespace, which evaluates the confluent
@@ -1614,8 +1905,9 @@ void pplfunc_hyperg_2F1(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_hyperg_U(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hyperg_U(a,b,x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_U(in[0].real, in[1].real, in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_hypot - Implement the function hypot(x,...) in the default namespace, which returns the quadrature sum of
@@ -1630,6 +1922,7 @@ void pplfunc_hyperg_U(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "hypot(...)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int i;
     double acc = 0, *buffer;
     if (nArgs < 1) {
@@ -1660,7 +1953,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     free(buffer);
     buffer = NULL;
     OUTPUT.real = sqrt(acc);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimCpy(&OUTPUT, in);
 }
 
@@ -1676,6 +1969,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
 
 void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Im(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
@@ -1686,11 +1980,14 @@ void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                     FunctionDescription);
             return;
         } else {
-            NULL_OUTPUT;
+            {
+                ppl_funcNullOutput(&call);
+                return;
+            }
         }
     }
     OUTPUT.real = in[0].imag;
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimCpy(&OUTPUT, in);
 }
 
@@ -1706,6 +2003,7 @@ void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_cn(u,m)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     {
         double t1, t2, t3;
         if (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) {
@@ -1714,7 +2012,7 @@ void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status,
             OUTPUT.real = t2;
         }
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_jacobi_dn - Implement the function jacobi_dn(u,m) in the default namespace, which returns the Jacobi
@@ -1729,6 +2027,7 @@ void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_dn(u,m)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     {
         double t1, t2, t3;
         if (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) {
@@ -1737,7 +2036,7 @@ void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status,
             OUTPUT.real = t3;
         }
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_jacobi_sn - Implement the function jacobi_sn(u,m) in the default namespace, which returns the Jacobi
@@ -1752,6 +2051,7 @@ void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "jacobi_sn(u,m)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     {
         double t1, t2, t3;
         if (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) {
@@ -1760,7 +2060,7 @@ void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status,
             OUTPUT.real = t1;
         }
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_lambert_W0 - Implement the function lambert_W0(x) in the default namespace, which returns the principal
@@ -1775,8 +2075,9 @@ void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_lambert_W0(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lambert_W0(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_lambert_W0(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_lambert_W1 - Implement the function lambert_W1(x) in the default namespace, which returns the secondary
@@ -1791,8 +2092,9 @@ void pplfunc_lambert_W0(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_lambert_W1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lambert_W1(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_lambert_Wm1(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_lcm - Implement the function lcm(x,...) in the default namespace, which returns the lowest common multiple
@@ -1807,11 +2109,12 @@ void pplfunc_lambert_W1(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lcm(x,...)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int i, gcd, lcm_i, zero = 0;
     double lcm;
     for (i = 0; i < nArgs; i++) {
         if (round(in[i].real) < 1) zero = 1;
-        CHECK_NEEDINT(in[i], "x", "function's requires arguments to be");
+        if (ppl_funcCheckInt(&call, &in[i], "x", "function's requires arguments to be")) return;
     }
     if (zero) {
         OUTPUT.real = 0;
@@ -1826,7 +2129,10 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Integer overflow in the %s function.", FunctionDescription);
             return;
         } else {
-            NULL_OUTPUT;
+            {
+                ppl_funcNullOutput(&call);
+                return;
+            }
         }
     }
     lcm_i = (int) round(lcm);
@@ -1840,13 +2146,16 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Integer overflow in the %s function.", FunctionDescription);
                 return;
             } else {
-                NULL_OUTPUT;
+                {
+                    ppl_funcNullOutput(&call);
+                    return;
+                }
             }
         }
         lcm_i = (int) round(lcm);
     }
     OUTPUT.real = lcm;
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_ldexp - Implement the function ldexp(x,y) in the default namespace, which returns x times 2 to the power of
@@ -1861,9 +2170,10 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_ldexp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ldexp(x,y)";
-    CHECK_NEEDSINT(in[1], "y", "function's second argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckSignedInt(&call, &in[1], "y", "function's second argument must be")) return;
     OUTPUT.real = ldexp(in[0].real, (int) in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_legendreP - Implement the function legendreP(l,x) in the default namespace, which evaluates the lth Legendre
@@ -1878,9 +2188,10 @@ void pplfunc_ldexp(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_legendreP(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "legendreP(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function's first argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function's first argument must be")) return;
     OUTPUT.real = gsl_sf_legendre_Pl((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_legendreQ - Implement the function legendreQ(l,x) in the default namespace, which evaluates the lth Legendre
@@ -1895,9 +2206,10 @@ void pplfunc_legendreP(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_legendreQ(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "legendreQ(l,x)";
-    CHECK_NEEDINT(in[0], "l", "function's first argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "l", "function's first argument must be")) return;
     OUTPUT.real = gsl_sf_legendre_Ql((int) in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_len - Implement the function len(x) in the default namespace, which returns the length of the object x. The
@@ -1954,11 +2266,12 @@ void pplfunc_locals(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_log(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "log(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_log(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_log10 - Implement the function log10(x) in the default namespace, which returns the logarithm of x to base
@@ -1973,11 +2286,12 @@ void pplfunc_log(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_log10(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "log10(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_log10(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_logn - Implement the function logn(x,n) in the default namespace, which returns the logarithm of x to base n
@@ -1991,17 +2305,18 @@ void pplfunc_log10(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "logn(z,n)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     pplObj base;
     GSL_SET_COMPLEX(&z, in[1].real, in[1].imag);
     z = gsl_complex_log(z);
-    CLEANUP_GSLCOMPLEX;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
     base = OUTPUT;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_log(z);
-    CLEANUP_GSLCOMPLEX;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
     ppl_uaDiv(c, &OUTPUT, &base, &OUTPUT, status, errType, errText);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_lrange - Implement the function lrange([f],l,[s]) in the default namespace, which returns a vector of
@@ -2016,12 +2331,15 @@ void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lrange([f],l,[s])";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double start, end, step, n;
     int i;
-    if (nArgs > 1) { CHECK_2INPUT_DIMMATCH; }
+    if (nArgs > 1) {
+        if (ppl_funcCheckDimensionsMatch(&call)) return;
+    }
     if (nArgs > 2) {
         in++;
-        CHECK_2INPUT_DIMMATCH;
+        if (ppl_funcCheckDimensionsMatch(&call)) return;
         in--;
     }
 
@@ -2194,6 +2512,7 @@ void pplfunc_min(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "mod(x,y)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (in[0].real * ppl_machineEpsilon * 10 > in[1].real) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
@@ -2204,11 +2523,14 @@ void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
                     FunctionDescription);
             return;
         } else {
-            NULL_OUTPUT;
+            {
+                ppl_funcNullOutput(&call);
+                return;
+            }
         }
     }
     OUTPUT.real = fmod(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
@@ -2284,13 +2606,14 @@ void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_ordinal(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ordinal(n)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     char *out;
     int n = (int) ceil(fabs(log10(in[0].real)));
     int i = (int) in[0].real;
     if (in[0].real < 0) in[0].real = GSL_NAN;
     if (n < 2) n = 2;
     if (n > 64) in[0].real = GSL_NAN;
-    CHECK_NEEDINT(in[0], "n", "function's input must be an integer");
+    if (ppl_funcCheckInt(&call, &in[0], "n", "function's input must be an integer")) return;
     out = (char *) malloc(n + 8);
     if (out == NULL) {
         *status = 1;
@@ -2331,7 +2654,8 @@ void pplfunc_pow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_prime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "prime(x)";
-    CHECK_NEEDINT(in[0], "x", "function's argument must be an integer in the range");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be an integer in the range")) return;
     pplObjBool(&OUTPUT, 0, 0);
     {
         long x = floor(in[0].real), m, n;
@@ -2351,7 +2675,7 @@ void pplfunc_prime(ppl_context *c, pplObj *in, const int nArgs, int *status, int
         }
         OUTPUT.real = 1;
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_primefactors - Implement the function primeFactors(x) in the default namespace, which returns a list of the
@@ -2369,7 +2693,8 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
     list *l;
     int i, n = (int) in[0].real;
     char *FunctionDescription = "primeFactors(x)";
-    CHECK_NEEDINT(in[0], "x", "function's argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
     if (in[0].real < 1) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
@@ -2378,7 +2703,10 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
                               FunctionDescription, INT_MAX);
             return;
         } else {
-            NULL_OUTPUT;
+            {
+                ppl_funcNullOutput(&call);
+                return;
+            }
         }
     }
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
@@ -2429,14 +2757,14 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_radians(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "radians(x)";
-    int i;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     if (in[0].dimensionless) {
         OUTPUT.real = ppl_rads(in[0].real);
     } else {
         OUTPUT.real = in[0].real;
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_raise - Implement the function raise(e,s) in the default namespace, which raises the exception e, with error
@@ -2494,12 +2822,15 @@ void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "range([f],l,[s])";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double start, end, step, n;
     int i;
-    if (nArgs > 1) { CHECK_2INPUT_DIMMATCH; }
+    if (nArgs > 1) {
+        if (ppl_funcCheckDimensionsMatch(&call)) return;
+    }
     if (nArgs > 2) {
         in++;
-        CHECK_2INPUT_DIMMATCH;
+        if (ppl_funcCheckDimensionsMatch(&call)) return;
         in--;
     }
 
@@ -2546,8 +2877,9 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_real(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Re(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = in[0].real;
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
@@ -2577,12 +2909,13 @@ void pplfunc_rgb(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "romanNumeral(n)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     char *h[] = {"", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"};
     char *t[] = {"", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"};
     char *o[] = {"", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"};
     char *out;
     int n, p = 0;
-    CHECK_NEEDINT(in[0], "n", "function's input must be an integer");
+    if (ppl_funcCheckInt(&call, &in[0], "n", "function's input must be an integer")) return;
     if ((in[0].real < 1) || (in[0].real > 10000)) {
         *status = 1;
         *errType = ERR_RANGE;
@@ -2626,9 +2959,10 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     pplObj x1, x2;
     double tmpdbl;
     char *FunctionDescription = "root(z,n)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     unsigned char negated = 0;
     in++;
-    CHECK_1INPUT_DIMLESS; // THIS IS CORRECT. Only check in[1]
+    if (ppl_funcCheckDimensionless(&call, 1)) return; // THIS IS CORRECT. Only check in[1]
     in--;
     if ((in[1].flagComplex) || (in[1].real < 2) || (in[1].real >= INT_MAX)) {
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
@@ -2637,7 +2971,10 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                               "function's second argument must be an integer in the range", INT_MAX);
             return;
         } else {
-            NULL_OUTPUT;
+            {
+                ppl_funcNullOutput(&call);
+                return;
+            }
         }
     }
     x1 = in[0];
@@ -2655,7 +2992,10 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
             if (OUTPUT.imag != 0.0) OUTPUT.imag = -OUTPUT.imag;
         } else {
             if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
-                QUERY_OUT_OF_RANGE;
+                {
+                    ppl_funcUndefined(&call);
+                    return;
+                }
             } else {
                 tmpdbl = OUTPUT.imag;
                 OUTPUT.imag = OUTPUT.real;
@@ -2666,7 +3006,7 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
             }
         }
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_round - Implement the function round(x) in the default namespace, which returns the nearest integer value to
@@ -2681,8 +3021,9 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_round(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "round(x)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = round(in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_sec - Implement the function sec(x) in the default namespace, which returns the secant of x. If x is
@@ -2697,13 +3038,13 @@ void pplfunc_round(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_sec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sec(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_sec(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_sech - Implement the function sech(x) in the default namespace, which returns the hyperbolic secant of x. x
@@ -2718,13 +3059,13 @@ void pplfunc_sec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_sech(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sech(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_sech(z);
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_sgn - Implement the function sgn(x) in the default namespace, which returns 1 if x is greater than zero, -1
@@ -2753,19 +3094,19 @@ void pplfunc_sgn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_sin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sin(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_sin(z);
-        CLEANUP_GSLCOMPLEX;
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_sin(z);
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = sin(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = sin(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_sinc - Implement the function sinc(x) in the default namespace, which returns the function sin(pi*x)/(pi*x).
@@ -2780,24 +3121,24 @@ void pplfunc_sin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_sinc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sinc(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     if ((in[0].real == 0) && (in[0].imag == 0)) {
         OUTPUT.real = 1.0;
     } else {
-        IF_1COMPLEX {
-            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-            z = gsl_complex_sin(z);
-            CLEANUP_GSLCOMPLEX;
-            ppl_uaDiv(c, &OUTPUT, &in[0], &OUTPUT, status, errType, errText);
+        if ((in[0].flagComplex)) {
+            {
+                GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+                z = gsl_complex_sin(z);
+                ppl_funcSetComplexOutput(&OUTPUT, z);
+                ppl_uaDiv(c, &OUTPUT, &in[0], &OUTPUT, status, errType, errText);
+            }
+        } else {
+            { OUTPUT.real = sin(in[0].real) / in[0].real; }
         }
-        ELSE_REAL {
-            OUTPUT.real = sin(in[0].real) / in[0].real;
-        }
-        ENDIF
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_sinh - Implement the function sinh(x) in the default namespace, which returns the hyperbolic sine of x. x
@@ -2812,19 +3153,19 @@ void pplfunc_sinc(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sinh(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_sinh(z);
-        CLEANUP_GSLCOMPLEX;
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_sinh(z);
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = sinh(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = sinh(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_sqrt - Implement the function sqrt(x) in the default namespace, which returns the square root of x
@@ -2838,18 +3179,19 @@ void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_sqrt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sqrt(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int i;
     gsl_complex z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_sqrt(z);
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_sqrt(z);
+        }
+    } else {
+        { z = gsl_complex_sqrt_real(in[0].real); }
     }
-    ELSE_REAL {
-        z = gsl_complex_sqrt_real(in[0].real);
-    }
-    ENDIF
-    CLEANUP_GSLCOMPLEX;
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetComplexOutput(&OUTPUT, z);
+    if (ppl_funcCheckOutput(&call)) return;
     OUTPUT.dimensionless = in[0].dimensionless;
     OUTPUT.tempType = in[0].tempType;
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] = in[0].exponent[i] / 2;
@@ -2953,19 +3295,19 @@ void pplfunc_sum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_tan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tan(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_tan(z);
-        CLEANUP_GSLCOMPLEX;
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_tan(z);
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = tan(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = tan(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_tanh - Implement the function tanh(x) in the default namespace, which returns the hyperbolic tangent of x. x
@@ -2980,19 +3322,19 @@ void pplfunc_tan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_tanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tanh(z)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "an angle", UNIT_ANGLE, 1);
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
-        z = gsl_complex_tanh(z);
-        CLEANUP_GSLCOMPLEX;
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
+            z = gsl_complex_tanh(z);
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = tanh(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = tanh(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_texify - Implement the function texify(str) in the default namespace, which converts an algebraic
@@ -3098,7 +3440,8 @@ void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int 
 
 void pplfunc_tophat(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tophat(x,sigma)";
-    CHECK_2INPUT_DIMMATCH;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckDimensionsMatch(&call)) return;
     if (fabs(in[0].real) <= fabs(in[1].real)) OUTPUT.real = 1.0;
 }
 
@@ -3129,10 +3472,11 @@ void pplfunc_typeOf(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "zernike(n,m,r,phi)";
-    CHECK_3INPUT_DIMLESS;
-    CHECK_NEEDINT(in[0], "n", "function can only evaluate Zernike polynomials");
-    CHECK_NEEDSINT(in[1], "m", "function can only evaluate Zernike polynomials");
-    CHECK_DIMLESS_OR_HAS_UNIT(in[3], "fourth", "an angle", UNIT_ANGLE, 1);
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckDimensionless(&call, 3)) return;
+    if (ppl_funcCheckInt(&call, &in[0], "n", "function can only evaluate Zernike polynomials")) return;
+    if (ppl_funcCheckSignedInt(&call, &in[1], "m", "function can only evaluate Zernike polynomials")) return;
+    if (ppl_funcCheckUnit(&call, &in[3], "fourth", "an angle", UNIT_ANGLE, 1)) return;
     {
         int n, m, ms, sgn = 1;
         double r;
@@ -3148,7 +3492,10 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, i
                                   FunctionDescription);
                 return;
             } else {
-                NULL_OUTPUT;
+                {
+                    ppl_funcNullOutput(&call);
+                    return;
+                }
             }
         }
         if ((r < 0) || (r > 1)) {
@@ -3165,7 +3512,7 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, i
             else if (ms < 0) OUTPUT.real *= sin(m * in[3].real);
         }
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_zernikeR - Implement the function zernikeR(n,m,r) in the default namespace, which evaluates the (n,m)th
@@ -3181,8 +3528,9 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
     char *FunctionDescription = "zernikeR(n,m,r)";
-    CHECK_NEEDINT(in[0], "n", "function can only evaluate Zernike polynomials");
-    CHECK_NEEDSINT(in[1], "m", "function can only evaluate Zernike polynomials");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "n", "function can only evaluate Zernike polynomials")) return;
+    if (ppl_funcCheckSignedInt(&call, &in[1], "m", "function can only evaluate Zernike polynomials")) return;
     {
         int n, m, ms, sgn = 1;
         double r;
@@ -3198,7 +3546,10 @@ void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, 
                                   FunctionDescription);
                 return;
             } else {
-                NULL_OUTPUT;
+                {
+                    ppl_funcNullOutput(&call);
+                    return;
+                }
             }
         }
         if ((r < 0) || (r > 1)) {
@@ -3214,7 +3565,7 @@ void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, 
             }
         }
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_zeta - Implement the function zeta(x) in the default namespace, which evaluates the Riemann zeta function at
@@ -3229,16 +3580,17 @@ void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_zeta(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "zeta(z)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
-    IF_1COMPLEX {
-        GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
-        riemann_zeta_complex(zi, &z, status, errText);
-        if (*status) return;
-        CLEANUP_GSLCOMPLEX;
+    if ((in[0].flagComplex)) {
+        {
+            GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
+            riemann_zeta_complex(zi, &z, status, errText);
+            if (*status) return;
+            ppl_funcSetComplexOutput(&OUTPUT, z);
+        }
+    } else {
+        { OUTPUT.real = gsl_sf_zeta(in[0].real); }
     }
-    ELSE_REAL {
-        OUTPUT.real = gsl_sf_zeta(in[0].real);
-    }
-    ENDIF
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }

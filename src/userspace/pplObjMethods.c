@@ -41,7 +41,7 @@
 #include "coreUtils/dict.h"
 
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 #include "expressions/expEval.h"
 #include "expressions/traceback_fns.h"
@@ -3802,7 +3802,7 @@ static void pplmethod_fileGetpos(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
     pplObjNum(&OUTPUT, 0, fp * 8, 0);
-    CLEANUP_APPLYUNIT(UNIT_BIT);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_BIT);
 }
 
 //! pplmethod_fileIsOpen - Implement the isOpen() method of file handles, which returns a boolean flag indicating
@@ -3978,10 +3978,10 @@ static void pplmethod_fileReadlines(ppl_context *c, pplObj *in, const int nArgs,
 static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     char FunctionDescription[] = "setPos(x)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     long int fp = (long int) in[0].real;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a number of bytes", UNIT_BIT, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "a number of bytes", UNIT_BIT, 1)) return;
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
@@ -4001,7 +4001,7 @@ static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
     pplObjNum(&OUTPUT, 0, fp * 8, 0);
-    CLEANUP_APPLYUNIT(UNIT_BIT);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_BIT);
 }
 
 //! pplmethod_fileWrite - Implement the write(x) method of file handles, which writes the string x to a file

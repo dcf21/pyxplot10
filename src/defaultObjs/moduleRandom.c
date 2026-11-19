@@ -48,7 +48,7 @@
 
 #include "defaultObjs/moduleRandom.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 static gsl_rng *rndgen = NULL; // Random number generator
 
@@ -91,13 +91,14 @@ void pplfunc_frandom(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomial(p,n)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
     }
-    CHECK_NEEDINT(in[1], "n", "function's second argument must be an integer in the range");
+    if (ppl_funcCheckInt(&call, &in[1], "n", "function's second argument must be an integer in the range")) return;
     OUTPUT.real = gsl_ran_binomial(rndgen, in[0].real, (unsigned int) in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_frandomcs - Implement the function random.chisq(nu) in the random module, which returns a random sample from
@@ -112,12 +113,13 @@ void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisq(nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
     }
     OUTPUT.real = gsl_ran_chisq(rndgen, in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_frandomg - Implement the function random.gaussian(sigma) in the random module, which returns a random sample
@@ -132,12 +134,13 @@ void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussian(sigma)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
     }
     OUTPUT.real = gsl_ran_gaussian(rndgen, in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_frandomln - Implement the function random.lognormal(zeta,sigma) in the random module, which returns a random
@@ -152,15 +155,16 @@ void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormal(zeta,sigma)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
     }
     in++;
-    CHECK_1INPUT_DIMLESS; // THIS IS CORRECT. Only check in[1]
+    if (ppl_funcCheckDimensionless(&call, 1)) return; // THIS IS CORRECT. Only check in[1]
     in--;
     OUTPUT.real = gsl_ran_lognormal(rndgen, in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
@@ -176,12 +180,13 @@ void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poisson(n)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
     }
     OUTPUT.real = gsl_ran_poisson(rndgen, in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_frandomt - Implement the function random.tdist(nu) in the random module, which returns a random sample from
@@ -196,10 +201,11 @@ void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_frandomt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdist(nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
     }
     OUTPUT.real = gsl_ran_tdist(rndgen, in[0].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }

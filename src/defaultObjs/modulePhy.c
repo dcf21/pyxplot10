@@ -43,7 +43,7 @@
 
 #include "defaultObjs/modulePhy.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 //! pplfunc_planck_Bv - Implement the function phy.Bv(nu,T) in the phy module, which returns the power emitted by a
 //! blackbody of temperature T per unit area, per unit solid angle, per unit frequency
@@ -57,11 +57,11 @@
 
 void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Bv(nu,T)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj kelvin;
 
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a frequency", UNIT_TIME, -1);
-    CHECK_DIMLESS_OR_HAS_UNIT(in[1], "second", "a temperature", UNIT_TEMPERATURE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "a frequency", UNIT_TIME, -1)) return;
+    if (ppl_funcCheckUnit(&call, &in[1], "second", "a temperature", UNIT_TEMPERATURE, 1)) return;
     pplObjNum(&kelvin, 0, 1, 0);
     kelvin.exponent[UNIT_TEMPERATURE] = 1;
     kelvin.tempType = 1;
@@ -73,7 +73,7 @@ void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status,
     OUTPUT.exponent[UNIT_ANGLE] = -2;
     OUTPUT.real = 2 * GSL_CONST_MKSA_PLANCKS_CONSTANT_H / pow(GSL_CONST_MKSA_SPEED_OF_LIGHT, 2) * pow(in[0].real, 3) /
             expm1(GSL_CONST_MKSA_PLANCKS_CONSTANT_H * in[0].real / GSL_CONST_MKSA_BOLTZMANN / kelvin.real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_planck_Bvmax - Implement the function phy.Bvmax(T) in the phy module, which returns the frequency of the
@@ -88,10 +88,10 @@ void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Bvmax(T)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj kelvin;
 
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a temperature", UNIT_TEMPERATURE, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "a temperature", UNIT_TEMPERATURE, 1)) return;
     pplObjNum(&kelvin, 0, 1, 0);
     kelvin.exponent[UNIT_TEMPERATURE] = 1;
     kelvin.tempType = 1;
@@ -101,5 +101,5 @@ void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *stat
     OUTPUT.exponent[UNIT_TIME] = -1;
     OUTPUT.real = 2.821439 * GSL_CONST_MKSA_BOLTZMANN / GSL_CONST_MKSA_PLANCKS_CONSTANT_H *
             kelvin.real; // Wien displacement law
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }

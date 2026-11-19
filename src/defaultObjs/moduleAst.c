@@ -41,7 +41,7 @@
 
 #include "defaultObjs/moduleAst.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 // Lambda Cold Dark Matter Cosmology Engine
 
@@ -208,7 +208,7 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
 // Lambda Cold Dark Matter Cosmology Wrappers
 
 #define CHECK_LCDM_INPUTS(XN, H0NUM) \
-    CHECK_DIMLESS_OR_HAS_UNIT(in[XN], H0NUM, "a recession velocity per unit distance", UNIT_TIME, -1); \
+    if (ppl_funcCheckUnit(&call, &in[XN], H0NUM, "a recession velocity per unit distance", UNIT_TIME, -1)) return; \
     if (in[XN].dimensionless) in[XN].real *= 1e3 / (GSL_CONST_MKSA_PARSEC * 1e6); \
     if (!(in[XN + 1].dimensionless && in[XN + 2].dimensionless)) { \
         *status = 1; \
@@ -244,11 +244,11 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
 
 void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(H0,w_m,w_l)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     CHECK_LCDM_INPUTS(0, "first");
     OUTPUT.real = Lcdm_age(in[0].real, in[1].real, in[2].real);
-    CLEANUP_APPLYUNIT(UNIT_TIME);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_TIME);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_Lcdm_angscale - Implement the function ast.Lcdm_angscale(z,H0,w_m,w_l) in the ast module, which returns the
@@ -263,13 +263,13 @@ void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_age(z,H0,w_m,w_l)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     CHECK_LCDM_INPUTS(1, "second");
     CHECK_LCDM_REDSHIFT;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real);
-    CLEANUP_APPLYUNIT(UNIT_LENGTH);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
     OUTPUT.exponent[UNIT_ANGLE] = -1;
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_Lcdm_DA - Implement the function ast.Lcdm_DA(z,H0,w_m,w_l) in the ast module, which returns the angular size
@@ -284,12 +284,12 @@ void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *sta
 
 void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DA(z,H0,w_m,w_l)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     CHECK_LCDM_INPUTS(1, "second");
     CHECK_LCDM_REDSHIFT;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real);
-    CLEANUP_APPLYUNIT(UNIT_LENGTH);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_Lcdm_DL - Implement the function ast.Lcdm_DL(z,H0,w_m,w_l) in the ast module, which returns the luminosity
@@ -304,12 +304,12 @@ void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DL(z,H0,w_m,w_l)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     CHECK_LCDM_INPUTS(1, "second");
     CHECK_LCDM_REDSHIFT;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real) * pow(1 + in[0].real, 2);
-    CLEANUP_APPLYUNIT(UNIT_LENGTH);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_Lcdm_DM - Implement the function ast.Lcdm_DM(z,H0,w_m,w_l) in the ast module, which returns the comoving
@@ -324,12 +324,12 @@ void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_DM(z,H0,w_m,w_l)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     CHECK_LCDM_INPUTS(1, "second");
     CHECK_LCDM_REDSHIFT;
     OUTPUT.real = Lcdm_DA(in[0].real, in[1].real, in[2].real, in[3].real) * (1 + in[0].real);
-    CLEANUP_APPLYUNIT(UNIT_LENGTH);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_LENGTH);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_Lcdm_t - Implement the function ast.Lcdm_t(z,H0,w_m,w_l) in the ast module, which returns the lookback time
@@ -344,12 +344,12 @@ void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_t(z,H0,w_m,w_l)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     CHECK_LCDM_INPUTS(1, "second");
     CHECK_LCDM_REDSHIFT;
     OUTPUT.real = Lcdm_t_from_z(in[0].real, in[1].real, in[2].real, in[3].real);
-    CLEANUP_APPLYUNIT(UNIT_TIME);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_TIME);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_Lcdm_z - Implement the function ast.Lcdm_z(t,H0,w_m,w_l) in the ast module, which returns the redshift
@@ -364,11 +364,11 @@ void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "Lcdm_z(t,H0,w_m,w_l)";
-    int i;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     CHECK_LCDM_INPUTS(1, "second");
-    CHECK_DIMLESS_OR_HAS_UNIT(in[0], "first", "a time", UNIT_TIME, 1);
+    if (ppl_funcCheckUnit(&call, &in[0], "first", "a time", UNIT_TIME, 1)) return;
     OUTPUT.real = Lcdm_z_from_t(in[0].real, in[1].real, in[2].real, in[3].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_sidereal_time - Implement the function ast.siderealTime(d) in the ast module, which returns the sidereal
@@ -383,6 +383,7 @@ void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "siderealTime(d)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -392,19 +393,25 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    CHECK_1NOTNAN;
-    CHECK_1INPUT_DIMLESS;
-    IF_1COMPLEX{QUERY_MUST_BE_REAL} ELSE_REAL {
-        const double JD = in->real / 86400.0 + 40587.5;
-        const double T = (JD - 51545.0) / 36525.0; // See pages 87-88 of Astronomical Algorithms, by Jean Meeus
-        OUTPUT.real = fmod(M_PI / 180 *
-                                   (280.46061837 + 360.98564736629 * (JD - 51545.0) + 0.000387933 * T * T +
-                                    T * T * T / 38710000.0),
-                           2 * M_PI);
+    if (ppl_funcCheckFinite(&call, 1)) return;
+    if (ppl_funcCheckDimensionless(&call, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            ppl_funcNeedsRealArguments(&call);
+            return;
+        }
+    } else {
+        {
+            const double JD = in->real / 86400.0 + 40587.5;
+            const double T = (JD - 51545.0) / 36525.0; // See pages 87-88 of Astronomical Algorithms, by Jean Meeus
+            OUTPUT.real = fmod(M_PI / 180 *
+                                       (280.46061837 + 360.98564736629 * (JD - 51545.0) + 0.000387933 * T * T +
+                                        T * T * T / 38710000.0),
+                               2 * M_PI);
+        }
     }
-    ENDIF
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_moonphase - Implement the function ast.moonPhase(d) in the ast module, which returns the phase of the Moon
@@ -419,6 +426,7 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
 
 void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "moonPhase(d)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -428,28 +436,35 @@ void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status,
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    CHECK_1NOTNAN;
-    CHECK_1INPUT_DIMLESS;
-    IF_1COMPLEX{QUERY_MUST_BE_REAL} ELSE_REAL {
-        const double JD = in->real / 86400.0 + 40587.5;
-        const double t = (JD - 51545) / 36525; // Time in Julian Centuries since 2000.0
-        const double Msun = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
-        const double Lsun = 2 * M_PI *
-                fmod(0.7859453 + Msun / (2 * M_PI) + (6893.0 * sin(Msun) + 72.0 * sin(2 * Msun) + 6191.2 * t) / 1296e3,
-                     1);
-        const double L0 = 2 * M_PI * fmod(0.606433 + 1336.855225 * t, 1);
-        const double l = 2 * M_PI * fmod(0.374897 + 1325.552410 * t, 1);
-        const double ls = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
-        const double D = 2 * M_PI * fmod(0.827361 + 1236.853086 * t, 1);
-        const double F = 2 * M_PI * fmod(0.259086 + 1342.227825 * t, 1);
-        const double dL = 22640 * sin(l) - 4586 * sin(l - 2 * D) + 2370 * sin(2 * D) + 769 * sin(2 * l) -
-                668 * sin(ls) - 412 * sin(2 * F) - 212 * sin(2 * l - 2 * D) - 206 * sin(l + ls - 2 * D) +
-                192 * sin(l + 2 * D) - 165 * sin(ls - 2 * D) - 125 * sin(D) - 110 * sin(l + ls) + 148 * sin(l - ls) -
-                55 * sin(2 * F - 2 * D);
-        OUTPUT.real = fmod(L0 + dL / 1296e3 * 2 * M_PI - Lsun, 2 * M_PI);
-        while (OUTPUT.real < 0) OUTPUT.real += 2 * M_PI;
+    if (ppl_funcCheckFinite(&call, 1)) return;
+    if (ppl_funcCheckDimensionless(&call, 1)) return;
+    if ((in[0].flagComplex)) {
+        {
+            ppl_funcNeedsRealArguments(&call);
+            return;
+        }
+    } else {
+        {
+            const double JD = in->real / 86400.0 + 40587.5;
+            const double t = (JD - 51545) / 36525; // Time in Julian Centuries since 2000.0
+            const double Msun = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
+            const double Lsun = 2 * M_PI *
+                    fmod(0.7859453 + Msun / (2 * M_PI) +
+                                 (6893.0 * sin(Msun) + 72.0 * sin(2 * Msun) + 6191.2 * t) / 1296e3,
+                         1);
+            const double L0 = 2 * M_PI * fmod(0.606433 + 1336.855225 * t, 1);
+            const double l = 2 * M_PI * fmod(0.374897 + 1325.552410 * t, 1);
+            const double ls = 2 * M_PI * fmod(0.993133 + 99.997361 * t, 1);
+            const double D = 2 * M_PI * fmod(0.827361 + 1236.853086 * t, 1);
+            const double F = 2 * M_PI * fmod(0.259086 + 1342.227825 * t, 1);
+            const double dL = 22640 * sin(l) - 4586 * sin(l - 2 * D) + 2370 * sin(2 * D) + 769 * sin(2 * l) -
+                    668 * sin(ls) - 412 * sin(2 * F) - 212 * sin(2 * l - 2 * D) - 206 * sin(l + ls - 2 * D) +
+                    192 * sin(l + 2 * D) - 165 * sin(ls - 2 * D) - 125 * sin(D) - 110 * sin(l + ls) +
+                    148 * sin(l - ls) - 55 * sin(2 * F - 2 * D);
+            OUTPUT.real = fmod(L0 + dL / 1296e3 * 2 * M_PI - Lsun, 2 * M_PI);
+            while (OUTPUT.real < 0) OUTPUT.real += 2 * M_PI;
+        }
     }
-    ENDIF
-    CLEANUP_APPLYUNIT(UNIT_ANGLE);
-    CHECK_OUTPUT_OKAY;
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_ANGLE);
+    if (ppl_funcCheckOutput(&call)) return;
 }

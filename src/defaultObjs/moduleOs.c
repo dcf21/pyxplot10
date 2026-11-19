@@ -44,7 +44,7 @@
 
 #include "defaultObjs/moduleOs.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 #define COPYSTR(X, Y) \
     { \
@@ -605,7 +605,7 @@ void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *st
         return;
     }
     pplObjNum(&OUTPUT, 0, buffer.st_size * 8, 0);
-    CLEANUP_APPLYUNIT(UNIT_BIT);
+    ppl_funcSetOutputUnit(c, &OUTPUT, UNIT_BIT);
 }
 
 //! pplfunc_osPathATime - Implement the function os.path.atime(x) in the os.path module, which returns a date object

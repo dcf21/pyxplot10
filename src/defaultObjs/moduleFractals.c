@@ -43,7 +43,7 @@
 
 #include "defaultObjs/moduleFractals.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 //! pplfunc_julia - Implement the function fractals.julia(z,cz,MaxIter) in the fractals module, which returns the number
 //! of iterations required before the Julia set iterator diverges outside the circle |z'|<2
@@ -57,7 +57,8 @@
 
 void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "julia(z,cz,MaxIter)";
-    CHECK_NEEDLONG(in[2], "MaxIter", "function's third argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckLong(&call, &in[2], "MaxIter", "function's third argument must be")) return;
     {
         double y = in[0].imag, x = in[0].real, x2;
         double cy = in[1].imag, cx = in[1].real;
@@ -70,7 +71,7 @@ void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int
         }
         OUTPUT.real = (double) iter;
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_mandelbrot - Implement the function fractals.mandelbrot(z,MaxIter) in the fractals module, which returns the
@@ -85,7 +86,8 @@ void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_mandelbrot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "mandelbrot(z,MaxIter)";
-    CHECK_NEEDLONG(in[1], "MaxIter", "function's second argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckLong(&call, &in[1], "MaxIter", "function's second argument must be")) return;
     {
         double y = in[0].imag, x = in[0].real, x2;
         double cy = in[0].imag, cx = in[0].real;
@@ -98,5 +100,5 @@ void pplfunc_mandelbrot(ppl_context *c, pplObj *in, const int nArgs, int *status
         }
         OUTPUT.real = (double) iter;
     }
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }

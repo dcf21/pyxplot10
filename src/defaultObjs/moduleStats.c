@@ -55,7 +55,7 @@
 
 #include "defaultObjs/moduleStats.h"
 #include "defaultObjs/defaultFuncs.h"
-#include "defaultObjs/defaultFuncsMacros.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 //! pplfunc_binomialPDF - Implement the function stats.binomialPDF(k,p,n) in the stats module, which evaulates the
 //! probability of getting k successes out of n trials in a binomial distribution with success probability p
@@ -69,10 +69,11 @@
 
 void pplfunc_binomialPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomialPDF(k,p,n)";
-    CHECK_NEEDINT(in[0], "k", "function's first argument must be");
-    CHECK_NEEDINT(in[2], "n", "function's third argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "k", "function's first argument must be")) return;
+    if (ppl_funcCheckInt(&call, &in[2], "n", "function's third argument must be")) return;
     OUTPUT.real = gsl_ran_binomial_pdf((unsigned int) in[0].real, in[1].real, (unsigned int) in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_binomialCDF - Implement the function stats.binomialCDF(k,p,n) in the stats module, which evaulates the
@@ -88,10 +89,11 @@ void pplfunc_binomialPDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_binomialCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomialCDF(k,p,n)";
-    CHECK_NEEDINT(in[0], "k", "function's first argument must be");
-    CHECK_NEEDINT(in[2], "n", "function's third argument must be");
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckInt(&call, &in[0], "k", "function's first argument must be")) return;
+    if (ppl_funcCheckInt(&call, &in[2], "n", "function's third argument must be")) return;
     OUTPUT.real = gsl_cdf_binomial_P((unsigned int) in[0].real, in[1].real, (unsigned int) in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_chisqPDF - Implement the function stats.chisqPDF(x,nu) in the stats module, which returns the probability
@@ -106,8 +108,9 @@ void pplfunc_binomialCDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_chisqPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqPDF(x,nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_ran_chisq_pdf(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_chisqCDF - Implement the function stats.chisqCDF(x,nu) in the stats module, which returns the cumulative
@@ -122,8 +125,9 @@ void pplfunc_chisqPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_chisqCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqCDF(x,nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_chisq_P(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_chisqCDFi - Implement the function stats.chisqCDFi(P,nu) in the stats module, which returns the point x at
@@ -138,8 +142,9 @@ void pplfunc_chisqCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqCDFi(P,nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_chisq_Pinv(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_gaussianPDF - Implement the function stats.gaussianPDF(x,sigma) in the stats module, which evaluates the
@@ -154,9 +159,10 @@ void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussianPDF(x,sigma)";
-    CHECK_2INPUT_DIMMATCH;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = gsl_ran_gaussian_pdf(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimInverse(&OUTPUT, &in[0]);
 }
 
@@ -172,9 +178,10 @@ void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_gaussianCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussianCDF(x,sigma)";
-    CHECK_2INPUT_DIMMATCH;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = gsl_cdf_gaussian_P(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_gaussianCDFi - Implement the function stats.gaussianCDFi(x,sigma) in the stats module, which evaluates the
@@ -189,9 +196,10 @@ void pplfunc_gaussianCDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussianCDFi(x,sigma)";
-    CHECK_1INPUT_DIMLESS;
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    if (ppl_funcCheckDimensionless(&call, 1)) return;
     OUTPUT.real = gsl_cdf_gaussian_Pinv(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimCpy(&OUTPUT, &in[1]);
 }
 
@@ -207,12 +215,13 @@ void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormalPDF(x,zeta,sigma)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     in += 2;
-    CHECK_1INPUT_DIMLESS;
+    if (ppl_funcCheckDimensionless(&call, 1)) return;
     in -= 2;
-    CHECK_2INPUT_DIMMATCH;
+    if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = gsl_ran_lognormal_pdf(in[0].real, in[1].real, in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimInverse(&OUTPUT, &in[0]);
 }
 
@@ -228,12 +237,13 @@ void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormalCDF(x,zeta,sigma)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     in += 2;
-    CHECK_1INPUT_DIMLESS;
+    if (ppl_funcCheckDimensionless(&call, 1)) return;
     in -= 2;
-    CHECK_2INPUT_DIMMATCH;
+    if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = gsl_cdf_lognormal_P(in[0].real, in[1].real, in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_lognormalCDFi - Implement the function stats.lognormalCDFi(x,zeta,sigma) in the stats module, which
@@ -248,12 +258,13 @@ void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormalCDFi(x,zeta,sigma)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     in += 2;
-    CHECK_1INPUT_DIMLESS;
+    if (ppl_funcCheckDimensionless(&call, 1)) return;
     in -= 2;
-    CHECK_2INPUT_DIMMATCH;
+    if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = gsl_cdf_lognormal_Pinv(in[0].real, in[1].real, in[2].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
     ppl_unitsDimCpy(&OUTPUT, &in[1]);
 }
 
@@ -269,8 +280,9 @@ void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, const int nArgs, int *sta
 
 void pplfunc_poissonPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poissonPDF(x,mu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_ran_poisson_pdf(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_poissonCDF - Implement the function stats.poissonCDF(x,mu) in the stats module, which returns the
@@ -285,8 +297,9 @@ void pplfunc_poissonPDF(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_poissonCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poissonCDF(x,mu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_poisson_P(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_tdistPDF - Implement the function stats.tdistPDF(x,nu) in the stats module, which returns the probability
@@ -301,8 +314,9 @@ void pplfunc_poissonCDF(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_tdistPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistPDF(x,nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_ran_tdist_pdf(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_tdistCDF - Implement the function stats.tdistCDF(x,nu) in the stats module, which returns the cumulative
@@ -317,8 +331,9 @@ void pplfunc_tdistPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_tdistCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistCDF(x,nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_tdist_P(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
 
 //! pplfunc_tdistCDFi - Implement the function stats.tdistCDFi(P,nu) in the stats module, which returns the point x at
@@ -333,6 +348,7 @@ void pplfunc_tdistCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_tdistCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistCDFi(P,nu)";
+    pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_tdist_Pinv(in[0].real, in[1].real);
-    CHECK_OUTPUT_OKAY;
+    if (ppl_funcCheckOutput(&call)) return;
 }
