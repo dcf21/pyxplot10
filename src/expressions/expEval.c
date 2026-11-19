@@ -244,7 +244,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
     int j = 0;
     int initialStackPtr = 0;
     int charpos = 0;
-    pplExprBytecode *in = inExpr->bytecode;
+    const pplExprInstruction *const bytecode = inExpr->bytecode;
 
     if (iterDepth > MAX_RECURSION_DEPTH) {
         strcpy(context->errStat.errBuff, "Maximum recursion depth exceeded.");
@@ -259,11 +259,10 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
 
     while (1) {
         pplObj *stk;
-        const int pos = j; // Position of start of instruction
-        int len = in[j].len; // length of bytecode instruction with data
-        const int o = in[j].opcode; // Opcode number
-        char *charaux = (char *) &(in[j + 1]);
-        charpos = in[j].charpos; // character position of token (for error reporting)
+        const pplExprInstruction *const instruction = &bytecode[j]; // The instruction to execute
+        const pplExprOpcode opcode = instruction->opcode;
+        int next = j + 1; // The index of the next instruction to execute; changed by instructions which jump
+        charpos = instruction->charpos; // Position of the token in the source text, for error reporting
 
         if (cancellationFlag) {
             strcpy(context->errStat.errBuff, "Operation cancelled.");
@@ -285,18 +284,18 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         }
         stk = &context->stack[context->stackPtr];
 
-        switch (o) {
-            case 0: // Return
+        switch (opcode) {
+            case PPL_BC_RETURN:
                 break;
-            case 1: // Numeric literal
+            case PPL_BC_PUSH_NUMBER:
                 *lastOpAssign = 0;
-                pplObjNum(stk, 0, in[j].auxil.d, 0);
+                pplObjNum(stk, 0, instruction->operand.number, 0);
                 stk->refCount = 1;
                 context->stackPtr++;
                 break;
-            case 2: // String literal
-            {
-                int l = strlen(charaux);
+            case PPL_BC_PUSH_STRING: {
+                const char *const string = inExpr->strings + instruction->operand.string;
+                const int l = strlen(string);
                 char *out;
                 *lastOpAssign = 0;
                 if ((out = (char *) malloc(l + 1)) == NULL) {
@@ -304,16 +303,15 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     TBADD(ERR_MEMORY);
                     goto cleanup_on_error;
                 }
-                strcpy(out, charaux);
+                strcpy(out, string);
                 pplObjStr(stk, 0, 1, out);
                 stk->refCount = 1;
                 context->stackPtr++;
                 break;
             }
-            case 3: // Lookup value
-            {
+            case PPL_BC_LOOKUP: {
                 int i, got = 0;
-                char *key = charaux;
+                char *key = inExpr->strings + instruction->operand.string;
                 *lastOpAssign = 0;
                 for (i = context->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
@@ -333,10 +331,9 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 4: // Lookup value (pointer)
-            {
+            case PPL_BC_LOOKUP_POINTER: {
                 int i;
-                char *key = charaux;
+                char *key = inExpr->strings + instruction->operand.string;
                 *lastOpAssign = 0;
                 for (i = context->ns_ptr;; i = 1) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
@@ -372,9 +369,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 5: // Dereference value
-            {
-                char *key = charaux;
+            case PPL_BC_DEREFERENCE: {
+                char *key = inExpr->strings + instruction->operand.string;
                 pplObj *in = stk - 1;
                 pplObj *in_cpy = NULL;
                 pplObj *iter = in;
@@ -425,9 +421,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 in->self_this = in_cpy;
                 break;
             }
-            case 6: // Dereference value (pointer)
-            {
-                char *key = charaux;
+            case PPL_BC_DEREFERENCE_POINTER: {
+                char *key = inExpr->strings + instruction->operand.string;
                 const int t = (stk - 1)->objType;
                 dict *d = (dict *) ((stk - 1)->auxil);
                 *lastOpAssign = 0;
@@ -466,15 +461,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 7: // slice
-            case 16: // slice pointer
-            {
+            case PPL_BC_SLICE:
+            case PPL_BC_SLICE_POINTER: {
                 int status = 0, errType = -1;
-                const int getPtr = (o == 16);
-                const int mode = in[j].auxil.i;
-                const int range = (mode & 1) == 0;
-                const int maxset = (mode & 2) != 0;
-                const int minset = (mode & 4) != 0;
+                const int getPtr = (opcode == PPL_BC_SLICE_POINTER);
+                const int mode = instruction->operand.sliceFlags;
+                const int range = (mode & PPL_SLICE_SINGLE_ITEM) == 0;
+                const int maxset = (mode & PPL_SLICE_MAX_SET) != 0;
+                const int minset = (mode & PPL_SLICE_MIN_SET) != 0;
                 int Nrange = 1, i, min = 0, max = 0;
                 *lastOpAssign = 0;
                 if (range) {
@@ -519,10 +513,9 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 8: // Make dict
-            {
+            case PPL_BC_MAKE_DICT: {
                 int k;
-                int len = in[j].auxil.i;
+                const int len = instruction->operand.count;
                 dict *d = ppl_dictInit(1);
                 *lastOpAssign = 0;
                 if (d == NULL) {
@@ -555,10 +548,9 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 context->stackPtr++;
                 break;
             }
-            case 9: // Make list
-            {
+            case PPL_BC_MAKE_LIST: {
                 int k;
-                const int len = in[j].auxil.i;
+                const int len = instruction->operand.count;
                 list *l = ppl_listInit(1);
                 *lastOpAssign = 0;
                 if (l == NULL) {
@@ -583,47 +575,40 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 context->stackPtr++;
                 break;
             }
-            case 10: // Execute function call
-            {
-                const int nArgs = in[j].auxil.i;
+            case PPL_BC_CALL: {
+                const int nArgs = instruction->operand.count;
                 *lastOpAssign = 0;
                 ppl_fnCall(context, inExpr, charpos, nArgs, dollarAllowed, iterDepth);
                 if (context->errStat.status) goto cleanup_on_error;
                 break;
             }
-            case 11: // Operator
-            {
-                int t = in[j].auxil.i;
+            case PPL_BC_OPERATOR: {
+                const int t = instruction->operand.operatorCode;
                 *lastOpAssign = 0;
                 pplObjNum(stk, 0, 0, 0);
                 stk->refCount = 1;
                 switch (t) {
-                    case 0x25: // -
-                    {
+                    case PPL_OP_NEGATE: {
                         CAST_TO_NUM(stk - 1);
                         (stk - 1)->real *= -1;
                         if ((stk - 1)->flagComplex) (stk - 1)->imag *= -1;
                         break;
                     }
-                    case 0x26: // +
-                    {
+                    case PPL_OP_UNARY_PLUS: {
                         CAST_TO_NUM(stk - 1);
                         break;
                     }
-                    case 0xA7: // ~
-                    {
+                    case PPL_OP_BITWISE_NOT: {
                         CAST_TO_INT(stk - 1, "~");
                         (stk - 1)->real = ~(int) ((stk - 1)->real);
                         break;
                     }
-                    case 0xA8: // !
-                    {
+                    case PPL_OP_LOGICAL_NOT: {
                         CAST_TO_BOOL(stk - 1);
                         (stk - 1)->real = !(stk - 1)->real;
                         break;
                     }
-                    case 0xC9: // **
-                    {
+                    case PPL_OP_POWER: {
                         int status = 0, errType = -1;
                         CAST_TO_NUM(stk - 1);
                         CAST_TO_NUM(stk - 2);
@@ -638,8 +623,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         context->stackPtr++;
                         break;
                     }
-                    case 0x4A: // *
-                    {
+                    case PPL_OP_MULTIPLY: {
                         int status = 0, errType = -1;
                         ppl_opMul(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
@@ -652,8 +636,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         context->stackPtr++;
                         break;
                     }
-                    case 0x4B: // div
-                    {
+                    case PPL_OP_DIVIDE: {
                         int status = 0, errType = -1;
                         ppl_opDiv(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
@@ -666,8 +649,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         context->stackPtr++;
                         break;
                     }
-                    case 0x4C: // mod
-                    {
+                    case PPL_OP_MODULO: {
                         int status = 0, errType = -1;
                         CAST_TO_NUM(stk - 1);
                         CAST_TO_NUM(stk - 2);
@@ -682,8 +664,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         context->stackPtr++;
                         break;
                     }
-                    case 0x4D: // add
-                    {
+                    case PPL_OP_ADD: {
                         int status = 0, errType = -1;
                         ppl_opAdd(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
@@ -696,8 +677,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         context->stackPtr++;
                         break;
                     }
-                    case 0x4E: // sub
-                    {
+                    case PPL_OP_SUBTRACT: {
                         int status = 0, errType = -1;
                         ppl_opSub(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
                         if (status) {
@@ -710,71 +690,65 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         context->stackPtr++;
                         break;
                     }
-                    case 0x4F: // <<
-                    {
+                    case PPL_OP_SHIFT_LEFT: {
                         CAST_TO_INT(stk - 1, "<<");
                         CAST_TO_INT(stk - 2, "<<");
                         (stk - 2)->real = ((int) (stk - 2)->real) << ((int) (stk - 1)->real);
                         STACK_POP;
                         break;
                     }
-                    case 0x50: // >>
-                    {
+                    case PPL_OP_SHIFT_RIGHT: {
                         CAST_TO_INT(stk - 1, ">>");
                         CAST_TO_INT(stk - 2, ">>");
                         (stk - 2)->real = ((int) (stk - 2)->real) >> ((int) (stk - 1)->real);
                         STACK_POP;
                         break;
                     }
-                    case 0x57: // &
-                    {
+                    case PPL_OP_BITWISE_AND: {
                         CAST_TO_INT(stk - 1, "&");
                         CAST_TO_INT(stk - 2, "&");
                         (stk - 2)->real = ((int) (stk - 2)->real) & ((int) (stk - 1)->real);
                         STACK_POP;
                         break;
                     }
-                    case 0x58: // ^
-                    {
+                    case PPL_OP_BITWISE_XOR: {
                         CAST_TO_INT(stk - 1, "^");
                         CAST_TO_INT(stk - 2, "^");
                         (stk - 2)->real = ((int) (stk - 2)->real) ^ ((int) (stk - 1)->real);
                         STACK_POP;
                         break;
                     }
-                    case 0x59: // |
-                    {
+                    case PPL_OP_BITWISE_OR: {
                         CAST_TO_INT(stk - 1, "|");
                         CAST_TO_INT(stk - 2, "|");
                         (stk - 2)->real = ((int) (stk - 2)->real) | ((int) (stk - 1)->real);
                         STACK_POP;
                         break;
                     }
-                    case 0x5C: // swap-pop
+                    case PPL_OP_COMMA: // a, b: discard a and keep b
                     {
                         ppl_garbageObject(stk - 2);
                         memcpy(stk - 2, stk - 1, sizeof(pplObj));
                         context->stackPtr--;
                         break;
                     }
-                    case 0x51: // <
-                    case 0x52: // <=
-                    case 0x53: // >=
-                    case 0x54: // >
-                    case 0x55: // ==
-                    case 0x56: // !=
-                    {
+                    case PPL_OP_LESS:
+                    case PPL_OP_LESS_EQUAL:
+                    case PPL_OP_GREATER_EQUAL:
+                    case PPL_OP_GREATER:
+                    case PPL_OP_EQUAL:
+                    case PPL_OP_NOT_EQUAL: {
                         int stat = 0, errType = -1,
                             cmp = pplObjCmp(context, stk - 2, stk - 1, &stat, &errType, context->errStat.errBuff, 0);
                         if (stat) {
                             TBADD(errType);
                             goto cleanup_on_error;
                         }
-                        if (t == 0x51) stat = (cmp == -1);
-                        else if (t == 0x52) stat = (cmp == -1) || (cmp == 0);
-                        else if (t == 0x53) stat = (cmp == 1) || (cmp == 0);
-                        else if (t == 0x54) stat = (cmp == 1);
-                        else if (t == 0x55) stat = (cmp == 0);
+                        if (t == PPL_OP_LESS) stat = (cmp == -1);
+                        else if (t == PPL_OP_LESS_EQUAL) stat = (cmp == -1) || (cmp == 0);
+                        else if (t == PPL_OP_GREATER_EQUAL) stat = (cmp == 1) || (cmp == 0);
+                        else if (t == PPL_OP_GREATER) stat = (cmp == 1);
+                        else if (t == PPL_OP_EQUAL) stat = (cmp == 0);
                         else stat = (cmp != 0);
                         STACK_POP;
                         STACK_POP;
@@ -790,9 +764,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 12: // assignment operator
-            {
-                int t = in[j].auxil.i;
+            case PPL_BC_ASSIGN: {
+                const int t = instruction->operand.operatorCode;
                 pplObj *o = stk - 2;
                 pplObj *in = stk - 1;
                 pplObj *tmp = stk;
@@ -848,37 +821,32 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         STACK_POP; \
     }
 
-                if (t == 0x40) // =
-                {
+                if (t == PPL_ASSIGN) {
                     pplObjCpy(tmp, in, 0, 0, 1);
                     tmp->immutable = 0;
                     ASSIGN;
-                } else if (t == 0x41) // +=
-                {
+                } else if (t == PPL_ASSIGN_ADD) {
                     ppl_opAdd(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         TBADD(errType);
                         goto cleanup_on_error;
                     }
                     ASSIGN;
-                } else if (t == 0x42) // -=
-                {
+                } else if (t == PPL_ASSIGN_SUBTRACT) {
                     ppl_opSub(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         TBADD(errType);
                         goto cleanup_on_error;
                     }
                     ASSIGN;
-                } else if (t == 0x43) // *=
-                {
+                } else if (t == PPL_ASSIGN_MULTIPLY) {
                     ppl_opMul(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         TBADD(errType);
                         goto cleanup_on_error;
                     }
                     ASSIGN;
-                } else if (t == 0x44) // /=
-                {
+                } else if (t == PPL_ASSIGN_DIVIDE) {
                     ppl_opDiv(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         TBADD(errType);
@@ -895,35 +863,35 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     CAST_TO_NUM(in);
                     pplObjNum(tmp, 0, 0, 0);
                     switch (t) {
-                        case 0x45: // %=
+                        case PPL_ASSIGN_MODULO:
                             ppl_uaMod(context, o, in, tmp, &status, &errType, context->errStat.errBuff);
                             break;
-                        case 0x46: // &=
+                        case PPL_ASSIGN_BITWISE_AND:
                             CAST_TO_INT(in, "&=");
                             CAST_TO_INT(o, "&=");
                             tmp->real = ((int) o->real) & ((int) in->real);
                             break;
-                        case 0x47: // ^=
+                        case PPL_ASSIGN_BITWISE_XOR:
                             CAST_TO_INT(in, "^=");
                             CAST_TO_INT(o, "^=");
                             tmp->real = ((int) o->real) ^ ((int) in->real);
                             break;
-                        case 0x48: // |=
+                        case PPL_ASSIGN_BITWISE_OR:
                             CAST_TO_INT(in, "|=");
                             CAST_TO_INT(o, "|=");
                             tmp->real = ((int) o->real) | ((int) in->real);
                             break;
-                        case 0x49: // <<=
+                        case PPL_ASSIGN_SHIFT_LEFT:
                             CAST_TO_INT(in, "<<=");
                             CAST_TO_INT(o, "<<=");
                             tmp->real = ((int) o->real) << ((int) in->real);
                             break;
-                        case 0x4A: // >>=
+                        case PPL_ASSIGN_SHIFT_RIGHT:
                             CAST_TO_INT(in, ">>=");
                             CAST_TO_INT(o, ">>=");
                             tmp->real = ((int) o->real) >> ((int) in->real);
                             break;
-                        case 0x4B: // **=
+                        case PPL_ASSIGN_POWER:
                             ppl_uaPow(context, o, in, tmp, &status, &errType, context->errStat.errBuff);
                             break;
                         default:
@@ -941,9 +909,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 13: // increment and decrement operators
-            {
-                int t = in[j].auxil.i;
+            case PPL_BC_INCREMENT: {
+                const int t = instruction->operand.operatorCode;
                 pplObj *o = stk - 1;
                 *lastOpAssign = 1;
                 if (context->stackPtr < 1) {
@@ -968,17 +935,19 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     goto cleanup_on_error;
                 }
                 switch (t) {
-                    case 0x21: // -- (post-eval)
-                    case 0x23: // -- (pre-eval)
+                    case PPL_OP_POST_DECREMENT:
+                    case PPL_OP_PRE_DECREMENT:
                         if (o->self_dval != NULL) (*o->self_dval)--;
                         else o->self_lval->real--;
-                        if (t == 0x23) o->real = (o->self_dval != NULL) ? *o->self_dval : o->self_lval->real;
+                        if (t == PPL_OP_PRE_DECREMENT)
+                            o->real = (o->self_dval != NULL) ? *o->self_dval : o->self_lval->real;
                         break;
-                    case 0x22: // ++ (post-eval)
-                    case 0x24: // ++ (pre-eval)
+                    case PPL_OP_POST_INCREMENT:
+                    case PPL_OP_PRE_INCREMENT:
                         if (o->self_dval != NULL) (*o->self_dval)++;
                         else o->self_lval->real++;
-                        if (t == 0x24) o->real = (o->self_dval != NULL) ? *o->self_dval : o->self_lval->real;
+                        if (t == PPL_OP_PRE_INCREMENT)
+                            o->real = (o->self_dval != NULL) ? *o->self_dval : o->self_lval->real;
                         break;
                     default:
                         sprintf(context->errStat.errBuff, "Unknown increment/decrement operator with id=%d.", t);
@@ -987,9 +956,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 14: // string substitution
-            {
-                const int Nsubs = in[j].auxil.i;
+            case PPL_BC_STRING_SUBST: {
+                const int Nsubs = instruction->operand.count;
                 int i;
                 if (context->stackPtr < Nsubs + 1) {
                     sprintf(context->errStat.errBuff, "Too few items on stack for string substitution operator.");
@@ -1010,8 +978,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 context->stackPtr++;
                 break;
             }
-            case 15: // dollar operator
-            {
+            case PPL_BC_DOLLAR: {
                 int t;
                 if (context->stackPtr < 1) {
                     sprintf(context->errStat.errBuff, "Too few items on stack for dollar operator.");
@@ -1049,42 +1016,40 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 break;
             }
-            case 17: // branch if false
-            {
+            case PPL_BC_BRANCH_IF_FALSE: {
                 int branch;
                 *lastOpAssign = 0;
                 CAST_TO_BOOL(stk - 1);
                 branch = (stk - 1)->real == 0;
                 if (branch) {
-                    len = in[j].auxil.i - pos;
-                    if (in[j].flag) { STACK_POP; }
+                    // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
+                    next = instruction->operand.target;
+                    if (instruction->popOnBranch) { STACK_POP; }
                 } else {
                     STACK_POP;
                 }
                 break;
             }
-            case 18: // branch if true
-            {
+            case PPL_BC_BRANCH_IF_TRUE: {
                 int branch;
                 *lastOpAssign = 0;
                 CAST_TO_BOOL(stk - 1);
                 branch = (stk - 1)->real != 0;
                 if (branch) {
-                    len = in[j].auxil.i - pos;
-                    if (in[j].flag) { STACK_POP; }
+                    // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
+                    next = instruction->operand.target;
+                    if (instruction->popOnBranch) { STACK_POP; }
                 } else {
                     STACK_POP;
                 }
                 break;
             }
-            case 19: // goto
-            {
+            case PPL_BC_GOTO: {
                 *lastOpAssign = 0;
-                len = in[j].auxil.i - pos;
+                next = instruction->operand.target;
                 break;
             }
-            case 20: // make boolean
-            {
+            case PPL_BC_MAKE_BOOLEAN: {
                 *lastOpAssign = 0;
                 CAST_TO_BOOL(stk - 1);
                 break;
@@ -1095,8 +1060,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 TBADD(ERR_INTERNAL);
                 goto cleanup_on_error;
         }
-        if (o == 0) break;
-        j = pos + len;
+        if (opcode == PPL_BC_RETURN) break;
+        j = next;
     }
     if (context->stackPtr <= 0) {
         sprintf(context->errStat.errBuff, "Unexpected empty stack at end of evaluation.");
