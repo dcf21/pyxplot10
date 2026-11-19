@@ -26,13 +26,12 @@
 #include "userspace/pplObj.h"
 
 void pplfunc_setRandomSeed(long i);
-void pplfunc_frandom(const ppl_context *c, pplObj *in, int nArgs, const int *status, const int *errType,
-                     const char *errText);
-void pplfunc_frandombin(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomcs(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomg(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandom(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandombin(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomcs(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomg(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_frandomln(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomp(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_frandomt(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomp(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_frandomt(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif

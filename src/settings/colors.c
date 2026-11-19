@@ -40,6 +40,25 @@
 #include "userspace/pplObjCmp.h"
 #include "pplConstants.h"
 
+//! ppl_colorFromDict - Read a color or fill color specified in a parsed command, and report an error if it is
+//! invalid
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The parser output for the command
+//! \param [in] pl - The parsed command line
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
+//! \param [in] stkbase - Offset to add to positions in <in->stk>
+//! \param [in] fillColor - If true, read the fill color; otherwise read the line color
+//! \param [out] outcol - Set to the color's palette index or named color number, if it has one
+//! \param [out] outcolspace - Set to the color space (SW_COLSPACE_*) of the color components
+//! \param [out] EXPoutcol - Set to an expression to evaluate to obtain the color, if it depends on data
+//! \param [out] outcol1 - Set to the first component of the color
+//! \param [out] outcol2 - Set to the second component of the color
+//! \param [out] outcol3 - Set to the third component of the color
+//! \param [out] outcol4 - Set to the fourth component of the color (CMYK only)
+//! \param [out] USEcol - Set to true if <outcol> was set
+//! \param [out] USEcol1234 - Set to true if the color components <outcol1>...<outcol4> were set
+//! \return Zero on success, or one if the color was invalid
+
 int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, const int *ptab, int stkbase,
                       const int fillColor, int *outcol, int *outcolspace, pplExpr **EXPoutcol, double *outcol1,
                       double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
@@ -53,6 +72,22 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
     if (s) ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, NULL);
     return s;
 }
+
+//! ppl_colorFromObj - Convert a Pyxplot object describing a color into its components. The object may be a color
+//! object, a palette index, or an expression to be evaluated later.
+//! \param [in] c - The Pyxplot context
+//! \param [in] col - The object describing the color
+//! \param [out] outcol - Set to the color's palette index or named color number, if it has one
+//! \param [out] outcolspace - Set to the color space (SW_COLSPACE_*) of the color components
+//! \param [out] EXPoutcol - Set to an expression to evaluate to obtain the color, if it depends on data
+//! \param [out] outcol1 - Set to the first component of the color
+//! \param [out] outcol2 - Set to the second component of the color
+//! \param [out] outcol3 - Set to the third component of the color
+//! \param [out] outcol4 - Set to the fourth component of the color (CMYK only)
+//! \param [out] USEcol - Set to true if <outcol> was set
+//! \param [out] USEcol1234 - Set to true if the color components <outcol1>...<outcol4> were set
+//! \return Zero on success, or one if the object did not describe a valid color, in which case an error message is
+//! left in <c->errcontext.tempErrStr>
 
 int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcolspace, pplExpr **EXPoutcol,
                      double *outcol1, double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,

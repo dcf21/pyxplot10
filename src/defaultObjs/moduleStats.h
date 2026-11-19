@@ -25,21 +25,21 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void pplfunc_binomialPDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_binomialCDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_chisqPDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_chisqCDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_chisqCDFi(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_binomialPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_binomialCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_chisqPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_chisqCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_gaussianCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_poissonPDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_poissonCDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_tdistPDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_tdistCDF(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
-void pplfunc_tdistCDFi(const ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_poissonPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_poissonCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_tdistPDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_tdistCDF(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
+void pplfunc_tdistCDFi(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText);
 
 #endif

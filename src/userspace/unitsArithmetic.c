@@ -41,6 +41,10 @@
 // Functions for comparing the units of quantities
 // -------------------------------------------------------------------
 
+//! ppl_unitsDimCpy - Copy the physical dimensions of one object onto another
+//! \param [out] o - The object whose dimensions are to be set
+//! \param [in] i - The object whose dimensions are to be copied
+
 void ppl_unitsDimCpy(pplObj *o, const pplObj *i) {
     int j;
     o->dimensionless = i->dimensionless;
@@ -48,6 +52,10 @@ void ppl_unitsDimCpy(pplObj *o, const pplObj *i) {
     for (j = 0; j < UNITS_MAX_BASEUNITS; j++) o->exponent[j] = i->exponent[j];
     return;
 }
+
+//! ppl_unitsDimInverse - Set the physical dimensions of one object to be the inverse of those of another
+//! \param [out] o - The object whose dimensions are to be set
+//! \param [in] i - The object whose dimensions are to be inverted
 
 void ppl_unitsDimInverse(pplObj *o, const pplObj *i) {
     int j;
@@ -57,6 +65,11 @@ void ppl_unitsDimInverse(pplObj *o, const pplObj *i) {
     return;
 }
 
+//! ppl_unitsDimEqual - Test whether two objects have the same physical dimensions
+//! \param [in] a - The first object
+//! \param [in] b - The second object
+//! \return One if the objects have the same dimensions, zero otherwise
+
 int ppl_unitsDimEqual(const pplObj *a, const pplObj *b) {
     int j;
     if (a->dimensionless && b->dimensionless) return 1;
@@ -65,6 +78,11 @@ int ppl_unitsDimEqual(const pplObj *a, const pplObj *b) {
     return 1;
 }
 
+//! ppl_unitsDimEqual2 - Test whether an object has the same physical dimensions as a unit
+//! \param [in] a - The object
+//! \param [in] b - The unit
+//! \return One if the dimensions are the same, zero otherwise
+
 int ppl_unitsDimEqual2(const pplObj *a, const unit *b) {
     int j;
     for (j = 0; j < UNITS_MAX_BASEUNITS; j++)
@@ -72,12 +90,23 @@ int ppl_unitsDimEqual2(const pplObj *a, const unit *b) {
     return 1;
 }
 
+//! ppl_unitsDimEqual3 - Test whether two units have the same physical dimensions
+//! \param [in] a - The first unit
+//! \param [in] b - The second unit
+//! \return One if the dimensions are the same, zero otherwise
+
 int ppl_unitsDimEqual3(const unit *a, const unit *b) {
     int j;
     for (j = 0; j < UNITS_MAX_BASEUNITS; j++)
         if (ppl_dblEqual(a->exponent[j], b->exponent[j]) == 0) return 0;
     return 1;
 }
+
+//! ppl_tempTypeMatch - Test whether two quantities are measured on compatible temperature scales. Quantities without
+//! dimensions of temperature are compatible with anything.
+//! \param [in] a - The temperature scale of the first quantity, or zero if it has no dimensions of temperature
+//! \param [in] b - The temperature scale of the second quantity, or zero if it has no dimensions of temperature
+//! \return One if the temperature scales are compatible, zero otherwise
 
 unsigned char ppl_tempTypeMatch(const unsigned char a, const unsigned char b) {
     if ((a < 1) || (b < 1))
@@ -88,6 +117,15 @@ unsigned char ppl_tempTypeMatch(const unsigned char a, const unsigned char b) {
 // -------------------------------
 // ARITHMETIC OPERATIONS ON VALUES
 // -------------------------------
+
+//! ppl_uaPow - Raise one quantity to the power of another, taking account of physical units and complex numbers
+//! \param [in] c - The Pyxplot context
+//! \param [in] a - The base
+//! \param [in] b - The exponent, which must be dimensionless
+//! \param [out] o - The result (may be the same object as <a> or <b>)
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     int i;
@@ -192,6 +230,15 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     return;
 }
 
+//! ppl_uaMul - Multiply two quantities, taking account of physical units and complex numbers
+//! \param [in] c - The Pyxplot context
+//! \param [in] a - The first quantity
+//! \param [in] b - The second quantity
+//! \param [out] o - The result (may be the same object as <a> or <b>)
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     int i;
     double tmp, areal, breal, aimag, bimag;
@@ -286,6 +333,15 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     if (o->exponent[UNIT_TEMPERATURE] == 0) o->tempType = 0; // We've lost our temperature dependence
     return;
 }
+
+//! ppl_uaDiv - Divide one quantity by another, taking account of physical units and complex numbers
+//! \param [in] c - The Pyxplot context
+//! \param [in] a - The numerator
+//! \param [in] b - The denominator
+//! \param [out] o - The result (may be the same object as <a> or <b>)
+//! \param [out] status - Set to one if an error occurred, e.g. division by zero
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     int i;
@@ -410,6 +466,15 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     return;
 }
 
+//! ppl_uaAdd - Add two quantities, which must have the same physical dimensions
+//! \param [in] c - The Pyxplot context
+//! \param [in] a - The first quantity
+//! \param [in] b - The second quantity
+//! \param [out] o - The result (may be the same object as <a> or <b>)
+//! \param [out] status - Set to one if an error occurred, e.g. the quantities have different dimensions
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     o->real = a->real + b->real;
     if ((o != a) && (o != b)) {
@@ -471,6 +536,15 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     return;
 }
 
+//! ppl_uaSub - Subtract one quantity from another. They must have the same physical dimensions.
+//! \param [in] c - The Pyxplot context
+//! \param [in] a - The quantity to subtract from
+//! \param [in] b - The quantity to subtract
+//! \param [out] o - The result (may be the same object as <a> or <b>)
+//! \param [out] status - Set to one if an error occurred, e.g. the quantities have different dimensions
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     o->real = a->real - b->real;
     if ((o != a) && (o != b)) {
@@ -531,6 +605,16 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
     return;
 }
+
+//! ppl_uaMod - Compute the remainder of dividing one quantity by another. They must have the same physical
+//! dimensions, and must be real.
+//! \param [in] c - The Pyxplot context
+//! \param [in] a - The numerator
+//! \param [in] b - The denominator
+//! \param [out] o - The result (may be the same object as <a> or <b>)
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     o->real = a->real - floor(a->real / b->real) * b->real;

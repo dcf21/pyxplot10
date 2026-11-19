@@ -57,7 +57,7 @@
 #include "defaultObjs/defaultFuncs.h"
 #include "defaultObjs/defaultFuncsMacros.h"
 
-void pplfunc_binomialPDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_binomialPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomialPDF(k,p,n)";
     CHECK_NEEDINT(in[0], "k", "function's first argument must be");
     CHECK_NEEDINT(in[2], "n", "function's third argument must be");
@@ -65,7 +65,7 @@ void pplfunc_binomialPDF(const ppl_context *c, pplObj *in, const int nArgs, int 
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_binomialCDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_binomialCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomialCDF(k,p,n)";
     CHECK_NEEDINT(in[0], "k", "function's first argument must be");
     CHECK_NEEDINT(in[2], "n", "function's third argument must be");
@@ -73,19 +73,19 @@ void pplfunc_binomialCDF(const ppl_context *c, pplObj *in, const int nArgs, int 
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_chisqPDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_chisqPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqPDF(x,nu)";
     OUTPUT.real = gsl_ran_chisq_pdf(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_chisqCDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_chisqCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqCDF(x,nu)";
     OUTPUT.real = gsl_cdf_chisq_P(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_chisqCDFi(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisqCDFi(P,nu)";
     OUTPUT.real = gsl_cdf_chisq_Pinv(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
@@ -146,31 +146,31 @@ void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, const int nArgs, int *sta
     ppl_unitsDimCpy(&OUTPUT, &in[1]);
 }
 
-void pplfunc_poissonPDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_poissonPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poissonPDF(x,mu)";
     OUTPUT.real = gsl_ran_poisson_pdf(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_poissonCDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_poissonCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poissonCDF(x,mu)";
     OUTPUT.real = gsl_cdf_poisson_P(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_tdistPDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_tdistPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistPDF(x,nu)";
     OUTPUT.real = gsl_ran_tdist_pdf(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_tdistCDF(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_tdistCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistCDF(x,nu)";
     OUTPUT.real = gsl_cdf_tdist_P(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_tdistCDFi(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_tdistCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdistCDFi(P,nu)";
     OUTPUT.real = gsl_cdf_tdist_Pinv(in[0].real, in[1].real);
     CHECK_OUTPUT_OKAY;

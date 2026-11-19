@@ -33,6 +33,9 @@
 #include "userspace/pplObj.h"
 #include "userspace/pplObjFunc_fns.h"
 
+//! ppl_garbageNamespace - Free a namespace dictionary, releasing a reference to each of the objects in it
+//! \param [in] n - The namespace to free. Has no effect unless it was allocated with malloc().
+
 void ppl_garbageNamespace(dict *n) {
     dictItem *ptr, *ptrnext;
     if ((n == NULL) || (!n->useMalloc)) return;
@@ -50,6 +53,9 @@ void ppl_garbageNamespace(dict *n) {
     return;
 }
 
+//! ppl_garbageList - Free a list of objects, releasing a reference to each of the objects in it
+//! \param [in] l - The list to free. Has no effect unless it was allocated with malloc().
+
 void ppl_garbageList(list *l) {
     listItem *ptr, *ptrnext;
     if ((l == NULL) || (!l->useMalloc)) return;
@@ -64,6 +70,10 @@ void ppl_garbageList(list *l) {
     free(l);
     return;
 }
+
+//! ppl_garbageObject - Release a reference to an object. When its reference count reaches zero, any storage it
+//! owns (strings, lists, dictionaries, files, etc.) is freed, and it becomes a zombie.
+//! \param [in] o - The object to release
 
 void ppl_garbageObject(pplObj *o) {
     int objType;

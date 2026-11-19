@@ -51,6 +51,11 @@
 // Functions for creating and destroying axis descriptors
 // ------------------------------------------------------
 
+//! pplaxis_destroy - Free all of the memory allocated within an axis descriptor, including its format expression,
+//! label, linkage expression and tick lists. The descriptor itself is not freed.
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] in - The axis descriptor to clean up
+
 void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
     int i;
     if (in->format != NULL) {
@@ -95,6 +100,11 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
         return; \
     }
 
+//! pplaxis_copy - Make a deep copy of an axis descriptor
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - The axis descriptor to write the copy into
+//! \param [in] in - The axis descriptor to copy
+
 void pplaxis_copy(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
     void *tmp;
     *out = *in;
@@ -108,6 +118,11 @@ void pplaxis_copy(ppl_context *context, pplset_axis *out, const pplset_axis *in)
     pplaxis_copyMTics(context, out, in);
     return;
 }
+
+//! pplaxis_copyTics - Make a deep copy of the list of major ticks of an axis, replacing those in <out>
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - The axis descriptor to copy the ticks into
+//! \param [in] in - The axis descriptor to copy the ticks from
 
 void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
     int i = 0, j;
@@ -130,6 +145,11 @@ void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis 
     return;
 }
 
+//! pplaxis_copyMTics - Make a deep copy of the list of minor ticks of an axis, replacing those in <out>
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - The axis descriptor to copy the ticks into
+//! \param [in] in - The axis descriptor to copy the ticks from
+
 void pplaxis_copyMTics(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
     int i = 0, j;
     void *tmp;
@@ -150,6 +170,16 @@ void pplaxis_copyMTics(ppl_context *context, pplset_axis *out, const pplset_axis
     }
     return;
 }
+
+//! pplaxis_cmpTics - Test whether two axes' tick settings are identical
+//! \param [in] context - The Pyxplot context
+//! \param [in] ta - The tick settings of the first axis
+//! \param [in] tb - The tick settings of the second axis
+//! \param [in] ua - The physical units of the first axis
+//! \param [in] ub - The physical units of the second axis
+//! \param [in] la - Flag indicating whether the first axis is logarithmic
+//! \param [in] lb - Flag indicating whether the second axis is logarithmic
+//! \return One if the tick settings are identical, zero otherwise
 
 unsigned char pplaxis_cmpTics(const ppl_context *context, const pplset_tics *ta, const pplset_tics *tb,
                               const pplObj *ua, const pplObj *ub, const int la, const int lb) {
@@ -179,9 +209,16 @@ unsigned char pplaxis_cmpTics(const ppl_context *context, const pplset_tics *ta,
     return 1;
 }
 
-// Where along this axis, in the range 0 (left) to 1 (right) should the value
-// xin go? xrn = Region Number for interpolated axes which do not have
-// monotonically increasing ordinate values.
+//! pplaxis_GetPosition - Return the fractional position along an axis at which a value should be plotted
+//! \param [in] xin - The value to locate on the axis
+//! \param [in] xa - The axis, or NULL to return <xin> unchanged
+//! \param [in] xrn - For axes whose values are linearly interpolated from a non-monotonic function, the number of
+//! the monotonic region of the axis in which to look for <xin>
+//! \param [in] AllowOffBounds - If true, values outside the range of the axis return positions outside the range
+//! 0-1; otherwise they return NaN
+//! \return The position along the axis, in the range 0 (left/bottom) to 1 (right/top), or NaN if the value cannot be
+//! placed on the axis
+
 double pplaxis_GetPosition(const double xin, const pplset_axis *xa, const int xrn, const unsigned char AllowOffBounds) {
     int imin, imax, i;
     if (xa == NULL) return xin;
@@ -211,7 +248,12 @@ double pplaxis_GetPosition(const double xin, const pplset_axis *xa, const int xr
     else return (log(xin) - log(xa->MinFinal)) / (log(xa->MaxFinal) - log(xa->MinFinal)); // ... or logarithmic
 }
 
-// What is the value of this axis at point xin, in the range 0 (left) to 1 (right)?
+//! pplaxis_InvGetPosition - Return the value of an axis at a fractional position along it. This is the inverse of
+//! pplaxis_GetPosition().
+//! \param [in] xin - The position along the axis, in the range 0 (left/bottom) to 1 (right/top)
+//! \param [in] xa - The axis
+//! \return The value of the axis at position <xin>
+
 double pplaxis_InvGetPosition(const double xin, const pplset_axis *xa) {
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {

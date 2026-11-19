@@ -48,6 +48,14 @@
 
 #define CMPVAL(X, Y) (ppl_unitsDimEqual(&X, &Y) && ppl_dblEqual(X.real, Y.real))
 
+//! pplarrow_add - Implement the "set arrow" command, adding a new arrow to a list of arrows, or replacing an
+//! existing arrow with the same ID number
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the linked list of arrows, sorted by ID number
+//! \param [in] in - The parser output for the command, containing the arrow's ID, coordinates and style
+//! \param [in] pl - The parsed command line, used to report errors
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
+
 void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
     int i;
     int system_x0, system_y0, system_z0, system_x1, system_y1, system_z1;
@@ -123,6 +131,15 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     return;
 }
 
+//! pplarrow_remove - Implement the "set noarrow" command, removing arrows from a list of arrows
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the linked list of arrows
+//! \param [in] in - The parser output for the command, containing the list of arrow IDs to remove. If no IDs are
+//! given, all arrows are removed.
+//! \param [in] pl - The parsed command line
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
+//! \param [in] quiet - If true, do not warn about arrow IDs which are not defined
+
 void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutput *in, const parserLine *pl,
                      const int *ptab, const int quiet) {
     int pos;
@@ -154,6 +171,14 @@ void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutpu
     }
     return;
 }
+
+//! pplarrow_unset - Implement the "unset arrow" command, reverting arrows to their default definitions
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the linked list of arrows
+//! \param [in] in - The parser output for the command, containing the list of arrow IDs to unset. If no IDs are
+//! given, all arrows are reverted to their defaults.
+//! \param [in] pl - The parsed command line
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
 void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
     int pos;
@@ -198,6 +223,12 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
     return;
 }
 
+//! pplarrow_compare - Test whether two arrow definitions are identical
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The first arrow
+//! \param [in] b - The second arrow
+//! \return One if the arrows are identical, zero otherwise
+
 unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarrow_object *b) {
     if (a->id != b->id) return 0;
     if ((!CMPVAL(a->x0, b->x0)) || (!CMPVAL(a->y0, b->y0)) || (!CMPVAL(a->z0, b->z0))) return 0;
@@ -209,6 +240,11 @@ unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarro
     if (!ppl_withWordsCmp(context, &a->style, &b->style)) return 0;
     return 1;
 }
+
+//! pplarrow_list_copy - Make a deep copy of a linked list of arrows
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - Pointer to the head of the new list
+//! \param [in] in - Pointer to the head of the list to copy
 
 void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_object **in) {
     *out = NULL;
@@ -227,6 +263,10 @@ void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_ob
     return;
 }
 
+//! pplarrow_list_destroy - Free a linked list of arrows
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the list to free, which is set to NULL
+
 void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist) {
     pplarrow_object *obj, **first;
 
@@ -240,6 +280,11 @@ void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist) {
     *first = NULL;
     return;
 }
+
+//! pplarrow_print - Write a textual description of an arrow, in the syntax of the "set arrow" command
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The arrow to describe
+//! \param [out] out - Character buffer into which to write the description
 
 void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out) {
     int i;

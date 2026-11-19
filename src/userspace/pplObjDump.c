@@ -41,6 +41,11 @@
 #include "userspace/pplObjPrint.h"
 #include "userspace/unitsDisp.h"
 
+//! pplObjDump - Write an object to a file, in a format which Pyxplot can read back in to recreate the object
+//! \param [in] c - The Pyxplot context
+//! \param [in] o - The object to write
+//! \param [in] output - The file handle to write to
+
 void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
     char *buffer = c->errcontext.tempErrStr;
     int t;

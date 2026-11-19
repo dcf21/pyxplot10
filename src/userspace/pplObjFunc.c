@@ -33,6 +33,10 @@
 #include "userspace/pplObj.h"
 #include "userspace/pplObjFunc_fns.h"
 
+//! pplObjFuncDestroyChain - Free a chain of function descriptors, such as the multiple definitions of a function
+//! over different ranges of its arguments
+//! \param [in] f - The first function descriptor in the chain
+
 void pplObjFuncDestroyChain(pplFunc *f) {
     pplFunc *next;
     while (f != NULL) {
@@ -42,6 +46,9 @@ void pplObjFuncDestroyChain(pplFunc *f) {
     }
     return;
 }
+
+//! pplObjFuncDestroy - Free a function descriptor and the storage it owns. System functions are never freed.
+//! \param [in] f - The function descriptor to free
 
 void pplObjFuncDestroy(pplFunc *f) {
     const int type = f->functionType;
@@ -114,6 +121,10 @@ void pplObjFuncDestroy(pplFunc *f) {
     free(f);
     return;
 }
+
+//! pplObjFuncCpy - Make a deep copy of a user-defined function descriptor
+//! \param [in] f - The function descriptor to copy
+//! \return The copy, or NULL if <f> is not a user-defined function, or if memory allocation failed
 
 pplFunc *pplObjFuncCpy(pplFunc *f) {
     pplFunc *o;

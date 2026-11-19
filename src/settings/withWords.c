@@ -47,6 +47,11 @@
 // ROUTINES FOR MANIPULATING WITH_WORDS STRUCTURES
 // -----------------------------------------------
 
+//! ppl_withWordsZero - Reset a set of plot style modifiers (the words which follow "with" in a plot command) so that
+//! none of them are set
+//! \param [in] context - The Pyxplot context
+//! \param [out] a - The plot style modifiers to reset
+
 void ppl_withWordsZero(const ppl_context *context, withWords *a) {
     a->color = a->fillcolor = a->linespoints = a->linetype = a->pointtype = a->style = a->Col1234Space =
             a->FillCol1234Space = 0;
@@ -59,6 +64,14 @@ void ppl_withWordsZero(const ppl_context *context, withWords *a) {
     a->AUTOcolor = a->AUTOlinetype = a->AUTOpointtype = 0;
     return;
 }
+
+//! ppl_withWordsFromDict - Read the plot style modifiers specified after "with" in a parsed command
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The parser output for the command
+//! \param [in] pl - The parsed command line, used to report errors
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
+//! \param [in] stkbase - Offset to add to positions in <in->stk>
+//! \param [out] out - The plot style modifiers which were read
 
 void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserLine *pl, const int *ptab,
                            const int stkbase, withWords *out) {
@@ -166,6 +179,11 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
 }
 
 
+//! ppl_withWordsCmp_zero - Test whether a set of plot style modifiers is empty
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The plot style modifiers to test
+//! \return One if none of the modifiers are set, zero otherwise
+
 int ppl_withWordsCmp_zero(const ppl_context *context, const withWords *a) {
     if (a->EXPlinetype != NULL) return 0;
     if (a->EXPlinewidth != NULL) return 0;
@@ -188,7 +206,13 @@ int ppl_withWordsCmp_zero(const ppl_context *context, const withWords *a) {
     return 1;
 }
 
-int ppl_withWordsCmp(const ppl_context *context, const withWords *a, const withWords *b) {
+//! ppl_withWordsCmp - Test whether two sets of plot style modifiers are identical
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The first set of modifiers
+//! \param [in] b - The second set of modifiers
+//! \return One if the modifiers are identical, zero otherwise
+
+int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *b) {
     // Check that the range of items which are defined in both structures are the same
     if ((a->EXPcolor == NULL) != (b->EXPcolor == NULL)) return 0;
     if ((a->EXPfillcolor == NULL) != (b->EXPfillcolor == NULL)) return 0;
@@ -240,7 +264,17 @@ int ppl_withWordsCmp(const ppl_context *context, const withWords *a, const withW
     return 1; // We have not found any differences
 }
 
-// a has highest priority; e has lowest priority
+//! ppl_withWordsMerge - Merge up to five sets of plot style modifiers, with modifiers set in earlier sets taking
+//! priority over those set in later ones. Numbered plot styles ("style N") are expanded if requested.
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - The merged set of modifiers
+//! \param [in] a - The set of modifiers with the highest priority (may be NULL)
+//! \param [in] b - The set of modifiers with the second-highest priority (may be NULL)
+//! \param [in] c - The set of modifiers with the third-highest priority (may be NULL)
+//! \param [in] d - The set of modifiers with the fourth-highest priority (may be NULL)
+//! \param [in] e - The set of modifiers with the lowest priority (may be NULL)
+//! \param [in] ExpandStyles - If true, substitute the definitions of numbered plot styles referenced with "style N"
+
 void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a, const withWords *b,
                         const withWords *c, const withWords *d, const withWords *e, const unsigned char ExpandStyles) {
     int i;
@@ -400,6 +434,12 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
     (char *) ppl_numericDisplay(X, context->numdispBuff[Y], context->set->term_current.SignificantFigures, \
                                 (context->set->term_current.NumDisplay == SW_DISPLAY_L))
 
+//! ppl_withWordsPrint - Write a textual description of a set of plot style modifiers, in the syntax used after
+//! "with" in a plot command
+//! \param [in] context - The Pyxplot context
+//! \param [in] defn - The plot style modifiers to describe
+//! \param [out] out - Character buffer into which to write the description
+
 void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out) {
     int i = 0;
     out[i] = '\0';
@@ -488,6 +528,10 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out) 
     return;
 }
 
+//! ppl_withWordsDestroy - Free the expressions referenced by a set of plot style modifiers
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] a - The plot style modifiers to clean up
+
 void ppl_withWordsDestroy(const ppl_context *context, withWords *a) {
     if (a->EXPlinetype != NULL) {
         pplExpr_free(a->EXPlinetype);
@@ -519,6 +563,12 @@ void ppl_withWordsDestroy(const ppl_context *context, withWords *a) {
     }
     return;
 }
+
+//! ppl_withWordsCpy - Copy a set of plot style modifiers. Expressions are shared between the copies, with their
+//! reference counts incremented.
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - The copy
+//! \param [in] in - The plot style modifiers to copy
 
 void ppl_withWordsCpy(const ppl_context *context, withWords *out, const withWords *in) {
     *out = *in;

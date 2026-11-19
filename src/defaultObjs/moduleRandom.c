@@ -58,8 +58,7 @@ void pplfunc_setRandomSeed(const long i) {
     return;
 }
 
-void pplfunc_frandom(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                     const char *errText) {
+void pplfunc_frandom(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
@@ -67,7 +66,7 @@ void pplfunc_frandom(const ppl_context *c, pplObj *in, const int nArgs, const in
     OUTPUT.real = gsl_rng_uniform(rndgen);
 }
 
-void pplfunc_frandombin(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomial(p,n)";
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
@@ -78,7 +77,7 @@ void pplfunc_frandombin(const ppl_context *c, pplObj *in, const int nArgs, int *
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_frandomcs(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisq(nu)";
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
@@ -88,7 +87,7 @@ void pplfunc_frandomcs(const ppl_context *c, pplObj *in, const int nArgs, int *s
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_frandomg(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussian(sigma)";
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
@@ -112,7 +111,7 @@ void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status,
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
-void pplfunc_frandomp(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poisson(n)";
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
@@ -122,7 +121,7 @@ void pplfunc_frandomp(const ppl_context *c, pplObj *in, const int nArgs, int *st
     CHECK_OUTPUT_OKAY;
 }
 
-void pplfunc_frandomt(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+void pplfunc_frandomt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdist(nu)";
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);

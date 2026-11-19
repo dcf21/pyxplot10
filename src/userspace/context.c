@@ -43,6 +43,10 @@
 #include "defaultObjs/defaultUnits.h"
 #include "defaultObjs/defaultVars.h"
 
+//! ppl_contextInit - Create a new Pyxplot context, which holds the settings, variable namespaces and all other
+//! state of a Pyxplot session
+//! \return The new context, or NULL if memory allocation failed
+
 ppl_context *ppl_contextInit() {
     int i;
     ppl_context *out = malloc(sizeof(ppl_context));
@@ -107,6 +111,9 @@ ppl_context *ppl_contextInit() {
     ppl_makeDefaultVars(out);
     return out;
 }
+
+//! ppl_contextFree - Free a Pyxplot context, including any local variable namespaces still open
+//! \param [in] in - The context to free
 
 void ppl_contextFree(ppl_context *in) {
     int i;

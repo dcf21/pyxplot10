@@ -33,6 +33,14 @@
 #include "userspace/unitsArithmetic.h"
 #include "userspace/unitsDisp.h"
 
+//! pplcol_RGBtoHSB - Convert a color from RGB to HSB components
+//! \param [in] ri - Red component, 0-1
+//! \param [in] gi - Green component, 0-1
+//! \param [in] bi - Blue component, 0-1
+//! \param [out] ho - Hue component, 0-1
+//! \param [out] so - Saturation component, 0-1
+//! \param [out] bo - Brightness component, 0-1
+
 void pplcol_RGBtoHSB(const double ri, const double gi, const double bi, double *ho, double *so, double *bo) {
     const double M = ppl_max3(ri, gi, bi);
     const double m = ppl_min3(ri, gi, bi);
@@ -53,6 +61,15 @@ void pplcol_RGBtoHSB(const double ri, const double gi, const double bi, double *
     if (*bo > 1) *bo = 1;
 }
 
+//! pplcol_CMYKtoRGB - Convert a color from CMYK to RGB components
+//! \param [in] ci - Cyan component, 0-1
+//! \param [in] mi - Magenta component, 0-1
+//! \param [in] yi - Yellow component, 0-1
+//! \param [in] ki - Key (black) component, 0-1
+//! \param [out] ro - Red component, 0-1
+//! \param [out] go - Green component, 0-1
+//! \param [out] bo - Blue component, 0-1
+
 void pplcol_CMYKtoRGB(const double ci, const double mi, const double yi, const double ki, double *ro, double *go,
                       double *bo) {
     *ro = 1.0 - (ci + ki);
@@ -65,6 +82,14 @@ void pplcol_CMYKtoRGB(const double ci, const double mi, const double yi, const d
     if (*bo < 0) *bo = 0;
     if (*bo > 1) *bo = 1;
 }
+
+//! pplcol_HSBtoRGB - Convert a color from HSB to RGB components
+//! \param [in] hi - Hue component, 0-1
+//! \param [in] si - Saturation component, 0-1
+//! \param [in] bi - Brightness component, 0-1
+//! \param [out] ro - Red component, 0-1
+//! \param [out] go - Green component, 0-1
+//! \param [out] bo - Blue component, 0-1
 
 void pplcol_HSBtoRGB(double hi, const double si, const double bi, double *ro, double *go, double *bo) {
     const double ch = si * bi;
@@ -122,12 +147,30 @@ void pplcol_HSBtoRGB(double hi, const double si, const double bi, double *ro, do
     if (*bo > 1) *bo = 1;
 }
 
+//! pplcol_CMYKtoHSB - Convert a color from CMYK to HSB components
+//! \param [in] ci - Cyan component, 0-1
+//! \param [in] mi - Magenta component, 0-1
+//! \param [in] yi - Yellow component, 0-1
+//! \param [in] ki - Key (black) component, 0-1
+//! \param [out] ho - Hue component, 0-1
+//! \param [out] so - Saturation component, 0-1
+//! \param [out] bo - Brightness component, 0-1
+
 void pplcol_CMYKtoHSB(const double ci, const double mi, const double yi, const double ki, double *ho, double *so,
                       double *bo) {
     double r, g, b;
     pplcol_CMYKtoRGB(ci, mi, yi, ki, &r, &g, &b);
     pplcol_RGBtoHSB(r, g, b, ho, so, bo);
 }
+
+//! pplcol_RGBtoCMYK - Convert a color from RGB to CMYK components
+//! \param [in] ri - Red component, 0-1
+//! \param [in] gi - Green component, 0-1
+//! \param [in] bi - Blue component, 0-1
+//! \param [out] co - Cyan component, 0-1
+//! \param [out] mo - Magenta component, 0-1
+//! \param [out] yo - Yellow component, 0-1
+//! \param [out] ko - Key (black) component, 0-1
 
 void pplcol_RGBtoCMYK(const double ri, const double gi, const double bi, double *co, double *mo, double *yo,
                       double *ko) {
@@ -145,6 +188,15 @@ void pplcol_RGBtoCMYK(const double ri, const double gi, const double bi, double 
     if (*ko > 1) *ko = 1;
 }
 
+//! pplcol_HSBtoCMYK - Convert a color from HSB to CMYK components
+//! \param [in] hi - Hue component, 0-1
+//! \param [in] si - Saturation component, 0-1
+//! \param [in] bi - Brightness component, 0-1
+//! \param [out] co - Cyan component, 0-1
+//! \param [out] mo - Magenta component, 0-1
+//! \param [out] yo - Yellow component, 0-1
+//! \param [out] ko - Key (black) component, 0-1
+
 void pplcol_HSBtoCMYK(const double hi, const double si, const double bi, double *co, double *mo, double *yo,
                       double *ko) {
     double r, g, b;
@@ -152,17 +204,39 @@ void pplcol_HSBtoCMYK(const double hi, const double si, const double bi, double 
     pplcol_RGBtoCMYK(r, g, b, co, mo, yo, ko);
 }
 
+//! SGN - Return the sign of an integer
+//! \param [in] x - The input integer
+//! \return -1 if <x> is negative, 1 if it is positive, or 0 if it is zero
+
 static int SGN(const int x) {
     if (x == 0) return 0;
     if (x < 0) return -1;
     return 1;
 }
 
+//! pplObjCmpQuiet - Comparison function for sorting arrays of pointers to objects with qsort()
+//! \param [in] a - Pointer to a pointer to the first object
+//! \param [in] b - Pointer to a pointer to the second object
+//! \return -1, 0 or 1 if the first object is less than, equal to or greater than the second, or -2 if they cannot
+//! be compared
+
 int pplObjCmpQuiet(const void *a, const void *b) {
     const pplObj *pa = *(pplObj **) a;
     const pplObj *pb = *(pplObj **) b;
     return pplObjCmp(NULL, pa, pb, NULL, NULL, NULL, 0);
 }
+
+//! pplObjCmp - Compare two objects. Objects of different types are ordered by type; objects of the same type are
+//! compared by value, recursing into the members of compound objects.
+//! \param [in] c - The Pyxplot context (may be NULL if <status> is NULL)
+//! \param [in] a - The first object
+//! \param [in] b - The second object
+//! \param [out] status - Set to one if the objects could not be compared, e.g. numbers with different physical
+//! dimensions (optional)
+//! \param [out] errType - Set to the type of error, if the objects could not be compared
+//! \param [out] errText - Character buffer into which to write an error message, if the objects could not be compared
+//! \param [in] iterDepth - The depth of recursion into compound objects, used to prevent infinite recursion
+//! \return -1, 0 or 1 if <a> is less than, equal to or greater than <b>, or -2 if they cannot be compared
 
 int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int *errType, char *errText,
               const int iterDepth) {

@@ -49,7 +49,20 @@ const char *SIprefixes_latex[] = {"y", "z", "a", "f", "p", "n", "\\upmu ", "m", 
 
 // NB: The LaTeX upmu character is defined by the {upgreek} package
 
-// Display a value with units and format string
+//! ppl_unitsNumericDisplayWithFormat - Render a quantity as a string using a printf-style format string, followed
+//! by its physical units
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The quantity to render
+//! \param [in] N - Which of two static output buffers in the context to use (0 or 1)
+//! \param [in] formatString - The printf-style format string for a single number, e.g. "%.3f"
+//! \param [in] formatChar - The conversion character at the end of <formatString>, e.g. 'f' or 'd'
+//! \param [in] maxLen - The maximum length of the output string
+//! \param [in] requiredArgs - The number of integer arguments (zero, one or two) required by <formatString>, e.g.
+//! for field widths and precisions given as *
+//! \param [in] arg1i - The first integer argument required by <formatString>
+//! \param [in] arg2i - The second integer argument required by <formatString>
+//! \return Pointer to the output buffer, which is overwritten by subsequent calls
+
 char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const int N, const char *formatString,
                                         const char formatChar, const int maxLen, const int requiredArgs, int arg1i,
                                         int arg2i) {
@@ -136,8 +149,16 @@ char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const 
     return output;
 }
 
-// Display a value with units
-char *ppl_unitsNumericDisplay(ppl_context *c, const pplObj *in, const int N, int typeable, int NSigFigs) {
+//! ppl_unitsNumericDisplay - Render a quantity as a string, followed by its physical units
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The quantity to render
+//! \param [in] N - Which of two static output buffers in the context to use (0 or 1)
+//! \param [in] typeable - The output style, one of the SW_DISPLAY_* constants (natural, typeable or LaTeX), or zero
+//! to use the current setting
+//! \param [in] NSigFigs - The number of significant figures to display, or zero or less to use the current setting
+//! \return Pointer to the output buffer, which is overwritten by subsequent calls
+
+char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typeable, int NSigFigs) {
     double numberOutReal, numberOutImag, OoM;
     char *output, *unitstr;
     int i = 0;
@@ -224,6 +245,16 @@ char *ppl_unitsNumericDisplay(ppl_context *c, const pplObj *in, const int N, int
      ((X).planck && (c->set->term_current.UnitScheme == SW_UNITSCH_PLK)) || \
      ((X).ancient && (c->set->term_current.UnitScheme == SW_UNITSCH_ANC)))
 
+//! ppl_udFindOptimalNextUnit - Find the unit which best matches some of the remaining physical dimensions of a
+//! quantity, and divide the quantity's dimensions by it. Used to build up a list of units with which to display a
+//! quantity.
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - The quantity, whose dimensions are reduced by those of the chosen unit
+//! \param [in] first - Flag indicating whether this is the first unit to be chosen, in which case a unit which
+//! matches all of the quantity's dimensions is preferred
+//! \param [out] best - Set to point to the chosen unit, or NULL if none was found
+//! \param [out] pow - Set to the power to which the chosen unit is raised
+
 void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned char first, unit **best, double *pow) {
     int i, j, k, score, found = 0, BestScore = 0;
     double power;
@@ -294,6 +325,15 @@ void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned 
     for (j = 0; j < UNITS_MAX_BASEUNITS; j++) { in->exponent[j] -= (*pow) * (*best)->exponent[j]; }
     return;
 }
+
+//! ppl_udPrefixFix - Choose SI prefixes and dimensionally-equivalent alternative units for a list of units, so as
+//! to make the number displayed alongside them as close to unity as possible
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - The quantity being displayed, whose value is rescaled to take account of the units chosen
+//! \param [in|out] UnitList - The list of units with which the quantity will be displayed
+//! \param [in] UnitPow - The power to which each unit in <UnitList> is raised
+//! \param [out] UnitPref - The SI prefix chosen for each unit in <UnitList>
+//! \param [in] Nunits - The number of units in <UnitList>
 
 void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const double *UnitPow, int *UnitPref,
                      const int Nunits) {
@@ -377,7 +417,18 @@ void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const do
     return;
 }
 
-// Main entry point for printing units
+//! ppl_printUnit - Render the physical units of a quantity as a string, choosing the units which make the numerical
+//! value of the quantity as close to unity as possible
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The quantity whose units are to be rendered
+//! \param [out] numberOutReal - Set to the real part of the quantity, expressed in the chosen units (optional)
+//! \param [out] numberOutImag - Set to the imaginary part of the quantity, expressed in the chosen units (optional)
+//! \param [in] N - Which of two static output buffers in the context to use (0 or 1)
+//! \param [in] DivAllowed - If true, units with negative powers may be written after a /, e.g. m/s; otherwise they
+//! are written with negative powers, e.g. m*s**-1
+//! \param [in] typeable - The output style, one of the SW_DISPLAY_* constants, or zero to use the current setting
+//! \return Pointer to the output buffer, which is overwritten by subsequent calls
+
 char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, double *numberOutImag, int N,
                     const int DivAllowed, int typeable) {
     char *output, *temp;
@@ -548,6 +599,12 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
 // Function to evaluate strings of the form "m/s"
 // ------------------------------------------------
 
+//! ppl_unitNameCmp - Test whether a string begins with the name of a unit, followed by a non-alphanumeric character
+//! \param [in] in - The string to test
+//! \param [in] unit - The name of the unit (may be NULL)
+//! \param [in] caseSensitive - If true, the comparison is case-sensitive
+//! \return The length of the unit name if it matches, or zero otherwise
+
 int ppl_unitNameCmp(const char *in, const char *unit, const unsigned char caseSensitive) {
     int k;
     if (unit == NULL) return 0;
@@ -558,6 +615,14 @@ int ppl_unitNameCmp(const char *in, const char *unit, const unsigned char caseSe
     if ((unit[k] == '\0') && (!(isalnum(in[k]) || (in[k] == '_')))) return k;
     return 0;
 }
+
+//! ppl_unitsStringEvaluate - Evaluate a string describing a physical unit, such as "m/s**2", into a quantity
+//! \param [in] c - The Pyxplot context
+//! \param [in] in - The string to evaluate
+//! \param [out] out - The quantity described by the string
+//! \param [out] end - Set to the number of characters of <in> which were read
+//! \param [out] errpos - Set to the position in <in> of any error, or -1 if there was no error
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, int *end, int *errpos, char *errText) {
     int i = 0, j = 0, k, l, m, p;
@@ -707,7 +772,16 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
     return;
 }
 
-// Function for making preferred unit structures
+//! ppl_newPreferredUnit - Create a description of a preferred unit, from a string such as "km/s", for use by the
+//! "set unit preferred" command
+//! \param [in] c - The Pyxplot context
+//! \param [out] output - Set to point to a newly malloced preferred-unit structure, or NULL on failure
+//! \param [in] instr - The string describing the preferred unit
+//! \param [in] OutputContext - Unused
+//! \param [in|out] errpos - The position in <instr> of any error, or -1 if there was no error. If this is already
+//! non-negative on entry, the function returns immediately.
+//! \param [out] errText - Character buffer into which to write an error message, if an error occurred
+
 void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, const int OutputContext, int *errpos,
                           char *errText) {
     int end, outpos, PrefixOut, i, j, k, l, m, p;

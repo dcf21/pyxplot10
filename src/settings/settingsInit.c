@@ -49,6 +49,10 @@ int cancellationFlag = 0;
 
 #include "userspace/pplObj_fns.h"
 
+//! pplset_makedefault - Initialise all of Pyxplot's settings to their default values. Settings for the paper size
+//! and color scheme are taken from the user's locale and environment, and then from configuration files.
+//! \param [in|out] context - The Pyxplot context whose settings are to be initialised
+
 void pplset_makedefault(ppl_context *context) {
     FILE *LocalePipe;
     int Nchars, i, gotPaperSize;

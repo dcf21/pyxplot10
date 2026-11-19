@@ -87,16 +87,14 @@ dict **pplObjMethods;
 
 // Universal methods of all objects
 
-static void pplmethod_class(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                            const char *errText) {
+static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     if (t == NULL) pplObjNull(&OUTPUT, 0);
     else pplObjCpy(&OUTPUT, t->objPrototype, 0, 0, 1);
     OUTPUT.self_lval = NULL;
 }
 
-static void pplmethod_data(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                           char *errText) {
+static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int count = 0;
     char *keys[4096], *key, *tmp;
     pplObj v;
@@ -150,8 +148,7 @@ static void pplmethod_data(const ppl_context *c, pplObj *in, const int nArgs, in
     }
 }
 
-static void pplmethod_contents(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int count = 0;
     char *keys[4096], *key, *tmp;
     pplObj v;
@@ -203,8 +200,7 @@ static void pplmethod_contents(const ppl_context *c, pplObj *in, const int nArgs
     }
 }
 
-static void pplmethod_methods(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                              char *errText) {
+static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int count = 0;
     char *keys[4096], *key, *tmp;
     pplObj v;
@@ -258,7 +254,7 @@ static void pplmethod_methods(const ppl_context *c, pplObj *in, const int nArgs,
     }
 }
 
-static void pplmethod_str(ppl_context *c, pplObj *in, const int nArgs, int *status, const int *errType, char *errText) {
+static void pplmethod_str(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *tmp = (char *) malloc(LSTR_LENGTH);
     if (tmp == NULL) {
@@ -270,8 +266,7 @@ static void pplmethod_str(ppl_context *c, pplObj *in, const int nArgs, int *stat
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
-static void pplmethod_type(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                           const char *errText) {
+static void pplmethod_type(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     if (t == NULL) pplObjNull(&OUTPUT, 0);
     else pplObjCpy(&OUTPUT, &pplObjPrototypes[t->objType], 0, 0, 1);
@@ -280,8 +275,7 @@ static void pplmethod_type(const ppl_context *c, pplObj *in, const int nArgs, co
 
 // String methods
 
-static void pplmethod_strUpper(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_strUpper(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
@@ -293,8 +287,7 @@ static void pplmethod_strUpper(const ppl_context *c, pplObj *in, const int nArgs
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
-static void pplmethod_strLower(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_strLower(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
@@ -306,8 +299,7 @@ static void pplmethod_strLower(const ppl_context *c, pplObj *in, const int nArgs
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
-static void pplmethod_strSplit(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
     int i, j;
@@ -336,7 +328,7 @@ static void pplmethod_strSplit(const ppl_context *c, pplObj *in, const int nArgs
         }
 }
 
-static void pplmethod_strSplitOn(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
@@ -386,8 +378,7 @@ static void pplmethod_strSplitOn(const ppl_context *c, pplObj *in, const int nAr
     }
 }
 
-static void pplmethod_strStrip(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_strStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i, j;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
@@ -400,8 +391,7 @@ static void pplmethod_strStrip(const ppl_context *c, pplObj *in, const int nArgs
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
-static void pplmethod_strLStrip(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_strLStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0, j = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
@@ -412,8 +402,7 @@ static void pplmethod_strLStrip(const ppl_context *c, pplObj *in, const int nArg
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
-static void pplmethod_strRStrip(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_strRStrip(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i = 0, j = 0;
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
@@ -425,8 +414,8 @@ static void pplmethod_strRStrip(const ppl_context *c, pplObj *in, const int nArg
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
-static void pplmethod_strisalpha(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_strisalpha(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
     int i, l = strlen(s), out = 1;
@@ -438,8 +427,8 @@ static void pplmethod_strisalpha(const ppl_context *c, pplObj *in, const int nAr
     pplObjBool(&OUTPUT, 0, out);
 }
 
-static void pplmethod_strisdigit(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_strisdigit(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
     int i, l = strlen(s), out = 1;
@@ -451,8 +440,8 @@ static void pplmethod_strisdigit(const ppl_context *c, pplObj *in, const int nAr
     pplObjBool(&OUTPUT, 0, out);
 }
 
-static void pplmethod_strisalnum(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_strisalnum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
     int i, l = strlen(s), out = 1;
@@ -464,8 +453,7 @@ static void pplmethod_strisalnum(const ppl_context *c, pplObj *in, const int nAr
     pplObjBool(&OUTPUT, 0, out);
 }
 
-static void pplmethod_strAppend(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *astr;
     int alen;
@@ -520,7 +508,7 @@ static void pplmethod_strAppend(const ppl_context *c, pplObj *in, const int nArg
     pplObjCpy(&OUTPUT, t, 0, 0, 1);
 }
 
-static void pplmethod_strBeginsWith(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_strBeginsWith(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                     char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
@@ -534,7 +522,7 @@ static void pplmethod_strBeginsWith(const ppl_context *c, pplObj *in, const int 
     pplObjBool(&OUTPUT, 0, strncmp(instr, cmpstr, strlen(cmpstr)) == 0);
 }
 
-static void pplmethod_strEndsWith(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
@@ -556,8 +544,7 @@ static void pplmethod_strEndsWith(const ppl_context *c, pplObj *in, const int nA
     }
 }
 
-static void pplmethod_strFind(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                              char *errText) {
+static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
     int il, cl, pmax, p;
@@ -579,7 +566,7 @@ static void pplmethod_strFind(const ppl_context *c, pplObj *in, const int nArgs,
     pplObjNum(&OUTPUT, 0, -1, 0);
 }
 
-static void pplmethod_strFindAll(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
@@ -611,8 +598,7 @@ static void pplmethod_strFindAll(const ppl_context *c, pplObj *in, const int nAr
         }
 }
 
-static void pplmethod_strLen(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                             const char *errText) {
+static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
     pplObjNum(&OUTPUT, 0, strlen(instr), 0);
@@ -662,7 +648,7 @@ static void pplmethod_dateToDayWeekName(ppl_context *c, pplObj *in, const int nA
     pplObjStr(&OUTPUT, 0, 1, tmp);
 }
 
-static void pplmethod_dateToDayWeekNum(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
     char *FunctionDescription = "toDayWeekNum(<timezone>)";
     pplObj *t = in[-1].self_this;
@@ -685,8 +671,7 @@ static void pplmethod_dateToHour(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjNum(&OUTPUT, 0, hour, 0);
 }
 
-static void pplmethod_dateToJD(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                               const char *errText) {
+static void pplmethod_dateToJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     pplObjNum(&OUTPUT, 0, t->real / 86400.0 + 2440587.5, 0);
 }
@@ -706,8 +691,7 @@ static void pplmethod_dateToMinute(ppl_context *c, pplObj *in, const int nArgs, 
     pplObjNum(&OUTPUT, 0, day, 0);
 }
 
-static void pplmethod_dateToMJD(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                const int *errType, const char *errText) {
+static void pplmethod_dateToMJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     pplObjNum(&OUTPUT, 0, t->real / 86400.0 + 40587.0, 0);
 }
@@ -800,8 +784,8 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
-static void pplmethod_dateToUnix(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_dateToUnix(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *t = in[-1].self_this;
     pplObjNum(&OUTPUT, 0, t->real, 0);
 }
@@ -823,8 +807,8 @@ static void pplmethod_dateToYear(ppl_context *c, pplObj *in, const int nArgs, in
 
 // Color methods
 
-static void pplmethod_colCompRGB(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *a = in[-1].self_this;
     double r, g, b;
     gsl_vector *v;
@@ -842,8 +826,8 @@ static void pplmethod_colCompRGB(const ppl_context *c, pplObj *in, const int nAr
     gsl_vector_set(v, 2, b);
 }
 
-static void pplmethod_colCompCMYK(const ppl_context *dummy, pplObj *in, const int nArgs, const int *status,
-                                  const int *errType, const char *errText) {
+static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArgs, int *status, int *errType,
+                                  char *errText) {
     pplObj *a = in[-1].self_this;
     double c, m, y, k;
     gsl_vector *v;
@@ -863,8 +847,8 @@ static void pplmethod_colCompCMYK(const ppl_context *dummy, pplObj *in, const in
     gsl_vector_set(v, 2, k);
 }
 
-static void pplmethod_colCompHSB(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *a = in[-1].self_this;
     double h, s, b;
     gsl_vector *v;
@@ -884,8 +868,7 @@ static void pplmethod_colCompHSB(const ppl_context *c, pplObj *in, const int nAr
     gsl_vector_set(v, 2, b);
 }
 
-static void pplmethod_colToRGB(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                               const char *errText) {
+static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *a = in[-1].self_this;
     double r, g, b;
     if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
@@ -898,8 +881,8 @@ static void pplmethod_colToRGB(const ppl_context *c, pplObj *in, const int nArgs
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, r, g, b, 0);
 }
 
-static void pplmethod_colToCMYK(const ppl_context *dummy, pplObj *in, const int nArgs, const int *status,
-                                const int *errType, const char *errText) {
+static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs, int *status, int *errType,
+                                char *errText) {
     pplObj *a = in[-1].self_this;
     double c, m, y, k;
     if (round(a->exponent[0]) == SW_COLSPACE_RGB)
@@ -913,8 +896,7 @@ static void pplmethod_colToCMYK(const ppl_context *dummy, pplObj *in, const int 
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_CMYK, c, m, y, k);
 }
 
-static void pplmethod_colToHSB(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                               const char *errText) {
+static void pplmethod_colToHSB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *a = in[-1].self_this;
     double h, s, b;
     if (round(a->exponent[0]) == SW_COLSPACE_RGB)
@@ -1258,13 +1240,12 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     }
 }
 
-static void pplmethod_vectorLen(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                const int *errType, const char *errText) {
+static void pplmethod_vectorLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     gsl_vector *v = ((pplVector *) in[-1].self_this->auxil)->v;
     pplObjNum(&OUTPUT, 0, v->size, 0);
 }
 
-static void pplmethod_vectorList(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_vector *vec = ((pplVector *) st->auxil)->v;
@@ -1404,8 +1385,8 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     return;
 }
 
-static void pplmethod_vectorNorm(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_vectorNorm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_vector *v = ((pplVector *) st->auxil)->v;
     pplObjNum(&OUTPUT, 0, gsl_blas_dnrm2(v), 0);
@@ -1511,8 +1492,8 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     return;
 }
 
-static void pplmethod_vectorReverse(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                    const int *errType, const char *errText) {
+static void pplmethod_vectorReverse(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                    char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_vector *v = ((pplVector *) st->auxil)->v;
     long i, j;
@@ -1526,8 +1507,8 @@ static void pplmethod_vectorReverse(const ppl_context *c, pplObj *in, const int 
     }
 }
 
-static void pplmethod_vectorSort(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_vectorSort(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_vector *v = ((pplVector *) st->auxil)->v;
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
@@ -1537,8 +1518,8 @@ static void pplmethod_vectorSort(const ppl_context *c, pplObj *in, const int nAr
 
 // List methods
 
-static void pplmethod_listAppend(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_listAppend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplObj v;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -1548,8 +1529,7 @@ static void pplmethod_listAppend(const ppl_context *c, pplObj *in, const int nAr
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
 }
 
-static void pplmethod_listCount(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                const int *errType, const char *errText) {
+static void pplmethod_listCount(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     int count = 0;
@@ -1564,7 +1544,7 @@ static void pplmethod_listCount(const ppl_context *c, pplObj *in, const int nArg
     return;
 }
 
-static void pplmethod_listExtend(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj v;
     pplObj *st = in[-1].self_this;
@@ -1690,8 +1670,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     return;
 }
 
-static void pplmethod_listIndex(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                const int *errType, const char *errText) {
+static void pplmethod_listIndex(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     int i = 0;
@@ -1710,7 +1689,7 @@ static void pplmethod_listIndex(const ppl_context *c, pplObj *in, const int nArg
     return;
 }
 
-static void pplmethod_listInsert(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     long p;
     pplObj v;
@@ -1750,8 +1729,7 @@ static void pplmethod_listInsert(const ppl_context *c, pplObj *in, const int nAr
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
 }
 
-static void pplmethod_listLen(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                              const char *errText) {
+static void pplmethod_listLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     list *l = (list *) in[-1].self_this->auxil;
     pplObjNum(&OUTPUT, 0, l->length, 0);
 }
@@ -1843,8 +1821,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     return;
 }
 
-static void pplmethod_listMax(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                              const char *errText) {
+static void pplmethod_listMax(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     pplObj *item, *best = NULL;
@@ -1856,8 +1833,7 @@ static void pplmethod_listMax(const ppl_context *c, pplObj *in, const int nArgs,
     else pplObjCpy(&OUTPUT, best, 0, 0, 1);
 }
 
-static void pplmethod_listMin(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                              const char *errText) {
+static void pplmethod_listMin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     pplObj *item, *best = NULL;
@@ -1869,8 +1845,7 @@ static void pplmethod_listMin(const ppl_context *c, pplObj *in, const int nArgs,
     else pplObjCpy(&OUTPUT, best, 0, 0, 1);
 }
 
-static void pplmethod_listPop(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                              char *errText) {
+static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *obj;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -2010,8 +1985,8 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     return;
 }
 
-static void pplmethod_listReverse(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                  const int *errType, const char *errText) {
+static void pplmethod_listReverse(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                  char *errText) {
     long i;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -2030,8 +2005,7 @@ static void pplmethod_listReverse(const ppl_context *c, pplObj *in, const int nA
     }
 }
 
-static void pplmethod_listSort(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     long i;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -2201,7 +2175,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     free(items);
 }
 
-static void pplmethod_listSortOnElement(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
     long i;
     pplObj *st = in[-1].self_this;
@@ -2349,7 +2323,7 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
 
 // Dictionary methods
 
-static void pplmethod_dictDelete(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *item;
     pplObj *st = in[-1].self_this;
@@ -2384,7 +2358,7 @@ static void pplmethod_dictDelete(const ppl_context *c, pplObj *in, const int nAr
     return;
 }
 
-static void pplmethod_dictHasKey(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *st = in[-1].self_this;
     dict *di = (dict *) st->auxil;
@@ -2401,8 +2375,7 @@ static void pplmethod_dictHasKey(const ppl_context *c, pplObj *in, const int nAr
     return;
 }
 
-static void pplmethod_dictItems(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *key, *tmp;
     pplObj v, va, vb, *item;
     list *l, *l2;
@@ -2439,8 +2412,7 @@ static void pplmethod_dictItems(const ppl_context *c, pplObj *in, const int nArg
     }
 }
 
-static void pplmethod_dictKeys(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *key, *tmp;
     pplObj v, *item;
     list *l;
@@ -2460,13 +2432,12 @@ static void pplmethod_dictKeys(const ppl_context *c, pplObj *in, const int nArgs
     }
 }
 
-static void pplmethod_dictLen(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                              const char *errText) {
+static void pplmethod_dictLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     dict *d = (dict *) in[-1].self_this->auxil;
     pplObjNum(&OUTPUT, 0, d->length, 0);
 }
 
-static void pplmethod_dictValues(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     char *key, *tmp;
     pplObj v, *item;
@@ -2489,8 +2460,7 @@ static void pplmethod_dictValues(const ppl_context *c, pplObj *in, const int nAr
 
 // Matrix methods
 
-static void pplmethod_matrixDet(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     double d = 0;
@@ -2531,8 +2501,8 @@ static void pplmethod_matrixDet(const ppl_context *c, pplObj *in, const int nArg
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] *= n;
 }
 
-static void pplmethod_matrixDiagonal(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                     const int *errType, const char *errText) {
+static void pplmethod_matrixDiagonal(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                     char *errText) {
     int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     if (m->size1 != m->size2) {
@@ -2548,7 +2518,7 @@ static void pplmethod_matrixDiagonal(const ppl_context *c, pplObj *in, const int
     pplObjBool(&OUTPUT, 0, 1);
 }
 
-static void pplmethod_matrixEigenvalues(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
     int i, j;
     pplObj *st = in[-1].self_this;
@@ -2603,7 +2573,7 @@ static void pplmethod_matrixEigenvalues(const ppl_context *c, pplObj *in, const 
     ppl_unitsDimCpy(&OUTPUT, st);
 }
 
-static void pplmethod_matrixEigenvectors(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                          char *errText) {
     int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
@@ -2685,8 +2655,7 @@ static void pplmethod_matrixEigenvectors(const ppl_context *c, pplObj *in, const
     gsl_matrix_free(tmp2);
 }
 
-static void pplmethod_matrixInv(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
     const int n = m->size1;
@@ -2737,7 +2706,7 @@ static void pplmethod_matrixInv(const ppl_context *c, pplObj *in, const int nArg
     ppl_unitsDimInverse(&OUTPUT, st);
 }
 
-static void pplmethod_matrixSize(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_matrixSize(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     gsl_vector *vo;
@@ -2752,8 +2721,8 @@ static void pplmethod_matrixSize(const ppl_context *c, pplObj *in, const int nAr
     gsl_vector_set(vo, 1, m->size2);
 }
 
-static void pplmethod_matrixSymmetric(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                      const int *errType, const char *errText) {
+static void pplmethod_matrixSymmetric(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                      char *errText) {
     int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     if (m->size1 != m->size2) {
@@ -2769,7 +2738,7 @@ static void pplmethod_matrixSymmetric(const ppl_context *c, pplObj *in, const in
     pplObjBool(&OUTPUT, 0, 1);
 }
 
-static void pplmethod_matrixTrans(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
@@ -2795,8 +2764,7 @@ static void pplmethod_matrixTrans(const ppl_context *c, pplObj *in, const int nA
 
 // File methods
 
-static void pplmethod_fileClose(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_fileClose(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     if (f->open) {
         if (f->pipe == 2) {
@@ -2812,15 +2780,13 @@ static void pplmethod_fileClose(const ppl_context *c, pplObj *in, const int nArg
     }
 }
 
-static void pplmethod_fileDump(ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                               const char *errText) {
+static void pplmethod_fileDump(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     pplObjDump(c, &in[0], f->file);
     return;
 }
 
-static void pplmethod_fileEof(const ppl_context *c, pplObj *in, const int nArgs, const int *status, const int *errType,
-                              const char *errText) {
+static void pplmethod_fileEof(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
@@ -2829,8 +2795,7 @@ static void pplmethod_fileEof(const ppl_context *c, pplObj *in, const int nArgs,
     pplObjBool(&OUTPUT, 0, feof(f->file) != 0);
 }
 
-static void pplmethod_fileFlush(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_fileFlush(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
@@ -2844,7 +2809,7 @@ static void pplmethod_fileFlush(const ppl_context *c, pplObj *in, const int nArg
     }
 }
 
-static void pplmethod_fileGetpos(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_fileGetpos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     long int fp;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
@@ -2862,14 +2827,13 @@ static void pplmethod_fileGetpos(const ppl_context *c, pplObj *in, const int nAr
     CLEANUP_APPLYUNIT(UNIT_BIT);
 }
 
-static void pplmethod_fileIsOpen(const ppl_context *c, pplObj *in, const int nArgs, const int *status,
-                                 const int *errType, const char *errText) {
+static void pplmethod_fileIsOpen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+                                 char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     pplObjBool(&OUTPUT, 0, f->open != 0);
 }
 
-static void pplmethod_fileRead(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *out = NULL, *new;
     int chunk = 8192;
     long pos = 0;
@@ -2900,7 +2864,7 @@ static void pplmethod_fileRead(const ppl_context *c, pplObj *in, const int nArgs
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
-static void pplmethod_fileReadline(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
+static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
     char *out = NULL;
     int chunk = 8192;
@@ -3002,8 +2966,7 @@ static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, in
     CLEANUP_APPLYUNIT(UNIT_BIT);
 }
 
-static void pplmethod_fileWrite(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                                char *errText) {
+static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     char *s = (char *) in[0].auxil;
     long int l, o;
@@ -3030,8 +2993,7 @@ static void pplmethod_fileWrite(const ppl_context *c, pplObj *in, const int nArg
 
 // Exception methods
 
-static void pplmethod_excRaise(const ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
-                               char *errText) {
+static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;

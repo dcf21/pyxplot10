@@ -41,6 +41,16 @@
 #include "userspace/pplObjPrint.h"
 #include "userspace/unitsDisp.h"
 
+//! pplObjPrint - Write a textual representation of an object
+//! \param [in] c - The Pyxplot context
+//! \param [in] o - The object to print
+//! \param [in] oname - The name of the variable containing the object, used to label some object types (may be NULL)
+//! \param [out] out - Character buffer into which to write the representation
+//! \param [in] outlen - The size of the buffer <out>
+//! \param [in] internal - If true, write strings with quotation marks and escape characters, as they would be typed
+//! in Pyxplot; otherwise write them verbatim
+//! \param [in] modIterDepth - The depth of recursion into compound objects, used to prevent infinite recursion
+
 void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const int outlen, const int internal,
                  const int modIterDepth) {
     int t;

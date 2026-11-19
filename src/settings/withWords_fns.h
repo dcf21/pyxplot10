@@ -30,7 +30,7 @@
 void ppl_withWordsZero(const ppl_context *context, withWords *a);
 void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserLine *pl, const int *ptab, int stkbase,
                            withWords *out);
-int ppl_withWordsCmp(const ppl_context *context, const withWords *a, const withWords *b);
+int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *b);
 int ppl_withWordsCmp_zero(const ppl_context *context, const withWords *a);
 void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a, const withWords *b,
                         const withWords *c, const withWords *d, const withWords *e, const unsigned char ExpandStyles);

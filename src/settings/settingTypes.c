@@ -186,6 +186,15 @@ char *SW_PIEKEYPOS_STR[] = {"auto", "inside", "key", "outside"};
 int SW_PIEKEYPOS_INT[] = {SW_PIEKEYPOS_AUTO, SW_PIEKEYPOS_INSIDE, SW_PIEKEYPOS_KEY, SW_PIEKEYPOS_OUTSIDE, -1};
 int SW_PIEKEYPOS_ACL[] = {1, 1, 1, 1, -1};
 
+//! ppl_fetchSettingName - Look up the name of a setting value in a table of names. A fatal error is raised if the
+//! value is not found in the table.
+//! \param [in] context - The error-reporting context
+//! \param [in] id - The setting value to look up
+//! \param [in] id_list - Array of setting values, terminated by -1
+//! \param [in] name_list - Array of names, with one entry for each value in <id_list>
+//! \param [in] name_list_size - The size, in bytes, of each entry in <name_list>
+//! \return Pointer to the entry in <name_list> which corresponds to <id>
+
 void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, void *name_list,
                            const int name_list_size) {
     int first;
@@ -210,6 +219,13 @@ void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, 
     ppl_fatal(context, __FILE__, __LINE__, context->tempErrStr);
     return NULL;
 }
+
+//! ppl_fetchSettingByName - Look up the setting value corresponding to a name, case-insensitively
+//! \param [in] context - The error-reporting context
+//! \param [in] name - The name to look up
+//! \param [in] id_list - Array of setting values, terminated by -1
+//! \param [in] name_list - Array of names, with one entry for each value in <id_list>
+//! \return The setting value corresponding to <name>, or -1 if it was not found
 
 int ppl_fetchSettingByName(const pplerr_context *context, const char *name, const int *id_list, char **name_list) {
     while (1) {

@@ -42,6 +42,9 @@ char ppltxt_set[LSTR_LENGTH];
 char ppltxt_unset[LSTR_LENGTH];
 char ppltxt_show[LSTR_LENGTH];
 
+//! ppltxt_init - Initialise the text strings which Pyxplot displays to the user, including the version string, the
+//! command-line help text and the startup banner
+
 void ppltxt_init() {
     sprintf(ppltxt_version, "Pyxplot %s", VERSION);
 

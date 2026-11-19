@@ -51,6 +51,14 @@
 
 #define CMPVAL(X, Y) (ppl_unitsDimEqual(&X, &Y) && ppl_dblEqual(X.real, Y.real))
 
+//! ppllabel_add - Implement the "set label" command, adding a new text label to a list of labels, or replacing an
+//! existing label with the same ID number
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the linked list of labels, sorted by ID number
+//! \param [in] in - The parser output for the command, containing the label's ID, text, position and style
+//! \param [in] pl - The parsed command line, used to report errors
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
+
 void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
     int i, system_x, system_y, system_z, gotTempstr, gotGap, gotAng;
     char *tempstr, *label;
@@ -147,6 +155,15 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     return;
 }
 
+//! ppllabel_remove - Implement the "set nolabel" command, removing labels from a list of labels
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the linked list of labels
+//! \param [in] in - The parser output for the command, containing the list of label IDs to remove. If no IDs are
+//! given, all labels are removed.
+//! \param [in] pl - The parsed command line
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
+//! \param [in] quiet - If true, do not warn about label IDs which are not defined
+
 void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, const parserLine *pl,
                      const int *ptab, const int quiet) {
     int pos;
@@ -179,6 +196,14 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
     }
     return;
 }
+
+//! ppllabel_unset - Implement the "unset label" command, reverting labels to their default definitions
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the linked list of labels
+//! \param [in] in - The parser output for the command, containing the list of label IDs to unset. If no IDs are
+//! given, all labels are reverted to their defaults.
+//! \param [in] pl - The parsed command line
+//! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
 void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
     int pos;
@@ -230,6 +255,12 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
     return;
 }
 
+//! ppllabel_compare - Test whether two label definitions are identical
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The first label
+//! \param [in] b - The second label
+//! \return One if the labels are identical, zero otherwise
+
 unsigned char ppllabel_compare(ppl_context *context, ppllabel_object *a, ppllabel_object *b) {
     if (a->id != b->id) return 0;
     if ((!CMPVAL(a->x, b->x)) || (!CMPVAL(a->y, b->y)) || (!CMPVAL(a->z, b->z))) return 0;
@@ -240,6 +271,11 @@ unsigned char ppllabel_compare(ppl_context *context, ppllabel_object *a, ppllabe
     if (strcmp(a->text, b->text) != 0) return 0;
     return 1;
 }
+
+//! ppllabel_list_copy - Make a deep copy of a linked list of labels
+//! \param [in] context - The Pyxplot context
+//! \param [out] out - Pointer to the head of the new list
+//! \param [in] in - Pointer to the head of the list to copy
 
 void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_object **in) {
     *out = NULL;
@@ -266,6 +302,10 @@ void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_ob
     return;
 }
 
+//! ppllabel_list_destroy - Free a linked list of labels, including their text
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] inlist - Pointer to the head of the list to free, which is set to NULL
+
 void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
     ppllabel_object *obj, **first;
 
@@ -280,6 +320,11 @@ void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
     *first = NULL;
     return;
 }
+
+//! ppllabel_print - Write a textual description of a label, in the syntax of the "set label" command
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The label to describe
+//! \param [out] out - Character buffer into which to write the description
 
 void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out) {
     int i;

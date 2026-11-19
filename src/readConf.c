@@ -455,7 +455,8 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
 
             DO_CRANGE(0, "1")
             DO_CRANGE(1, "2")
-            DO_CRANGE(2, "3") DO_CRANGE(3, "4")
+            DO_CRANGE(2, "3")
+            DO_CRANGE(3, "4")
 
                     else if (strcmp(setkey, "DATASTYLE") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_STYLE_INT, SW_STYLE_STR)) > 0) {

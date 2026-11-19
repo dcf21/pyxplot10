@@ -72,7 +72,7 @@ int ppl_listFree(list *in) {
 //! \param [in] in - The list to query (may be NULL)
 //! \return The number of items in the list, or zero if <in> is NULL
 
-int ppl_listLen(const list *in) {
+int ppl_listLen(list *in) {
     if (in == NULL) return 0;
     return in->length;
 }

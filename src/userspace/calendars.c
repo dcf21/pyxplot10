@@ -36,6 +36,14 @@
 
 // Routines for looking up the dates when the transition between the Julian calendar and the Gregorian calendar occurred
 
+//! ppl_switchOverCalDate - Return the calendar dates of the transition between the Julian and Gregorian calendars,
+//! for the calendar currently selected for input
+//! \param [in] ct - The Pyxplot context
+//! \param [out] LastJulian - The last day of the Julian calendar, expressed as yyyymmdd, or -HUGE_VAL if the Julian
+//! calendar is never used, or HUGE_VAL if the Gregorian calendar is never used
+//! \param [out] FirstGregorian - The first day of the Gregorian calendar, expressed as yyyymmdd, or +/- HUGE_VAL as
+//! above
+
 void ppl_switchOverCalDate(ppl_context *ct, double *LastJulian, double *FirstGregorian) {
     switch (ct->set->term_current.CalendarIn) {
         case SW_CALENDAR_GREGORIAN: {
@@ -79,6 +87,12 @@ void ppl_switchOverCalDate(ppl_context *ct, double *LastJulian, double *FirstGre
     }
 }
 
+//! ppl_switchOverJD - Return the Julian day number of the transition between the Julian and Gregorian calendars,
+//! for the calendar currently selected for output
+//! \param [in] ct - The Pyxplot context
+//! \return The Julian day number of the first day of the Gregorian calendar, or -HUGE_VAL if the Julian calendar is
+//! never used, or HUGE_VAL if the Gregorian calendar is never used
+
 double ppl_switchOverJD(ppl_context *ct) {
     switch (ct->set->term_current.CalendarOut) {
         case SW_CALENDAR_GREGORIAN:
@@ -104,7 +118,12 @@ double ppl_switchOverJD(ppl_context *ct) {
 
 // Functions for looking up the names of the Nth calendar month and the Nth day of the week
 
-char *ppl_getMonthName(const ppl_context *ct, const int i) {
+//! ppl_getMonthName - Return the name of the Nth month of the year, in the calendar currently selected for output
+//! \param [in] ct - The Pyxplot context
+//! \param [in] i - The month number, where 1 is the first month of the year
+//! \return The name of the month, or "???" if the month number is out of range
+
+char *ppl_getMonthName(ppl_context *ct, const int i) {
     switch (ct->set->term_current.CalendarOut) {
         case SW_CALENDAR_HEBREW:
             switch (i) {
@@ -199,7 +218,12 @@ char *ppl_getMonthName(const ppl_context *ct, const int i) {
     return "???";
 }
 
-char *ppl_getWeekDayName(const ppl_context *ct, int i) {
+//! ppl_getWeekDayName - Return the name of the Nth day of the week
+//! \param [in] ct - The Pyxplot context
+//! \param [in] i - The day number, where 0 is Monday and 6 is Sunday. Negative values count back from Sunday.
+//! \return The name of the day, or "???" if the day number is out of range
+
+char *ppl_getWeekDayName(ppl_context *ct, int i) {
     if (i < 0) i += 7;
     switch (i) {
         case 0:
@@ -229,6 +253,14 @@ static int hebrewMonthLengths[6][13] = {
         {30, 29, 29, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29}, // Deficient Embolismic Year
         {30, 29, 30, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29}, // Regular   Embolismic Year
         {30, 30, 30, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29}}; // Complete  Embolismic Year
+
+//! ppl_getHebrewNewYears - Compute the dates of three consecutive Hebrew new years, starting with the one which
+//! falls in the year before a specified Gregorian year
+//! \param [in] ct - The Pyxplot context
+//! \param [in] GregYear - The Gregorian year
+//! \param [out] YearNumbers - Array of three Hebrew year numbers
+//! \param [out] JDs - Array of the three Julian day numbers on which the Hebrew years begin
+//! \param [out] YearTypes - Array of the types of the first two Hebrew years, encoding their lengths in days
 
 void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearNumbers, double *JDs, int *YearTypes) {
     int i;
@@ -273,6 +305,18 @@ void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearN
     return;
 }
 
+//! ppl_hebrewToUnixTime - Convert a date in the Hebrew calendar into a unix time
+//! \param [in] ct - The Pyxplot context
+//! \param [in] year - The Hebrew year
+//! \param [in] month - The month number, 1-13
+//! \param [in] day - The day of the month
+//! \param [in] hour - The hour of the day
+//! \param [in] min - The minute
+//! \param [in] sec - The second
+//! \param [out] status - Set to one if the date is invalid
+//! \param [out] errText - Character buffer into which to write an error message if the date is invalid
+//! \return The unix time of the date
+
 double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day, const int hour, const int min,
                             const int sec, int *status, char *errText) {
     int i;
@@ -305,6 +349,15 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
     DayFraction = fabs(hour) * 24 * 60 + fabs(min) * 60 + fabs(sec);
     return JD + DayFraction;
 }
+
+//! ppl_hebrewFromUnixTime - Convert a unix time into a date in the Hebrew calendar
+//! \param [in] ct - The Pyxplot context
+//! \param [in] UT - The unix time to convert
+//! \param [out] year - The Hebrew year
+//! \param [out] month - The month number, 1-13
+//! \param [out] day - The day of the month
+//! \param [in] status - Unused
+//! \param [in] errText - Unused
 
 void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, const int *status,
                             const char *errText) {
@@ -339,6 +392,18 @@ void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *mo
 }
 
 // Routines for converting between unix times and the Islamic calendar
+
+//! ppl_islamicToUnixTime - Convert a date in the Islamic calendar into a unix time
+//! \param [in] ct - The Pyxplot context
+//! \param [in] year - The Islamic year
+//! \param [in] month - The month number, 1-12
+//! \param [in] day - The day of the month
+//! \param [in] hour - The hour of the day
+//! \param [in] min - The minute
+//! \param [in] sec - The second
+//! \param [out] status - Set to one if the date is invalid
+//! \param [out] errText - Character buffer into which to write an error message if the date is invalid
+//! \return The unix time of the date
 
 double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, const int day, const int hour,
                              const int min, const int sec, int *status, char *errText) {
@@ -383,6 +448,15 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
     DayFraction = fabs(hour) * 24 * 60 + fabs(min) * 60 + fabs(sec);
     return JD + DayFraction;
 }
+
+//! ppl_islamicFromUnixTime - Convert a unix time into a date in the Islamic calendar
+//! \param [in] ct - The Pyxplot context
+//! \param [in] UT - The unix time to convert
+//! \param [out] year - The Islamic year
+//! \param [out] month - The month number, 1-12
+//! \param [out] day - The day of the month
+//! \param [out] status - Set to one if the date precedes the start of the Islamic calendar
+//! \param [out] errText - Character buffer into which to write an error message
 
 void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
                              char *errText) {
@@ -472,6 +546,18 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
 
 // Routines for converting between unix times and calendar dates in Gregorian and Julian calendars
 
+//! ppl_toUnixTime - Convert a calendar date into a unix time, using the calendar currently selected for input
+//! \param [in] ct - The Pyxplot context
+//! \param [in] year - The year
+//! \param [in] month - The month number, where 1 is the first month of the year
+//! \param [in] day - The day of the month
+//! \param [in] hour - The hour of the day
+//! \param [in] min - The minute
+//! \param [in] sec - The second
+//! \param [out] status - Set to one if the date is invalid
+//! \param [out] errText - Character buffer into which to write an error message if the date is invalid
+//! \return The unix time of the date
+
 double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const int hour, const int min, const int sec,
                       int *status, char *errText) {
     double JD, DayFraction, LastJulian, FirstGregorian, ReqDate;
@@ -543,6 +629,18 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
     return JD + DayFraction;
 }
 
+//! ppl_fromUnixTime - Convert a unix time into a calendar date, using the calendar currently selected for output
+//! \param [in] ct - The Pyxplot context
+//! \param [in] UT - The unix time to convert
+//! \param [out] year - The year (optional)
+//! \param [out] month - The month number, where 1 is the first month of the year (optional)
+//! \param [out] day - The day of the month (optional)
+//! \param [out] hour - The hour of the day (optional)
+//! \param [out] min - The minute (optional)
+//! \param [out] sec - The second (optional)
+//! \param [out] status - Set to one if the time could not be converted
+//! \param [out] errText - Character buffer into which to write an error message if the conversion failed
+
 void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, int *hour, int *min,
                       double *sec, int *status, char *errText) {
     long a, b, c, d, e, f;
@@ -589,6 +687,15 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
 }
 
 // String representations of dates
+
+//! ppl_dateString - Render a unix time as a string, using a strftime-like format string
+//! \param [in] ct - The Pyxplot context
+//! \param [out] out - Character buffer into which to write the string
+//! \param [in] UT - The unix time to render
+//! \param [in] format - The format string, or NULL to use the default format "%a %Y %b %d %H:%M:%S %Z"
+//! \param [in] timezone - The name of the timezone in which to render the time, or NULL to use the default
+//! \param [out] status - Set to one if the time could not be rendered
+//! \param [out] errText - Character buffer into which to write an error message if rendering failed
 
 void ppl_dateString(ppl_context *ct, char *out, double UT, const char *format, const char *timezone, int *status,
                     char *errText) {
@@ -678,6 +785,16 @@ void ppl_dateString(ppl_context *ct, char *out, double UT, const char *format, c
     out[k] = '\0'; // Null terminate string
 }
 
+//! ppl_timeDiffStr - Render the time interval between two unix times as a string, using a format string in which
+//! tokens such as %d and %H are replaced by the number of days and hours in the interval
+//! \param [in] ct - The Pyxplot context
+//! \param [out] out - Character buffer into which to write the string
+//! \param [in] UT1 - The unix time at the start of the interval
+//! \param [in] UT2 - The unix time at the end of the interval
+//! \param [in] format - The format string
+//! \param [out] status - Set to one if the format string was invalid
+//! \param [out] errText - Character buffer into which to write an error message
+
 void ppl_timeDiffStr(const ppl_context *ct, char *out, const double UT1, const double UT2, const char *format,
                      int *status, char *errText) {
     int j = 0, k = 0;
@@ -741,16 +858,32 @@ void ppl_timeDiffStr(const ppl_context *ct, char *out, const double UT1, const d
     return;
 }
 
+//! ppl_calendarTimezoneSet - Set the TZ environment variable, to select the timezone used by the C library's time
+//! functions
+//! \param [in] ct - The Pyxplot context
+//! \param [in] specified - If true, use the timezone <tz>; otherwise use the timezone in Pyxplot's settings
+//! \param [in] tz - The name of the timezone to use, if <specified> is true
+
 void ppl_calendarTimezoneSet(const ppl_context *ct, const int specified, const char *tz) {
     if (specified) setenv("TZ", tz, 1);
     else setenv("TZ", ct->set->term_current.timezone, 1);
     return;
 }
 
+//! ppl_calendarTimezoneUnset - Reset the TZ environment variable to UTC
+//! \param [in] ct - The Pyxplot context
+
 void ppl_calendarTimezoneUnset(const ppl_context *ct) {
     setenv("TZ", "UTC", 1);
     return;
 }
+
+//! ppl_calendarTimezoneOffset - Look up the offset of the current timezone (set with ppl_calendarTimezoneSet())
+//! from UTC at a particular time
+//! \param [in] ct - The Pyxplot context
+//! \param [in] unixTime - The unix time at which to compute the offset
+//! \param [out] tzNameOut - Character buffer into which to write the abbreviated name of the timezone (optional)
+//! \param [out] offset - Set to the offset of local time from UTC, in seconds (optional)
 
 void ppl_calendarTimezoneOffset(const ppl_context *ct, double unixTime, char *tzNameOut, double *offset) {
     struct tm *t;

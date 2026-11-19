@@ -37,8 +37,7 @@
 // Where along this axis, in the range 0 (left) to 1 (right) should the value
 // xin go? xrn = Region Number for interpolated axes which do not have
 // monotonically increasing ordinate values.
-double eps_plot_axis_GetPosition(const double xin, const pplset_axis *xa, const int xrn,
-                                 const unsigned char AllowOffBounds) {
+double eps_plot_axis_GetPosition(const double xin, pplset_axis *xa, const int xrn, const unsigned char AllowOffBounds) {
     int imin, imax, i;
     if (xa == NULL) return xin;
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
@@ -68,7 +67,7 @@ double eps_plot_axis_GetPosition(const double xin, const pplset_axis *xa, const 
 }
 
 // What is the value of this axis at point xin, in the range 0 (left) to 1 (right)?
-double eps_plot_axis_InvGetPosition(const double xin, const pplset_axis *xa) {
+double eps_plot_axis_InvGetPosition(const double xin, pplset_axis *xa) {
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {
         const int i = floor(xin * (AXISLINEARINTERPOLATION_NPOINTS - 1));

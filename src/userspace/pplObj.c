@@ -42,6 +42,10 @@ const char *pplObjTypeNames[] = {"number",    "string",  "boolean", "date",     
 const int pplObjTypeOrder[] = {2, 4, 2, 3, 5, 9, 11, 7, 6, 8, 13, 12, 14, 0, 15, 0, 0, 0, 0, 10};
 pplObj *pplObjPrototypes;
 
+//! pplObjInit - Create the prototype objects for each of Pyxplot's object types, which hold their methods. Has no
+//! effect if called more than once.
+//! \param [in] c - The Pyxplot context
+
 void pplObjInit(ppl_context *c) {
     static int initialised = 0; // Only ever run this once
     int i;
@@ -63,6 +67,13 @@ void pplObjInit(ppl_context *c) {
     return;
 }
 
+//! pplObjNum - Initialise an object as a dimensionless number
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] real - The real part of the number
+//! \param [in] imag - The imaginary part of the number
+//! \return Pointer to <in>
+
 pplObj *pplObjNum(pplObj *in, const unsigned char amMalloced, const double real, const double imag) {
     int i;
     in->objType = PPLOBJ_NUM;
@@ -80,6 +91,14 @@ pplObj *pplObjNum(pplObj *in, const unsigned char amMalloced, const double real,
     return in;
 }
 
+//! pplObjStr - Initialise an object as a string. The string is not copied.
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether <str> was allocated with malloc(), and should be freed with
+//! the object
+//! \param [in] str - The string
+//! \return Pointer to <in>
+
 pplObj *pplObjStr(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, char *str) {
     in->objType = PPLOBJ_ZOM; // In case we get interrupted
     in->auxil = (void *) str;
@@ -94,6 +113,12 @@ pplObj *pplObjStr(pplObj *in, const unsigned char amMalloced, const unsigned cha
     in->objType = PPLOBJ_STR;
     return in;
 }
+
+//! pplObjBool - Initialise an object as a boolean
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] stat - The boolean value
+//! \return Pointer to <in>
 
 pplObj *pplObjBool(pplObj *in, const unsigned char amMalloced, const int stat) {
     int i;
@@ -115,6 +140,12 @@ pplObj *pplObjBool(pplObj *in, const unsigned char amMalloced, const int stat) {
     return in;
 }
 
+//! pplObjDate - Initialise an object as a date
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] unixTime - The date, expressed as a unix time
+//! \return Pointer to <in>
+
 pplObj *pplObjDate(pplObj *in, const unsigned char amMalloced, const double unixTime) {
     in->objType = PPLOBJ_DATE;
     in->real = unixTime;
@@ -129,6 +160,16 @@ pplObj *pplObjDate(pplObj *in, const unsigned char amMalloced, const double unix
     in->immutable = 0;
     return in;
 }
+
+//! pplObjColor - Initialise an object as a color. Color components are clipped to the range 0-1.
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] scheme - The color space of the components, one of the SW_COLSPACE_* constants
+//! \param [in] c1 - The first color component
+//! \param [in] c2 - The second color component
+//! \param [in] c3 - The third color component
+//! \param [in] c4 - The fourth color component (CMYK only)
+//! \return Pointer to <in>
 
 pplObj *pplObjColor(pplObj *in, const unsigned char amMalloced, const int scheme, double c1, double c2, double c3,
                     double c4) {
@@ -159,6 +200,13 @@ pplObj *pplObjColor(pplObj *in, const unsigned char amMalloced, const int scheme
     return in;
 }
 
+//! pplObjDict - Initialise an object as a dictionary
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the dictionary is allocated with malloc()
+//! \param [in] d - The dictionary to wrap, or NULL to create a new empty dictionary
+//! \return Pointer to <in>, or NULL if memory allocation failed
+
 pplObj *pplObjDict(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced, dict *d) {
     in->objType = PPLOBJ_ZOM;
     if (d == NULL) in->auxil = (void *) ppl_dictInit(auxilMalloced);
@@ -175,6 +223,13 @@ pplObj *pplObjDict(pplObj *in, const unsigned char amMalloced, unsigned char aux
     in->objType = PPLOBJ_DICT;
     return in;
 }
+
+//! pplObjModule - Initialise an object as a module, with an empty dictionary of members
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the dictionary of members is allocated with malloc()
+//! \param [in] frozen - If true, the module's members cannot be modified by the user
+//! \return Pointer to <in>, or NULL if memory allocation failed
 
 pplObj *pplObjModule(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced,
                      const unsigned char frozen) {
@@ -194,6 +249,13 @@ pplObj *pplObjModule(pplObj *in, const unsigned char amMalloced, unsigned char a
     return in;
 }
 
+//! pplObjList - Initialise an object as a list
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the list is allocated with malloc()
+//! \param [in] l - The list to wrap, or NULL to create a new empty list
+//! \return Pointer to <in>, or NULL if memory allocation failed
+
 pplObj *pplObjList(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced, list *l) {
     in->objType = PPLOBJ_ZOM;
     if (l == NULL) in->auxil = (void *) ppl_listInit(auxilMalloced);
@@ -210,6 +272,14 @@ pplObj *pplObjList(pplObj *in, const unsigned char amMalloced, unsigned char aux
     in->objType = PPLOBJ_LIST;
     return in;
 }
+
+//! pplObjVector - Initialise an object as a vector of zeros
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the vector's storage is allocated with malloc(), or in the
+//! current ppl_memAlloc context
+//! \param [in] size - The number of elements in the vector
+//! \return Pointer to <in>, or NULL if memory allocation failed
 
 pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, const int size) {
     int i;
@@ -249,6 +319,15 @@ pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned 
     in->objType = PPLOBJ_VEC;
     return in;
 }
+
+//! pplObjMatrix - Initialise an object as a matrix of zeros
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the matrix's storage is allocated with malloc(), or in the
+//! current ppl_memAlloc context
+//! \param [in] size1 - The number of rows in the matrix
+//! \param [in] size2 - The number of columns in the matrix
+//! \return Pointer to <in>, or NULL if memory allocation failed
 
 pplObj *pplObjMatrix(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, const int size1,
                      const int size2) {
@@ -290,6 +369,15 @@ pplObj *pplObjMatrix(pplObj *in, const unsigned char amMalloced, const unsigned 
     return in;
 }
 
+//! pplObjFile - Initialise an object as a file handle
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the file descriptor structure is allocated with malloc()
+//! \param [in] f - The file handle
+//! \param [in] pipe - Zero for a file, one for a pipe opened with popen(), or two for stdin/stdout, which are never
+//! closed
+//! \return Pointer to <in>, or NULL if memory allocation failed
+
 pplObj *pplObjFile(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, FILE *f,
                    const int pipe) {
     in->objType = PPLOBJ_ZOM;
@@ -312,6 +400,13 @@ pplObj *pplObjFile(pplObj *in, const unsigned char amMalloced, const unsigned ch
     return in;
 }
 
+//! pplObjFunc - Initialise an object as a function
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the function descriptor <f> was allocated with malloc()
+//! \param [in] f - The function descriptor
+//! \return Pointer to <in>
+
 pplObj *pplObjFunc(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, pplFunc *f) {
     in->objType = PPLOBJ_ZOM;
     in->auxilLen = sizeof(pplFunc);
@@ -326,6 +421,13 @@ pplObj *pplObjFunc(pplObj *in, const unsigned char amMalloced, const unsigned ch
     in->objType = PPLOBJ_FUNC;
     return in;
 }
+
+//! pplObjType - Initialise an object as a type object, which describes one of Pyxplot's object types
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the type descriptor <t> was allocated with malloc()
+//! \param [in] t - The type descriptor
+//! \return Pointer to <in>
 
 pplObj *pplObjType(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, pplType *t) {
     in->objType = PPLOBJ_ZOM;
@@ -342,6 +444,11 @@ pplObj *pplObjType(pplObj *in, const unsigned char amMalloced, const unsigned ch
     return in;
 }
 
+//! pplObjNull - Initialise an object as null
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \return Pointer to <in>
+
 pplObj *pplObjNull(pplObj *in, const unsigned char amMalloced) {
     in->objType = PPLOBJ_NULL;
     in->objPrototype = &pplObjPrototypes[PPLOBJ_NULL];
@@ -352,6 +459,14 @@ pplObj *pplObjNull(pplObj *in, const unsigned char amMalloced) {
     in->immutable = 0;
     return in;
 }
+
+//! pplObjException - Initialise an object as an exception. The message is not copied.
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether <str> was allocated with malloc()
+//! \param [in] str - The exception message
+//! \param [in] errCode - The type of error, one of the ERR_* constants
+//! \return Pointer to <in>
 
 pplObj *pplObjException(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, char *str,
                         const int errCode) {
@@ -370,6 +485,12 @@ pplObj *pplObjException(pplObj *in, const unsigned char amMalloced, const unsign
     return in;
 }
 
+//! pplObjGlobal - Initialise an object as a placeholder, which marks a name in a local namespace as referring to a
+//! global variable
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \return Pointer to <in>
+
 pplObj *pplObjGlobal(pplObj *in, const unsigned char amMalloced) {
     in->objType = PPLOBJ_GLOB;
     in->objPrototype = &pplObjPrototypes[PPLOBJ_GLOB];
@@ -380,6 +501,12 @@ pplObj *pplObjGlobal(pplObj *in, const unsigned char amMalloced) {
     in->immutable = 0;
     return in;
 }
+
+//! pplObjExpression - Initialise an object as a compiled expression
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] bytecode - The compiled expression
+//! \return Pointer to <in>
 
 pplObj *pplObjExpression(pplObj *in, const unsigned char amMalloced, void *bytecode) {
     in->objType = PPLOBJ_EXP;
@@ -395,6 +522,12 @@ pplObj *pplObjExpression(pplObj *in, const unsigned char amMalloced, void *bytec
     return in;
 }
 
+//! pplObjBytecode - Initialise an object as a compiled command line
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] parserline - The compiled command line
+//! \return Pointer to <in>
+
 pplObj *pplObjBytecode(pplObj *in, const unsigned char amMalloced, void *parserline) {
     in->objType = PPLOBJ_BYT;
     in->auxil = parserline;
@@ -409,6 +542,11 @@ pplObj *pplObjBytecode(pplObj *in, const unsigned char amMalloced, void *parserl
     return in;
 }
 
+//! pplObjZom - Initialise an object as a zombie, i.e. an object which has been deleted
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \return Pointer to <in>
+
 pplObj *pplObjZom(pplObj *in, const unsigned char amMalloced) {
     in->objType = PPLOBJ_ZOM;
     in->objPrototype = &pplObjPrototypes[PPLOBJ_ZOM];
@@ -419,6 +557,13 @@ pplObj *pplObjZom(pplObj *in, const unsigned char amMalloced) {
     in->immutable = 0;
     return in;
 }
+
+//! pplObjUser - Initialise an object as an instance of a user-defined class, with an empty dictionary of members
+//! \param [out] in - The object to initialise
+//! \param [in] amMalloced - Flag indicating whether the object itself was allocated with malloc()
+//! \param [in] auxilMalloced - Flag indicating whether the dictionary of members is allocated with malloc()
+//! \param [in] prototype - The class from which the instance inherits its methods
+//! \return Pointer to <in>, or NULL if memory allocation failed
 
 pplObj *pplObjUser(pplObj *in, const unsigned char amMalloced, unsigned char auxilMalloced, pplObj *prototype) {
     in->objType = PPLOBJ_ZOM;
@@ -438,6 +583,17 @@ pplObj *pplObjUser(pplObj *in, const unsigned char amMalloced, unsigned char aux
     in->objType = PPLOBJ_USER;
     return in;
 }
+
+//! pplObjCpy - Make a copy of an object. Compound objects (lists, dictionaries, vectors, etc.) are not duplicated;
+//! instead their reference counts are incremented, so that the copy refers to the same storage.
+//! \param [out] out - The object to copy into, or NULL to allocate a new object
+//! \param [in] in - The object to copy
+//! \param [in] lval - If true, the copy records that it was derived from <in>, so that assignments to it can be
+//! propagated back to <in>
+//! \param [in] outMalloced - Flag indicating whether <out> is allocated with malloc() (if <out> is NULL, whether the
+//! new object should be allocated with malloc() or in the current ppl_memAlloc context)
+//! \param [in] useMalloc - Flag indicating whether any storage that needs to be allocated should use malloc()
+//! \return Pointer to the copy, or NULL on failure
 
 pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsigned char outMalloced,
                   const unsigned char useMalloc) {
@@ -539,6 +695,17 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsig
     }
     return out;
 }
+
+//! pplObjDeepCpy - Make a deep copy of an object, duplicating the storage of compound objects such as lists,
+//! dictionaries, vectors and matrices
+//! \param [out] out - The object to copy into, or NULL to allocate a new object
+//! \param [in] in - The object to copy
+//! \param [in] deep - If true, the members of lists and dictionaries are themselves deep-copied; otherwise only the
+//! containers are duplicated
+//! \param [in] outMalloced - Flag indicating whether <out> is allocated with malloc() (if <out> is NULL, whether the
+//! new object should be allocated with malloc() or in the current ppl_memAlloc context)
+//! \param [in] useMalloc - Flag indicating whether new storage should be allocated with malloc()
+//! \return Pointer to the copy, or NULL on failure
 
 pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned char outMalloced,
                       unsigned char useMalloc) {

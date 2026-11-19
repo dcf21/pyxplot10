@@ -46,6 +46,20 @@
 
 #define TBADD(et, pos) ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, et, pos, linetxt, "")
 
+//! ppl_contextVarHierLookup - Look up a variable referred to by a hierarchical name, such as a.b.c, where a is a
+//! dictionary, module or instance and b and c are members of it. If the final member does not exist it is created,
+//! so that it can be assigned to.
+//! \param [in] c - The Pyxplot context
+//! \param [in] srcLineN - The line number of the command, used to report errors
+//! \param [in] srcId - The ID of the source of the command, used to report errors
+//! \param [in] srcFname - The filename of the source of the command, used to report errors
+//! \param [in] linetxt - The text of the command, used to report errors
+//! \param [in] stk - The parser output stack, containing a linked list of the components of the name
+//! \param [in] stkPos - Positions in <linetxt> of each item in <stk>, used to report errors
+//! \param [out] out - Set to point to the variable
+//! \param [in] base - The position in <stk> of the head of the linked list of name components
+//! \param [in] offset - The offset from each list item to the name component it contains
+
 void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcId, const char *srcFname,
                               const char *linetxt, pplObj *stk, const int *stkPos, pplObj **out, const int base,
                               int offset) {
@@ -139,6 +153,14 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
     return;
 }
 
+//! ppl_contextVarLookup - Look up a variable by name, searching the local namespace, then the global namespace, and
+//! then the default namespace
+//! \param [in] c - The Pyxplot context
+//! \param [in] name - The name of the variable
+//! \param [out] output - Set to point to the variable, or NULL if it was not found
+//! \param [in] returnGlobObjs - If true, return placeholder objects which mark variables as global or deleted;
+//! otherwise skip over them
+
 void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, const int returnGlobObjs) {
     int i;
     for (i = c->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
@@ -151,6 +173,14 @@ void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, const int
     *output = NULL;
     return;
 }
+
+//! ppl_contextGetVarPointer - Get a pointer to a variable in the current namespace, so that it can be overwritten.
+//! If the variable already exists, its value is moved into <temp> and it is temporarily set to a number; otherwise
+//! it is created. ppl_contextRestoreVarPointer() must be called afterwards.
+//! \param [in] c - The Pyxplot context
+//! \param [in] name - The name of the variable
+//! \param [out] output - Set to point to the variable
+//! \param [out] temp - Holds the previous value of the variable
 
 void ppl_contextGetVarPointer(const ppl_context *c, char *name, pplObj **output, pplObj *temp) {
     dict *d = c->namespaces[c->ns_ptr];
@@ -168,6 +198,12 @@ void ppl_contextGetVarPointer(const ppl_context *c, char *name, pplObj **output,
         pplObjZom(temp, 1);
     }
 }
+
+//! ppl_contextRestoreVarPointer - Store a new value in a variable after a call to ppl_contextGetVarPointer(),
+//! freeing its temporary value
+//! \param [in] c - The Pyxplot context
+//! \param [in] name - The name of the variable
+//! \param [in] temp - The value to store in the variable
 
 void ppl_contextRestoreVarPointer(const ppl_context *c, char *name, pplObj *temp) {
     dict *d = c->namespaces[c->ns_ptr];

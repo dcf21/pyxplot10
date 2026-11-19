@@ -65,6 +65,9 @@ PaperSize PaperSizeList[129] = {{"crown", 508, 381},
                                 {"END", 0, 0}};
 
 
+//! ppl_PaperSizeInit - Populate the table of named paper sizes, including the ISO A, B and C series and the Swedish
+//! extensions to them
+
 void ppl_PaperSizeInit() {
     double height, width;
     double height2, width2;
@@ -111,6 +114,11 @@ void ppl_PaperSizeInit() {
     return;
 }
 
+//! ppl_PaperSizeByName - Look up the dimensions of a named paper size
+//! \param [in] name - The name of the paper size, e.g. "a4"
+//! \param [out] height - Set to the height of the paper, in mm, or zero if the paper size is not recognised
+//! \param [out] width - Set to the width of the paper, in mm, or zero if the paper size is not recognised
+
 void ppl_PaperSizeByName(const char *name, double *height, double *width) {
     int i = 0;
     while (1) {
@@ -129,6 +137,12 @@ void ppl_PaperSizeByName(const char *name, double *height, double *width) {
         i++;
     }
 }
+
+//! ppl_GetPaperName - Look up the name of the paper size with specified dimensions
+//! \param [out] name - Character buffer into which to write the name of the paper size, or "User-defined
+//! papersize" if it does not match any named paper size
+//! \param [in] height - The height of the paper, in mm
+//! \param [in] width - The width of the paper, in mm
 
 void ppl_GetPaperName(char *name, const double *height, const double *width) {
     int i = 0;
