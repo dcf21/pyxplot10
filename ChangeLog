@@ -32,6 +32,7 @@
      - texify() produced unbalanced LaTeX for some functions, including
        range() and the hypergeometric functions.
      - The help text of sinc() described the normalised sinc function.
+     - sgn() did not accept quantities with physical units.
      - The index blocks written by the tabulate command were labelled from 1,
        though the index modifier counts them from 0.
    - Pyxplot now exits with status 1 if any error occurs while running a

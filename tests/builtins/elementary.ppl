@@ -7,6 +7,10 @@ assert abs(-2 * unit(m)) == 2 * unit(m)
 assert sgn(-4) == -1
 assert sgn(0) == 0
 assert sgn(7) == 1
+assert sgn(7 * unit(s)) == 1  # Quantities with units are accepted, and the result is dimensionless
+assert sgn(-2 * unit(km)) == -1
+assert sgn(0 * unit(kg)) == 0
+assert sgn(-3 * unit(m)) + 1 == 0
 assert floor(2.7) == 2
 assert floor(-2.5) == -3
 assert ceil(2.1) == 3

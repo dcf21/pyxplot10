@@ -665,8 +665,8 @@ void ppl_makeDefaultVars(ppl_context *out) {
                 d, "sech", 1, 1, 1, 1, 0, 0, (void *) &pplfunc_sech, "sech(z)", "\\mathrm{sech}@<@1@>",
                 "sech(x) returns the hyperbolic secant of x. x may either be a dimensionless number or may have units of angle");
         ppl_addSystemFunc(
-                d, "sgn", 1, 1, 1, 1, 1, 1, (void *) &pplfunc_sgn, "sgn(x)", "\\mathrm{sgn}@<@1@>",
-                "sgn(x) returns 1 if x is greater than zero, -1 if x is less than zero, and 0 if x equals zero");
+                d, "sgn", 1, 1, 1, 1, 1, 0, (void *) &pplfunc_sgn, "sgn(x)", "\\mathrm{sgn}@<@1@>",
+                "sgn(x) returns 1 if x is greater than zero, -1 if x is less than zero, and 0 if x equals zero. x may have any physical units; the result is dimensionless");
         ppl_addSystemFunc(
                 d, "sin", 1, 1, 1, 1, 0, 0, (void *) &pplfunc_sin, "sin(z)", "\\mathrm{sin}@<@1@>",
                 "sin(x) returns the sine of x. If x is dimensionless, it is assumed to be measured in radians");
