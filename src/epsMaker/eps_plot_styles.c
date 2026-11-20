@@ -196,94 +196,203 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsi
     return -1;
 }
 
-// UpdateUsage... get content of row X from data table
-#define UUR(X) blk->data_real[X + Ncolumns * j]
+//! usageRange - Tracks whether a data point lies within the ranges of the axes, while the ranges of data plotted
+//! against each axis are being measured. A plot style may test several alternative sets of positions for each data
+//! point (e.g. the two ends of an error bar); the point counts as partially in range if any of them are in range.
+typedef struct usageRange {
+    unsigned char InRange; // True if every position tested so far in the current set is within the axes' ranges
+    unsigned char PartiallyInRange; // True if any previous set of positions was entirely within range
+    unsigned char InRangeMemory; // The value of <InRange> to start each alternative set of positions with
+} usageRange;
 
-// UpdateUsage... check whether position is within range of axis
-#define UUC(X, Y) \
-    { \
-        if (InRange && (!eps_plot_axis_InRange(X, Y))) InRange = 0; \
+//! usageReset - Begin testing whether a new data point lies within the ranges of the axes
+//! \param [out] r - The range-tracking state
+
+static void usageReset(usageRange *r) {
+    r->InRange = 1;
+    r->PartiallyInRange = 0;
+    r->InRangeMemory = 1;
+}
+
+//! usageCheck - Test whether a position lies within the range of an axis
+//! \param [in,out] r - The range-tracking state; <InRange> is cleared if the position is out of range
+//! \param [in] axis - The axis
+//! \param [in] value - The position along the axis
+
+static void usageCheck(usageRange *r, pplset_axis *axis, const double value) {
+    if (r->InRange && (!eps_plot_axis_InRange(axis, value))) r->InRange = 0;
+}
+
+//! usageCheckAlternative - Begin testing an alternative set of positions for the current data point, starting with a
+//! position along one axis
+//! \param [in,out] r - The range-tracking state
+//! \param [in] axis - The axis
+//! \param [in] value - The position along the axis
+
+static void usageCheckAlternative(usageRange *r, pplset_axis *axis, const double value) {
+    r->PartiallyInRange = r->PartiallyInRange || r->InRange;
+    r->InRange = r->InRangeMemory;
+    usageCheck(r, axis, value);
+}
+
+//! usageCheckRemember - Test a position which is common to all of the alternative sets of positions which follow, and
+//! remember the result as the starting point for each of them
+//! \param [in,out] r - The range-tracking state
+//! \param [in] axis - The axis
+//! \param [in] value - The position along the axis
+
+static void usageCheckRemember(usageRange *r, pplset_axis *axis, const double value) {
+    r->InRangeMemory = r->InRange;
+    usageCheck(r, axis, value);
+}
+
+//! usageUpdate - If the current data point lies within the ranges of the axes, extend the range of data plotted
+//! against an axis to include a position. Non-finite positions, and non-positive positions on logarithmic axes, are
+//! ignored.
+//! \param [in] r - The range-tracking state
+//! \param [in,out] axis - The axis, whose MinUsed and MaxUsed are updated
+//! \param [in] z - The position along the axis
+
+static void usageUpdate(const usageRange *r, pplset_axis *axis, const double z) {
+    if (!(r->InRange || r->PartiallyInRange)) return;
+    if ((gsl_finite(z)) && ((!axis->MinUsedSet) || (axis->MinUsed > z)) &&
+        ((axis->LogFinal != SW_BOOL_TRUE) || (z > 0.0))) {
+        axis->MinUsedSet = 1;
+        axis->MinUsed = z;
     }
-
-// Memory recall on within-range flag, adding previous flag to ORed list of points to be checked
-#define UUD(X, Y) \
-    { \
-        PartiallyInRange = PartiallyInRange || InRange; \
-        InRange = InRangeMemory; \
-        UUC(X, Y); \
+    if ((gsl_finite(z)) && ((!axis->MaxUsedSet) || (axis->MaxUsed < z)) &&
+        ((axis->LogFinal != SW_BOOL_TRUE) || (z > 0.0))) {
+        axis->MaxUsedSet = 1;
+        axis->MaxUsed = z;
     }
+}
 
-// Store current within-range flag to memory
-#define UUE(X, Y) \
-    { \
-        InRangeMemory = InRange; \
-        UUC(X, Y); \
+//! usageCheckUpdate - Test whether a position lies within the range of an axis, and if the data point is in range,
+//! extend the range of data plotted against the axis to include it
+//! \param [in,out] r - The range-tracking state
+//! \param [in,out] axis - The axis
+//! \param [in] value - The position along the axis
+
+static void usageCheckUpdate(usageRange *r, pplset_axis *axis, const double value) {
+    usageCheck(r, axis, value);
+    usageUpdate(r, axis, value);
+}
+
+//! usageUpdateBoxFrom - Extend the range of data plotted against an axis to include the position from which boxes
+//! are drawn ("set boxfrom"), unless its physical units are incompatible with the axis
+//! \param [in] r - The range-tracking state
+//! \param [in,out] axis - The axis
+//! \param [in] sg - The graph settings
+
+static void usageUpdateBoxFrom(const usageRange *r, pplset_axis *axis, const pplset_graph *sg) {
+    if (!(axis->DataUnitSet && (!ppl_unitsDimEqual(&sg->BoxFrom, &axis->DataUnit))))
+        usageUpdate(r, axis, sg->BoxFrom.real);
+}
+
+//! usageUnitsCheck - Check that the physical units of a column of data are compatible with the axis it is plotted
+//! against, and record them as the units of data plotted against that axis
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] id - The ID number of the canvas item, used in error messages
+//! \param [in] xyz - The direction of the axis (0=x, 1=y, 2=z)
+//! \param [in] xyzn - The number of the axis
+//! \param [in,out] axis - The axis
+//! \param [in] value - A value from the column of data, whose units are checked
+//! \return Zero on success, or one if the units conflict (in which case an error is reported)
+
+static int usageUnitsCheck(EPSComm *x, const int id, const int xyz, const int xyzn, pplset_axis *axis,
+                           const pplObj *value) {
+    char msg[PPL_MSG_LENGTH];
+    if ((axis->HardUnitSet) && (!ppl_unitsDimEqual(&axis->HardUnit, value))) {
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> as "
+                          "compared to range of axis, which has units of <%s>.",
+                          "xyzc"[xyz], xyzn, id, ppl_printUnit(x->c, value, NULL, NULL, 0, 1, 0),
+                          ppl_printUnit(x->c, &axis->HardUnit, NULL, NULL, 1, 1, 0));
+        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
+        return 1;
     }
-
-// Simultaneously update usage with UUU and check whether position is within range
-#define UUF(X, Y) {UUC(X, logaxis ? exp(Y) : (Y)) UUU(X, logaxis ? exp(Y) : (Y))}
-
-// Reset flags used to test whether a datapoint is within range before using it to update ranges of other axes
-#define UUC_RESET \
-    { \
-        InRange = 1; \
-        PartiallyInRange = 0; \
-        InRangeMemory = 1; \
+    if ((axis->DataUnitSet) && (!ppl_unitsDimEqual(&axis->DataUnit, value))) {
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> "
+                          "and <%s>.",
+                          "xyzc"[xyz], xyzn, id, ppl_printUnit(x->c, &axis->DataUnit, NULL, NULL, 0, 1, 0),
+                          ppl_printUnit(x->c, value, NULL, NULL, 1, 1, 0));
+        ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
+        return 1;
     }
-
-// UpdateUsage... update axis X with ordinate value Y
-#define UUU(X, Y) \
-    { \
-        if (InRange || PartiallyInRange) { \
-            z = Y; \
-            if ((gsl_finite(z)) && ((!X->MinUsedSet) || (X->MinUsed > z)) && \
-                ((X->LogFinal != SW_BOOL_TRUE) || (z > 0.0))) { \
-                X->MinUsedSet = 1; \
-                X->MinUsed = z; \
-            } \
-            if ((gsl_finite(z)) && ((!X->MaxUsedSet) || (X->MaxUsed < z)) && \
-                ((X->LogFinal != SW_BOOL_TRUE) || (z > 0.0))) { \
-                X->MaxUsedSet = 1; \
-                X->MaxUsed = z; \
-            } \
-        } \
+    if (!axis->DataUnitSet) {
+        axis->DataUnitSet = 1;
+        axis->DataUnit = *value;
     }
+    return 0;
+}
 
-// UpdateUsage... update axis X to include value of BoxFrom
-#define UUUBF(X) \
-    { \
-        if (!(X->DataUnitSet && (!ppl_unitsDimEqual(&sg->BoxFrom, &X->DataUnit)))) UUU(X, sg->BoxFrom.real); \
+//! finishFactoringBoxes - Extend the ranges of data plotted against the axes to include the final box or step at the
+//! end of a dataset (or of a block of it) plotted with the boxes, steps, fsteps or histeps styles. The extent of each
+//! box or step depends on the positions of its neighbours, so the last one is only known when the data ends.
+//! \param [in,out] r - The range-tracking state
+//! \param [in] style - The plot style, one of the SW_STYLE_* constants
+//! \param [in] sg - The graph settings
+//! \param [in,out] a1 - The axis along which boxes or steps are spread
+//! \param [in,out] a2 - The axis along which the heights of boxes or steps are measured
+//! \param [in] ptBset - True if there is a point before the last one
+//! \param [in] ptCset - True if there is a last point
+//! \param [in] ptBx - The position along <a1> of the point before the last one (logged if <a1> is logarithmic)
+//! \param [in] ptCx - The position along <a1> of the last point (logged if <a1> is logarithmic)
+//! \param [in] lasty - The height of the last point
+
+static void finishFactoringBoxes(usageRange *r, const int style, const pplset_graph *sg, pplset_axis *a1,
+                                 pplset_axis *a2, const unsigned char ptBset, const unsigned char ptCset,
+                                 const double ptBx, const double ptCx, const double lasty) {
+    const unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE);
+    if (!(ptCset &&
+          ((style == SW_STYLE_BOXES) || (style == SW_STYLE_STEPS) || (style == SW_STYLE_FSTEPS) ||
+           (style == SW_STYLE_HISTEPS))))
+        return;
+    usageReset(r);
+    usageCheck(r, a2, lasty);
+    if (ptBset) {
+        // We have one final box/step to process
+        if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx - (ptCx - ptBx) / 2) : (ptCx - (ptCx - ptBx) / 2));
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx + (ptCx - ptBx) / 2) : (ptCx + (ptCx - ptBx) / 2));
+            usageUpdateBoxFrom(r, a2, sg);
+        } else if (style == SW_STYLE_BOXES) {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx - sg->BoxWidth.real / 2) : (ptCx - sg->BoxWidth.real / 2));
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx + sg->BoxWidth.real / 2) : (ptCx + sg->BoxWidth.real / 2));
+            usageUpdateBoxFrom(r, a2, sg);
+        } else if (style == SW_STYLE_HISTEPS) {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx - (ptCx - ptBx) / 2) : (ptCx - (ptCx - ptBx) / 2));
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx + (ptCx - ptBx) / 2) : (ptCx + (ptCx - ptBx) / 2));
+        } else if (style == SW_STYLE_STEPS) {
+            usageCheckUpdate(r, a1,
+                             logaxis ? exp((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2)
+                                     : ((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2));
+            usageCheckUpdate(r, a1,
+                             logaxis ? exp((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2)
+                                     : ((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2));
+        } else if (style == SW_STYLE_FSTEPS) {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx) : (ptCx));
+        }
+    } else {
+        // We have a dataset with only a single box/step
+        if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx - 0.5) : (ptCx - 0.5));
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx + 0.5) : (ptCx + 0.5));
+            usageUpdateBoxFrom(r, a2, sg);
+        } else if (style == SW_STYLE_BOXES) {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx - sg->BoxWidth.real / 2) : (ptCx - sg->BoxWidth.real / 2));
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx + sg->BoxWidth.real / 2) : (ptCx + sg->BoxWidth.real / 2));
+            usageUpdateBoxFrom(r, a2, sg);
+        } else if (sg->BoxWidth.real < 1e-200) {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx - 0.5) : (ptCx - 0.5));
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx + 0.5) : (ptCx + 0.5));
+        } else {
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx - sg->BoxWidth.real / 2) : (ptCx - sg->BoxWidth.real / 2));
+            usageCheckUpdate(r, a1, logaxis ? exp(ptCx + sg->BoxWidth.real / 2) : (ptCx + sg->BoxWidth.real / 2));
+        }
     }
-
-// UpdateUsage... get physical unit of row X from data table
-#define UURU(X) data->firstEntries[X]
-
-// UpdateUsage... assert that axis X should be dimensionally compatible with unit Y
-#define UUAU(XYZ, XYZN, X, Y) \
-    do { \
-        if ((X->HardUnitSet) && (!ppl_unitsDimEqual(&X->HardUnit, &(Y)))) { \
-            ppl_snprintfTrunc( \
-                    msg, sizeof(msg), \
-                    "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> as compared to range of axis, which has units of <%s>.", \
-                    "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &(Y), NULL, NULL, 0, 1, 0), \
-                    ppl_printUnit(x->c, &X->HardUnit, NULL, NULL, 1, 1, 0)); \
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg); \
-            return 1; \
-        } \
-        if ((X->DataUnitSet) && (!ppl_unitsDimEqual(&X->DataUnit, &(Y)))) { \
-            ppl_snprintfTrunc( \
-                    msg, sizeof(msg), \
-                    "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> and <%s>.", \
-                    "xyzc"[XYZ], XYZN, id, ppl_printUnit(x->c, &X->DataUnit, NULL, NULL, 0, 1, 0), \
-                    ppl_printUnit(x->c, &(Y), NULL, NULL, 1, 1, 0)); \
-            ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg); \
-            return 1; \
-        } \
-        if (!X->DataUnitSet) { \
-            X->DataUnitSet = 1; \
-            X->DataUnit = Y; \
-        } \
-    } while (0)
+}
 
 //! eps_plot_styles_UpdateUsage - Update the record of the range of values plotted against a set of axes, to include a
 //! data table plotted in a given style
@@ -307,201 +416,228 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsi
 int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, unsigned char ThreeDim, pplset_axis *a1,
                                 pplset_axis *a2, pplset_axis *a3, pplset_graph *sg, int xyz1, int xyz2, int xyz3,
                                 int n1, int n2, int n3, int id) {
-    char msg[PPL_MSG_LENGTH];
     int i, j, Ncolumns;
-    double z;
     double ptAx, ptBx = 0, ptCx = 0, lasty = 0;
     unsigned char ptAset = 0, ptBset = 0, ptCset = 0;
-    unsigned char InRange, PartiallyInRange, InRangeMemory;
+    usageRange r;
     dataBlock *blk;
 
     if ((data == NULL) || (data->Nrows < 1)) return 0; // No data present
 
     // Cycle through data table acting upon the physical units of all of the columns
     if (style == SW_STYLE_POINTS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_LINES) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_LINESPOINTS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_XERRORBARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2 + ThreeDim));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_YERRORBARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz2, n2, a2, UURU(2 + ThreeDim));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_ZERRORBARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz3, n3, a3, UURU(3));
-    } else if (style == SW_STYLE_XYERRORBARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2 + ThreeDim));
-        UUAU(xyz2, n2, a2, UURU(3 + ThreeDim));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_XZERRORBARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz1, n1, a1, UURU(3));
-        UUAU(xyz3, n3, a3, UURU(4));
-    } else if (style == SW_STYLE_YZERRORBARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz2, n2, a2, UURU(3));
-        UUAU(xyz3, n3, a3, UURU(4));
-    } else if (style == SW_STYLE_XYZERRORBARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz1, n1, a1, UURU(3));
-        UUAU(xyz2, n2, a2, UURU(4));
-        UUAU(xyz3, n3, a3, UURU(5));
-    } else if (style == SW_STYLE_XERRORRANGE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2 + ThreeDim));
-        UUAU(xyz1, n1, a1, UURU(3 + ThreeDim));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_YERRORRANGE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz2, n2, a2, UURU(2 + ThreeDim));
-        UUAU(xyz2, n2, a2, UURU(3 + ThreeDim));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_ZERRORRANGE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz3, n3, a3, UURU(3));
-        UUAU(xyz3, n3, a3, UURU(4));
-    } else if (style == SW_STYLE_XYERRORRANGE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2 + ThreeDim));
-        UUAU(xyz1, n1, a1, UURU(3 + ThreeDim));
-        UUAU(xyz2, n2, a2, UURU(4 + ThreeDim));
-        UUAU(xyz2, n2, a2, UURU(5 + ThreeDim));
-        if (ThreeDim) UUAU(xyz3, n3, a3, UURU(2));
-    } else if (style == SW_STYLE_XZERRORRANGE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz1, n1, a1, UURU(3));
-        UUAU(xyz1, n1, a1, UURU(4));
-        UUAU(xyz3, n3, a3, UURU(5));
-        UUAU(xyz3, n3, a3, UURU(6));
-    } else if (style == SW_STYLE_YZERRORRANGE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz2, n2, a2, UURU(3));
-        UUAU(xyz2, n2, a2, UURU(4));
-        UUAU(xyz3, n3, a3, UURU(5));
-        UUAU(xyz3, n3, a3, UURU(6));
-    } else if (style == SW_STYLE_XYZERRORRANGE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz3, n3, a3, UURU(2));
-        UUAU(xyz1, n1, a1, UURU(3));
-        UUAU(xyz1, n1, a1, UURU(4));
-        UUAU(xyz2, n2, a2, UURU(5));
-        UUAU(xyz2, n2, a2, UURU(6));
-        UUAU(xyz3, n3, a3, UURU(7));
-        UUAU(xyz3, n3, a3, UURU(8));
-    } else if (style == SW_STYLE_FILLEDREGION) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-    } else if (style == SW_STYLE_YERRORSHADED) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz2, n2, a2, UURU(2));
-    } else if (style == SW_STYLE_UPPERLIMITS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_LOWERLIMITS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_DOTS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_IMPULSES) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_BOXES) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-    } else if (style == SW_STYLE_WBOXES) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2));
-    } else if (style == SW_STYLE_STEPS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-    } else if (style == SW_STYLE_FSTEPS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-    } else if (style == SW_STYLE_HISTEPS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-    } else if (style == SW_STYLE_STARS) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
-    } else if (style == SW_STYLE_ARROWS_HEAD) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2 + ThreeDim));
-        UUAU(xyz2, n2, a2, UURU(3 + ThreeDim));
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
         if (ThreeDim) {
-            UUAU(xyz3, n3, a3, UURU(2));
-            UUAU(xyz3, n3, a3, UURU(5));
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_LINES) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_LINESPOINTS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_XERRORBARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_YERRORBARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_ZERRORBARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[3])) return 1;
+    } else if (style == SW_STYLE_XYERRORBARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_XZERRORBARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[3])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[4])) return 1;
+    } else if (style == SW_STYLE_YZERRORBARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[4])) return 1;
+    } else if (style == SW_STYLE_XYZERRORBARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[3])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[4])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
+    } else if (style == SW_STYLE_XERRORRANGE) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[3 + ThreeDim])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_YERRORRANGE) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_ZERRORRANGE) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[3])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[4])) return 1;
+    } else if (style == SW_STYLE_XYERRORRANGE) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[3 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[4 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[5 + ThreeDim])) return 1;
+        if (ThreeDim)
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+    } else if (style == SW_STYLE_XZERRORRANGE) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[3])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[4])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[6])) return 1;
+    } else if (style == SW_STYLE_YZERRORRANGE) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[4])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[6])) return 1;
+    } else if (style == SW_STYLE_XYZERRORRANGE) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[3])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[4])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[5])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[6])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[7])) return 1;
+        if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[8])) return 1;
+    } else if (style == SW_STYLE_FILLEDREGION) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+    } else if (style == SW_STYLE_YERRORSHADED) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[2])) return 1;
+    } else if (style == SW_STYLE_UPPERLIMITS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_LOWERLIMITS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_DOTS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_IMPULSES) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_BOXES) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+    } else if (style == SW_STYLE_WBOXES) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2])) return 1;
+    } else if (style == SW_STYLE_STEPS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+    } else if (style == SW_STYLE_FSTEPS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+    } else if (style == SW_STYLE_HISTEPS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+    } else if (style == SW_STYLE_STARS) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
+    } else if (style == SW_STYLE_ARROWS_HEAD) {
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
         }
     } else if (style == SW_STYLE_ARROWS_NOHEAD) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2 + ThreeDim));
-        UUAU(xyz2, n2, a2, UURU(3 + ThreeDim));
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
         if (ThreeDim) {
-            UUAU(xyz3, n3, a3, UURU(2));
-            UUAU(xyz3, n3, a3, UURU(5));
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
         }
     } else if (style == SW_STYLE_ARROWS_TWOHEAD) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        UUAU(xyz1, n1, a1, UURU(2 + ThreeDim));
-        UUAU(xyz2, n2, a2, UURU(3 + ThreeDim));
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
         if (ThreeDim) {
-            UUAU(xyz3, n3, a3, UURU(2));
-            UUAU(xyz3, n3, a3, UURU(5));
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
         }
     } else if (style == SW_STYLE_SURFACE) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
-        if (ThreeDim) { UUAU(xyz3, n3, a3, UURU(2)); }
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
+        if (ThreeDim) {
+            if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
+        }
     } else if (style == SW_STYLE_COLORMAP) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
     } else if (style == SW_STYLE_CONTOURMAP) {
-        UUAU(xyz1, n1, a1, UURU(0));
-        UUAU(xyz2, n2, a2, UURU(1));
+        if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[0])) return 1;
+        if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
     }
 
     // Cycle through data table, ensuring that axis ranges are sufficient to include all data
@@ -510,471 +646,653 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
     i = 0;
     while (blk != NULL) {
         for (j = 0; j < blk->blockPosition; j++) {
-            UUC_RESET;
+            const double *row = blk->data_real + Ncolumns * j; // The data in this row
+            usageReset(&r);
             if (style == SW_STYLE_POINTS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_LINES) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_LINESPOINTS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_XERRORBARS) {
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUE(a1, UUR(0) - UUR(2 + ThreeDim));
-                UUD(a1, UUR(0));
-                UUD(a1, UUR(0) + UUR(2 + ThreeDim));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(0) - UUR(2 + ThreeDim));
-                UUU(a1, UUR(0) + UUR(2 + ThreeDim));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageCheckRemember(&r, a1, row[0] - row[2 + ThreeDim]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheckAlternative(&r, a1, row[0] + row[2 + ThreeDim]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[0] - row[2 + ThreeDim]);
+                usageUpdate(&r, a1, row[0] + row[2 + ThreeDim]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_YERRORBARS) {
-                UUC(a1, UUR(0));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUE(a2, UUR(1) - UUR(2 + ThreeDim));
-                UUD(a2, UUR(1));
-                UUD(a2, UUR(1) + UUR(2 + ThreeDim));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(1) - UUR(2 + ThreeDim));
-                UUU(a2, UUR(1) + UUR(2 + ThreeDim));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageCheckRemember(&r, a2, row[1] - row[2 + ThreeDim]);
+                usageCheckAlternative(&r, a2, row[1]);
+                usageCheckAlternative(&r, a2, row[1] + row[2 + ThreeDim]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[1] - row[2 + ThreeDim]);
+                usageUpdate(&r, a2, row[1] + row[2 + ThreeDim]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_ZERRORBARS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUE(a3, UUR(2));
-                UUD(a3, UUR(2) - UUR(3));
-                UUD(a3, UUR(2) + UUR(3));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(2) - UUR(3));
-                UUU(a3, UUR(2) + UUR(3));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheckRemember(&r, a3, row[2]);
+                usageCheckAlternative(&r, a3, row[2] - row[3]);
+                usageCheckAlternative(&r, a3, row[2] + row[3]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[2] - row[3]);
+                usageUpdate(&r, a3, row[2] + row[3]);
             } else if (style == SW_STYLE_XYERRORBARS) {
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUE(a1, UUR(0));
-                UUC(a2, UUR(1) - UUR(3 + ThreeDim));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1) + UUR(3 + ThreeDim));
-                UUD(a1, UUR(0) - UUR(2 + ThreeDim));
-                UUC(a2, UUR(1));
-                UUD(a1, UUR(0) + UUR(2 + ThreeDim));
-                UUC(a2, UUR(1));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(0) - UUR(2 + ThreeDim));
-                UUU(a1, UUR(0) + UUR(2 + ThreeDim));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(1) - UUR(3 + ThreeDim));
-                UUU(a2, UUR(1) + UUR(3 + ThreeDim));
-                if (ThreeDim) UUU(a3, UUR(2));
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageCheckRemember(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1] - row[3 + ThreeDim]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1] + row[3 + ThreeDim]);
+                usageCheckAlternative(&r, a1, row[0] - row[2 + ThreeDim]);
+                usageCheck(&r, a2, row[1]);
+                usageCheckAlternative(&r, a1, row[0] + row[2 + ThreeDim]);
+                usageCheck(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[0] - row[2 + ThreeDim]);
+                usageUpdate(&r, a1, row[0] + row[2 + ThreeDim]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[1] - row[3 + ThreeDim]);
+                usageUpdate(&r, a2, row[1] + row[3 + ThreeDim]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_XZERRORBARS) {
-                UUC(a2, UUR(1));
-                UUE(a1, UUR(0));
-                UUC(a3, UUR(2) - UUR(4));
-                UUD(a1, UUR(0));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0));
-                UUC(a3, UUR(2) + UUR(4));
-                UUD(a1, UUR(0) - UUR(3));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0) + UUR(3));
-                UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(0) - UUR(3));
-                UUU(a1, UUR(0) + UUR(3));
-                UUU(a2, UUR(1));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(2) - UUR(4));
-                UUU(a3, UUR(2) + UUR(4));
+                usageCheck(&r, a2, row[1]);
+                usageCheckRemember(&r, a1, row[0]);
+                usageCheck(&r, a3, row[2] - row[4]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a3, row[2] + row[4]);
+                usageCheckAlternative(&r, a1, row[0] - row[3]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0] + row[3]);
+                usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[0] - row[3]);
+                usageUpdate(&r, a1, row[0] + row[3]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[2] - row[4]);
+                usageUpdate(&r, a3, row[2] + row[4]);
             } else if (style == SW_STYLE_YZERRORBARS) {
-                UUC(a1, UUR(0));
-                UUE(a2, UUR(1));
-                UUC(a3, UUR(2) - UUR(4));
-                UUD(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUD(a2, UUR(1));
-                UUC(a3, UUR(2) + UUR(4));
-                UUD(a2, UUR(1) - UUR(3));
-                UUC(a3, UUR(2));
-                UUD(a2, UUR(1) + UUR(3));
-                UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(1) - UUR(3));
-                UUU(a2, UUR(1) + UUR(3));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(2) - UUR(4));
-                UUU(a3, UUR(2) + UUR(4));
+                usageCheck(&r, a1, row[0]);
+                usageCheckRemember(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2] - row[4]);
+                usageCheckAlternative(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2] + row[4]);
+                usageCheckAlternative(&r, a2, row[1] - row[3]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a2, row[1] + row[3]);
+                usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[1] - row[3]);
+                usageUpdate(&r, a2, row[1] + row[3]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[2] - row[4]);
+                usageUpdate(&r, a3, row[2] + row[4]);
             } else if (style == SW_STYLE_XYZERRORBARS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2) - UUR(5));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2) + UUR(5));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1) - UUR(4));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1) + UUR(4));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0) - UUR(3));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0) + UUR(3));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(0) - UUR(3));
-                UUU(a1, UUR(0) + UUR(3));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(1) - UUR(4));
-                UUU(a2, UUR(1) + UUR(4));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(2) - UUR(5));
-                UUU(a3, UUR(2) + UUR(5));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2] - row[5]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2] + row[5]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1] - row[4]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1] + row[4]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0] - row[3]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0] + row[3]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[0] - row[3]);
+                usageUpdate(&r, a1, row[0] + row[3]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[1] - row[4]);
+                usageUpdate(&r, a2, row[1] + row[4]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[2] - row[5]);
+                usageUpdate(&r, a3, row[2] + row[5]);
             } else if (style == SW_STYLE_XERRORRANGE) {
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUE(a1, UUR(2 + ThreeDim));
-                UUD(a1, UUR(0));
-                UUD(a1, UUR(3 + ThreeDim));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a1, UUR(2 + ThreeDim));
-                UUU(a1, UUR(3 + ThreeDim));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageCheckRemember(&r, a1, row[2 + ThreeDim]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheckAlternative(&r, a1, row[3 + ThreeDim]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[2 + ThreeDim]);
+                usageUpdate(&r, a1, row[3 + ThreeDim]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_YERRORRANGE) {
-                UUC(a1, UUR(0));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUE(a2, UUR(2 + ThreeDim));
-                UUD(a2, UUR(1));
-                UUD(a2, UUR(3 + ThreeDim));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(2 + ThreeDim));
-                UUU(a2, UUR(3 + ThreeDim));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageCheckRemember(&r, a2, row[2 + ThreeDim]);
+                usageCheckAlternative(&r, a2, row[1]);
+                usageCheckAlternative(&r, a2, row[3 + ThreeDim]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[2 + ThreeDim]);
+                usageUpdate(&r, a2, row[3 + ThreeDim]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_ZERRORRANGE) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUE(a3, UUR(2));
-                UUD(a3, UUR(3));
-                UUD(a3, UUR(4));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(3));
-                UUU(a3, UUR(4));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheckRemember(&r, a3, row[2]);
+                usageCheckAlternative(&r, a3, row[3]);
+                usageCheckAlternative(&r, a3, row[4]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[3]);
+                usageUpdate(&r, a3, row[4]);
             } else if (style == SW_STYLE_XYERRORRANGE) {
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUE(a1, UUR(0));
-                UUC(a2, UUR(4 + ThreeDim));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(5 + ThreeDim));
-                UUD(a1, UUR(2 + ThreeDim));
-                UUC(a2, UUR(1));
-                UUD(a1, UUR(3 + ThreeDim));
-                UUC(a2, UUR(1));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a1, UUR(2 + ThreeDim));
-                UUU(a1, UUR(3 + ThreeDim));
-                UUU(a2, UUR(4 + ThreeDim));
-                UUU(a2, UUR(5 + ThreeDim));
-                if (ThreeDim) UUU(a3, UUR(2));
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageCheckRemember(&r, a1, row[0]);
+                usageCheck(&r, a2, row[4 + ThreeDim]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[5 + ThreeDim]);
+                usageCheckAlternative(&r, a1, row[2 + ThreeDim]);
+                usageCheck(&r, a2, row[1]);
+                usageCheckAlternative(&r, a1, row[3 + ThreeDim]);
+                usageCheck(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[2 + ThreeDim]);
+                usageUpdate(&r, a1, row[3 + ThreeDim]);
+                usageUpdate(&r, a2, row[4 + ThreeDim]);
+                usageUpdate(&r, a2, row[5 + ThreeDim]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_XZERRORRANGE) {
-                UUC(a2, UUR(1));
-                UUE(a1, UUR(0));
-                UUC(a3, UUR(5));
-                UUD(a1, UUR(0));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0));
-                UUC(a3, UUR(6));
-                UUD(a1, UUR(3));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(4));
-                UUC(a3, UUR(2));
-                UUU(a2, UUR(1));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(3));
-                UUU(a1, UUR(4));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(5));
-                UUU(a3, UUR(6));
+                usageCheck(&r, a2, row[1]);
+                usageCheckRemember(&r, a1, row[0]);
+                usageCheck(&r, a3, row[5]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a3, row[6]);
+                usageCheckAlternative(&r, a1, row[3]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[4]);
+                usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[3]);
+                usageUpdate(&r, a1, row[4]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[5]);
+                usageUpdate(&r, a3, row[6]);
             } else if (style == SW_STYLE_YZERRORRANGE) {
-                UUC(a1, UUR(0));
-                UUE(a2, UUR(1));
-                UUC(a3, UUR(5));
-                UUD(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUD(a2, UUR(1));
-                UUC(a3, UUR(6));
-                UUD(a2, UUR(3));
-                UUC(a3, UUR(2));
-                UUD(a2, UUR(4));
-                UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(3));
-                UUU(a1, UUR(4));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(5));
-                UUU(a2, UUR(6));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(7));
-                UUU(a3, UUR(8));
+                usageCheck(&r, a1, row[0]);
+                usageCheckRemember(&r, a2, row[1]);
+                usageCheck(&r, a3, row[5]);
+                usageCheckAlternative(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a2, row[1]);
+                usageCheck(&r, a3, row[6]);
+                usageCheckAlternative(&r, a2, row[3]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a2, row[4]);
+                usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[3]);
+                usageUpdate(&r, a1, row[4]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[5]);
+                usageUpdate(&r, a2, row[6]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[7]);
+                usageUpdate(&r, a3, row[8]);
             } else if (style == SW_STYLE_XYZERRORRANGE) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(7));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(8));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(5));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(0));
-                UUC(a2, UUR(6));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(3));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUD(a1, UUR(4));
-                UUC(a2, UUR(1));
-                UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(0) - UUR(3));
-                UUU(a1, UUR(0) + UUR(3));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(1) - UUR(4));
-                UUU(a2, UUR(1) + UUR(4));
-                UUU(a3, UUR(2));
-                UUU(a3, UUR(2) - UUR(5));
-                UUU(a3, UUR(2) + UUR(5));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[7]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[8]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[5]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[0]);
+                usageCheck(&r, a2, row[6]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[3]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[4]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[0] - row[3]);
+                usageUpdate(&r, a1, row[0] + row[3]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[1] - row[4]);
+                usageUpdate(&r, a2, row[1] + row[4]);
+                usageUpdate(&r, a3, row[2]);
+                usageUpdate(&r, a3, row[2] - row[5]);
+                usageUpdate(&r, a3, row[2] + row[5]);
             } else if (style == SW_STYLE_FILLEDREGION) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
             } else if (style == SW_STYLE_YERRORSHADED) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUC(a2, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a2, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageCheck(&r, a2, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a2, row[2]);
             } else if (style == SW_STYLE_LOWERLIMITS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_UPPERLIMITS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_DOTS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if (style == SW_STYLE_IMPULSES) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
-                UUUBF(a2);
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
+                usageUpdateBoxFrom(&r, a2, sg);
             } else if (style == SW_STYLE_WBOXES) {
-                UUC(a2, UUR(1));
-                UUE(a1, UUR(0));
-                UUD(a1, UUR(0) - UUR(2));
-                UUD(a1, UUR(0) + UUR(2));
-                UUU(a2, UUR(1));
-                UUU(a1, UUR(0));
-                UUU(a1, UUR(0) - UUR(2));
-                UUU(a1, UUR(0) + UUR(2));
-                UUUBF(a2);
+                usageCheck(&r, a2, row[1]);
+                usageCheckRemember(&r, a1, row[0]);
+                usageCheckAlternative(&r, a1, row[0] - row[2]);
+                usageCheckAlternative(&r, a1, row[0] + row[2]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a1, row[0] - row[2]);
+                usageUpdate(&r, a1, row[0] + row[2]);
+                usageUpdateBoxFrom(&r, a2, sg);
             } else if (style == SW_STYLE_STARS) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if ((style == SW_STYLE_ARROWS_HEAD) || (style == SW_STYLE_ARROWS_NOHEAD) ||
                        (style == SW_STYLE_ARROWS_TWOHEAD)) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUD(a1, UUR(2 + ThreeDim));
-                UUC(a2, UUR(3 + ThreeDim));
-                if (ThreeDim) UUC(a3, UUR(5));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                UUU(a1, UUR(2 + ThreeDim));
-                UUU(a2, UUR(3 + ThreeDim));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageCheckAlternative(&r, a1, row[2 + ThreeDim]);
+                usageCheck(&r, a2, row[3 + ThreeDim]);
+                if (ThreeDim) usageCheck(&r, a3, row[5]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[2 + ThreeDim]);
+                usageUpdate(&r, a2, row[3 + ThreeDim]);
                 if (ThreeDim) {
-                    UUU(a3, UUR(2));
-                    UUU(a3, UUR(5));
+                    usageUpdate(&r, a3, row[2]);
+                    usageUpdate(&r, a3, row[5]);
                 }
             } else if (style == SW_STYLE_SURFACE) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                if (ThreeDim) UUC(a3, UUR(2));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
-                if (ThreeDim) UUU(a3, UUR(2));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                if (ThreeDim) usageCheck(&r, a3, row[2]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
+                if (ThreeDim) usageUpdate(&r, a3, row[2]);
             } else if ((style == SW_STYLE_COLORMAP) || (style == SW_STYLE_CONTOURMAP)) {
-                UUC(a1, UUR(0));
-                UUC(a2, UUR(1));
-                UUU(a1, UUR(0));
-                UUU(a2, UUR(1));
+                usageCheck(&r, a1, row[0]);
+                usageCheck(&r, a2, row[1]);
+                usageUpdate(&r, a1, row[0]);
+                usageUpdate(&r, a2, row[1]);
             } else if ((style == SW_STYLE_BOXES) || (style == SW_STYLE_STEPS) || (style == SW_STYLE_FSTEPS) ||
                        (style == SW_STYLE_HISTEPS)) {
                 // Boxes and steps need slightly more complicated logic to take into account finite width of boxes/steps
 
-#define FINISH_FACTORING_BOXES \
-    { \
-        /* Logic to take account of final boxes/steps */ \
-        if (ptCset && \
-            ((style == SW_STYLE_BOXES) || (style == SW_STYLE_STEPS) || (style == SW_STYLE_FSTEPS) || \
-             (style == SW_STYLE_HISTEPS))) { \
-            unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE); \
-            UUC_RESET; \
-            UUC(a2, lasty); \
-            if (ptBset) /* We have one final box/step to process */ \
-            { \
-                if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) { \
-                    UUF(a1, (ptCx - (ptCx - ptBx) / 2)); \
-                    UUF(a1, (ptCx + (ptCx - ptBx) / 2)); \
-                    UUUBF(a2); \
-                } else if (style == SW_STYLE_BOXES) { \
-                    UUF(a1, (ptCx - sg->BoxWidth.real / 2)); \
-                    UUF(a1, (ptCx + sg->BoxWidth.real / 2)); \
-                    UUUBF(a2); \
-                } else if (style == SW_STYLE_HISTEPS) { \
-                    UUF(a1, (ptCx - (ptCx - ptBx) / 2)); \
-                    UUF(a1, (ptCx + (ptCx - ptBx) / 2)); \
-                } else if (style == SW_STYLE_STEPS) { \
-                    UUF(a1, ((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2)); \
-                    UUF(a1, ((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2)); \
-                } else if (style == SW_STYLE_FSTEPS) { \
-                    UUF(a1, ptCx); \
-                } \
-            } else if (ptCset) /* We have a dataset with only a single box/step */ \
-            { \
-                if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) { \
-                    UUF(a1, (ptCx - 0.5)); \
-                    UUF(a1, (ptCx + 0.5)); \
-                    UUUBF(a2); \
-                } else if (style == SW_STYLE_BOXES) { \
-                    UUF(a1, (ptCx - sg->BoxWidth.real / 2)); \
-                    UUF(a1, (ptCx + sg->BoxWidth.real / 2)); \
-                    UUUBF(a2); \
-                } else if (sg->BoxWidth.real < 1e-200) { \
-                    UUF(a1, (ptCx - 0.5)); \
-                    UUF(a1, (ptCx + 0.5)); \
-                } else { \
-                    UUF(a1, (ptCx - sg->BoxWidth.real / 2)); \
-                    UUF(a1, (ptCx + sg->BoxWidth.real / 2)); \
-                } \
-            } \
-        } \
-    }
-
                 const unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE);
-                if (blk->split[j]) { FINISH_FACTORING_BOXES; }
-                UUC(a2, UUR(1)); // y-coordinates are easy
+                if (blk->split[j]) { finishFactoringBoxes(&r, style, sg, a1, a2, ptBset, ptCset, ptBx, ptCx, lasty); }
+                usageCheck(&r, a2, row[1]); // y-coordinates are easy
                 ptAx = ptBx;
                 ptAset = ptBset;
                 ptBx = ptCx;
                 ptBset = ptCset;
-                ptCx = logaxis ? log(UUR(0)) : (UUR(0));
+                ptCx = logaxis ? log(row[0]) : (row[0]);
                 ptCset = 1;
                 if (ptBset) {
                     if (ptAset) // We are processing a box in the midst of many
                     {
                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
-                            UUF(a1, ((ptBx + (ptAx + ptCx) / 2) / 2 - (ptCx - ptAx) / 4));
-                            UUF(a1, ((ptBx + (ptAx + ptCx) / 2) / 2 + (ptCx - ptAx) / 4));
-                            UUUBF(a2);
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + (ptAx + ptCx) / 2) / 2 - (ptCx - ptAx) / 4))
+                                                     : (((ptBx + (ptAx + ptCx) / 2) / 2 - (ptCx - ptAx) / 4)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + (ptAx + ptCx) / 2) / 2 + (ptCx - ptAx) / 4))
+                                                     : (((ptBx + (ptAx + ptCx) / 2) / 2 + (ptCx - ptAx) / 4)));
+                            usageUpdateBoxFrom(&r, a2, sg);
                         } else if (style == SW_STYLE_BOXES) {
-                            UUF(a1, (ptBx - sg->BoxWidth.real / 2));
-                            UUF(a1, (ptBx + sg->BoxWidth.real / 2));
-                            UUUBF(a2);
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx - sg->BoxWidth.real / 2))
+                                                     : ((ptBx - sg->BoxWidth.real / 2)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx + sg->BoxWidth.real / 2))
+                                                     : ((ptBx + sg->BoxWidth.real / 2)));
+                            usageUpdateBoxFrom(&r, a2, sg);
                         } else if (style == SW_STYLE_HISTEPS) {
-                            UUF(a1, ((ptBx + (ptAx + ptCx) / 2) / 2 - (ptCx - ptAx) / 4));
-                            UUF(a1, ((ptBx + (ptAx + ptCx) / 2) / 2 + (ptCx - ptAx) / 4));
-                            UUUBF(a2);
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + (ptAx + ptCx) / 2) / 2 - (ptCx - ptAx) / 4))
+                                                     : (((ptBx + (ptAx + ptCx) / 2) / 2 - (ptCx - ptAx) / 4)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + (ptAx + ptCx) / 2) / 2 + (ptCx - ptAx) / 4))
+                                                     : (((ptBx + (ptAx + ptCx) / 2) / 2 + (ptCx - ptAx) / 4)));
+                            usageUpdateBoxFrom(&r, a2, sg);
                         } else if (style == SW_STYLE_STEPS) {
-                            UUF(a1, ((ptAx + ptBx) / 2 - (ptBx - ptAx) / 2));
-                            UUF(a1, ((ptAx + ptBx) / 2 + (ptBx - ptAx) / 2));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptAx + ptBx) / 2 - (ptBx - ptAx) / 2))
+                                                     : (((ptAx + ptBx) / 2 - (ptBx - ptAx) / 2)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptAx + ptBx) / 2 + (ptBx - ptAx) / 2))
+                                                     : (((ptAx + ptBx) / 2 + (ptBx - ptAx) / 2)));
                         } else if (style == SW_STYLE_FSTEPS) {
-                            UUF(a1, ((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2));
-                            UUF(a1, ((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2))
+                                                     : (((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2))
+                                                     : (((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2)));
                         }
                     } else // The first box/step we work out the width of
                     {
                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
-                            UUF(a1, (ptBx - (ptCx - ptBx) / 2));
-                            UUF(a1, (ptBx + (ptCx - ptBx) / 2));
-                            UUUBF(a2);
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx - (ptCx - ptBx) / 2)) : ((ptBx - (ptCx - ptBx) / 2)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx + (ptCx - ptBx) / 2)) : ((ptBx + (ptCx - ptBx) / 2)));
+                            usageUpdateBoxFrom(&r, a2, sg);
                         } else if (style == SW_STYLE_BOXES) {
-                            UUF(a1, (ptBx - sg->BoxWidth.real / 2));
-                            UUF(a1, (ptBx + sg->BoxWidth.real / 2));
-                            UUUBF(a2);
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx - sg->BoxWidth.real / 2))
+                                                     : ((ptBx - sg->BoxWidth.real / 2)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx + sg->BoxWidth.real / 2))
+                                                     : ((ptBx + sg->BoxWidth.real / 2)));
+                            usageUpdateBoxFrom(&r, a2, sg);
                         } else if (style == SW_STYLE_HISTEPS) {
-                            UUF(a1, (ptBx - (ptCx - ptBx) / 2));
-                            UUF(a1, (ptBx + (ptCx - ptBx) / 2));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx - (ptCx - ptBx) / 2)) : ((ptBx - (ptCx - ptBx) / 2)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp((ptBx + (ptCx - ptBx) / 2)) : ((ptBx + (ptCx - ptBx) / 2)));
                         } else if (style == SW_STYLE_STEPS) {
-                            UUF(a1, ptBx);
+                            usageCheckUpdate(&r, a1, logaxis ? exp(ptBx) : (ptBx));
                         } else if (style == SW_STYLE_FSTEPS) {
-                            UUF(a1, ((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2));
-                            UUF(a1, ((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2))
+                                                     : (((ptBx + ptCx) / 2 - (ptCx - ptBx) / 2)));
+                            usageCheckUpdate(&r, a1,
+                                             logaxis ? exp(((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2))
+                                                     : (((ptBx + ptCx) / 2 + (ptCx - ptBx) / 2)));
                         }
                     }
                 }
-                UUU(a2, UUR(1)); // y-coordinates are easy
-                lasty = UUR(1);
+                usageUpdate(&r, a2, row[1]); // y-coordinates are easy
+                lasty = row[1];
             }
             i++;
         }
         blk = blk->next;
     }
-    FINISH_FACTORING_BOXES;
+    finishFactoringBoxes(&r, style, sg, a1, a2, ptBset, ptCset, ptBx, ptCx, lasty);
+    return 0;
+}
+
+//! graphProjection - The mapping from data coordinates onto the page for a graph
+typedef struct graphProjection {
+    pplset_axis *xa, *ya, *za; // The axes against which data are plotted
+    int xrn, yrn, zrn; // The monotonic regions of the axes in which the data lie
+    pplset_graph *sg; // The graph settings
+    unsigned char ThreeDim; // Flag indicating whether the graph is three-dimensional
+    double origin_x, origin_y; // The position of the bottom-left corner of the graph, in postscript points
+    double scale_x, scale_y, scale_z; // The width, height and depth of the graph, in postscript points
+} graphProjection;
+
+//! surfacePoint - Find the position on the page of one corner of a cell of a surface plot
+//! \param [in] proj - The mapping from data coordinates onto the page
+//! \param [in] row - The data for the grid point at the corner of the cell
+//! \param [in] xn - The column of <row> which is plotted against the x axis
+//! \param [in] yn - The column of <row> which is plotted against the y axis
+//! \param [in] zn - The column of <row> which is plotted against the z axis
+//! \param [out] xo - Set to the horizontal position on the page, in postscript points
+//! \param [out] yo - Set to the vertical position on the page, in postscript points
+//! \param [out] zo - Set to the depth of the point
+//! \return True if the point lies outside the graph, or has a non-finite position, so the cell should not be drawn
+
+static int surfacePoint(const graphProjection *proj, const double *row, const int xn, const int yn, const int zn,
+                        double *xo, double *yo, double *zo) {
+    double xap, yap, zap, theta_x, theta_y, theta_z;
+    eps_plot_GetPosition(xo, yo, zo, &xap, &yap, &zap, &theta_x, &theta_y, &theta_z, proj->ThreeDim, row[xn], row[yn],
+                         proj->ThreeDim ? row[zn] : 0.0, proj->xa, proj->ya, proj->za, proj->xrn, proj->yrn, proj->zrn,
+                         proj->sg, proj->origin_x, proj->origin_y, proj->scale_x, proj->scale_y, proj->scale_z, 1);
+    if ((xap < 0) || (xap > 1) || (yap < 0) || (yap > 1) || (zap < 0) || (zap > 1)) return 1;
+    if ((!gsl_finite(*xo)) || (!gsl_finite(*yo)) || (!gsl_finite(*zo))) return 1;
+    return 0;
+}
+
+//! boxDrawer - The state needed to draw the boxes or steps of a dataset plotted with the boxes, wboxes, steps,
+//! fsteps or histeps styles
+typedef struct boxDrawer {
+    EPSComm *x; // The state of the EPS/PS rendering process for the canvas currently being drawn
+    LineDrawHandle *ld; // The line along which the outlines of boxes and steps are drawn
+    canvas_plotdesc *pd; // The descriptor of the plot item
+    graphProjection proj; // The mapping from data coordinates onto the page
+    pplset_axis **a; // The axes against which each data column is plotted
+    int xn, yn, zn; // The data columns which are plotted against the x, y and z axes
+    unsigned char logaxis; // True if the axis along which the boxes are spread is logarithmic
+    char *last_colstr; // The colour in which the line was last drawn, or NULL
+} boxDrawer;
+
+//! boxColourUpdate - Record the current colour as the colour in which the outline of a box or step is drawn
+//! \param [in,out] bd - The box-drawing state
+//! \return Zero on success, or nonzero if memory ran out
+
+static int boxColourUpdate(boxDrawer *bd) {
+    EPSComm *x = bd->x;
+    if ((bd->last_colstr == NULL) || (strcmp(bd->last_colstr, x->CurrentColor) != 0)) {
+        bd->last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
+        if (bd->last_colstr == NULL) return 1;
+        strcpy(bd->last_colstr, x->CurrentColor);
+    }
+    return 0;
+}
+
+//! makeStep - Draw one horizontal step of a dataset plotted with the steps, fsteps or histeps styles
+//! \param [in,out] bd - The box-drawing state
+//! \param [in] X0 - The horizontal centre of the step (logged if the axis is logarithmic)
+//! \param [in] Y0 - The height of the step
+//! \param [in] WIDTH - The half-width of the step
+//! \return Zero on success, or nonzero if memory ran out
+
+static int makeStep(boxDrawer *bd, const double X0, const double Y0, const double WIDTH) {
+    EPSComm *x = bd->x;
+    const canvas_plotdesc *pd = bd->pd;
+    const int xn = bd->xn, yn = bd->yn, zn = bd->zn;
+    const unsigned char ThreeDim = bd->proj.ThreeDim;
+    double pA[3] = {(X0) - (WIDTH), (Y0), 0}, pB[3] = {(X0) + (WIDTH), (Y0), 0};
+    if (!eps_core_isVisible(x)) return 0;
+    if (boxColourUpdate(bd)) return 1;
+    if (bd->logaxis) {
+        pA[0] = exp(pA[0]);
+        pB[0] = exp(pB[0]);
+    }
+    LineDraw_Point(x, bd->ld, pA[xn], pA[yn], ThreeDim ? (pA[zn]) : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                   pd->ww_final.linewidth, bd->last_colstr);
+    LineDraw_Point(x, bd->ld, pB[xn], pB[yn], ThreeDim ? (pB[zn]) : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                   pd->ww_final.linewidth, bd->last_colstr);
+    return 0;
+}
+
+//! makeBox - Draw one box of a dataset plotted with the boxes or wboxes styles, filling it and stroking its outline
+//! \param [in,out] bd - The box-drawing state
+//! \param [in] X0 - The horizontal centre of the box (logged if the axis is logarithmic)
+//! \param [in] Y0 - The height of the top of the box; its bottom is at "set boxfrom"
+//! \param [in] WIDTH - The half-width of the box
+//! \return Zero on success, or nonzero if memory ran out
+
+static int makeBox(boxDrawer *bd, const double X0, const double Y0, const double WIDTH) {
+    EPSComm *x = bd->x;
+    canvas_plotdesc *pd = bd->pd;
+    const graphProjection *g = &bd->proj;
+    const int xn = bd->xn, yn = bd->yn, zn = bd->zn;
+    const unsigned char ThreeDim = g->ThreeDim;
+    int an;
+    double pA[3] = {(X0) - (WIDTH), g->sg->BoxFrom.real, 0};
+    double pB[3] = {(X0) - (WIDTH), (Y0), 0};
+    double pC[3] = {(X0) + (WIDTH), (Y0), 0};
+    double pD[3] = {(X0) + (WIDTH), g->sg->BoxFrom.real, 0};
+    if (bd->logaxis) {
+        pA[0] = exp(pA[0]);
+        pB[0] = exp(pB[0]);
+        pC[0] = exp(pC[0]);
+        pD[0] = exp(pD[0]);
+    }
+    if (xn == 1) an = 0;
+    else if (yn == 1) an = 1;
+    else an = 2;
+    if ((bd->a[an]->LogFinal == SW_BOOL_TRUE) && (pA[1] < DBL_MIN)) pA[1] = DBL_MIN;
+    if ((bd->a[an]->LogFinal == SW_BOOL_TRUE) && (pB[1] < DBL_MIN)) pB[1] = DBL_MIN;
+    if ((bd->a[an]->LogFinal == SW_BOOL_TRUE) && (pC[1] < DBL_MIN)) pC[1] = DBL_MIN;
+    if ((bd->a[an]->LogFinal == SW_BOOL_TRUE) && (pD[1] < DBL_MIN)) pD[1] = DBL_MIN;
+
+    // Set fill color of box
+    eps_core_SetFillColor(x, &pd->ww_final);
+    eps_core_SwitchTo_FillColor(x, 0);
+
+    // Fill box
+    if (eps_core_isVisible(x) && (!ThreeDim)) {
+        FilledRegionHandle *fr = FilledRegion_Init(x, g->xa, g->ya, g->za, g->xrn, g->yrn, g->zrn, g->sg, ThreeDim,
+                                                   g->origin_x, g->origin_y, g->scale_x, g->scale_y, g->scale_z);
+        FilledRegion_Point(x, fr, pA[xn], pA[yn]);
+        FilledRegion_Point(x, fr, pB[xn], pB[yn]);
+        FilledRegion_Point(x, fr, pC[xn], pC[yn]);
+        FilledRegion_Point(x, fr, pD[xn], pD[yn]);
+        FilledRegion_Finish(x, fr, pd->ww_final.linetype, pd->ww_final.linewidth, 0);
+    }
+    eps_core_SwitchFrom_FillColor(x, 0);
+
+    // Stroke outline of box
+    if (eps_core_isVisible(x)) {
+        if (boxColourUpdate(bd)) return 1;
+        LineDraw_Point(x, bd->ld, pA[xn], pA[yn], ThreeDim ? pA[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                       pd->ww_final.linewidth, bd->last_colstr);
+        LineDraw_Point(x, bd->ld, pB[xn], pB[yn], ThreeDim ? pB[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                       pd->ww_final.linewidth, bd->last_colstr);
+        LineDraw_Point(x, bd->ld, pC[xn], pC[yn], ThreeDim ? pC[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                       pd->ww_final.linewidth, bd->last_colstr);
+        LineDraw_Point(x, bd->ld, pD[xn], pD[yn], ThreeDim ? pD[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                       pd->ww_final.linewidth, bd->last_colstr);
+        LineDraw_Point(x, bd->ld, pA[xn], pA[yn], ThreeDim ? pA[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                       pd->ww_final.linewidth, bd->last_colstr);
+        LineDraw_PenUp(x, bd->ld);
+    }
+    return 0;
+}
+
+//! finishRowOfBoxes - Draw the final box or step at the end of a dataset (or of a block of it), whose extent was not
+//! known until the data ended, and start afresh
+//! \param [in,out] bd - The box-drawing state
+//! \param [in] style - The plot style, one of the SW_STYLE_* constants
+//! \param [out] ptAset - Flag indicating whether the point before last is set; cleared
+//! \param [in,out] ptBset - Flag indicating whether there is a point before the last one; cleared
+//! \param [in,out] ptCset - Flag indicating whether there is a last point; cleared
+//! \param [in] ptBx - The horizontal position of the point before the last one (logged if the axis is logarithmic)
+//! \param [in] ptCx - The horizontal position of the last point (logged if the axis is logarithmic)
+//! \param [in] ptCy - The height of the last point
+//! \return Zero on success, or nonzero if memory ran out
+
+static int finishRowOfBoxes(boxDrawer *bd, const int style, unsigned char *ptAset, unsigned char *ptBset,
+                            unsigned char *ptCset, const double ptBx, const double ptCx, const double ptCy) {
+    const pplset_graph *sg = bd->proj.sg;
+    int status = 0;
+    if (*ptBset) {
+        // We have one final box/step to process
+        if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
+            status = makeBox(bd, ptCx, ptCy, (ptCx - ptBx) / 2);
+        } else if (style == SW_STYLE_BOXES) {
+            status = makeBox(bd, ptCx, ptCy, sg->BoxWidth.real / 2);
+        } else if (style == SW_STYLE_HISTEPS) {
+            status = makeStep(bd, ptCx, ptCy, (ptCx - ptBx) / 2);
+        } else if (style == SW_STYLE_STEPS) {
+            status = makeStep(bd, (ptBx + ptCx) / 2, ptCy, (ptCx - ptBx) / 2);
+        } else if (style == SW_STYLE_FSTEPS) {
+            status = makeStep(bd, ptCx, ptCy, 0.0);
+        }
+    } else if (*ptCset) {
+        // We have a dataset with only a single box/step
+        if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
+            status = makeBox(bd, ptCx, ptCy, 0.5);
+        } else if (style == SW_STYLE_BOXES) {
+            status = makeBox(bd, ptCx, ptCy, sg->BoxWidth.real / 2);
+        } else if (sg->BoxWidth.real < 1e-200) {
+            status = makeStep(bd, ptCx, ptCy, 0.5);
+        } else {
+            status = makeStep(bd, ptCx, ptCy, sg->BoxWidth.real / 2);
+        }
+    }
+    if (status) return status;
+    *ptAset = *ptBset = *ptCset = 0;
+    LineDraw_PenUp(bd->x, bd->ld);
     return 0;
 }
 
@@ -1068,6 +1386,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                     while (blk != NULL) {
                         for (j = 0; j < blk->blockPosition; j++) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
                             eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
@@ -1079,7 +1398,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     if (last_colstr == NULL) break;
                                     strcpy(last_colstr, x->CurrentColor);
                                 }
-                                LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, 0, 0, 0, 0, 0, 0,
+                                LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, 0, 0, 0, 0, 0, 0,
                                                pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
                             } else {
                                 LineDraw_PenUp(x, ld);
@@ -1098,9 +1417,10 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     blk = data->first;
                     while (blk != NULL) {
                         for (j = 0; j < blk->blockPosition; j++) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             double final_pointsize = 0.0;
                             eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, NULL, NULL, NULL, ThreeDim,
-                                                 UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, a[xn], a[yn], a[zn], xrn,
+                                                 row[xn], row[yn], ThreeDim ? row[zn] : 0.0, a[xn], a[yn], a[zn], xrn,
                                                  yrn, zrn, sg, origin_x, origin_y, scale_x, scale_y, scale_z, 0);
                             if (!gsl_finite(xpos)) // Position of point is off side of graph
                             {
@@ -1193,103 +1513,104 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                     while (blk != NULL) {
                         for (j = 0; j < blk->blockPosition; j++) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
                             eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             LineDraw_PenUp(x, ld);
                             if (eps_core_isVisible(x)) {
-                                for (i = 0; i < 3; i++) { min[i] = max[i] = UUR(i); }
+                                for (i = 0; i < 3; i++) { min[i] = max[i] = row[i]; }
                                 if (style == SW_STYLE_XERRORBARS) {
                                     NDirections = 1;
                                     ac[0] = 1;
-                                    min[0] = UUR(0) - UUR(2 + ThreeDim);
-                                    max[0] = UUR(0) + UUR(2 + ThreeDim);
+                                    min[0] = row[0] - row[2 + ThreeDim];
+                                    max[0] = row[0] + row[2 + ThreeDim];
                                 } else if (style == SW_STYLE_YERRORBARS) {
                                     NDirections = 1;
                                     ac[1] = 1;
-                                    min[1] = UUR(1) - UUR(2 + ThreeDim);
-                                    max[1] = UUR(1) + UUR(2 + ThreeDim);
+                                    min[1] = row[1] - row[2 + ThreeDim];
+                                    max[1] = row[1] + row[2 + ThreeDim];
                                 } else if (style == SW_STYLE_ZERRORBARS) {
                                     NDirections = 1;
                                     ac[2] = 1;
-                                    min[2] = UUR(2) - UUR(3);
-                                    max[2] = UUR(2) + UUR(3);
+                                    min[2] = row[2] - row[3];
+                                    max[2] = row[2] + row[3];
                                 } else if (style == SW_STYLE_XERRORRANGE) {
                                     NDirections = 1;
                                     ac[0] = 1;
-                                    min[0] = UUR(2 + ThreeDim);
-                                    max[0] = UUR(3 + ThreeDim);
+                                    min[0] = row[2 + ThreeDim];
+                                    max[0] = row[3 + ThreeDim];
                                 } else if (style == SW_STYLE_YERRORRANGE) {
                                     NDirections = 1;
                                     ac[1] = 1;
-                                    min[1] = UUR(2 + ThreeDim);
-                                    max[1] = UUR(3 + ThreeDim);
+                                    min[1] = row[2 + ThreeDim];
+                                    max[1] = row[3 + ThreeDim];
                                 } else if (style == SW_STYLE_ZERRORRANGE) {
                                     NDirections = 1;
                                     ac[2] = 1;
-                                    min[2] = UUR(3);
-                                    max[2] = UUR(4);
+                                    min[2] = row[3];
+                                    max[2] = row[4];
                                 } else if (style == SW_STYLE_XYERRORBARS) {
                                     NDirections = 2;
                                     ac[0] = ac[1] = 1;
-                                    min[0] = UUR(0) - UUR(2 + ThreeDim);
-                                    max[0] = UUR(0) + UUR(2 + ThreeDim);
-                                    min[1] = UUR(1) - UUR(3 + ThreeDim);
-                                    max[1] = UUR(1) + UUR(3 + ThreeDim);
+                                    min[0] = row[0] - row[2 + ThreeDim];
+                                    max[0] = row[0] + row[2 + ThreeDim];
+                                    min[1] = row[1] - row[3 + ThreeDim];
+                                    max[1] = row[1] + row[3 + ThreeDim];
                                 } else if (style == SW_STYLE_XZERRORBARS) {
                                     NDirections = 2;
                                     ac[0] = ac[2] = 1;
-                                    min[0] = UUR(0) - UUR(3);
-                                    max[0] = UUR(0) + UUR(3);
-                                    min[2] = UUR(2) - UUR(4);
-                                    max[2] = UUR(2) + UUR(4);
+                                    min[0] = row[0] - row[3];
+                                    max[0] = row[0] + row[3];
+                                    min[2] = row[2] - row[4];
+                                    max[2] = row[2] + row[4];
                                 } else if (style == SW_STYLE_YZERRORBARS) {
                                     NDirections = 2;
                                     ac[1] = ac[2] = 1;
-                                    min[1] = UUR(1) - UUR(3);
-                                    max[1] = UUR(1) + UUR(3);
-                                    min[2] = UUR(2) - UUR(4);
-                                    max[2] = UUR(2) + UUR(4);
+                                    min[1] = row[1] - row[3];
+                                    max[1] = row[1] + row[3];
+                                    min[2] = row[2] - row[4];
+                                    max[2] = row[2] + row[4];
                                 } else if (style == SW_STYLE_XYERRORRANGE) {
                                     NDirections = 2;
                                     ac[0] = ac[1] = 1;
-                                    min[0] = UUR(2 + ThreeDim);
-                                    max[0] = UUR(3 + ThreeDim);
-                                    min[1] = UUR(4 + ThreeDim);
-                                    max[1] = UUR(5 + ThreeDim);
+                                    min[0] = row[2 + ThreeDim];
+                                    max[0] = row[3 + ThreeDim];
+                                    min[1] = row[4 + ThreeDim];
+                                    max[1] = row[5 + ThreeDim];
                                 } else if (style == SW_STYLE_YZERRORRANGE) {
                                     NDirections = 2;
                                     ac[1] = ac[2] = 1;
-                                    min[1] = UUR(3);
-                                    max[1] = UUR(4);
-                                    min[2] = UUR(5);
-                                    max[2] = UUR(6);
+                                    min[1] = row[3];
+                                    max[1] = row[4];
+                                    min[2] = row[5];
+                                    max[2] = row[6];
                                 } else if (style == SW_STYLE_XZERRORRANGE) {
                                     NDirections = 2;
                                     ac[0] = ac[2] = 1;
-                                    min[0] = UUR(3);
-                                    max[0] = UUR(4);
-                                    min[2] = UUR(5);
-                                    max[2] = UUR(6);
+                                    min[0] = row[3];
+                                    max[0] = row[4];
+                                    min[2] = row[5];
+                                    max[2] = row[6];
                                 } else if (style == SW_STYLE_XYZERRORBARS) {
                                     NDirections = 3;
                                     ac[0] = ac[1] = ac[2] = 1;
-                                    min[0] = UUR(0) - UUR(3);
-                                    max[0] = UUR(0) + UUR(3);
-                                    min[1] = UUR(1) - UUR(4);
-                                    max[1] = UUR(1) + UUR(4);
-                                    min[2] = UUR(2) - UUR(5);
-                                    max[2] = UUR(2) + UUR(6);
+                                    min[0] = row[0] - row[3];
+                                    max[0] = row[0] + row[3];
+                                    min[1] = row[1] - row[4];
+                                    max[1] = row[1] + row[4];
+                                    min[2] = row[2] - row[5];
+                                    max[2] = row[2] + row[6];
                                 } else if (style == SW_STYLE_XYZERRORRANGE) {
                                     NDirections = 3;
                                     ac[0] = ac[1] = ac[2] = 1;
-                                    min[0] = UUR(3);
-                                    max[0] = UUR(4);
-                                    min[1] = UUR(5);
-                                    max[1] = UUR(6);
-                                    min[2] = UUR(7);
-                                    max[2] = UUR(8);
+                                    min[0] = row[3];
+                                    max[0] = row[4];
+                                    min[1] = row[5];
+                                    max[1] = row[6];
+                                    min[2] = row[7];
+                                    max[2] = row[8];
                                 }
 
                                 if (a[0]->LogFinal == SW_BOOL_TRUE) {
@@ -1313,45 +1634,45 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                                 for (i = 0; i < 3; i++)
                                     if (ac[i]) {
-                                        LineDraw_Point(x, ld, (i == xn) ? (min[xn]) : (UUR(xn)),
-                                                       (i == yn) ? (min[yn]) : (UUR(yn)),
-                                                       ThreeDim ? ((i == zn) ? (min[zn]) : (UUR(zn))) : 0.0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (i == xn) ? (min[xn]) : (row[xn]),
+                                                       (i == yn) ? (min[yn]) : (row[yn]),
+                                                       ThreeDim ? ((i == zn) ? (min[zn]) : (row[zn])) : 0.0, 0, 0, 0,
                                                        (i == xn) ? (b) : 0, (i == yn) ? (b) : 0, (i == zn) ? (b) : 0,
                                                        pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
-                                        LineDraw_Point(x, ld, (i == xn) ? (min[xn]) : (UUR(xn)),
-                                                       (i == yn) ? (min[yn]) : (UUR(yn)),
-                                                       ThreeDim ? ((i == zn) ? (min[zn]) : (UUR(zn))) : 0.0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (i == xn) ? (min[xn]) : (row[xn]),
+                                                       (i == yn) ? (min[yn]) : (row[yn]),
+                                                       ThreeDim ? ((i == zn) ? (min[zn]) : (row[zn])) : 0.0, 0, 0, 0,
                                                        (i == xn) ? (-b) : 0, (i == yn) ? (-b) : 0, (i == zn) ? (-b) : 0,
                                                        pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
                                         LineDraw_PenUp(x, ld);
-                                        LineDraw_Point(x, ld, (i == xn) ? (min[xn]) : (UUR(xn)),
-                                                       (i == yn) ? (min[yn]) : (UUR(yn)),
-                                                       ThreeDim ? ((i == zn) ? (min[zn]) : (UUR(zn))) : 0.0, 0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (i == xn) ? (min[xn]) : (row[xn]),
+                                                       (i == yn) ? (min[yn]) : (row[yn]),
+                                                       ThreeDim ? ((i == zn) ? (min[zn]) : (row[zn])) : 0.0, 0, 0, 0, 0,
                                                        0, 0, pd->ww_final.linetype, pd->ww_final.linewidth,
                                                        last_colstr);
-                                        LineDraw_Point(x, ld, (i == xn) ? (max[xn]) : (UUR(xn)),
-                                                       (i == yn) ? (max[yn]) : (UUR(yn)),
-                                                       ThreeDim ? ((i == zn) ? (max[zn]) : (UUR(zn))) : 0.0, 0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (i == xn) ? (max[xn]) : (row[xn]),
+                                                       (i == yn) ? (max[yn]) : (row[yn]),
+                                                       ThreeDim ? ((i == zn) ? (max[zn]) : (row[zn])) : 0.0, 0, 0, 0, 0,
                                                        0, 0, pd->ww_final.linetype, pd->ww_final.linewidth,
                                                        last_colstr);
                                         LineDraw_PenUp(x, ld);
-                                        LineDraw_Point(x, ld, (i == xn) ? (max[xn]) : (UUR(xn)),
-                                                       (i == yn) ? (max[yn]) : (UUR(yn)),
-                                                       ThreeDim ? ((i == zn) ? (max[zn]) : (UUR(zn))) : 0.0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (i == xn) ? (max[xn]) : (row[xn]),
+                                                       (i == yn) ? (max[yn]) : (row[yn]),
+                                                       ThreeDim ? ((i == zn) ? (max[zn]) : (row[zn])) : 0.0, 0, 0, 0,
                                                        (i == xn) ? (b) : 0, (i == yn) ? (b) : 0, (i == zn) ? (b) : 0,
                                                        pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
-                                        LineDraw_Point(x, ld, (i == xn) ? (max[xn]) : (UUR(xn)),
-                                                       (i == yn) ? (max[yn]) : (UUR(yn)),
-                                                       ThreeDim ? ((i == zn) ? (max[zn]) : (UUR(zn))) : 0.0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (i == xn) ? (max[xn]) : (row[xn]),
+                                                       (i == yn) ? (max[yn]) : (row[yn]),
+                                                       ThreeDim ? ((i == zn) ? (max[zn]) : (row[zn])) : 0.0, 0, 0, 0,
                                                        (i == xn) ? (-b) : 0, (i == yn) ? (-b) : 0, (i == zn) ? (-b) : 0,
                                                        pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
                                         LineDraw_PenUp(x, ld);
                                         if (NDirections != 1)
                                             continue; // Only put a central bar through errorbars which only go in a single direction
-                                        LineDraw_Point(x, ld, (UUR(xn)), (UUR(yn)), ThreeDim ? (UUR(zn)) : 0.0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (row[xn]), (row[yn]), ThreeDim ? (row[zn]) : 0.0, 0, 0, 0,
                                                        (i == xn) ? (ps) : 0, (i == yn) ? (ps) : 0, (i == zn) ? (ps) : 0,
                                                        pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
-                                        LineDraw_Point(x, ld, (UUR(xn)), (UUR(yn)), ThreeDim ? (UUR(zn)) : 0.0, 0, 0, 0,
+                                        LineDraw_Point(x, ld, (row[xn]), (row[yn]), ThreeDim ? (row[zn]) : 0.0, 0, 0, 0,
                                                        (i == xn) ? (-ps) : 0, (i == yn) ? (-ps) : 0,
                                                        (i == zn) ? (-ps) : 0, pd->ww_final.linetype,
                                                        pd->ww_final.linewidth, last_colstr);
@@ -1368,7 +1689,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     strcpy(last_colstr, x->CurrentColor);
                                 }
                                 eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, NULL, NULL, NULL, ThreeDim,
-                                                     UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, a[xn], a[yn], a[zn],
+                                                     row[xn], row[yn], ThreeDim ? row[zn] : 0.0, a[xn], a[yn], a[zn],
                                                      xrn, yrn, zrn, sg, origin_x, origin_y, scale_x, scale_y, scale_z,
                                                      0);
                                 if (!gsl_finite(xpos)) {
@@ -1402,6 +1723,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     } else {
                         while (blk != NULL) {
                             for (j = 0; j < blk->blockPosition; j++) {
+                                const double *row = blk->data_real + Ncolumns * j; // The data in this row
                                 // Work out style information for next point
                                 eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                                  &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
@@ -1415,11 +1737,11 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                         if (last_colstr == NULL) break;
                                         strcpy(last_colstr, x->CurrentColor);
                                     }
-                                    LineDraw_Point(x, ld, (xn == 1) ? boxfrom : (UUR(xn)),
-                                                   (yn == 1) ? boxfrom : (UUR(yn)),
-                                                   ThreeDim ? ((zn == 1) ? boxfrom : (UUR(zn))) : 0.0, 0, 0, 0, 0, 0, 0,
+                                    LineDraw_Point(x, ld, (xn == 1) ? boxfrom : (row[xn]),
+                                                   (yn == 1) ? boxfrom : (row[yn]),
+                                                   ThreeDim ? ((zn == 1) ? boxfrom : (row[zn])) : 0.0, 0, 0, 0, 0, 0, 0,
                                                    pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
-                                    LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, 0, 0, 0, 0, 0, 0,
+                                    LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, 0, 0, 0, 0, 0, 0,
                                                    pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
                                 }
                                 LineDraw_PenUp(x, ld);
@@ -1433,7 +1755,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                         strcpy(last_colstr, x->CurrentColor);
                                     }
                                     eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, NULL, NULL, NULL,
-                                                         ThreeDim, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, a[xn],
+                                                         ThreeDim, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, a[xn],
                                                          a[yn], a[zn], xrn, yrn, zrn, sg, origin_x, origin_y, scale_x,
                                                          scale_y, scale_z, 0);
                                     if (!gsl_finite(xpos)) {
@@ -1467,6 +1789,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                     while (blk != NULL) {
                         for (j = 0; j < blk->blockPosition; j++) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
                             eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
@@ -1474,7 +1797,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                             LineDraw_PenUp(x, ld);
                             if (eps_core_isVisible(x)) {
                                 eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, &theta[0], &theta[1],
-                                                     &theta[2], ThreeDim, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0,
+                                                     &theta[2], ThreeDim, row[xn], row[yn], ThreeDim ? row[zn] : 0.0,
                                                      a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, origin_x, origin_y,
                                                      scale_x, scale_y, scale_z, 0);
                                 if (!gsl_finite(xpos)) // Position of point is off side of graph
@@ -1497,14 +1820,14 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 offset_arrx = sgn * 2 * ps * sin(theta[an]);
                                 offset_arry = sgn * 2 * ps * cos(theta[an]);
 
-                                LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, -offset_barx,
+                                LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, -offset_barx,
                                                -offset_bary, 0, 0, 0, 0, pd->ww_final.linetype, lw, last_colstr);
-                                LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, offset_barx,
+                                LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, offset_barx,
                                                offset_bary, 0, 0, 0, 0, pd->ww_final.linetype, lw, last_colstr);
                                 LineDraw_PenUp(x, ld);
-                                LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, 0, 0, 0, 0, 0, 0,
+                                LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, 0, 0, 0, 0, 0, 0,
                                                pd->ww_final.linetype, lw, last_colstr);
-                                LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, offset_arrx,
+                                LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, offset_arrx,
                                                offset_arry, 0, 0, 0, 0, pd->ww_final.linetype, lw, last_colstr);
                                 LineDraw_PenUp(x, ld);
                                 x2 = xpos + sgn * 2 * ps * M_TO_PS * sin(theta[an]);
@@ -1563,115 +1886,6 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                        scale_y, scale_z);
                     last_colstr = NULL;
 
-#define MAKE_STEP(X0, Y0, WIDTH) \
-    if (eps_core_isVisible(x)) { \
-        double pA[3] = {(X0) - (WIDTH), (Y0), 0}, pB[3] = {(X0) + (WIDTH), (Y0), 0}; \
-        if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) { \
-            last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1); \
-            if (last_colstr == NULL) break; \
-            strcpy(last_colstr, x->CurrentColor); \
-        } \
-        if (logaxis) { \
-            pA[0] = exp(pA[0]); \
-            pB[0] = exp(pB[0]); \
-        } \
-        LineDraw_Point(x, ld, pA[xn], pA[yn], ThreeDim ? (pA[zn]) : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype, \
-                       pd->ww_final.linewidth, last_colstr); \
-        LineDraw_Point(x, ld, pB[xn], pB[yn], ThreeDim ? (pB[zn]) : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype, \
-                       pd->ww_final.linewidth, last_colstr); \
-    }
-
-#define MAKE_BOX(X0, Y0, WIDTH) \
-    { \
-        int an; \
-        double pA[3] = {(X0) - (WIDTH), sg->BoxFrom.real, 0}; \
-        double pB[3] = {(X0) - (WIDTH), (Y0), 0}; \
-        double pC[3] = {(X0) + (WIDTH), (Y0), 0}; \
-        double pD[3] = {(X0) + (WIDTH), sg->BoxFrom.real, 0}; \
-        if (logaxis) { \
-            pA[0] = exp(pA[0]); \
-            pB[0] = exp(pB[0]); \
-            pC[0] = exp(pC[0]); \
-            pD[0] = exp(pD[0]); \
-        } \
-        if (xn == 1) an = 0; \
-        else if (yn == 1) an = 1; \
-        else an = 2; \
-        if ((a[an]->LogFinal == SW_BOOL_TRUE) && (pA[1] < DBL_MIN)) pA[1] = DBL_MIN; \
-        if ((a[an]->LogFinal == SW_BOOL_TRUE) && (pB[1] < DBL_MIN)) pB[1] = DBL_MIN; \
-        if ((a[an]->LogFinal == SW_BOOL_TRUE) && (pC[1] < DBL_MIN)) pC[1] = DBL_MIN; \
-        if ((a[an]->LogFinal == SW_BOOL_TRUE) && (pD[1] < DBL_MIN)) pD[1] = DBL_MIN; \
-\
-        /* Set fill color of box */ \
-        eps_core_SetFillColor(x, &pd->ww_final); \
-        eps_core_SwitchTo_FillColor(x, 0); \
-\
-        /* Fill box */ \
-        if (eps_core_isVisible(x)) \
-            if (!ThreeDim) { \
-                FilledRegionHandle *fr; \
-                fr = FilledRegion_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, \
-                                       scale_x, scale_y, scale_z); \
-                FilledRegion_Point(x, fr, pA[xn], pA[yn]); \
-                FilledRegion_Point(x, fr, pB[xn], pB[yn]); \
-                FilledRegion_Point(x, fr, pC[xn], pC[yn]); \
-                FilledRegion_Point(x, fr, pD[xn], pD[yn]); \
-                FilledRegion_Finish(x, fr, pd->ww_final.linetype, pd->ww_final.linewidth, 0); \
-            } \
-        eps_core_SwitchFrom_FillColor(x, 0); \
-\
-        /* Stroke outline of box */ \
-        if (eps_core_isVisible(x)) { \
-            if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) { \
-                last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1); \
-                if (last_colstr == NULL) break; \
-                strcpy(last_colstr, x->CurrentColor); \
-            } \
-            LineDraw_Point(x, ld, pA[xn], pA[yn], ThreeDim ? pA[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype, \
-                           pd->ww_final.linewidth, last_colstr); \
-            LineDraw_Point(x, ld, pB[xn], pB[yn], ThreeDim ? pB[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype, \
-                           pd->ww_final.linewidth, last_colstr); \
-            LineDraw_Point(x, ld, pC[xn], pC[yn], ThreeDim ? pC[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype, \
-                           pd->ww_final.linewidth, last_colstr); \
-            LineDraw_Point(x, ld, pD[xn], pD[yn], ThreeDim ? pD[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype, \
-                           pd->ww_final.linewidth, last_colstr); \
-            LineDraw_Point(x, ld, pA[xn], pA[yn], ThreeDim ? pA[zn] : 0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype, \
-                           pd->ww_final.linewidth, last_colstr); \
-            LineDraw_PenUp(x, ld); \
-        } \
-    }
-
-#define FINISH_ROW_OF_BOXES \
-    { \
-        if (ptBset) /*/ We have one final box/step to process */ \
-        { \
-            if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) { \
-                MAKE_BOX(ptCx, ptCy, (ptCx - ptBx) / 2); \
-            } else if (style == SW_STYLE_BOXES) { \
-                MAKE_BOX(ptCx, ptCy, sg->BoxWidth.real / 2); \
-            } else if (style == SW_STYLE_HISTEPS) { \
-                MAKE_STEP(ptCx, ptCy, (ptCx - ptBx) / 2); \
-            } else if (style == SW_STYLE_STEPS) { \
-                MAKE_STEP((ptBx + ptCx) / 2, ptCy, (ptCx - ptBx) / 2); \
-            } else if (style == SW_STYLE_FSTEPS) { \
-                MAKE_STEP(ptCx, ptCy, 0.0); \
-            } \
-        } else if (ptCset) /* We have a dataset with only a single box/step */ \
-        { \
-            if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) { \
-                MAKE_BOX(ptCx, ptCy, 0.5); \
-            } else if (style == SW_STYLE_BOXES) { \
-                MAKE_BOX(ptCx, ptCy, sg->BoxWidth.real / 2); \
-            } else if (sg->BoxWidth.real < 1e-200) { \
-                MAKE_STEP(ptCx, ptCy, 0.5); \
-            } else { \
-                MAKE_STEP(ptCx, ptCy, sg->BoxWidth.real / 2); \
-            } \
-        } \
-        ptAset = ptBset = ptCset = 0; \
-        LineDraw_PenUp(x, ld); \
-    }
-
                     if (a[yn]->DataUnitSet && (!ppl_unitsDimEqual(&sg->BoxFrom, &a[yn]->DataUnit))) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -1689,43 +1903,60 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                         ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
                     } else {
                         const unsigned char logaxis = (a[xn]->LogFinal == SW_BOOL_TRUE);
+                        boxDrawer bd = {
+                                x,
+                                ld,
+                                pd,
+                                {a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x, scale_y, scale_z},
+                                a,
+                                xn,
+                                yn,
+                                zn,
+                                logaxis,
+                                NULL};
                         while (blk != NULL) {
                             for (j = 0; j < blk->blockPosition; j++) {
-                                if (blk->split[j]) { FINISH_ROW_OF_BOXES; }
+                                const double *row = blk->data_real + Ncolumns * j; // The data in this row
+                                if (blk->split[j]) {
+                                    if (finishRowOfBoxes(&bd, style, &ptAset, &ptBset, &ptCset, ptBx, ptCx, ptCy))
+                                        break;
+                                }
                                 ptAx = ptBx;
                                 ptAset = ptBset;
                                 ptBx = ptCx;
                                 ptBy = ptCy;
                                 ptBset = ptCset;
-                                ptCx = logaxis ? log(UUR(0)) : (UUR(0));
-                                ptCy = UUR(1);
+                                ptCx = logaxis ? log(row[0]) : (row[0]);
+                                ptCy = row[1];
                                 ptCset = 1;
                                 if (ptBset) {
                                     if (ptAset) // We are processing a box in the midst of many
                                     {
                                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
-                                            MAKE_BOX((ptBx + (ptAx + ptCx) / 2) / 2, ptBy, (ptCx - ptAx) / 4);
+                                            if (makeBox(&bd, (ptBx + (ptAx + ptCx) / 2) / 2, ptBy, (ptCx - ptAx) / 4))
+                                                break;
                                         } else if (style == SW_STYLE_BOXES) {
-                                            MAKE_BOX(ptBx, ptBy, sg->BoxWidth.real / 2);
+                                            if (makeBox(&bd, ptBx, ptBy, sg->BoxWidth.real / 2)) break;
                                         } else if (style == SW_STYLE_HISTEPS) {
-                                            MAKE_STEP((ptBx + (ptAx + ptCx) / 2) / 2, ptBy, (ptCx - ptAx) / 4);
+                                            if (makeStep(&bd, (ptBx + (ptAx + ptCx) / 2) / 2, ptBy, (ptCx - ptAx) / 4))
+                                                break;
                                         } else if (style == SW_STYLE_STEPS) {
-                                            MAKE_STEP((ptAx + ptBx) / 2, ptBy, (ptBx - ptAx) / 2);
+                                            if (makeStep(&bd, (ptAx + ptBx) / 2, ptBy, (ptBx - ptAx) / 2)) break;
                                         } else if (style == SW_STYLE_FSTEPS) {
-                                            MAKE_STEP((ptBx + ptCx) / 2, ptBy, (ptCx - ptBx) / 2);
+                                            if (makeStep(&bd, (ptBx + ptCx) / 2, ptBy, (ptCx - ptBx) / 2)) break;
                                         }
                                     } else // The first box/step we work out the width of
                                     {
                                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
-                                            MAKE_BOX(ptBx, ptBy, (ptCx - ptBx) / 2);
+                                            if (makeBox(&bd, ptBx, ptBy, (ptCx - ptBx) / 2)) break;
                                         } else if (style == SW_STYLE_BOXES) {
-                                            MAKE_BOX(ptBx, ptBy, sg->BoxWidth.real / 2);
+                                            if (makeBox(&bd, ptBx, ptBy, sg->BoxWidth.real / 2)) break;
                                         } else if (style == SW_STYLE_HISTEPS) {
-                                            MAKE_STEP(ptBx, ptBy, (ptCx - ptBx) / 2);
+                                            if (makeStep(&bd, ptBx, ptBy, (ptCx - ptBx) / 2)) break;
                                         } else if (style == SW_STYLE_STEPS) {
-                                            MAKE_STEP(ptBx, ptBy, 0.0);
+                                            if (makeStep(&bd, ptBx, ptBy, 0.0)) break;
                                         } else if (style == SW_STYLE_FSTEPS) {
-                                            MAKE_STEP((ptBx + ptCx) / 2, ptBy, (ptCx - ptBx) / 2);
+                                            if (makeStep(&bd, (ptBx + ptCx) / 2, ptBy, (ptCx - ptBx) / 2)) break;
                                         }
                                     }
                                 }
@@ -1733,11 +1964,13 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                                  &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                                 eps_core_SetColor(x, &pd->ww_final, 0);
-                                if (style == SW_STYLE_WBOXES) { MAKE_BOX(ptCx, ptCy, UUR(2) / 2); }
+                                if (style == SW_STYLE_WBOXES) {
+                                    if (makeBox(&bd, ptCx, ptCy, row[2] / 2)) break;
+                                }
                             }
                             blk = blk->next;
                         }
-                        FINISH_ROW_OF_BOXES;
+                        if (finishRowOfBoxes(&bd, style, &ptAset, &ptBset, &ptCset, ptBx, ptCx, ptCy)) break;
                     }
                     LineDraw_PenUp(x, ld);
                 }
@@ -1754,6 +1987,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                     while (blk != NULL) {
                         for (j = 0; j < blk->blockPosition; j++) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
                             eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
@@ -1765,20 +1999,20 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     if (last_colstr == NULL) break;
                                     strcpy(last_colstr, x->CurrentColor);
                                 }
-                                LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, 0, 0, 0, 0, 0, 0,
+                                LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, 0, 0, 0, 0, 0, 0,
                                                pd->ww_final.linetype, lw, last_colstr);
-                                LineDraw_Point(x, ld, UUR(xn + 2 + ThreeDim), UUR(yn + 2 + ThreeDim),
-                                               ThreeDim ? UUR(zn + 3) : 0.0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
+                                LineDraw_Point(x, ld, row[xn + 2 + ThreeDim], row[yn + 2 + ThreeDim],
+                                               ThreeDim ? row[zn + 3] : 0.0, 0, 0, 0, 0, 0, 0, pd->ww_final.linetype,
                                                lw, last_colstr);
                                 LineDraw_PenUp(x, ld);
 
                                 eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, NULL, NULL, NULL, ThreeDim,
-                                                     UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, a[xn], a[yn], a[zn],
+                                                     row[xn], row[yn], ThreeDim ? row[zn] : 0.0, a[xn], a[yn], a[zn],
                                                      xrn, yrn, zrn, sg, origin_x, origin_y, scale_x, scale_y, scale_z,
                                                      1);
                                 eps_plot_GetPosition(&xpos2, &ypos2, &depth2, &xap2, &yap2, &zap2, NULL, NULL, NULL,
-                                                     ThreeDim, UUR(xn + 2 + ThreeDim), UUR(yn + 2 + ThreeDim),
-                                                     ThreeDim ? UUR(zn + 3) : 0.0, a[xn], a[yn], a[zn], xrn, yrn, zrn,
+                                                     ThreeDim, row[xn + 2 + ThreeDim], row[yn + 2 + ThreeDim],
+                                                     ThreeDim ? row[zn + 3] : 0.0, a[xn], a[yn], a[zn], xrn, yrn, zrn,
                                                      sg, origin_x, origin_y, scale_x, scale_y, scale_z, 1);
                                 if ((!gsl_finite(xpos)) || (!gsl_finite(ypos)) || (!gsl_finite(xpos2)) ||
                                     (!gsl_finite(ypos2)) ||
@@ -1877,10 +2111,11 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                     while (blk != NULL) {
                         for (j = 0; j < blk->blockPosition; j++) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
                             eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
-                            FilledRegion_Point(x, fr, UUR(xn), UUR(yn));
+                            FilledRegion_Point(x, fr, row[xn], row[yn]);
                         }
                         blk = blk->next;
                     }
@@ -1901,7 +2136,10 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                     // First add all of the points along the tops of the error bars, moving from left to right
                     while (blk != NULL) {
-                        for (j = 0; j < blk->blockPosition; j++) FilledRegion_Point(x, fr, UUR(xn), UUR(yn));
+                        for (j = 0; j < blk->blockPosition; j++) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
+                            FilledRegion_Point(x, fr, row[xn], row[yn]);
+                        }
                         blk = blk->next;
                         BlkNo++;
                     }
@@ -1911,11 +2149,12 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                         blk = data->first;
                         for (j = 0; j < BlkNo; j++) blk = blk->next;
                         for (j = blk->blockPosition - 1; j >= 0; j--) {
+                            const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
                             eps_plot_WithWordsFromUsingItems(x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
-                            if (xn == 0) FilledRegion_Point(x, fr, UUR(0), UUR(2));
-                            else FilledRegion_Point(x, fr, UUR(2), UUR(0));
+                            if (xn == 0) FilledRegion_Point(x, fr, row[0], row[2]);
+                            else FilledRegion_Point(x, fr, row[2], row[0]);
                         }
                     }
 
@@ -1933,15 +2172,10 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     const int YSize = pd->GridYSize;
                     long X, Y;
                     long j;
-                    double xap, yap, zap, theta_x, theta_y, theta_z, depth;
+                    double depth;
+                    const graphProjection proj = {a[xn],    a[yn],    a[zn],    xrn,     yrn,     zrn,    sg,
+                                                  ThreeDim, origin_x, origin_y, scale_x, scale_y, scale_z};
                     double x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4;
-
-#define SURFACE_POINT(XO, YO, ZO) \
-    eps_plot_GetPosition(&XO, &YO, &ZO, &xap, &yap, &zap, &theta_x, &theta_y, &theta_z, ThreeDim, UUR(xn), UUR(yn), \
-                         ThreeDim ? UUR(zn) : 0.0, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, origin_x, origin_y, \
-                         scale_x, scale_y, scale_z, 1); \
-    if ((xap < 0) || (xap > 1) || (yap < 0) || (yap > 1) || (zap < 0) || (zap > 1)) continue; \
-    if ((!gsl_finite(XO)) || (!gsl_finite(YO)) || (!gsl_finite(ZO))) continue;
 
                     if (blk->blockPosition != ((long) XSize) * YSize) {
                         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1,
@@ -1968,13 +2202,21 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                             if (last_colstr == NULL) break;
                                             strcpy(last_colstr, x->CurrentColor);
                                         }
-                                        SURFACE_POINT(x1, y1, z1);
+                                        if (surfacePoint(&proj, blk->data_real + Ncolumns * j, xn, yn, zn, &x1, &y1,
+                                                         &z1))
+                                            continue;
                                         j++;
-                                        SURFACE_POINT(x2, y2, z2);
+                                        if (surfacePoint(&proj, blk->data_real + Ncolumns * j, xn, yn, zn, &x2, &y2,
+                                                         &z2))
+                                            continue;
                                         j += XSize;
-                                        SURFACE_POINT(x3, y3, z3);
+                                        if (surfacePoint(&proj, blk->data_real + Ncolumns * j, xn, yn, zn, &x3, &y3,
+                                                         &z3))
+                                            continue;
                                         j--;
-                                        SURFACE_POINT(x4, y4, z4); // Draw a square
+                                        if (surfacePoint(&proj, blk->data_real + Ncolumns * j, xn, yn, zn, &x4, &y4,
+                                                         &z4))
+                                            continue; // Draw a square
                                         depth = (z1 + z2 + z3 + z4) / 4.0;
                                         if (fill) depth += 1e-6 * fabs(depth);
                                         ppl_snprintfTrunc(
