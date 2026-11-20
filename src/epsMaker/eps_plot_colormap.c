@@ -218,6 +218,257 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     return;
 }
 
+//! hsbToRgb - Convert the components of a colour from HSB to RGB
+//! \param [in,out] comp - The components of the colour, each in the range 0 to 1
+
+static void hsbToRgb(double comp[4]) {
+    double h2, ch, xc, m;
+    int h2i;
+    clipComponents(comp);
+    ch = comp[1] * comp[2]; // Chroma
+    h2i = (int) (h2 = comp[0] * 6); // Sextant of the colour wheel
+    xc = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
+    m = comp[2] - ch;
+    switch (h2i) {
+        case 0:
+            comp[0] = ch;
+            comp[1] = xc;
+            comp[2] = 0;
+            break;
+        case 1:
+            comp[0] = xc;
+            comp[1] = ch;
+            comp[2] = 0;
+            break;
+        case 2:
+            comp[0] = 0;
+            comp[1] = ch;
+            comp[2] = xc;
+            break;
+        case 3:
+            comp[0] = 0;
+            comp[1] = xc;
+            comp[2] = ch;
+            break;
+        case 4:
+            comp[0] = xc;
+            comp[1] = 0;
+            comp[2] = ch;
+            break;
+        case 5:
+        case 6: // case 6 is for hue=1.0 only
+            comp[0] = ch;
+            comp[1] = 0;
+            comp[2] = xc;
+            break;
+        default:
+            comp[0] = 0;
+            comp[1] = 0;
+            comp[2] = 0;
+            break;
+    }
+    comp[0] += m;
+    comp[1] += m;
+    comp[2] += m;
+}
+
+//! colormapPixel - Work out the colour of one pixel of a colormap, from the colour expression and mask expression of
+//! the graph, which are evaluated with the variables c1...c4 set to the data at the pixel. Masked pixels, and those
+//! whose colour is not finite, are given the reserved colour (TRANS_R, TRANS_G, TRANS_B) which is made transparent.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] sg - The graph settings, which contain the colour and mask expressions
+//! \param [in] C1Var - The variable c1, used as a greyscale value if there is no colour expression
+//! \param [out] rgb - Set to the red, green and blue components of the pixel
+//! \param [out] msg - Buffer into which to write error messages
+//! \param [in] msgLen - The size of the buffer <msg>
+//! \return Zero on success, or nonzero if an error was reported
+
+static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var, unsigned char rgb[3], char *msg,
+                         const size_t msgLen) {
+    int colspace;
+    double comp[4] = {0, 0, 0, 0};
+    const int stkLevelOld = x->c->stackPtr; // Stack: note its level, so that results of evaluation can be discarded
+
+    // Default to the transparent colour, used if the pixel is masked or has no finite colour
+    rgb[0] = TRANS_R;
+    rgb[1] = TRANS_G;
+    rgb[2] = TRANS_B;
+
+    // Check if mask criterion is satisfied
+    if (sg->MaskExpr != NULL) {
+        int lOP;
+        const pplObj *v = ppl_expEval(x->c, (pplExpr *) sg->MaskExpr, &lOP, 1, x->iterDepth + 1); // Stack: push result
+        if (x->c->errStat.status) {
+            ppl_snprintfTrunc(msg, msgLen, "Could not evaluate mask expression <%s>.",
+                              ((pplExpr *) sg->MaskExpr)->ascii);
+            ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+            ppl_tbWrite(x->c);
+            ppl_tbClear(x->c);
+            return 1;
+        }
+        if (v->real == 0) {
+            ppl_stackClean(x->c, stkLevelOld); // Stack: discard the result of the mask expression
+            return 0;
+        }
+    }
+
+    // Compute RGB, HSB or CMYK components
+    if (sg->ColMapExpr == NULL) {
+        colspace = SW_COLSPACE_RGB;
+        comp[0] = comp[1] = comp[2] = C1Var->real;
+    } else {
+        int lOP, outcol;
+        unsigned char d1, d2;
+        const pplObj *v = ppl_expEval(x->c, (pplExpr *) sg->ColMapExpr, &lOP, 1, x->iterDepth + 1); // Stack: push
+        if (x->c->errStat.status) {
+            ppl_snprintfTrunc(msg, msgLen, "Could not evaluate color expression <%s>.",
+                              ((pplExpr *) sg->ColMapExpr)->ascii);
+            ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+            ppl_tbWrite(x->c);
+            ppl_tbClear(x->c);
+            return 1;
+        }
+        lOP = ppl_colorFromObj(x->c, v, &outcol, &colspace, NULL, comp, comp + 1, comp + 2, comp + 3, &d1, &d2, msg);
+        if (lOP) {
+            ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+            return 1;
+        }
+        if (outcol != 0) {
+            colspace = SW_COLSPACE_CMYK;
+            comp[0] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT,
+                                                       (void *) SW_COLOR_CMYK_C, sizeof(double));
+            comp[1] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT,
+                                                       (void *) SW_COLOR_CMYK_M, sizeof(double));
+            comp[2] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT,
+                                                       (void *) SW_COLOR_CMYK_Y, sizeof(double));
+            comp[3] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT,
+                                                       (void *) SW_COLOR_CMYK_K, sizeof(double));
+        }
+        if ((!gsl_finite(comp[0])) || (!gsl_finite(comp[1])) || (!gsl_finite(comp[2])) || (!gsl_finite(comp[3]))) {
+            ppl_stackClean(x->c, stkLevelOld); // Stack: discard the result of the colour expression
+            return 0;
+        }
+    }
+
+    // Convert to RGB
+    switch (colspace) {
+        case SW_COLSPACE_RGB: // Convert RGB --> RGB
+            break;
+        case SW_COLSPACE_HSB: // Convert HSB --> RGB
+            hsbToRgb(comp);
+            break;
+        case SW_COLSPACE_CMYK: // Convert CMYK --> RGB
+            comp[0] = 1.0 - (comp[0] + comp[3]);
+            comp[1] = 1.0 - (comp[1] + comp[3]);
+            comp[2] = 1.0 - (comp[2] + comp[3]);
+            break;
+        default: // Unknown color space
+            comp[0] = comp[1] = comp[2] = 0.0;
+            break;
+    }
+    clipComponents(comp);
+
+    // Store RGB components, avoiding the colour reserved for transparent pixels
+    rgb[0] = (unsigned char) floor(comp[0] * 255.99);
+    rgb[1] = (unsigned char) floor(comp[1] * 255.99);
+    rgb[2] = (unsigned char) floor(comp[2] * 255.99);
+    if ((rgb[0] == TRANS_R) && (rgb[1] == TRANS_G) && (rgb[2] == TRANS_B)) rgb[2]++;
+    ppl_stackClean(x->c, stkLevelOld); // Stack: discard the result of the colour expression
+    return 0;
+}
+
+//! compressPostscriptImage - Prepare the bitmap image of a colormap for writing to postscript, converting it to a
+//! paletted or greyscale image if possible, and compressing it with zlib if requested
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in,out] img - The bitmap image
+
+static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
+    uLongf zlen; // Length of buffer passed to zlib
+    unsigned char *imagez;
+    int status;
+
+    // Consider converting RGB data into a paletted image
+    if ((img->depth == 24) && (img->type == BMP_COLOUR_BMP))
+        ppl_bmp_colour_count(&x->c->errcontext, img); // Check full color image to ensure more than 256 colors
+    if ((img->depth == 8) && (img->type == BMP_COLOUR_PALETTE))
+        ppl_bmp_grey_check(&x->c->errcontext, img); // Check paletted images for greyscale conversion
+    if ((img->type == BMP_COLOUR_PALETTE) && (img->pal_len <= 16) && (img->depth == 8))
+        ppl_bmp_compact(&x->c->errcontext, img); // Compact images with few palette entries
+
+    // Apply compression to image data
+    if (img->TargetCompression != BMP_ENCODING_FLATE) return;
+
+    zlen = img->data_len * 1.01 + 12; // Nasty guess at size of buffer needed
+    imagez = (unsigned char *) ppl_memAlloc(zlen);
+    if (imagez == NULL) {
+        ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (m).");
+        img->TargetCompression = BMP_ENCODING_NULL;
+        return;
+    }
+    if (DEBUG) { ppl_log(&x->c->errcontext, "Calling zlib to compress image data."); }
+    status = compress2(imagez, &zlen, img->data, img->data_len, 9); // Call zlib to do deflation
+
+    if (status != 0) {
+        if (DEBUG) {
+            char msg[PPL_MSG_LENGTH];
+            ppl_snprintfTrunc(msg, sizeof(msg), "zlib returned error code %d\n", status);
+            ppl_log(&x->c->errcontext, msg);
+        }
+        img->TargetCompression = BMP_ENCODING_NULL; // Give up trying to compress data
+        return;
+    }
+    if (DEBUG) {
+        char msg[PPL_MSG_LENGTH];
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "zlib has completed compression. Before flate: %ld bytes. After flate: %ld bytes.",
+                          img->data_len, (long) zlen);
+        ppl_log(&x->c->errcontext, msg);
+    }
+    if (zlen >= img->data_len) {
+        if (DEBUG) {
+            ppl_log(&x->c->errcontext,
+                    "Using original uncompressed data since zlib made it bigger than it was to start with.");
+        }
+        img->TargetCompression = BMP_ENCODING_NULL; // Give up trying to compress data; result was larger than original
+        return;
+    }
+    img->data = imagez; // Replace old data with new compressed data
+    img->data_len = zlen;
+}
+
+//! writePostscriptImage - Write the bitmap image of a colormap to the postscript output
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] img - The bitmap image
+
+static void writePostscriptImage(EPSComm *x, const bitmap_data *img) {
+    if (img->colour == BMP_COLOUR_RGB) fprintf(x->epsbuffer, "/DeviceRGB setcolorspace\n"); // RGB palette
+    else if (img->colour == BMP_COLOUR_GREY) fprintf(x->epsbuffer, "/DeviceGray setcolorspace\n"); // Greyscale
+    else if (img->colour == BMP_COLOUR_PALETTE) {
+        // Indexed palette
+        fprintf(x->epsbuffer, "[/Indexed /DeviceRGB %d <~\n", img->pal_len - 1);
+        ppl_bmp_A85(&x->c->errcontext, x->epsbuffer, img->palette, 3 * img->pal_len);
+        fprintf(x->epsbuffer, "] setcolorspace\n\n");
+    }
+
+    fprintf(x->epsbuffer, "<<\n /ImageType %d\n /Width %d\n /Height %d\n /ImageMatrix [%d 0 0 %d 0 %d]\n",
+            (img->trans == NULL) ? 1 : 4, img->width, img->height, img->width, -img->height, img->height);
+    // Image data is stored in currentfile, but need to apply filters to decode it
+    fprintf(x->epsbuffer, " /DataSource currentfile /ASCII85Decode filter");
+    if (img->TargetCompression == BMP_ENCODING_FLATE) fprintf(x->epsbuffer, " /FlateDecode filter");
+    fprintf(x->epsbuffer, "\n /BitsPerComponent %d\n /Decode [0 %d%s]\n",
+            (img->colour == BMP_COLOUR_RGB) ? (img->depth / 3) : (img->depth),
+            (img->type == BMP_COLOUR_PALETTE) ? ((1 << img->depth) - 1) : 1,
+            (img->colour == BMP_COLOUR_RGB) ? " 0 1 0 1" : "");
+    if (img->trans != NULL) {
+        fprintf(x->epsbuffer, " /MaskColor [");
+        if (img->colour == BMP_COLOUR_RGB)
+            fprintf(x->epsbuffer, "%d %d %d]\n", (int) img->trans[0], (int) img->trans[1], (int) img->trans[2]);
+        else fprintf(x->epsbuffer, "%d]\n", (int) img->trans[0]);
+    }
+    fprintf(x->epsbuffer, ">> image\n");
+    ppl_bmp_A85(&x->c->errcontext, x->epsbuffer, img->data, img->data_len);
+}
+
 //! eps_plot_colormap - Render a dataset as a colormap, by resampling it onto a regular grid and writing it as a bitmap
 //! image
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -248,10 +499,9 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     long p;
     double xo, yo, Lx, Ly, ThetaX, ThetaY, CMin[4], CMax[4];
     pplObj *CVar[4], *C1Var, CDummy[4];
-    uLongf zlen; // Length of buffer passed to zlib
-    unsigned char *imagez, CMinAuto[4], CMinSet[4], CMaxAuto[4], CMaxSet[4], CLog[4];
+    unsigned char CMinAuto[4], CMinSet[4], CMaxAuto[4], CMaxSet[4], CLog[4];
     char *errtext;
-    unsigned char component_r, component_g, component_b, transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
+    unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
     bitmap_data img;
 
     if ((data == NULL) || (data->Nrows < 1)) return 0; // No data present
@@ -456,157 +706,9 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                             log(blk->data_real[c + 2 + Ncol_real * (i + XSize * j)] / CMin[c]) / log(CMax[c] / CMin[c]);
                 }
 
-#define SET_RGB_COLOR \
-    /* Check if mask criterion is satisfied */ \
-    { \
-        int colspace; \
-        double comp[4] = {0, 0, 0, 0}; \
-        const int stkLevelOld = x->c->stackPtr; \
-        if (sg->MaskExpr != NULL) { \
-            pplObj *v; \
-            int lOP; \
-            v = ppl_expEval(x->c, (pplExpr *) sg->MaskExpr, &lOP, 1, x->iterDepth + 1); \
-            if (x->c->errStat.status) { \
-                ppl_snprintfTrunc(msg, sizeof(msg), "Could not evaluate mask expression <%s>.", \
-                                  ((pplExpr *) sg->MaskExpr)->ascii); \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
-                ppl_tbWrite(x->c); \
-                ppl_tbClear(x->c); \
-                return 1; \
-            } \
-            if (v->real == 0) { \
-                component_r = TRANS_R; \
-                component_g = TRANS_G; \
-                component_b = TRANS_B; \
-                goto write_rgb; \
-            } \
-        } \
-\
-        /* Compute RGB, HSB or CMYK components */ \
-        if (sg->ColMapExpr == NULL) { \
-            colspace = SW_COLSPACE_RGB; \
-            comp[0] = comp[1] = comp[2] = C1Var->real; \
-        } else { \
-            pplObj *v; \
-            int lOP, outcol; \
-            unsigned char d1, d2; \
-            v = ppl_expEval(x->c, (pplExpr *) sg->ColMapExpr, &lOP, 1, x->iterDepth + 1); \
-            if (x->c->errStat.status) { \
-                ppl_snprintfTrunc(msg, sizeof(msg), "Could not evaluate color expression <%s>.", \
-                                  ((pplExpr *) sg->ColMapExpr)->ascii); \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
-                ppl_tbWrite(x->c); \
-                ppl_tbClear(x->c); \
-                return 1; \
-            } \
-            lOP = ppl_colorFromObj(x->c, v, &outcol, &colspace, NULL, comp, comp + 1, comp + 2, comp + 3, &d1, &d2, \
-                                   msg); \
-            if (lOP) { \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
-                return 1; \
-            } \
-            if (outcol != 0) { \
-                colspace = SW_COLSPACE_CMYK; \
-                comp[0] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT, \
-                                                           (void *) SW_COLOR_CMYK_C, sizeof(double)); \
-                comp[1] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT, \
-                                                           (void *) SW_COLOR_CMYK_M, sizeof(double)); \
-                comp[2] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT, \
-                                                           (void *) SW_COLOR_CMYK_Y, sizeof(double)); \
-                comp[3] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT, \
-                                                           (void *) SW_COLOR_CMYK_K, sizeof(double)); \
-            } \
-            if ((!gsl_finite(comp[0])) || (!gsl_finite(comp[1])) || (!gsl_finite(comp[2])) || \
-                (!gsl_finite(comp[3]))) { \
-                component_r = TRANS_R; \
-                component_g = TRANS_G; \
-                component_b = TRANS_B; \
-                goto write_rgb; \
-            } \
-        } \
-\
-        /* Convert to RGB */ \
-        switch (colspace) { \
-            case SW_COLSPACE_RGB: /* Convert RGB --> RGB */ \
-                break; \
-            case SW_COLSPACE_HSB: /* Convert HSB --> RGB */ \
-            { \
-                double h2, ch, x, m; \
-                int h2i; \
-                clipComponents(comp); \
-                ch = comp[1] * comp[2]; \
-                h2i = (int) (h2 = comp[0] * 6); \
-                x = ch * (1.0 - fabs(fmod(h2, 2) - 1.0)); \
-                m = comp[2] - ch; \
-                switch (h2i) { \
-                    case 0: \
-                        comp[0] = ch; \
-                        comp[1] = x; \
-                        comp[2] = 0; \
-                        break; \
-                    case 1: \
-                        comp[0] = x; \
-                        comp[1] = ch; \
-                        comp[2] = 0; \
-                        break; \
-                    case 2: \
-                        comp[0] = 0; \
-                        comp[1] = ch; \
-                        comp[2] = x; \
-                        break; \
-                    case 3: \
-                        comp[0] = 0; \
-                        comp[1] = x; \
-                        comp[2] = ch; \
-                        break; \
-                    case 4: \
-                        comp[0] = x; \
-                        comp[1] = 0; \
-                        comp[2] = ch; \
-                        break; \
-                    case 5: \
-                    case 6: \
-                        comp[0] = ch; \
-                        comp[1] = 0; \
-                        comp[2] = x; \
-                        break; /* case 6 is for hue=1.0 only */ \
-                    default: \
-                        comp[0] = 0; \
-                        comp[1] = 0; \
-                        comp[2] = 0; \
-                        break; \
-                } \
-                comp[0] += m; \
-                comp[1] += m; \
-                comp[2] += m; \
-                break; \
-            } \
-            case SW_COLSPACE_CMYK: /* Convert CMYK --> RGB */ \
-                comp[0] = 1.0 - (comp[0] + comp[3]); \
-                comp[1] = 1.0 - (comp[1] + comp[3]); \
-                comp[2] = 1.0 - (comp[2] + comp[3]); \
-                break; \
-            default: /* Unknown color space */ \
-                comp[0] = comp[1] = comp[2] = 0.0; \
-                break; \
-        } \
-        clipComponents(comp); \
-\
-        /* Store RGB components */ \
-        component_r = (unsigned char) floor(comp[0] * 255.99); \
-        component_g = (unsigned char) floor(comp[1] * 255.99); \
-        component_b = (unsigned char) floor(comp[2] * 255.99); \
-        if ((component_r == TRANS_R) && (component_g == TRANS_G) && (component_b == TRANS_B)) component_b++; \
-\
-    write_rgb: \
-        img.data[p++] = component_r; \
-        img.data[p++] = component_g; \
-        img.data[p++] = component_b; \
-        ppl_stackClean(x->c, stkLevelOld); /* Discard anything left on the stack */ \
-    }
-
             C1Var = CVar[0];
-            SET_RGB_COLOR;
+            if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) return 1;
+            p += 3;
         }
 
     // Restore variables c1...c4 in the user's variable space
@@ -615,96 +717,17 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         ppl_contextRestoreVarPointer(x->c, v, CDummy + i);
     }
 
-#define COMPRESS_POSTSCRIPT_IMAGE \
-    /* Consider converting RGB data into a paletted image */ \
-    if ((img.depth == 24) && (img.type == BMP_COLOUR_BMP)) \
-        ppl_bmp_colour_count(&x->c->errcontext, &img); /* Check full color image to ensure more than 256 colors */ \
-    if ((img.depth == 8) && (img.type == BMP_COLOUR_PALETTE)) \
-        ppl_bmp_grey_check(&x->c->errcontext, &img); /* Check paletted images for greyscale conversion */ \
-    if ((img.type == BMP_COLOUR_PALETTE) && (img.pal_len <= 16) && (img.depth == 8)) \
-        ppl_bmp_compact(&x->c->errcontext, &img); /* Compact images with few palette entries */ \
-\
-    /* Apply compression to image data */ \
-    switch (img.TargetCompression) { \
-        case BMP_ENCODING_FLATE: \
-            zlen = img.data_len * 1.01 + 12; /* Nasty guess at size of buffer needed. */ \
-            imagez = (unsigned char *) ppl_memAlloc(zlen); \
-            if (imagez == NULL) { \
-                ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (m)."); \
-                img.TargetCompression = BMP_ENCODING_NULL; \
-                break; \
-            } \
-            if (DEBUG) { ppl_log(&x->c->errcontext, "Calling zlib to compress image data."); } \
-            j = compress2(imagez, &zlen, img.data, img.data_len, 9); /* Call zlib to do deflation */ \
-\
-            if (j != 0) { \
-                if (DEBUG) { \
-                    ppl_snprintfTrunc(msg, sizeof(msg), "zlib returned error code %d\n", j); \
-                    ppl_log(&x->c->errcontext, msg); \
-                } \
-                img.TargetCompression = BMP_ENCODING_NULL; /* Give up trying to compress data */ \
-                break; \
-            } \
-            if (DEBUG) { \
-                ppl_snprintfTrunc(msg, sizeof(msg), \
-                                  "zlib has completed compression. Before flate: %ld bytes. After flate: %ld bytes.", \
-                                  img.data_len, (long) zlen); \
-                ppl_log(&x->c->errcontext, msg); \
-            } \
-            if (zlen >= img.data_len) { \
-                if (DEBUG) { \
-                    ppl_log(&x->c->errcontext, \
-                            "Using original uncompressed data since zlib made it bigger than it was to start with."); \
-                } \
-                img.TargetCompression = \
-                        BMP_ENCODING_NULL; /* Give up trying to compress data; result was larger than original data size */ \
-                break; \
-            } \
-            img.data = imagez; /* Replace old data with new compressed data */ \
-            img.data_len = zlen; \
-            break; \
-    }
-
 #ifdef FLATE_DISABLE
     if (img.TargetCompression == BMP_ENCODING_FLATE) img.TargetCompression = BMP_ENCODING_NULL;
 #endif
-    COMPRESS_POSTSCRIPT_IMAGE;
+    compressPostscriptImage(x, &img);
 
     // Write out postscript image
     fprintf(x->epsbuffer, "gsave\n");
     fprintf(x->epsbuffer, "[ %.2f %.2f %.2f %.2f %.2f %.2f ] concat\n", Lx * sin(ThetaX), Lx * cos(ThetaX),
             Ly * sin(ThetaY), Ly * cos(ThetaY), xo, yo);
 
-#define WRITE_POSTSCRIPT_IMAGE \
-    if (img.colour == BMP_COLOUR_RGB) fprintf(x->epsbuffer, "/DeviceRGB setcolorspace\n"); /* RGB palette */ \
-    else if (img.colour == BMP_COLOUR_GREY) \
-        fprintf(x->epsbuffer, "/DeviceGray setcolorspace\n"); /* Greyscale palette */ \
-    else if (img.colour == BMP_COLOUR_PALETTE) /* Indexed palette */ \
-    { \
-        fprintf(x->epsbuffer, "[/Indexed /DeviceRGB %d <~\n", img.pal_len - 1); \
-        ppl_bmp_A85(&x->c->errcontext, x->epsbuffer, img.palette, 3 * img.pal_len); \
-        fprintf(x->epsbuffer, "] setcolorspace\n\n"); \
-    } \
-\
-    fprintf(x->epsbuffer, "<<\n /ImageType %d\n /Width %d\n /Height %d\n /ImageMatrix [%d 0 0 %d 0 %d]\n", \
-            (img.trans == NULL) ? 1 : 4, img.width, img.height, img.width, -img.height, img.height); \
-    fprintf(x->epsbuffer, \
-            " /DataSource currentfile /ASCII85Decode filter"); /* Image data is stored in currentfile, but need to apply filters to decode it */ \
-    if (img.TargetCompression == BMP_ENCODING_FLATE) fprintf(x->epsbuffer, " /FlateDecode filter"); \
-    fprintf(x->epsbuffer, "\n /BitsPerComponent %d\n /Decode [0 %d%s]\n", \
-            (img.colour == BMP_COLOUR_RGB) ? (img.depth / 3) : (img.depth), \
-            (img.type == BMP_COLOUR_PALETTE) ? ((1 << img.depth) - 1) : 1, \
-            (img.colour == BMP_COLOUR_RGB) ? " 0 1 0 1" : ""); \
-    if (img.trans != NULL) { \
-        fprintf(x->epsbuffer, " /MaskColor ["); \
-        if (img.colour == BMP_COLOUR_RGB) \
-            fprintf(x->epsbuffer, "%d %d %d]\n", (int) img.trans[0], (int) img.trans[1], (int) img.trans[2]); \
-        else fprintf(x->epsbuffer, "%d]\n", (int) img.trans[0]); \
-    } \
-    fprintf(x->epsbuffer, ">> image\n"); \
-    ppl_bmp_A85(&x->c->errcontext, x->epsbuffer, img.data, img.data_len);
-
-    WRITE_POSTSCRIPT_IMAGE;
+    writePostscriptImage(x, &img);
     fprintf(x->epsbuffer, "grestore\n");
     return 0;
 }
@@ -784,7 +807,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
         dataTable *data = x->current->plotdata[k];
         if (pd->CRangeDisplay) {
             double XSize = 1024, YSize = 1; // Dimensions of bitmap image
-            unsigned char component_r, component_g, component_b, transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
+            unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
             char v[3] = "c1";
             double x1, y1, x2, y2, x3, y3, x4, y4, theta, dummy, CMin, CMax;
             double Lx, Ly, ThetaX, ThetaY;
@@ -792,8 +815,6 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             const double MARGIN = EPS_COLORSCALE_MARGIN * M_TO_PS;
             const double WIDTH = EPS_COLORSCALE_WIDTH * M_TO_PS;
             const unsigned char Lr = (sg->ColKeyPos == SW_COLKEYPOS_B) || (sg->ColKeyPos == SW_COLKEYPOS_R);
-            uLongf zlen; // Length of buffer passed to zlib
-            unsigned char *imagez;
             bitmap_data img;
             pplObj *CVar = NULL, *C1Var, CDummy;
 
@@ -903,18 +924,19 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                     } else CVar->real = ((double) i) / (XSize - 1);
 
                     C1Var = CVar;
-                    SET_RGB_COLOR;
+                    if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) return 1;
+                    p += 3;
                 }
 #ifdef FLATE_DISABLE
             if (img.TargetCompression == BMP_ENCODING_FLATE) img.TargetCompression = BMP_ENCODING_NULL;
 #endif
-            COMPRESS_POSTSCRIPT_IMAGE;
+            compressPostscriptImage(x, &img);
 
             // Write postscript image
             fprintf(x->epsbuffer, "gsave\n");
             fprintf(x->epsbuffer, "[ %.2f %.2f %.2f %.2f %.2f %.2f ] concat\n", Lx * sin(ThetaX), Lx * cos(ThetaX),
                     Ly * sin(ThetaY), Ly * cos(ThetaY), x3, y3);
-            WRITE_POSTSCRIPT_IMAGE;
+            writePostscriptImage(x, &img);
             fprintf(x->epsbuffer, "grestore\n");
 
         POST_BITMAP:
