@@ -47,15 +47,25 @@
 #include "userspace/garbageCollector.h"
 #include "userspace/pplObj_fns.h"
 
-#define PARSE_TBADD(X, Y, Z) \
-    { \
-        ppl_tbAdd(c, srcLineN, srcId, srcFname, 1, X, Y, Z, ""); \
-        if ((c->errStat.errPosExpr == -1) && (c->errStat.oldErrPosExpr == c->algebraErrPos) && \
-            (c->algebraErrPos >= 0) && (c->algebraErrPos >= (Y))) { \
-            c->errStat.errPosExpr = c->algebraErrPos; \
-            c->errStat.sourceIdExpr = srcId; \
-        } \
+//! parseTbAdd - Add an error in the parsing of a command line to the traceback. If the error arose within an
+//! algebraic expression at or after the position of the error, the position within the expression is also recorded.
+//! \param [in] c - The Pyxplot context
+//! \param [in] srcLineN - The line number of the source of the command
+//! \param [in] srcId - The ID number of the source of the command
+//! \param [in] srcFname - The filename of the source of the command
+//! \param [in] errType - The type of the error, e.g. ERR_SYNTAX
+//! \param [in] errPos - The position of the error within the command line
+//! \param [in] line - The command line
+
+static void parseTbAdd(ppl_context *c, const int srcLineN, const long srcId, const char *srcFname, const int errType,
+                       const int errPos, const char *line) {
+    ppl_tbAdd(c, srcLineN, srcId, srcFname, 1, errType, errPos, line, "");
+    if ((c->errStat.errPosExpr == -1) && (c->errStat.oldErrPosExpr == c->algebraErrPos) && (c->algebraErrPos >= 0) &&
+        (c->algebraErrPos >= errPos)) {
+        c->errStat.errPosExpr = c->algebraErrPos;
+        c->errStat.sourceIdExpr = srcId;
     }
+}
 
 //! strDup - Copy the first N characters of a string into a newly malloced, null-terminated string
 //! \param [in] in - The string to copy
@@ -261,7 +271,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                 status = 0;
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Bad node type coming out of code block.");
-                PARSE_TBADD(ERR_INTERNAL, 0, line);
+                parseTbAdd(c, srcLineN, srcId, srcFname, ERR_INTERNAL, 0, line);
             }
             goto cleanup;
         }
@@ -275,7 +285,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
         output->stackLen = node->listLen;
         if (output == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-            PARSE_TBADD(ERR_MEMORY, 0, line);
+            parseTbAdd(c, srcLineN, srcId, srcFname, ERR_MEMORY, 0, line);
             return 0;
         }
         ppl_parserStatAdd(s, blockDepth, output);
@@ -1132,7 +1142,7 @@ cleanup:
         if (status == 0) {
             ppl_snprintfTrunc(c->errStat.errBuff, LSTR_LENGTH, "At this point, was expecting %s.", s->expectingList);
             c->errStat.errBuff[LSTR_LENGTH - 1] = '\0';
-            PARSE_TBADD(ERR_SYNTAX, s->eLlinePos, line);
+            parseTbAdd(c, srcLineN, srcId, srcFname, ERR_SYNTAX, s->eLlinePos, line);
         }
     }
 
@@ -1382,7 +1392,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
     c->algebraErrPos = c->errStat.oldErrPosExpr = c->errStat.oldErrPosCmd = -1;
     if (blockDepth > MAX_RECURSION_DEPTH) {
         strcpy(c->errStat.errBuff, "Maximum recursion depth exceeded.");
-        PARSE_TBADD(ERR_OVERFLOW, 0, line);
+        parseTbAdd(c, srcLineN, srcId, srcFname, ERR_OVERFLOW, 0, line);
         ppl_parserStatReInit(s);
         return 1;
     }
@@ -1398,7 +1408,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
             if (s->waitingForBrace) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Cannot process a macro on the same line as the opening brace of a loop.");
-                PARSE_TBADD(ERR_SYNTAX, 0, line);
+                parseTbAdd(c, srcLineN, srcId, srcFname, ERR_SYNTAX, 0, line);
                 ppl_parserStatReInit(s);
                 return 1;
             }
@@ -1407,7 +1417,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
             ppl_parserLineInit(&output, srcLineN, srcId, srcFname, line);
             if (output == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-                PARSE_TBADD(ERR_MEMORY, 0, line);
+                parseTbAdd(c, srcLineN, srcId, srcFname, ERR_MEMORY, 0, line);
                 ppl_parserStatReInit(s);
                 return 1;
             }
@@ -1594,7 +1604,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
             }
         }
         if (fail) {
-            PARSE_TBADD(ERR_SYNTAX, 0, line);
+            parseTbAdd(c, srcLineN, srcId, srcFname, ERR_SYNTAX, 0, line);
             ppl_parserStatReInit(s);
             return 1;
         }
@@ -1680,7 +1690,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 
     // We have not found a match to this command
     ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Unrecognised command.");
-    PARSE_TBADD(ERR_SYNTAX, 0, line);
+    parseTbAdd(c, srcLineN, srcId, srcFname, ERR_SYNTAX, 0, line);
     if (outbuff != NULL) {
         free(outbuff);
         outbuff = NULL;
