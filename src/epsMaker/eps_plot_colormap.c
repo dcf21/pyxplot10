@@ -204,8 +204,10 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     // Submit axis labels for color key
     pd->C1Axis.FirstTextID = x->NTextItems;
     if (pd->C1Axis.TickListStrings != NULL)
-        for (l = 0; pd->C1Axis.TickListStrings[l] != NULL; l++) { YIELD_TEXTITEM(pd->C1Axis.TickListStrings[l]); }
-    YIELD_TEXTITEM(pd->C1Axis.FinalAxisLabel);
+        for (l = 0; pd->C1Axis.TickListStrings[l] != NULL; l++) {
+            if (eps_yieldTextItem(x, pd->C1Axis.TickListStrings[l])) return;
+        }
+    if (eps_yieldTextItem(x, pd->C1Axis.FinalAxisLabel)) return;
 
     // If we have three columns of data, consider drawing a color scale bar
     if ((Ncol == 3) && (sg->ColKey == SW_ONOFF_ON)) {

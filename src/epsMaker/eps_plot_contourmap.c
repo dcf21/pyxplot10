@@ -208,7 +208,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
 
         // UnitString points to a buffer of LSTR_LENGTH bytes in the context, returned by ppl_printUnit()
         ppl_snprintfTrunc(UnitString, LSTR_LENGTH, "%s", ppl_unitsNumericDisplay(x->c, &v, 0, SW_DISPLAY_L, 0));
-        YIELD_TEXTITEM_CPY(UnitString);
+        if (eps_yieldTextItemCopy(x, UnitString)) return;
     }
 
     // Store range of values for which contours will be drawn

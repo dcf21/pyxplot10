@@ -1052,7 +1052,9 @@ void eps_plot_YieldUpText(EPSComm *x) {
             blk = x->current->plotdata[k]->first;
             while (blk != NULL) {
                 if (blk->text != NULL)
-                    for (j = 0; j < blk->blockPosition; j++) { YIELD_TEXTITEM(blk->text[j]); }
+                    for (j = 0; j < blk->blockPosition; j++) {
+                        if (eps_yieldTextItem(x, blk->text[j])) return;
+                    }
                 blk = blk->next;
             }
         }
@@ -1078,19 +1080,19 @@ void eps_plot_YieldUpText(EPSComm *x) {
                 axes[k].FirstTextID = x->NTextItems;
                 if (axes[k].TickListPositions != NULL)
                     for (l = 0; axes[k].TickListStrings[l] != NULL; l++) {
-                        YIELD_TEXTITEM(axes[k].TickListStrings[l]);
+                        if (eps_yieldTextItem(x, axes[k].TickListStrings[l])) return;
                     } // Major tick labels
                 if (axes[k].MTickListPositions != NULL)
                     for (l = 0; axes[k].MTickListStrings[l] != NULL; l++) {
-                        YIELD_TEXTITEM(axes[k].MTickListStrings[l]);
+                        if (eps_yieldTextItem(x, axes[k].MTickListStrings[l])) return;
                     } // Minor tick labels
-                YIELD_TEXTITEM(axes[k].FinalAxisLabel);
+                if (eps_yieldTextItem(x, axes[k].FinalAxisLabel)) return;
             }
     }
 
     // Title of plot
     x->current->TitleTextID = x->NTextItems;
-    YIELD_TEXTITEM(x->current->settings.title);
+    if (eps_yieldTextItem(x, x->current->settings.title)) return;
 
     return;
 }

@@ -474,6 +474,31 @@ FAIL:
     return 1;
 }
 
+//! addPotentialTick - Add a tick to the list of potential ticks which might be placed on an axis. If the list is
+//! full, the tick is counted but not stored.
+//! \param [in,out] list - The list of potential ticks
+//! \param [in,out] N - The number of potential ticks found so far; incremented
+//! \param [in] Nmax - The number of potential ticks which <list> has room for
+//! \param [in] ArgNo - The argument whose changing is marked by this tick
+//! \param [in] DivOfThrow - The factor of the argument's throw which this tick divides it into, or NOT_THROW
+//! \param [in] OoM - The order of magnitude of the digit which changes on this tick
+//! \param [in] DivOfOoM - The factor of the log base into which the order of magnitude is being split
+//! \param [in] TargetValue - The target value of the argument where this tick should be placed
+//! \param [in] IntervalNum - The number of the interval in which this tick lies
+
+static void addPotentialTick(PotentialTick *list, int *N, const int Nmax, const int ArgNo, const int DivOfThrow,
+                             const int OoM, const int DivOfOoM, const double TargetValue, const int IntervalNum) {
+    if (*N < Nmax) {
+        list[*N].ArgNo = ArgNo;
+        list[*N].DivOfThrow = DivOfThrow;
+        list[*N].OoM = OoM;
+        list[*N].DivOfOoM = DivOfOoM;
+        list[*N].TargetValue = TargetValue;
+        list[*N].IntervalNum = IntervalNum;
+    }
+    (*N)++;
+}
+
 //! eps_plot_ticking_auto - Place ticks automatically on an axis with a format expression, choosing ticks at which the
 //! arguments of the format expression take round values
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -729,17 +754,6 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
     // Generate list of potential ticks
 
-#define ADDTICK(A, B, C, D, E, F) \
-    if (NPotTicks < NPotTicksMax) { \
-        PotTickList[NPotTicks].ArgNo = A; \
-        PotTickList[NPotTicks].DivOfThrow = B; \
-        PotTickList[NPotTicks].OoM = C; \
-        PotTickList[NPotTicks].DivOfOoM = D; \
-        PotTickList[NPotTicks].TargetValue = E; \
-        PotTickList[NPotTicks].IntervalNum = F; \
-    } \
-    NPotTicks++;
-
     for (j = 1; j < N_STEPS; j++) {
         for (i = 0; i < NArgs; i++)
             if (!args[i].vetoed) {
@@ -747,7 +761,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                 {
                     if (((args[i].StringArg) && (strcmp(args[i].StringValues[j], args[i].StringValues[j - 1]) != 0)) ||
                         ((!args[i].StringArg) && (args[i].NumericValues[j] != args[i].NumericValues[j - 1]))) {
-                        ADDTICK(i, 0, 0, 0, 0.0, j);
+                        addPotentialTick(PotTickList, &NPotTicks, NPotTicksMax, i, 0, 0, 0, 0.0, j);
                     }
                 } else // Continuous arguments... study where they change OoM
                 {
@@ -769,17 +783,18 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                         n = floor(nd + 0.5);
                         if ((j == 1) && (fabs(nd - n) < 1e-12)) // A tick should go on the left extreme of the axis
                         {
-                            ADDTICK(i, k, 0, 0,
-                                    (args[i].MinValue +
-                                     n / pow(LogBase, FACTOR_MULTIPLY - 1) * args[i].FactorsThrow[k]),
-                                    j);
+                            addPotentialTick(PotTickList, &NPotTicks, NPotTicksMax, i, k, 0, 0,
+                                             (args[i].MinValue +
+                                              n / pow(LogBase, FACTOR_MULTIPLY - 1) * args[i].FactorsThrow[k]),
+                                             j);
                         }
                         n = floor((args[i].NumericValues[j - 1] - args[i].MinValue) *
                                   pow(LogBase, FACTOR_MULTIPLY - 1) / args[i].FactorsThrow[k]);
                         m = floor((args[i].NumericValues[j] - args[i].MinValue) * pow(LogBase, FACTOR_MULTIPLY - 1) /
                                   args[i].FactorsThrow[k]);
                         if (n != m) {
-                            ADDTICK(i, k, 0, 0,
+                            addPotentialTick(
+                                    PotTickList, &NPotTicks, NPotTicksMax, i, k, 0, 0,
                                     (args[i].MinValue +
                                      ((n > m) ? n : m) / pow(LogBase, FACTOR_MULTIPLY - 1) * args[i].FactorsThrow[k]),
                                     j);
@@ -791,7 +806,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                         ((args[i].NumericValues[j - 1] == 0) && (j == 1)) ||
                         ((args[i].NumericValues[j - 1] < 0) && (args[i].NumericValues[j] > 0)) ||
                         ((args[i].NumericValues[j - 1] > 0) && (args[i].NumericValues[j] < 0))) {
-                        ADDTICK(i, NOT_THROW, INT_MAX, -10, 0.0, j); // Zero should be marked in this interval
+                        addPotentialTick(PotTickList, &NPotTicks, NPotTicksMax, i, NOT_THROW, INT_MAX, -10, 0.0,
+                                         j); // Zero should be marked in this interval
                         n = 0;
                         ZeroInInterval = 1;
                     } else if ((args[i].NumericValues[j - 1] != 0) || (args[i].NumericValues[j] != 0)) {
@@ -814,7 +830,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                     if ((!args[i].OoM_RangeSet) || (OoM - n > args[i].OoM_max))
                                         args[i].OoM_max = OoM - n;
                                     args[i].OoM_RangeSet = 1;
-                                    ADDTICK(i, NOT_THROW, OoM - n, priority, (floor(xn / divisor + 0.5) * divisor), j);
+                                    addPotentialTick(PotTickList, &NPotTicks, NPotTicksMax, i, NOT_THROW, OoM - n,
+                                                     priority, (floor(xn / divisor + 0.5) * divisor), j);
                                     break;
                                 }
                             }
@@ -836,8 +853,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                 if ((!args[i].OoM_RangeSet) || (OoM - n < args[i].OoM_min)) args[i].OoM_min = OoM - n;
                                 if ((!args[i].OoM_RangeSet) || (OoM - n > args[i].OoM_max)) args[i].OoM_max = OoM - n;
                                 args[i].OoM_RangeSet = 1;
-                                ADDTICK(i, NOT_THROW, OoM - n, priority, (floor(ppl_max(xn, yn) / divisor) * divisor),
-                                        j);
+                                addPotentialTick(PotTickList, &NPotTicks, NPotTicksMax, i, NOT_THROW, OoM - n, priority,
+                                                 (floor(ppl_max(xn, yn) / divisor) * divisor), j);
                                 break;
                             }
                         }
@@ -858,15 +875,17 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                                     const int ynf = floor(ynfd);
                                     const int priority = (floor(fabs(xn / divisor)) == 0) ? 0 : -1;
                                     if (xnf != ynf) {
-                                        ADDTICK(i, NOT_THROW, OoM - m, 2 * (o + 1) + priority,
-                                                ((xnf > ynf) ? xnf : ynf) * divisor / pow(LogBase, FACTOR_MULTIPLY) *
-                                                        FactorsLogBase[o],
-                                                j);
+                                        addPotentialTick(PotTickList, &NPotTicks, NPotTicksMax, i, NOT_THROW, OoM - m,
+                                                         2 * (o + 1) + priority,
+                                                         ((xnf > ynf) ? xnf : ynf) * divisor /
+                                                                 pow(LogBase, FACTOR_MULTIPLY) * FactorsLogBase[o],
+                                                         j);
                                     } else if ((j == 1) && (fabs(floor(xnfd + 0.5) - xnfd) < 1e-12)) {
-                                        ADDTICK(i, NOT_THROW, OoM - m, 2 * (o + 1) + priority,
-                                                floor(xnfd + 0.5) * divisor / pow(LogBase, FACTOR_MULTIPLY) *
-                                                        FactorsLogBase[o],
-                                                j);
+                                        addPotentialTick(PotTickList, &NPotTicks, NPotTicksMax, i, NOT_THROW, OoM - m,
+                                                         2 * (o + 1) + priority,
+                                                         floor(xnfd + 0.5) * divisor / pow(LogBase, FACTOR_MULTIPLY) *
+                                                                 FactorsLogBase[o],
+                                                         j);
                                     }
                                 }
                         }

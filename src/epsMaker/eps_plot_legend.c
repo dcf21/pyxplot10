@@ -104,6 +104,45 @@ static void TriSwap(double *a, double *b) {
 
 // Graph legend API routines
 
+//! eps_yieldTextItem - Add a string to the list of text items which are to be typeset by LaTeX for the canvas item
+//! currently being drawn. Blank strings are skipped.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] text - The string, which must persist until the canvas has been drawn; may be NULL
+//! \return Zero on success, or nonzero if memory ran out (in which case an error is reported and <x->status> set)
+
+int eps_yieldTextItem(EPSComm *x, char *text) {
+    CanvasTextItem *i;
+    if ((text == NULL) || (text[0] == '\0')) return 0;
+    i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+    if (i == NULL) {
+        ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (q).");
+        *(x->status) = 1;
+        return 1;
+    }
+    i->text = text;
+    i->CanvasMultiplotID = x->current->id;
+    ppl_listAppend(x->TextItems, i);
+    x->NTextItems++;
+    return 0;
+}
+
+//! eps_yieldTextItemCopy - Add a copy of a string to the list of text items which are to be typeset by LaTeX for the
+//! canvas item currently being drawn
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] text - The string, which is copied
+//! \return Zero on success, or nonzero if memory ran out (in which case an error is reported and <x->status> set)
+
+int eps_yieldTextItemCopy(EPSComm *x, const char *text) {
+    char *out = (char *) ppl_memAlloc(strlen(text) + 1);
+    if (out == NULL) {
+        ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (r).");
+        *(x->status) = 1;
+        return 1;
+    }
+    strcpy(out, text);
+    return eps_yieldTextItem(x, out);
+}
+
 //! GraphLegend_YieldUpText - Collect the titles of the plot items in a graph's legend, generating automatic titles from
 //! their filenames or functions where none was given, so that they can be typeset
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -124,7 +163,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
         } // notitle set
         else if (pd->TitleSet) {
             pd->TitleFinal = pd->title;
-            YIELD_TEXTITEM(pd->title);
+            if (eps_yieldTextItem(x, pd->title)) return;
         } // title for dataset manually set
         else // generate automatic title for dataset
         {
@@ -243,7 +282,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                     }
                 }
                 cptr[k] = '\0';
-                YIELD_TEXTITEM(cptr);
+                if (eps_yieldTextItem(x, cptr)) return;
             }
         }
         pd = pd->next;

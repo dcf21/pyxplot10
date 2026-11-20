@@ -299,7 +299,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
                 tmp = (char *) o->auxil;
             }
             if ((tmp == NULL) || (tmp[0] == '\0')) blk->text[j] = NULL;
-            YIELD_TEXTITEM_CPY(tmp);
+            if (eps_yieldTextItemCopy(x, tmp)) return;
 
             // Restore values of the variables [percentage, label, wedgesize]
             ppl_contextRestoreVarPointer(c, "label", &DummyTemp_l);
@@ -312,7 +312,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
 
     // Title of piechart
     x->current->TitleTextID = x->NTextItems;
-    YIELD_TEXTITEM(x->current->settings.title);
+    if (eps_yieldTextItem(x, x->current->settings.title)) return;
     return;
 }
 
