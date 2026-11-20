@@ -90,54 +90,106 @@ static int markupMatch(const char *text, const char *markup) {
 }
 
 
-#define PGE_OVERFLOW \
-    { \
-        context->tokenBuffLen *= 2; \
-        context->tokenBuff = \
-                (pplTokenCode *) realloc(context->tokenBuff, context->tokenBuffLen * sizeof(pplTokenCode)); \
-        if (context->tokenBuff == NULL) { \
-            *errPos = scanpos; \
-            *errType = ERR_OVERFLOW; \
-            strcpy(errText, "Algebraic expression too long"); \
-            *end = -1; \
-            return; \
-        } \
-        out = context->tokenBuff + outOffset; \
-        buffSize = context->tokenBuffLen - outOffset; \
-    }
+//! tokeniserState - The state of ppl_expTokenise() as it works through an expression, writing a token code for
+//! each character into <context->tokenBuff>. The buffer may be reallocated as it grows (including by recursive calls
+//! which tokenise bracketed sub-expressions), so pointers into it are never kept; tokenOut() finds the current
+//! position afresh.
+typedef struct tokeniserState {
+    ppl_context *context;
+    int outOffset; // The position in <context->tokenBuff> of the token for the first character of the expression
+    int outpos; // The number of tokens written so far
+    int scanpos; // The position in the expression of the next character to tokenise
+    char state; // The state of the tokeniser, i.e. the type of token currently being read (see the table above)
+    unsigned char opcode; // The operator which the current token represents
+    unsigned char precedence; // The precedence of that operator
+} tokeniserState;
 
-#define NEWSTATE(L, O, P) \
-    { \
-        int i; \
-        state = trialstate; \
-        opcode = O; \
-        precedence = P; \
-        for (i = 0; i < L; i++) { \
-            out[outpos].state = state; \
-            out[outpos].opcode = opcode; \
-            out[outpos].precedence = precedence; \
-            outpos++; \
-            if (outpos >= buffSize) PGE_OVERFLOW; \
-        } \
-        scanpos += L; \
-    }
+//! tokenOut - Find the position in the token buffer at which the next token will be written
+//! \param [in] t - The tokeniser state
+//! \return Pointer to the next token in <context->tokenBuff>
 
-#define SAMESTATE \
-    { \
-        out[outpos].state = state; \
-        out[outpos].opcode = opcode; \
-        out[outpos].precedence = precedence; \
-        outpos++; \
-        if (outpos >= buffSize) PGE_OVERFLOW; \
-        scanpos++; \
-    }
+static pplTokenCode *tokenOut(const tokeniserState *t) {
+    return t->context->tokenBuff + t->outOffset + t->outpos;
+}
 
-#define FFWSTATE(L) \
-    { \
-        while (outpos + L >= buffSize) PGE_OVERFLOW; \
-        outpos += (L); \
-        scanpos += (L); \
+//! tokenBuffEnsure - Make sure that the token buffer has room for more than <n> further tokens, enlarging it if
+//! necessary
+//! \param [in,out] t - The tokeniser state
+//! \param [in] n - The number of further tokens to make room for
+//! \return Zero on success, or nonzero if memory ran out
+
+static int tokenBuffEnsure(tokeniserState *t, const int n) {
+    ppl_context *context = t->context;
+    while (t->outOffset + t->outpos + n >= context->tokenBuffLen) {
+        pplTokenCode *grown =
+                (pplTokenCode *) realloc(context->tokenBuff, 2 * context->tokenBuffLen * sizeof(pplTokenCode));
+        if (grown == NULL) return 1;
+        context->tokenBuff = grown;
+        context->tokenBuffLen *= 2;
     }
+    return 0;
+}
+
+//! tokenNewState - Move the tokeniser into a new state, recording a token for each of the next <len> characters of
+//! the expression
+//! \param [in,out] t - The tokeniser state
+//! \param [in] state - The new state
+//! \param [in] opcode - The operator which the new token represents
+//! \param [in] precedence - The precedence of that operator
+//! \param [in] len - The number of characters which the new token spans
+//! \return Zero on success, or nonzero if memory ran out
+
+static int tokenNewState(tokeniserState *t, const char state, const unsigned char opcode,
+                         const unsigned char precedence, const int len) {
+    int i;
+    t->state = state;
+    t->opcode = opcode;
+    t->precedence = precedence;
+    if (tokenBuffEnsure(t, len)) return 1;
+    for (i = 0; i < len; i++) {
+        pplTokenCode *o = tokenOut(t);
+        o->state = state;
+        o->opcode = opcode;
+        o->precedence = precedence;
+        t->outpos++;
+    }
+    t->scanpos += len;
+    return 0;
+}
+
+//! tokenSameState - Record a token for the next character of the expression, which continues the current token
+//! \param [in,out] t - The tokeniser state
+//! \return Zero on success, or nonzero if memory ran out
+
+static int tokenSameState(tokeniserState *t) {
+    return tokenNewState(t, t->state, t->opcode, t->precedence, 1);
+}
+
+//! tokenFastForward - Skip over the tokens for the next <len> characters of the expression, which have already been
+//! written by a recursive call to ppl_expTokenise()
+//! \param [in,out] t - The tokeniser state
+//! \param [in] len - The number of characters to skip
+//! \return Zero on success, or nonzero if memory ran out
+
+static int tokenFastForward(tokeniserState *t, const int len) {
+    if (tokenBuffEnsure(t, len)) return 1;
+    t->outpos += len;
+    t->scanpos += len;
+    return 0;
+}
+
+//! appendOr - When listing the alternatives which a syntax error message says were expected, write " or " between
+//! each alternative and the next
+//! \param [in,out] errText - The error message being written
+//! \param [in,out] i - The position in <errText> at which to write; advanced past what is written
+//! \param [in,out] j - Flag indicating whether any alternatives have been listed yet; set to true
+
+static void appendOr(char *errText, int *i, int *j) {
+    if (*j != 0) {
+        strcpy(errText + *i, " or ");
+        *i += strlen(errText + *i);
+    } else *j = 1;
+}
 
 //! ppl_expTokenise - Tokenise an algebraic expression, labelling each character with the type of token it belongs
 //! to and the operator it represents. The result is written into <context->tokenBuff>.
@@ -163,11 +215,9 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                              "BEHLMNOG",  "BEHILMNOG", "BEHILMNOG", "JKU",      "JKQRU",  "JKQRU", "ELV",      "JKPQRU",
                              "SFJKPQRU",  "T",         "BEHILMNOG", "SFJKPQRU", "",       "JKU"};
     int nCommaItems = 1, nDictItems = 0, tertiaryDepth = 0;
-    char state = 'A', trialstate;
-    int scanpos = 0, outpos = 0, oldpos, trialpos;
-    unsigned char opcode = 0, precedence = 0;
-    pplTokenCode *out;
-    int buffSize;
+    char trialstate;
+    int oldpos, trialpos;
+    tokeniserState t = {context, outOffset, 0, 0, 'A', 0, 0};
     int expOp = 0; // Was last named function one which acts on an expression -- e.g. unit() or int_dx()?
     int extraArg =
             0; // Was last named function one which has a variable name encoded in it -- i.e. int_dx() or diff_dx()?
@@ -191,50 +241,49 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         return;
     }
 
-    out = context->tokenBuff + outOffset;
-    buffSize = context->tokenBuffLen - outOffset;
+    while (t.state != 'U') {
+        while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
+            if (tokenSameState(&t)) goto overflow;
+        } // Sop up whitespace
+        oldpos = t.scanpos;
 
-    while (state != 'U') {
-        while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) { SAMESTATE; } // Sop up whitespace
-        oldpos = scanpos;
-
-        for (trialpos = 0; ((trialstate = allowed[(int) (state - 'A')][trialpos]) != '\0'); trialpos++) {
+        for (trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
             if ((expOp) && (trialstate != 'P'))
                 continue; // int_dx and diff_dx MUST be followed by arguments; they have already put one on the stack.
             if (trialstate == 'B') // string literal
             {
                 char quoteType;
                 int raw = 0;
-                if ((in[scanpos] == 'r') && ((in[scanpos + 1] == '\'') || (in[scanpos + 1] == '"'))) {
+                if ((in[t.scanpos] == 'r') && ((in[t.scanpos + 1] == '\'') || (in[t.scanpos + 1] == '"'))) {
                     raw = 1;
-                    NEWSTATE(1, 0, 0);
+                    if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
                 } // r'hello' is raw string
-                if ((in[scanpos] == 'e') && ((in[scanpos + 1] == '\'') || (in[scanpos + 1] == '"'))) {
+                if ((in[t.scanpos] == 'e') && ((in[t.scanpos + 1] == '\'') || (in[t.scanpos + 1] == '"'))) {
                     raw = 0;
-                    NEWSTATE(1, 0, 0);
+                    if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
                 } // e'hello' is string with extended escapes
-                if ((in[scanpos] == (quoteType = '\'')) || (in[scanpos] == (quoteType = '"'))) {
+                if ((in[t.scanpos] == (quoteType = '\'')) || (in[t.scanpos] == (quoteType = '"'))) {
                     int j = 1, tripleQuote = 0;
-                    if ((in[scanpos + 1] == quoteType) && (in[scanpos + 2] == quoteType)) {
+                    if ((in[t.scanpos + 1] == quoteType) && (in[t.scanpos + 2] == quoteType)) {
                         j = 3;
                         tripleQuote = 1;
                     }
-                    for (; (in[scanpos + j] != '\0') &&
-                         (((!tripleQuote) && (in[scanpos + j] != quoteType)) ||
+                    for (; (in[t.scanpos + j] != '\0') &&
+                         (((!tripleQuote) && (in[t.scanpos + j] != quoteType)) ||
                           (tripleQuote &&
-                           ((in[scanpos + j] != quoteType) || (in[scanpos + j + 1] != quoteType) ||
-                            (in[scanpos + j + 2] != quoteType))));
+                           ((in[t.scanpos + j] != quoteType) || (in[t.scanpos + j + 1] != quoteType) ||
+                            (in[t.scanpos + j + 2] != quoteType))));
                          j++)
-                        if ((!raw) && (in[scanpos + j] == '\\') && (in[scanpos + j + 1] != '\0')) j++;
-                    if (in[scanpos + j] == quoteType) {
+                        if ((!raw) && (in[t.scanpos + j] == '\\') && (in[t.scanpos + j + 1] != '\0')) j++;
+                    if (in[t.scanpos + j] == quoteType) {
                         if (tripleQuote) {
                             j += 3;
                         } else {
                             j++;
                         }
-                        NEWSTATE(j, 0, 0);
+                        if (tokenNewState(&t, trialstate, 0, 0, j)) goto overflow;
                     } else {
-                        *errPos = scanpos;
+                        *errPos = t.scanpos;
                         *errType = ERR_SYNTAX;
                         ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched quote.");
                         *end = -1;
@@ -244,35 +293,38 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'C') // string substitution operator
             {
-                if (markupMatch(in + scanpos, "%")) { NEWSTATE(1, PPL_OP_STRING_SUBST, 4); }
+                if (markupMatch(in + t.scanpos, "%")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_STRING_SUBST, 4, 1)) goto overflow;
+                }
             } else if ((trialstate == 'D') // a list of string substitutions
                        || (trialstate == 'E') // a bracketed sub-expression
                        || (trialstate == 'P')) // a list of function arguments
             {
-                if (markupMatch(in + scanpos, "(")) {
+                if (markupMatch(in + t.scanpos, "(")) {
                     int j, k, l, m, n = 1, cp[3], cpl = 3, extraStrArg = 0;
-                    ppl_strBracketMatch(in + scanpos, '(', ')', cp, &cpl, &j, cpl); // Search for a ) to match the (
+                    ppl_strBracketMatch(in + t.scanpos, '(', ')', cp, &cpl, &j, cpl); // Search for a ) to match the (
                     if (j <= 0) {
-                        *errPos = scanpos;
+                        *errPos = t.scanpos;
                         *errType = ERR_SYNTAX;
                         ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched ( )");
                         *end = -1;
                         *outlen = 0;
                         return;
                     }
-                    NEWSTATE(1, 0, 0); // Record the one character opening bracket
-                    while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
-                        SAMESTATE;
+                    if (tokenNewState(&t, trialstate, 0, 0, 1))
+                        goto overflow; // Record the one character opening bracket
+                    while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
+                        if (tokenSameState(&t)) goto overflow;
                         n++;
                     } // Sop up whitespace
-                    if ((trialstate == 'P') && (expOp) && (in[scanpos] != '\'') &&
-                        (in[scanpos] !=
+                    if ((trialstate == 'P') && (expOp) && (in[t.scanpos] != '\'') &&
+                        (in[t.scanpos] !=
                          '"')) // Function call acting on expression: save expression as string even though it's not quoted
                     {
                         int explen = cp[1] + (cpl != 1) - n;
                         if (expOp > 1) explen = j - n; // texify receives all arguments as a string
                         if (cpl < 1) {
-                            *errPos = scanpos;
+                            *errPos = t.scanpos;
                             *errType = ERR_INTERNAL;
                             ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
                                               "ppl_strBracketMatch returned fewer than two results.");
@@ -281,13 +333,13 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             return;
                         }
                         trialstate = 'B';
-                        NEWSTATE(explen, 0, 0);
+                        if (tokenNewState(&t, trialstate, 0, 0, explen)) goto overflow;
                         trialstate = 'P';
                         n += explen;
                         extraStrArg = (explen > 0);
                     }
-                    k = scanpos;
-                    l = outpos;
+                    k = t.scanpos;
+                    l = t.outpos;
                     j -= n;
                     if ((in[k] != ')') || (trialstate == 'E')) {
                         ppl_expTokenise(context, in + k, &m, dollarAllowed, 1, 1, (trialstate != 'E'), 0, l + outOffset,
@@ -306,43 +358,44 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             *outlen = 0;
                             return;
                         }
-                    } else out[outpos].depth = 0;
-                    FFWSTATE(j); // Fast-forward to closing bracket
-                    if (extraStrArg) out[outpos].depth++;
-                    if (extraArg) out[outpos].depth++;
-                    NEWSTATE(1, 0, 0); // Record the one character closing bracket
+                    } else tokenOut(&t)->depth = 0;
+                    if (tokenFastForward(&t, j)) goto overflow; // Fast-forward to closing bracket
+                    if (extraStrArg) tokenOut(&t)->depth++;
+                    if (extraArg) tokenOut(&t)->depth++;
+                    if (tokenNewState(&t, trialstate, 0, 0, 1))
+                        goto overflow; // Record the one character closing bracket
                     extraArg = 0;
                     expOp = 0;
                 }
             } else if (trialstate == 'F') // a unary post-lvalue operator
             {
-                if (markupMatch(in + scanpos, "--")) {
-                    NEWSTATE(2, PPL_OP_POST_DECREMENT, 3);
-                } else if (markupMatch(in + scanpos, "++")) {
-                    NEWSTATE(2, PPL_OP_POST_INCREMENT, 3);
+                if (markupMatch(in + t.scanpos, "--")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_POST_DECREMENT, 3, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "++")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_POST_INCREMENT, 3, 2)) goto overflow;
                 }
             } else if (trialstate == 'H') // a unary pre-lvalue operator
             {
-                if (markupMatch(in + scanpos, "--")) {
-                    NEWSTATE(2, PPL_OP_PRE_DECREMENT, 3);
-                } else if (markupMatch(in + scanpos, "++")) {
-                    NEWSTATE(2, PPL_OP_PRE_INCREMENT, 3);
+                if (markupMatch(in + t.scanpos, "--")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_PRE_DECREMENT, 3, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "++")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_PRE_INCREMENT, 3, 2)) goto overflow;
                 }
             } else if ((trialstate == 'G') || // a variable name
                        (trialstate == 'T') || // a dereference name
                        (trialstate == 'V')) // a $parameter name
             {
-                if (isalpha(in[scanpos])) {
+                if (isalpha(in[t.scanpos])) {
                     const char tmp = trialstate;
-                    if ((strncmp(in + scanpos, "unit", 4) == 0) && (!isalnum(in[scanpos + 4])) &&
-                        (in[scanpos + 4] != '_')) // unit() function
+                    if ((strncmp(in + t.scanpos, "unit", 4) == 0) && (!isalnum(in[t.scanpos + 4])) &&
+                        (in[t.scanpos + 4] != '_')) // unit() function
                     {
                         expOp = 1;
-                        NEWSTATE(4, 0, 0);
-                    } else if (strncmp(in + scanpos, "int_d", 5) == 0) // int_d() function
+                        if (tokenNewState(&t, trialstate, 0, 0, 4)) goto overflow;
+                    } else if (strncmp(in + t.scanpos, "int_d", 5) == 0) // int_d() function
                     {
-                        if (!isalpha(in[scanpos + 5])) {
-                            *errPos = scanpos;
+                        if (!isalpha(in[t.scanpos + 5])) {
+                            *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
                             ppl_snprintfTrunc(
                                     errText, PPL_MSG_LENGTH, "%s",
@@ -351,18 +404,20 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             *outlen = 0;
                             return;
                         }
-                        NEWSTATE(5, 0, 0);
+                        if (tokenNewState(&t, trialstate, 0, 0, 5)) goto overflow;
                         trialstate = 'B';
-                        NEWSTATE(1, 0, 0);
-                        while ((isalnum(in[scanpos])) || (in[scanpos] == '_')) { SAMESTATE; }
+                        if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
+                        while ((isalnum(in[t.scanpos])) || (in[t.scanpos] == '_')) {
+                            if (tokenSameState(&t)) goto overflow;
+                        }
                         trialstate = tmp;
-                        NEWSTATE(0, 0, 0);
+                        if (tokenNewState(&t, trialstate, 0, 0, 0)) goto overflow;
                         expOp = 1;
                         extraArg = 1;
-                    } else if (strncmp(in + scanpos, "diff_d", 6) == 0) // diff_d() function
+                    } else if (strncmp(in + t.scanpos, "diff_d", 6) == 0) // diff_d() function
                     {
-                        if (!isalpha(in[scanpos + 6])) {
-                            *errPos = scanpos;
+                        if (!isalpha(in[t.scanpos + 6])) {
+                            *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
                             ppl_snprintfTrunc(
                                     errText, PPL_MSG_LENGTH, "%s",
@@ -371,92 +426,96 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             *outlen = 0;
                             return;
                         }
-                        NEWSTATE(6, 0, 0);
+                        if (tokenNewState(&t, trialstate, 0, 0, 6)) goto overflow;
                         trialstate = 'B';
-                        NEWSTATE(1, 0, 0);
-                        while ((isalnum(in[scanpos])) || (in[scanpos] == '_')) { SAMESTATE; }
+                        if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
+                        while ((isalnum(in[t.scanpos])) || (in[t.scanpos] == '_')) {
+                            if (tokenSameState(&t)) goto overflow;
+                        }
                         trialstate = tmp;
-                        NEWSTATE(0, 0, 0);
+                        if (tokenNewState(&t, trialstate, 0, 0, 0)) goto overflow;
                         expOp = 1;
                         extraArg = 1;
                     } else {
-                        NEWSTATE(1, 0, 0);
-                        while ((isalnum(in[scanpos])) || (in[scanpos] == '_')) { SAMESTATE; }
+                        if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
+                        while ((isalnum(in[t.scanpos])) || (in[t.scanpos] == '_')) {
+                            if (tokenSameState(&t)) goto overflow;
+                        }
                         expOp = 0;
                     }
                 }
             } else if (trialstate == 'I') // a unary value-based operator
             {
-                if (markupMatch(in + scanpos, "-")) {
-                    NEWSTATE(1, PPL_OP_NEGATE, 3);
-                } else if (markupMatch(in + scanpos, "+")) {
-                    NEWSTATE(1, PPL_OP_UNARY_PLUS, 3);
-                } else if (markupMatch(in + scanpos, "~")) {
-                    NEWSTATE(1, PPL_OP_BITWISE_NOT, 3);
-                } else if (markupMatch(in + scanpos, "!")) {
-                    NEWSTATE(1, PPL_OP_LOGICAL_NOT, 3);
-                } else if (markupMatch(in + scanpos, "not") && (!isalpha(in[scanpos + 3]))) {
-                    NEWSTATE(3, PPL_OP_LOGICAL_NOT, 3);
-                } else if (markupMatch(in + scanpos, "NOT") && (!isalpha(in[scanpos + 3]))) {
-                    NEWSTATE(3, PPL_OP_LOGICAL_NOT, 3);
+                if (markupMatch(in + t.scanpos, "-")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_NEGATE, 3, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "+")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_UNARY_PLUS, 3, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "~")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_BITWISE_NOT, 3, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "!")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_NOT, 3, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "not") && (!isalpha(in[t.scanpos + 3]))) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_NOT, 3, 3)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "NOT") && (!isalpha(in[t.scanpos + 3]))) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_NOT, 3, 3)) goto overflow;
                 }
             } else if (trialstate == 'J') // a binary operator
             {
-                if (markupMatch(in + scanpos, "**")) {
-                    NEWSTATE(2, PPL_OP_POWER, 2);
-                } else if (markupMatch(in + scanpos, "<<")) {
-                    NEWSTATE(2, PPL_OP_SHIFT_LEFT, 7);
-                } else if (markupMatch(in + scanpos, ">>")) {
-                    NEWSTATE(2, PPL_OP_SHIFT_RIGHT, 7);
-                } else if (markupMatch(in + scanpos, "<=")) {
-                    NEWSTATE(2, PPL_OP_LESS_EQUAL, 8);
-                } else if (markupMatch(in + scanpos, ">=")) {
-                    NEWSTATE(2, PPL_OP_GREATER_EQUAL, 8);
-                } else if (markupMatch(in + scanpos, "==")) {
-                    NEWSTATE(2, PPL_OP_EQUAL, 9);
-                } else if (markupMatch(in + scanpos, "<>")) {
-                    NEWSTATE(2, PPL_OP_NOT_EQUAL, 10);
-                } else if (markupMatch(in + scanpos, "!=")) {
-                    NEWSTATE(2, PPL_OP_NOT_EQUAL, 10);
-                } else if (markupMatch(in + scanpos, "&&")) {
-                    NEWSTATE(2, PPL_OP_LOGICAL_AND, 14);
-                } else if (markupMatch(in + scanpos, "and") && (!isalpha(in[scanpos + 3]))) {
-                    NEWSTATE(3, PPL_OP_LOGICAL_AND, 14);
-                } else if (markupMatch(in + scanpos, "AND") && (!isalpha(in[scanpos + 3]))) {
-                    NEWSTATE(3, PPL_OP_LOGICAL_AND, 14);
-                } else if (markupMatch(in + scanpos, "||")) {
-                    NEWSTATE(2, PPL_OP_LOGICAL_OR, 15);
-                } else if (markupMatch(in + scanpos, "or") && (!isalpha(in[scanpos + 2]))) {
-                    NEWSTATE(2, PPL_OP_LOGICAL_OR, 15);
-                } else if (markupMatch(in + scanpos, "OR") && (!isalpha(in[scanpos + 2]))) {
-                    NEWSTATE(2, PPL_OP_LOGICAL_OR, 15);
-                } else if (markupMatch(in + scanpos, "*")) {
-                    NEWSTATE(1, PPL_OP_MULTIPLY, 5);
-                } else if (markupMatch(in + scanpos, "/")) {
-                    NEWSTATE(1, PPL_OP_DIVIDE, 5);
-                } else if (markupMatch(in + scanpos, "%")) {
-                    NEWSTATE(1, PPL_OP_MODULO, 5);
-                } else if (markupMatch(in + scanpos, "+")) {
-                    NEWSTATE(1, PPL_OP_ADD, 6);
-                } else if (markupMatch(in + scanpos, "-")) {
-                    NEWSTATE(1, PPL_OP_SUBTRACT, 6);
-                } else if (markupMatch(in + scanpos, "<")) {
-                    NEWSTATE(1, PPL_OP_LESS, 8);
-                } else if (markupMatch(in + scanpos, ">")) {
-                    NEWSTATE(1, PPL_OP_GREATER, 8);
-                } else if (markupMatch(in + scanpos, "&")) {
-                    NEWSTATE(1, PPL_OP_BITWISE_AND, 11);
-                } else if (markupMatch(in + scanpos, "^")) {
-                    NEWSTATE(1, PPL_OP_BITWISE_XOR, 12);
-                } else if (markupMatch(in + scanpos, "|")) {
-                    NEWSTATE(1, PPL_OP_BITWISE_OR, 13);
-                } else if ((markupMatch(in + scanpos, ",") &&
+                if (markupMatch(in + t.scanpos, "**")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_POWER, 2, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "<<")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_SHIFT_LEFT, 7, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, ">>")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_SHIFT_RIGHT, 7, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "<=")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LESS_EQUAL, 8, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, ">=")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_GREATER_EQUAL, 8, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "==")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_EQUAL, 9, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "<>")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_NOT_EQUAL, 10, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "!=")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_NOT_EQUAL, 10, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "&&")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_AND, 14, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "and") && (!isalpha(in[t.scanpos + 3]))) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_AND, 14, 3)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "AND") && (!isalpha(in[t.scanpos + 3]))) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_AND, 14, 3)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "||")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_OR, 15, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "or") && (!isalpha(in[t.scanpos + 2]))) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_OR, 15, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "OR") && (!isalpha(in[t.scanpos + 2]))) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LOGICAL_OR, 15, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "*")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_MULTIPLY, 5, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "/")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_DIVIDE, 5, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "%")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_MODULO, 5, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "+")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_ADD, 6, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "-")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_SUBTRACT, 6, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "<")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_LESS, 8, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, ">")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_GREATER, 8, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "&")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_BITWISE_AND, 11, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "^")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_BITWISE_XOR, 12, 1)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "|")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_BITWISE_OR, 13, 1)) goto overflow;
+                } else if ((markupMatch(in + t.scanpos, ",") &&
                             (collectCommas || allowCommaOperator || (tertiaryDepth > 0)))) {
                     if ((!collectCommas) || (tertiaryDepth > 0)) {
-                        NEWSTATE(1, PPL_OP_COMMA, 18);
+                        if (tokenNewState(&t, trialstate, PPL_OP_COMMA, 18, 1)) goto overflow;
                     } else {
                         if (isDict && (nCommaItems >= 2 - (nDictItems == 0))) {
-                            *errPos = scanpos;
+                            *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
                             ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
                                               "Expecting : followed by value for dictionary key");
@@ -464,19 +523,19 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             *outlen = 0;
                             return;
                         }
-                        NEWSTATE(1, PPL_OP_COLLECT, 18);
+                        if (tokenNewState(&t, trialstate, PPL_OP_COLLECT, 18, 1)) goto overflow;
                         nCommaItems++;
                     }
                 }
             } else if (trialstate == 'K') // a ternary operator
             {
-                if (markupMatch(in + scanpos, "?")) {
-                    NEWSTATE(1, PPL_OP_TERNARY_QUESTION, 16);
+                if (markupMatch(in + t.scanpos, "?")) {
+                    if (tokenNewState(&t, trialstate, PPL_OP_TERNARY_QUESTION, 16, 1)) goto overflow;
                     tertiaryDepth++;
-                } else if (markupMatch(in + scanpos, ":")) {
+                } else if (markupMatch(in + t.scanpos, ":")) {
                     if (isDict && (tertiaryDepth == 0)) {
                         if (nCommaItems < 2 - (nDictItems == 0)) {
-                            *errPos = scanpos;
+                            *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
                             ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s",
                                               "Expecting , to separate dictionary items");
@@ -484,49 +543,52 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             *outlen = 0;
                             return;
                         }
-                        NEWSTATE(1, PPL_OP_COLLECT, 18);
+                        if (tokenNewState(&t, trialstate, PPL_OP_COLLECT, 18, 1)) goto overflow;
                         nCommaItems = 1;
                         nDictItems++;
                     } else {
                         if (tertiaryDepth > 0) {
                             tertiaryDepth--;
-                            NEWSTATE(1, PPL_OP_TERNARY_COLON, 16);
+                            if (tokenNewState(&t, trialstate, PPL_OP_TERNARY_COLON, 16, 1)) goto overflow;
                         }
                     }
                 }
             } else if (trialstate == 'L') // a numeric literal
             {
                 int j = 0;
-                if (ppl_validFloat(in + scanpos, &j)) { NEWSTATE(j, 0, 0); }
+                if (ppl_validFloat(in + t.scanpos, &j)) {
+                    if (tokenNewState(&t, trialstate, 0, 0, j)) goto overflow;
+                }
             } else if ((trialstate == 'M') || // a list literal
                        (trialstate == 'Q')) // an array dereference []
             {
                 expOp = 0;
-                if (markupMatch(in + scanpos, "[")) {
+                if (markupMatch(in + t.scanpos, "[")) {
                     int j, k, l, m = 0, n = 1;
                     int slice = 0, minSet = 0, maxSet = 0;
-                    ppl_strBracketMatch(in + scanpos, '[', ']', NULL, NULL, &j, 0); // Search for a ] to match the [
+                    ppl_strBracketMatch(in + t.scanpos, '[', ']', NULL, NULL, &j, 0); // Search for a ] to match the [
                     if (j <= 0) {
-                        *errPos = scanpos;
+                        *errPos = t.scanpos;
                         *errType = ERR_SYNTAX;
                         ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched [ ]");
                         *end = -1;
                         *outlen = 0;
                         return;
                     }
-                    NEWSTATE(1, 0, 0); // Record the one character opening bracket
-                    if ((trialstate == 'Q') && (in[scanpos] == ':')) // slice of the form [:x]
+                    if (tokenNewState(&t, trialstate, 0, 0, 1))
+                        goto overflow; // Record the one character opening bracket
+                    if ((trialstate == 'Q') && (in[t.scanpos] == ':')) // slice of the form [:x]
                     {
-                        SAMESTATE;
+                        if (tokenSameState(&t)) goto overflow;
                         n++;
                         slice = 1;
-                        while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
-                            SAMESTATE;
+                        while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
+                            if (tokenSameState(&t)) goto overflow;
                             n++;
                         } // Sop up whitespace
                     }
-                    k = scanpos;
-                    l = outpos;
+                    k = t.scanpos;
+                    l = t.outpos;
                     j -= n;
                     if ((in[k] != ']') ||
                         ((trialstate == 'Q') &&
@@ -542,18 +604,18 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         }
                         if ((trialstate == 'Q') && (!slice) && (in[k + m] == ':')) {
                             slice = minSet = 1;
-                            FFWSTATE(m);
+                            if (tokenFastForward(&t, m)) goto overflow;
                             j -= m; // Fast-forward over first expression in range
                             trialstate = 'J';
-                            NEWSTATE(1, PPL_OP_COLLECT, 18);
+                            if (tokenNewState(&t, trialstate, PPL_OP_COLLECT, 18, 1)) goto overflow;
                             j--; // Treat : separating ranges as a , operator (collect items on stack)
-                            while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
-                                SAMESTATE;
+                            while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
+                                if (tokenSameState(&t)) goto overflow;
                                 j--;
                             } // Sop up whitespace
                             trialstate = 'Q';
-                            k = scanpos;
-                            l = outpos;
+                            k = t.scanpos;
+                            l = t.outpos;
                             m = 0;
                             if (j > 0) {
                                 maxSet = 1;
@@ -575,35 +637,37 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             *outlen = 0;
                             return;
                         }
-                    } else out[outpos].depth = 0;
-                    FFWSTATE(j); // Fast-forward to closing bracket
+                    } else tokenOut(&t)->depth = 0;
+                    if (tokenFastForward(&t, j)) goto overflow; // Fast-forward to closing bracket
                     if (trialstate == 'Q') {
-                        out[outpos].opcode = (minSet ? PPL_SLICE_MIN_SET : 0) | (maxSet ? PPL_SLICE_MAX_SET : 0) |
+                        tokenOut(&t)->opcode = (minSet ? PPL_SLICE_MIN_SET : 0) | (maxSet ? PPL_SLICE_MAX_SET : 0) |
                                 (slice ? 0 : PPL_SLICE_SINGLE_ITEM);
-                        out[outpos].precedence = 0;
+                        tokenOut(&t)->precedence = 0;
                     }
-                    NEWSTATE(1, out[outpos].opcode, out[outpos].precedence); // Record the one character closing bracket
+                    if (tokenNewState(&t, trialstate, tokenOut(&t)->opcode, tokenOut(&t)->precedence, 1))
+                        goto overflow; // Record the one character closing bracket
                 }
             } else if (trialstate == 'N') // a dictionary literal
             {
-                if (markupMatch(in + scanpos, "{")) {
+                if (markupMatch(in + t.scanpos, "{")) {
                     int j, k, l, m, n = 1;
-                    ppl_strBracketMatch(in + scanpos, '{', '}', NULL, NULL, &j, 0); // Search for a } to match the {
+                    ppl_strBracketMatch(in + t.scanpos, '{', '}', NULL, NULL, &j, 0); // Search for a } to match the {
                     if (j <= 0) {
-                        *errPos = scanpos;
+                        *errPos = t.scanpos;
                         *errType = ERR_SYNTAX;
                         ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Mismatched { }");
                         *end = -1;
                         *outlen = 0;
                         return;
                     }
-                    NEWSTATE(1, 0, 0); // Record the one character opening bracket
-                    while ((in[scanpos] != '\0') && ((unsigned char) in[scanpos] <= ' ')) {
-                        SAMESTATE;
+                    if (tokenNewState(&t, trialstate, 0, 0, 1))
+                        goto overflow; // Record the one character opening bracket
+                    while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
+                        if (tokenSameState(&t)) goto overflow;
                         n++;
                     } // Sop up whitespace
-                    k = scanpos;
-                    l = outpos;
+                    k = t.scanpos;
+                    l = t.outpos;
                     j -= n;
                     if (in[k] != '}') {
                         ppl_expTokenise(context, in + k, &m, dollarAllowed, 1, 1, 1, 1, l + outOffset, &n, errPos,
@@ -621,135 +685,132 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             *outlen = 0;
                             return;
                         }
-                    } else out[outpos].depth = 0;
-                    FFWSTATE(j); // Fast-forward to closing bracket
-                    NEWSTATE(1, 0, 0); // Record the one character closing bracket
+                    } else tokenOut(&t)->depth = 0;
+                    if (tokenFastForward(&t, j)) goto overflow; // Fast-forward to closing bracket
+                    if (tokenNewState(&t, trialstate, 0, 0, 1))
+                        goto overflow; // Record the one character closing bracket
                 }
             } else if (trialstate == 'O') // a dollar sign
             {
-                if ((dollarAllowed) && (markupMatch(in + scanpos, "$"))) { NEWSTATE(1, 0, 0); }
+                if ((dollarAllowed) && (markupMatch(in + t.scanpos, "$"))) {
+                    if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
+                }
             } else if (trialstate == 'R') // the dot operator
             {
-                if (markupMatch(in + scanpos, ".")) { NEWSTATE(1, 0, 0); }
+                if (markupMatch(in + t.scanpos, ".")) {
+                    if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
+                }
             } else if (trialstate == 'S') // assignment operator
             {
-                if ((markupMatch(in + scanpos, "=") && (in[scanpos + 1] != '=') && equalsAllowed)) {
-                    NEWSTATE(1, PPL_ASSIGN, 17);
+                if ((markupMatch(in + t.scanpos, "=") && (in[t.scanpos + 1] != '=') && equalsAllowed)) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN, 17, 1)) goto overflow;
                 } // Match = but not ==
-                else if (markupMatch(in + scanpos, "+=")) {
-                    NEWSTATE(2, PPL_ASSIGN_ADD, 17);
-                } else if (markupMatch(in + scanpos, "-=")) {
-                    NEWSTATE(2, PPL_ASSIGN_SUBTRACT, 17);
-                } else if (markupMatch(in + scanpos, "*=")) {
-                    NEWSTATE(2, PPL_ASSIGN_MULTIPLY, 17);
-                } else if (markupMatch(in + scanpos, "/=")) {
-                    NEWSTATE(2, PPL_ASSIGN_DIVIDE, 17);
-                } else if (markupMatch(in + scanpos, "%=")) {
-                    NEWSTATE(2, PPL_ASSIGN_MODULO, 17);
-                } else if (markupMatch(in + scanpos, "&=")) {
-                    NEWSTATE(2, PPL_ASSIGN_BITWISE_AND, 17);
-                } else if (markupMatch(in + scanpos, "^=")) {
-                    NEWSTATE(2, PPL_ASSIGN_BITWISE_XOR, 17);
-                } else if (markupMatch(in + scanpos, "|=")) {
-                    NEWSTATE(2, PPL_ASSIGN_BITWISE_OR, 17);
-                } else if (markupMatch(in + scanpos, "<<=")) {
-                    NEWSTATE(3, PPL_ASSIGN_SHIFT_LEFT, 17);
-                } else if (markupMatch(in + scanpos, ">>=")) {
-                    NEWSTATE(3, PPL_ASSIGN_SHIFT_RIGHT, 17);
-                } else if (markupMatch(in + scanpos, "**=")) {
-                    NEWSTATE(3, PPL_ASSIGN_POWER, 17);
+                else if (markupMatch(in + t.scanpos, "+=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_ADD, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "-=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_SUBTRACT, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "*=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_MULTIPLY, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "/=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_DIVIDE, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "%=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_MODULO, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "&=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_BITWISE_AND, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "^=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_BITWISE_XOR, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "|=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_BITWISE_OR, 17, 2)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "<<=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_SHIFT_LEFT, 17, 3)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, ">>=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_SHIFT_RIGHT, 17, 3)) goto overflow;
+                } else if (markupMatch(in + t.scanpos, "**=")) {
+                    if (tokenNewState(&t, trialstate, PPL_ASSIGN_POWER, 17, 3)) goto overflow;
                 }
             } else if (trialstate == 'U') // end of expression
             {
-                NEWSTATE(0, 0, 0);
+                if (tokenNewState(&t, trialstate, 0, 0, 0)) goto overflow;
                 break; // State U consumes no characters, and has no successor states, so stop looking for one
             }
-            if (scanpos != oldpos) break;
+            if (t.scanpos != oldpos) break;
         }
-        if (scanpos == oldpos) break; // We've got stuck
+        if (t.scanpos == oldpos) break; // We've got stuck
     }
 
-    if (state == 'U') // We reached state U... end of expression
+    if (t.state == 'U') // We reached t.state U... end of expression
     {
         *errPos = -1;
         *errType = 0;
         *errText = '\0';
-        out[outpos].state = '@';
-        out[outpos].opcode = 0;
+        tokenOut(&t)->state = '@';
+        tokenOut(&t)->opcode = 0;
         if (isDict) {
-            out[outpos].depth = nDictItems;
+            tokenOut(&t)->depth = nDictItems;
         } else if (collectCommas) {
-            out[outpos].depth = nCommaItems;
+            tokenOut(&t)->depth = nCommaItems;
         } else {
-            out[outpos].depth = 0;
+            tokenOut(&t)->depth = 0;
         }
-        outpos++;
-        *end = scanpos;
-        *outlen = outpos;
+        t.outpos++;
+        *end = t.scanpos;
+        *outlen = t.outpos;
         return;
     } else {
-        // Error; we didn't reach state U
+        // Error; we didn't reach t.state U
         int i = 0, j = 0;
         int B = 0, F = 0, G = 0, J = 0, P = 0;
-        *errPos = scanpos;
+        *errPos = t.scanpos;
         *end = -1;
         *outlen = 0;
         // Now we need to construct an error string
         *errType = ERR_SYNTAX;
         ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "At this point, was expecting ");
         i = strlen(errText);
-        for (trialpos = 0; ((trialstate = allowed[(int) (state - 'A')][trialpos]) != '\0'); trialpos++) {
+        for (trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
             if ((expOp) && (trialstate != 'P'))
                 continue; // int_dx and diff_dx MUST be followed by arguments; they have already put one on the stack.
-
-#define W \
-    { \
-        if (j != 0) { \
-            strcpy(errText + i, " or "); \
-            i += strlen(errText + i); \
-        } else j = 1; \
-    }
 
             if ((!B) &&
                 ((trialstate == 'B') || (trialstate == 'L') || (trialstate == 'M') || (trialstate == 'N') ||
                  (trialstate == 'O'))) {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a literal value");
                 i += strlen(errText + i);
                 B = 1;
             } else if (trialstate == 'C') {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a string substitution operator");
                 i += strlen(errText + i);
             } else if (trialstate == 'D') {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a list of string substitutions");
                 i += strlen(errText + i);
             } else if (trialstate == 'E') {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a bracketed expression");
                 i += strlen(errText + i);
             } else if ((!F) && ((trialstate == 'F') || (trialstate == 'H') || (trialstate == 'I'))) {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a unary operator");
                 i += strlen(errText + i);
                 F = 1;
             } else if ((!G) && ((trialstate == 'G') || (trialstate == 'T'))) {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a variable name");
                 i += strlen(errText + i);
                 G = 1;
             } else if ((!J) && ((trialstate == 'J') || (trialstate == 'K') || (trialstate == 'S'))) {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a binary/ternary operator");
                 i += strlen(errText + i);
                 J = 1;
             } else if (trialstate == 'P') {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "a list of function arguments");
                 i += strlen(errText + i);
             } else if ((!P) && ((trialstate == 'Q') || (trialstate == 'R'))) {
-                W;
+                appendOr(errText, &i, &j);
                 strcpy(errText + i, "an object dereference");
                 i += strlen(errText + i);
                 P = 1;
@@ -759,6 +820,13 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         i += strlen(errText + i);
         return;
     }
+
+overflow:
+    // The token buffer could not be enlarged to hold the expression
+    *errPos = t.scanpos;
+    *errType = ERR_OVERFLOW;
+    ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Algebraic expression too long");
+    *end = -1;
 }
 
 //! ppl_tokenPrint - Print the tokenised form of an expression to stdout, for debugging
