@@ -69,35 +69,6 @@
 #include "pplConstants.h"
 
 
-#define GET_AXISLOG(OUT, AXIS, DEFAULT) \
-    { \
-        pplset_axis *ai = (AXIS); \
-        int C = 0, *out = &ai->log; \
-        while ((ai->linked) && (C < 100)) { \
-            if (ai->LinkedAxisCanvasID > 0) { \
-                out = &(AXIS)->log; \
-                *out = 0; \
-            } \
-            if (!DEFAULT) { \
-                if (ai->LinkedAxisToXYZ == 0) ai = xa + ai->LinkedAxisToNum; \
-                else if (ai->LinkedAxisToXYZ == 1) ai = ya + ai->LinkedAxisToNum; \
-                else ai = za + ai->LinkedAxisToNum; \
-            } else { \
-                if (ai->LinkedAxisToXYZ == 0) ai = c->set->XAxesDefault + ai->LinkedAxisToNum; \
-                else if (ai->LinkedAxisToXYZ == 1) ai = c->set->YAxesDefault + ai->LinkedAxisToNum; \
-                else ai = c->set->ZAxesDefault + ai->LinkedAxisToNum; \
-            } \
-            C++; \
-            if (!ai->enabled) { \
-                out = &(AXIS)->log; \
-                *out = 0; \
-                break; \
-            } \
-            out = &ai->log; \
-        } \
-        OUT = out; \
-    }
-
 //! tics_rm - Free the list of manually-specified tick positions and labels stored in a tick descriptor
 //! \param [in|out] a - The tick descriptor
 
@@ -148,217 +119,298 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
     }
 }
 
-#define SET_NOTICKS(T) \
-    { \
-        tics_rm(&(T)); \
-        T.tickList = (double *) malloc(sizeof(double)); \
-        T.tickStrs = (char **) malloc(sizeof(char *)); \
-        T.tickStrs[0] = NULL; \
-    }
-
-#define SET_TICKS(T, TO, U, US, amLog) \
-    { \
-        const int gotAuto = \
-                ((ptab[PARSE_INDEX_autofreq] > 0) && (command[ptab[PARSE_INDEX_autofreq]].objType == PPLOBJ_STR)); \
-        const int gotRange = \
-                ((ptab[PARSE_INDEX_start] > 0) && (command[ptab[PARSE_INDEX_start]].objType == PPLOBJ_NUM)); \
-        const int gotList = \
-                ((ptab[PARSE_INDEX_got_list] > 0) && (command[ptab[PARSE_INDEX_got_list]].objType == PPLOBJ_STR)); \
-        if ((ptab[PARSE_INDEX_dir] > 0) && (command[ptab[PARSE_INDEX_dir]].objType == PPLOBJ_STR)) { \
-            (T).tickDir = ppl_fetchSettingByName(&c->errcontext, (char *) command[ptab[PARSE_INDEX_dir]].auxil, \
-                                                 SW_TICDIR_INT, SW_TICDIR_STR); \
-        } \
-        if (gotAuto || gotRange || gotList) tics_rm(&(T)); \
-        if (gotRange) { \
-            int gotStart = \
-                    ((ptab[PARSE_INDEX_start] > 0) && (command[ptab[PARSE_INDEX_start]].objType == PPLOBJ_NUM)); \
-            int gotIncr = ((ptab[PARSE_INDEX_increment] > 0) && \
-                           (command[ptab[PARSE_INDEX_increment]].objType == PPLOBJ_NUM)); \
-            int gotEnd = ((ptab[PARSE_INDEX_end] > 0) && (command[ptab[PARSE_INDEX_end]].objType == PPLOBJ_NUM)); \
-            pplObj *objstart = &command[ptab[PARSE_INDEX_start]]; \
-            pplObj *objincr = &command[ptab[PARSE_INDEX_increment]]; \
-            pplObj *objend = &command[ptab[PARSE_INDEX_end]]; \
-            double start = objstart->real; \
-            double incr = objincr->real; \
-            double end = objend->real; \
-            if (!gotIncr) { \
-                objincr = objstart; \
-                incr = start; \
-                gotIncr = 1; \
-                gotStart = 0; \
-            } /* if only one number given, it is increment */ \
-\
-            if ((gotStart && gotIncr && !amLog) && (!ppl_unitsDimEqual(objstart, objincr))) { \
-                ppl_snprintfTrunc( \
-                        msg, sizeof(msg), \
-                        "Start value for axis ticks has conflicting units with step size. Units of the start value are <%s>; units of the step size are <%s>.", \
-                        ppl_printUnit(c, objstart, NULL, NULL, 0, 1, 0), \
-                        ppl_printUnit(c, objincr, NULL, NULL, 1, 1, 0)); \
-                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
-                return; \
-            } \
-            if ((gotStart && gotEnd) && (!ppl_unitsDimEqual(objstart, objend))) { \
-                ppl_snprintfTrunc( \
-                        msg, sizeof(msg), \
-                        "Start value for axis ticks has conflicting units with end value. Units of the start value are <%s>; units of the end value are <%s>.", \
-                        ppl_printUnit(c, objstart, NULL, NULL, 0, 1, 0), \
-                        ppl_printUnit(c, objend, NULL, NULL, 1, 1, 0)); \
-                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
-                return; \
-            } \
-            if (amLog && (!objincr->dimensionless)) { \
-                ppl_snprintfTrunc( \
-                        msg, sizeof(msg), \
-                        "Invalid step size for axis ticks. On a log axis, step size should be a dimensionless multiplier; supplied step size has units of <%s>.", \
-                        ppl_printUnit(c, objincr, NULL, NULL, 0, 1, 0)); \
-                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
-                return; \
-            } \
-            if (gotStart && (!gsl_finite(start))) { \
-                ppl_snprintfTrunc(msg, sizeof(msg), \
-                                  "Invalid starting value for axis ticks. Value supplied is not finite."); \
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg); \
-                return; \
-            } \
-            if (gotIncr && (!gsl_finite(incr))) { \
-                ppl_snprintfTrunc(msg, sizeof(msg), \
-                                  "Invalid step size for axis ticks. Value supplied is not finite."); \
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg); \
-                return; \
-            } \
-            if (gotEnd && (!gsl_finite(end))) { \
-                ppl_snprintfTrunc(msg, sizeof(msg), \
-                                  "Invalid end value for axis ticks. Value supplied is not finite."); \
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg); \
-                return; \
-            } \
-            if ((!amLog) || (gotStart)) { \
-                pplObj *o = amLog ? objstart : objincr; \
-                if ((US) && (!ppl_unitsDimEqual(o, &(U)))) { \
-                    ppl_snprintfTrunc( \
-                            msg, sizeof(msg), \
-                            "Tick positions supplied to the '%s' command have units of <%s>, which conflicts with the axis range which has units of <%s>.", \
-                            cmd, ppl_printUnit(c, o, NULL, NULL, 0, 1, 0), \
-                            ppl_printUnit(c, &(U), NULL, NULL, 1, 1, 0)); \
-                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
-                    return; \
-                } \
-                if (!ppl_unitsDimEqual(o, &(U))) { \
-                    tics_rm(&(TO)); \
-                    U = *o; \
-                } \
-            } \
-\
-            if (((T).tickMinSet = gotStart)) (T).tickMin = start; \
-            if (((T).tickStepSet = gotIncr)) (T).tickStep = incr; \
-            if (((T).tickMaxSet = gotEnd)) (T).tickMax = end; \
-        } else if (gotList) { \
-            int pos = ptab[PARSE_INDEX_0tick_list]; \
-            const int x = ptab[PARSE_INDEX_x]; \
-            const int lab = ptab[PARSE_INDEX_label]; \
-            int i = 0; \
-            pplObj *first = NULL; \
-\
-            while (command[pos].objType == PPLOBJ_NUM) { \
-                pplObj *ox, *ol; \
-                pos = (int) round(command[pos].real); \
-                if (pos <= 0) break; \
-                ox = &command[pos + x]; \
-                ol = &command[pos + lab]; \
-                if ((ox->objType == PPLOBJ_STR) && \
-                    ((ol->objType == PPLOBJ_NUM) || (ol->objType == PPLOBJ_BOOL) || (ol->objType == PPLOBJ_DATE))) { \
-                    pplObj *tmp = ol; \
-                    ol = ox; \
-                    ox = tmp; \
-                } \
-                if (ox->objType != PPLOBJ_NUM) { \
-                    ppl_snprintfTrunc(msg, sizeof(msg), \
-                                      "Ticks can only be set at numeric values; supplied value is of type <%s>.", \
-                                      pplObjTypeNames[ox->objType]); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
-                    return; \
-                } \
-                if ((ol->objType != PPLOBJ_ZOM) && (ol->objType != PPLOBJ_STR)) { \
-                    ppl_snprintfTrunc(msg, sizeof(msg), \
-                                      "Ticks labels must be strings; supplied value is of type <%s>.", \
-                                      pplObjTypeNames[ol->objType]); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
-                    return; \
-                } \
-                if (!gsl_finite(ox->real)) { \
-                    ppl_snprintfTrunc( \
-                            msg, sizeof(msg), \
-                            "Ticks can only be set at finite numeric values; supplied value is not finite."); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
-                    return; \
-                } \
-                if (ox->flagComplex) { \
-                    ppl_snprintfTrunc(msg, sizeof(msg), \
-                                      "Ticks can only be set at real numeric values; supplied value is complex."); \
-                    ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg); \
-                    return; \
-                } \
-                if (i == 0) { \
-                    first = ox; \
-                    if ((US) && (!ppl_unitsDimEqual(first, &(U)))) { \
-                        ppl_snprintfTrunc( \
-                                msg, sizeof(msg), \
-                                "Tick positions supplied to the '%s' command have units of <%s>, which conflicts with the axis range which has units of <%s>.", \
-                                cmd, ppl_printUnit(c, first, NULL, NULL, 0, 1, 0), \
-                                ppl_printUnit(c, &(U), NULL, NULL, 1, 1, 0)); \
-                        ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
-                        return; \
-                    } \
-                    if (!ppl_unitsDimEqual(first, &(U))) { \
-                        tics_rm(&(TO)); \
-                        U = *first; \
-                    } \
-                } else if (!ppl_unitsDimEqual(first, ox)) { \
-                    ppl_snprintfTrunc( \
-                            msg, sizeof(msg), \
-                            "Tick positions supplied to the '%s' command must all have the same physical units; supplied list has multiple units, including <%s> and <%s>.", \
-                            cmd, ppl_printUnit(c, first, NULL, NULL, 0, 1, 0), \
-                            ppl_printUnit(c, ox, NULL, NULL, 1, 1, 0)); \
-                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg); \
-                    return; \
-                } \
-                i++; \
-            } \
-            (T).tickList = (double *) malloc((i + 1) * sizeof(double)); \
-            (T).tickStrs = (char **) malloc((i + 1) * sizeof(char *)); \
-            pos = ptab[PARSE_INDEX_0tick_list]; \
-            i = 0; \
-            while (command[pos].objType == PPLOBJ_NUM) { \
-                pplObj *ox, *ol; \
-                char *label; \
-                pos = (int) round(command[pos].real); \
-                if (pos <= 0) break; \
-                ox = &command[pos + x]; \
-                ol = &command[pos + lab]; \
-                if (ox->objType == PPLOBJ_STR) { \
-                    pplObj *tmp = ol; \
-                    ol = ox; \
-                    ox = tmp; \
-                } \
-                (T).tickList[i] = ox->real; \
-                label = (ol->objType == PPLOBJ_STR) ? ((char *) ol->auxil) : ("\xFF"); \
-                (T).tickStrs[i] = (char *) malloc(strlen(label) + 1); \
-                if ((T).tickStrs[i] == NULL) { \
-                    ppl_snprintfTrunc(msg, sizeof(msg), "Out of memory."); \
-                    ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, msg); \
-                    return; \
-                } \
-                strcpy((T).tickStrs[i], label); \
-                i++; \
-            } \
-            (T).tickStrs[i] = NULL; \
-        } \
-    }
 
 //! ppl_directive_set - Implement the set and unset commands, which change Pyxplot's settings
 //! \param [in] c - The Pyxplot context
 //! \param [in] pl - The compiled command line, used to report errors
 //! \param [in] in - The parser output for the command, containing the values of its parameters
+//! setTicks - Implement the parts of the set xtics command (and similar) which set where ticks are placed
+//! \param [in] c - The Pyxplot context
+//! \param [in] command - The parser output stack of the command
+//! \param [in] ptab - The table of the positions of the command's parameters in <command>
+//! \param [in] cmd - The name of the command, e.g. "xtics", used in error messages
+//! \param [in,out] t - The tick settings to change
+//! \param [in] tOther - The other set of ticks on the same axis (minor if <t> is major, or vice versa)
+//! \param [in] unit - The physical unit of the axis
+//! \param [in] unitSet - True if the axis has a range set, whose units the tick positions must match
+//! \param [in] amLog - True if the axis is logarithmic
+//! setNoTicks - Remove all ticks from an axis, by giving it an empty list of tick positions
+//! getAxisLog - Find the setting which determines whether an axis is logarithmic. For an axis linked to another
+//! axis, this is the setting of the axis at the end of the chain of links (unless that axis is disabled, or is on
+//! another canvas item, in which case the axis's own setting is used, after being reset to linear).
+//! \param [in] c - The Pyxplot context
+//! \param [in] axis - The axis
+//! \param [in] useDefaults - If true, follow links to the default axes, rather than to <xa>, <ya> and <za>
+//! \param [in] xa - The x axes of the graph
+//! \param [in] ya - The y axes of the graph
+//! \param [in] za - The z axes of the graph
+//! setAutoscaleAxis - Implement set autoscale (or unset autoscale) for one axis
+//! \param [in] c - The Pyxplot context
+//! \param [in] xa - The x axes of the graph
+//! \param [in] ya - The y axes of the graph
+//! \param [in] za - The z axes of the graph
+//! \param [in] direction - Which axis: 0 for x, 1 for y, 2 for z
+//! \param [in] n - The number of the axis
+//! \param [in] set - True for set autoscale; false for unset autoscale
+//! \param [in] setAll - True if the command applies to all axes, in which case disabled axes are not enabled
+
+static void setAutoscaleAxis(ppl_context *c, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int direction,
+                             const int n, const int set, const int setAll) {
+    pplset_axis *a, *ad;
+    if (direction == 1) {
+        a = &ya[n];
+        ad = &c->set->YAxesDefault[n];
+    } else if (direction == 2) {
+        a = &za[n];
+        ad = &c->set->ZAxesDefault[n];
+    } else {
+        a = &xa[n];
+        ad = &c->set->XAxesDefault[n];
+    }
+    if (set && ((!setAll) || (a->enabled))) {
+        a->enabled = 1;
+        a->MinSet = SW_BOOL_FALSE;
+        a->MaxSet = SW_BOOL_FALSE;
+    } else {
+        a->MinSet = ad->MinSet;
+        a->MaxSet = ad->MaxSet;
+    }
+    a->min = ad->min;
+    a->max = ad->max;
+}
+
+//! \return Pointer to the setting which determines whether the axis is logarithmic
+
+static int *getAxisLog(ppl_context *c, pplset_axis *axis, const int useDefaults, pplset_axis *xa, pplset_axis *ya,
+                       pplset_axis *za) {
+    pplset_axis *ai = axis;
+    int count = 0, *out = &ai->log;
+    while ((ai->linked) && (count < 100)) { // Limit the length of chains of links, in case they are circular
+        if (ai->LinkedAxisCanvasID > 0) {
+            out = &axis->log;
+            *out = 0;
+        }
+        if (!useDefaults) {
+            if (ai->LinkedAxisToXYZ == 0) ai = xa + ai->LinkedAxisToNum;
+            else if (ai->LinkedAxisToXYZ == 1) ai = ya + ai->LinkedAxisToNum;
+            else ai = za + ai->LinkedAxisToNum;
+        } else {
+            if (ai->LinkedAxisToXYZ == 0) ai = c->set->XAxesDefault + ai->LinkedAxisToNum;
+            else if (ai->LinkedAxisToXYZ == 1) ai = c->set->YAxesDefault + ai->LinkedAxisToNum;
+            else ai = c->set->ZAxesDefault + ai->LinkedAxisToNum;
+        }
+        count++;
+        if (!ai->enabled) {
+            out = &axis->log;
+            *out = 0;
+            break;
+        }
+        out = &ai->log;
+    }
+    return out;
+}
+
+//! \param [in,out] t - The tick settings
+
+static void setNoTicks(pplset_tics *t) {
+    tics_rm(t);
+    t->tickList = (double *) malloc(sizeof(double));
+    t->tickStrs = (char **) malloc(sizeof(char *));
+    t->tickStrs[0] = NULL;
+}
+
+//! \return Zero on success, or nonzero if an error was reported
+
+static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char *cmd, pplset_tics *t,
+                    pplset_tics *tOther, pplObj *unit, const int unitSet, const int amLog) {
+    char msg[PPL_MSG_LENGTH];
+    const int gotAuto =
+            ((ptab[PARSE_INDEX_autofreq] > 0) && (command[ptab[PARSE_INDEX_autofreq]].objType == PPLOBJ_STR));
+    const int gotRange = ((ptab[PARSE_INDEX_start] > 0) && (command[ptab[PARSE_INDEX_start]].objType == PPLOBJ_NUM));
+    const int gotList =
+            ((ptab[PARSE_INDEX_got_list] > 0) && (command[ptab[PARSE_INDEX_got_list]].objType == PPLOBJ_STR));
+    if ((ptab[PARSE_INDEX_dir] > 0) && (command[ptab[PARSE_INDEX_dir]].objType == PPLOBJ_STR)) {
+        t->tickDir = ppl_fetchSettingByName(&c->errcontext, (char *) command[ptab[PARSE_INDEX_dir]].auxil,
+                                            SW_TICDIR_INT, SW_TICDIR_STR);
+    }
+    if (gotAuto || gotRange || gotList) tics_rm(t);
+    if (gotRange) {
+        int gotStart = ((ptab[PARSE_INDEX_start] > 0) && (command[ptab[PARSE_INDEX_start]].objType == PPLOBJ_NUM));
+        int gotIncr =
+                ((ptab[PARSE_INDEX_increment] > 0) && (command[ptab[PARSE_INDEX_increment]].objType == PPLOBJ_NUM));
+        int gotEnd = ((ptab[PARSE_INDEX_end] > 0) && (command[ptab[PARSE_INDEX_end]].objType == PPLOBJ_NUM));
+        pplObj *objstart = &command[ptab[PARSE_INDEX_start]];
+        pplObj *objincr = &command[ptab[PARSE_INDEX_increment]];
+        pplObj *objend = &command[ptab[PARSE_INDEX_end]];
+        double start = objstart->real;
+        double incr = objincr->real;
+        double end = objend->real;
+        if (!gotIncr) {
+            objincr = objstart;
+            incr = start;
+            gotIncr = 1;
+            gotStart = 0;
+        } /* if only one number given, it is increment */
+
+        if ((gotStart && gotIncr && !amLog) && (!ppl_unitsDimEqual(objstart, objincr))) {
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
+                    "Start value for axis ticks has conflicting units with step size. Units of the start value are <%s>; units of the step size are <%s>.",
+                    ppl_printUnit(c, objstart, NULL, NULL, 0, 1, 0), ppl_printUnit(c, objincr, NULL, NULL, 1, 1, 0));
+            ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
+            return 1;
+        }
+        if ((gotStart && gotEnd) && (!ppl_unitsDimEqual(objstart, objend))) {
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
+                    "Start value for axis ticks has conflicting units with end value. Units of the start value are <%s>; units of the end value are <%s>.",
+                    ppl_printUnit(c, objstart, NULL, NULL, 0, 1, 0), ppl_printUnit(c, objend, NULL, NULL, 1, 1, 0));
+            ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
+            return 1;
+        }
+        if (amLog && (!objincr->dimensionless)) {
+            ppl_snprintfTrunc(
+                    msg, sizeof(msg),
+                    "Invalid step size for axis ticks. On a log axis, step size should be a dimensionless multiplier; supplied step size has units of <%s>.",
+                    ppl_printUnit(c, objincr, NULL, NULL, 0, 1, 0));
+            ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
+            return 1;
+        }
+        if (gotStart && (!gsl_finite(start))) {
+            ppl_snprintfTrunc(msg, sizeof(msg), "Invalid starting value for axis ticks. Value supplied is not finite.");
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
+            return 1;
+        }
+        if (gotIncr && (!gsl_finite(incr))) {
+            ppl_snprintfTrunc(msg, sizeof(msg), "Invalid step size for axis ticks. Value supplied is not finite.");
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
+            return 1;
+        }
+        if (gotEnd && (!gsl_finite(end))) {
+            ppl_snprintfTrunc(msg, sizeof(msg), "Invalid end value for axis ticks. Value supplied is not finite.");
+            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
+            return 1;
+        }
+        if ((!amLog) || (gotStart)) {
+            pplObj *o = amLog ? objstart : objincr;
+            if ((unitSet) && (!ppl_unitsDimEqual(o, unit))) {
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
+                        "Tick positions supplied to the '%s' command have units of <%s>, which conflicts with the axis range which has units of <%s>.",
+                        cmd, ppl_printUnit(c, o, NULL, NULL, 0, 1, 0), ppl_printUnit(c, unit, NULL, NULL, 1, 1, 0));
+                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
+                return 1;
+            }
+            if (!ppl_unitsDimEqual(o, unit)) {
+                tics_rm(tOther);
+                (*unit) = *o;
+            }
+        }
+
+        if ((t->tickMinSet = gotStart)) t->tickMin = start;
+        if ((t->tickStepSet = gotIncr)) t->tickStep = incr;
+        if ((t->tickMaxSet = gotEnd)) t->tickMax = end;
+    } else if (gotList) {
+        int pos = ptab[PARSE_INDEX_0tick_list];
+        const int x = ptab[PARSE_INDEX_x];
+        const int lab = ptab[PARSE_INDEX_label];
+        int i = 0;
+        pplObj *first = NULL;
+
+        while (command[pos].objType == PPLOBJ_NUM) {
+            pplObj *ox, *ol;
+            pos = (int) round(command[pos].real);
+            if (pos <= 0) break;
+            ox = &command[pos + x];
+            ol = &command[pos + lab];
+            if ((ox->objType == PPLOBJ_STR) &&
+                ((ol->objType == PPLOBJ_NUM) || (ol->objType == PPLOBJ_BOOL) || (ol->objType == PPLOBJ_DATE))) {
+                pplObj *tmp = ol;
+                ol = ox;
+                ox = tmp;
+            }
+            if (ox->objType != PPLOBJ_NUM) {
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "Ticks can only be set at numeric values; supplied value is of type <%s>.",
+                                  pplObjTypeNames[ox->objType]);
+                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
+                return 1;
+            }
+            if ((ol->objType != PPLOBJ_ZOM) && (ol->objType != PPLOBJ_STR)) {
+                ppl_snprintfTrunc(msg, sizeof(msg), "Ticks labels must be strings; supplied value is of type <%s>.",
+                                  pplObjTypeNames[ol->objType]);
+                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
+                return 1;
+            }
+            if (!gsl_finite(ox->real)) {
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "Ticks can only be set at finite numeric values; supplied value is not finite.");
+                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
+                return 1;
+            }
+            if (ox->flagComplex) {
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "Ticks can only be set at real numeric values; supplied value is complex.");
+                ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
+                return 1;
+            }
+            if (i == 0) {
+                first = ox;
+                if ((unitSet) && (!ppl_unitsDimEqual(first, unit))) {
+                    ppl_snprintfTrunc(
+                            msg, sizeof(msg),
+                            "Tick positions supplied to the '%s' command have units of <%s>, which conflicts with the axis range which has units of <%s>.",
+                            cmd, ppl_printUnit(c, first, NULL, NULL, 0, 1, 0),
+                            ppl_printUnit(c, unit, NULL, NULL, 1, 1, 0));
+                    ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
+                    return 1;
+                }
+                if (!ppl_unitsDimEqual(first, unit)) {
+                    tics_rm(tOther);
+                    (*unit) = *first;
+                }
+            } else if (!ppl_unitsDimEqual(first, ox)) {
+                ppl_snprintfTrunc(
+                        msg, sizeof(msg),
+                        "Tick positions supplied to the '%s' command must all have the same physical units; supplied list has multiple units, including <%s> and <%s>.",
+                        cmd, ppl_printUnit(c, first, NULL, NULL, 0, 1, 0), ppl_printUnit(c, ox, NULL, NULL, 1, 1, 0));
+                ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
+                return 1;
+            }
+            i++;
+        }
+        t->tickList = (double *) malloc((i + 1) * sizeof(double));
+        t->tickStrs = (char **) malloc((i + 1) * sizeof(char *));
+        pos = ptab[PARSE_INDEX_0tick_list];
+        i = 0;
+        while (command[pos].objType == PPLOBJ_NUM) {
+            pplObj *ox, *ol;
+            char *label;
+            pos = (int) round(command[pos].real);
+            if (pos <= 0) break;
+            ox = &command[pos + x];
+            ol = &command[pos + lab];
+            if (ox->objType == PPLOBJ_STR) {
+                pplObj *tmp = ol;
+                ol = ox;
+                ox = tmp;
+            }
+            t->tickList[i] = ox->real;
+            label = (ol->objType == PPLOBJ_STR) ? ((char *) ol->auxil) : ("\xFF");
+            t->tickStrs[i] = (char *) malloc(strlen(label) + 1);
+            if (t->tickStrs[i] == NULL) {
+                ppl_snprintfTrunc(msg, sizeof(msg), "Out of memory.");
+                ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, msg);
+                return 1;
+            }
+            strcpy(t->tickStrs[i], label);
+            i++;
+        }
+        t->tickStrs[i] = NULL;
+    }
+    return 0;
+}
+
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive) {
@@ -422,31 +474,6 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (al != NULL) pplarrow_unset(c, al, in, pl, PARSE_TABLE_unset_arrow_);
     } else if ((strcmp(setoption, "autoscale") == 0)) /* set autoscale | unset autoscale */
     {
-#define SET_AUTOSCALE_AXIS \
-    { \
-        pplset_axis *a, *ad; \
-        if (j == 1) { \
-            a = &ya[i]; \
-            ad = &c->set->YAxesDefault[i]; \
-        } else if (j == 2) { \
-            a = &za[i]; \
-            ad = &c->set->ZAxesDefault[i]; \
-        } else { \
-            a = &xa[i]; \
-            ad = &c->set->XAxesDefault[i]; \
-        } \
-        if (set && ((!SetAll) || (a->enabled))) { \
-            a->enabled = 1; \
-            a->MinSet = SW_BOOL_FALSE; \
-            a->MaxSet = SW_BOOL_FALSE; \
-        } else { \
-            a->MinSet = ad->MinSet; \
-            a->MaxSet = ad->MaxSet; \
-        } \
-        a->min = ad->min; \
-        a->max = ad->max; \
-    }
-
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             const unsigned char set = strcmp_set;
             int pos = PARSE_set_autoscale_0axes;
@@ -458,12 +485,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     if (pos <= 0) break;
                     i = (int) round(command[pos + PARSE_set_autoscale_axis_0axes].real);
                     j = (int) round(command[pos + PARSE_set_autoscale_axis_0axes].exponent[0]);
-                    SET_AUTOSCALE_AXIS;
+                    setAutoscaleAxis(c, xa, ya, za, j, i, set, SetAll);
                 }
             else {
                 int i, j;
                 for (j = 0; j < 2; j++)
-                    for (i = 0; i < MAX_AXES; i++) SET_AUTOSCALE_AXIS;
+                    for (i = 0; i < MAX_AXES; i++) setAutoscaleAxis(c, xa, ya, za, j, i, set, SetAll);
             }
         }
     } else if (strcmp_set && (strcmp(setoption, "axis") == 0)) /* set axis */
@@ -752,13 +779,15 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int *ptab = PARSE_TABLE_set_c1tics_;
         char *cmd = m ? "mc1tics" : "c1tics";
         if (!m) {
-            SET_TICKS(sg->ticsC, sg->ticsCM, sg->unitC,
-                      ((sg->Cminauto[0] != SW_BOOL_TRUE) || (sg->Cmaxauto[0] != SW_BOOL_TRUE)),
-                      (sg->Clog[0] == SW_BOOL_TRUE));
+            if (setTicks(c, command, ptab, cmd, &(sg->ticsC), &(sg->ticsCM), &(sg->unitC),
+                         ((sg->Cminauto[0] != SW_BOOL_TRUE) || (sg->Cmaxauto[0] != SW_BOOL_TRUE)),
+                         (sg->Clog[0] == SW_BOOL_TRUE)))
+                return;
         } else {
-            SET_TICKS(sg->ticsCM, sg->ticsC, sg->unitC,
-                      ((sg->Cminauto[0] != SW_BOOL_TRUE) || (sg->Cmaxauto[0] != SW_BOOL_TRUE)),
-                      (sg->Clog[0] == SW_BOOL_TRUE));
+            if (setTicks(c, command, ptab, cmd, &(sg->ticsCM), &(sg->ticsC), &(sg->unitC),
+                         ((sg->Cminauto[0] != SW_BOOL_TRUE) || (sg->Cmaxauto[0] != SW_BOOL_TRUE)),
+                         (sg->Clog[0] == SW_BOOL_TRUE)))
+                return;
         }
     } else if (strcmp_unset && (strcmp(setoption, "c1tics") == 0)) /* unset c1tics */
     {
@@ -1327,8 +1356,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         a = &xa[i];
                         ad = &c->set->XAxesDefault[i];
                     }
-                    GET_AXISLOG(alog, a, 0);
-                    GET_AXISLOG(adlog, ad, 1);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
+                    adlog = getAxisLog(c, ad, 1, xa, ya, za);
                     if (sl) {
                         a->enabled = 1;
                         newstate = SW_BOOL_TRUE;
@@ -1390,7 +1419,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             for (i = 0; i < MAX_AXES; i++) {
                 a = &xa[i];
                 if (a->enabled) {
-                    GET_AXISLOG(alog, a, 0);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
                     if (*alog != newstate) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1402,7 +1431,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             for (i = 0; i < MAX_AXES; i++) {
                 a = &ya[i];
                 if (a->enabled) {
-                    GET_AXISLOG(alog, a, 0);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
                     if (*alog != newstate) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1414,7 +1443,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             for (i = 0; i < MAX_AXES; i++) {
                 a = &za[i];
                 if (a->enabled) {
-                    GET_AXISLOG(alog, a, 0);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
                     if (*alog != newstate) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1442,8 +1471,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 a = &xa[i];
                 ad = &c->set->XAxesDefault[i];
                 if (a->enabled) {
-                    GET_AXISLOG(alog, a, 0);
-                    GET_AXISLOG(adlog, ad, 1);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
+                    adlog = getAxisLog(c, ad, 1, xa, ya, za);
                     if (*alog != *adlog) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1456,8 +1485,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 a = &ya[i];
                 ad = &c->set->YAxesDefault[i];
                 if (a->enabled) {
-                    GET_AXISLOG(alog, a, 0);
-                    GET_AXISLOG(adlog, ad, 1);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
+                    adlog = getAxisLog(c, ad, 1, xa, ya, za);
                     if (*alog != *adlog) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1470,8 +1499,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 a = &za[i];
                 ad = &c->set->ZAxesDefault[i];
                 if (a->enabled) {
-                    GET_AXISLOG(alog, a, 0);
-                    GET_AXISLOG(adlog, ad, 1);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
+                    adlog = getAxisLog(c, ad, 1, xa, ya, za);
                     if (*alog != *adlog) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1505,8 +1534,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "noc1tics") == 0)) /* set noc1tics */
     {
         const int m = (command[PARSE_set_notics_minor].objType == PPLOBJ_STR);
-        if (!m) { SET_NOTICKS(sg->ticsC); }
-        SET_NOTICKS(sg->ticsCM);
+        if (!m) { setNoTicks(&(sg->ticsC)); }
+        setNoTicks(&(sg->ticsCM));
     } else if (strcmp_set && (strcmp(setoption, "noclip") == 0)) /* set noclip */
     {
         sg->clip = SW_ONOFF_OFF;
@@ -1556,16 +1585,16 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
                 if (j == 1) {
                     pplset_axis *a = &ya[i];
-                    if (!m) { SET_NOTICKS(a->tics); }
-                    SET_NOTICKS(a->ticsM);
+                    if (!m) { setNoTicks(&(a->tics)); }
+                    setNoTicks(&(a->ticsM));
                 } else if (j == 2) {
                     pplset_axis *a = &za[i];
-                    if (!m) { SET_NOTICKS(a->tics); }
-                    SET_NOTICKS(a->ticsM);
+                    if (!m) { setNoTicks(&(a->tics)); }
+                    setNoTicks(&(a->ticsM));
                 } else {
                     pplset_axis *a = &xa[i];
-                    if (!m) { SET_NOTICKS(a->tics); }
-                    SET_NOTICKS(a->ticsM);
+                    if (!m) { setNoTicks(&(a->tics)); }
+                    setNoTicks(&(a->ticsM));
                 }
             }
         } else {
@@ -1573,22 +1602,22 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i];
                 if (a->enabled) {
-                    if (!m) { SET_NOTICKS(a->tics); }
-                    SET_NOTICKS(a->ticsM);
+                    if (!m) { setNoTicks(&(a->tics)); }
+                    setNoTicks(&(a->ticsM));
                 }
             }
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i];
                 if (a->enabled) {
-                    if (!m) { SET_NOTICKS(a->tics); }
-                    SET_NOTICKS(a->ticsM);
+                    if (!m) { setNoTicks(&(a->tics)); }
+                    setNoTicks(&(a->ticsM));
                 }
             }
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i];
                 if (a->enabled) {
-                    if (!m) { SET_NOTICKS(a->tics); }
-                    SET_NOTICKS(a->ticsM);
+                    if (!m) { setNoTicks(&(a->tics)); }
+                    setNoTicks(&(a->ticsM));
                 }
             }
         }
@@ -2157,15 +2186,17 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 if (j == 1) a = &ya[i];
                 else if (j == 2) a = &za[i];
                 else a = &xa[i];
-                GET_AXISLOG(alog, a, 0);
+                alog = getAxisLog(c, a, 0, xa, ya, za);
                 if (!m) {
                     tics_rm(&a->tics);
-                    SET_TICKS(a->tics, a->ticsM, a->unit, ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                              (*alog == SW_BOOL_TRUE));
+                    if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
+                                 ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)), (*alog == SW_BOOL_TRUE)))
+                        return;
                 } else {
                     tics_rm(&a->ticsM);
-                    SET_TICKS(a->ticsM, a->tics, a->unit, ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                              (*alog == SW_BOOL_TRUE));
+                    if (setTicks(c, command, ptab, cmd, &(a->ticsM), &(a->tics), &(a->unit),
+                                 ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)), (*alog == SW_BOOL_TRUE)))
+                        return;
                 }
             }
         } else {
@@ -2175,17 +2206,19 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 pplset_axis *a = &xa[i];
                 if (a->enabled) {
                     int *alog;
-                    GET_AXISLOG(alog, a, 0);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
                     if (!m) {
                         tics_rm(&a->tics);
-                        SET_TICKS(a->tics, a->ticsM, a->unit,
-                                  ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                                  (*alog == SW_BOOL_TRUE));
+                        if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
+                                     ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
+                                     (*alog == SW_BOOL_TRUE)))
+                            return;
                     } else {
                         tics_rm(&a->ticsM);
-                        SET_TICKS(a->ticsM, a->tics, a->unit,
-                                  ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                                  (*alog == SW_BOOL_TRUE));
+                        if (setTicks(c, command, ptab, cmd, &(a->ticsM), &(a->tics), &(a->unit),
+                                     ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
+                                     (*alog == SW_BOOL_TRUE)))
+                            return;
                     }
                 }
             }
@@ -2193,17 +2226,19 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 pplset_axis *a = &ya[i];
                 if (a->enabled) {
                     int *alog;
-                    GET_AXISLOG(alog, a, 0);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
                     if (!m) {
                         tics_rm(&a->tics);
-                        SET_TICKS(a->tics, a->ticsM, a->unit,
-                                  ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                                  (*alog == SW_BOOL_TRUE));
+                        if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
+                                     ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
+                                     (*alog == SW_BOOL_TRUE)))
+                            return;
                     } else {
                         tics_rm(&a->ticsM);
-                        SET_TICKS(a->ticsM, a->tics, a->unit,
-                                  ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                                  (*alog == SW_BOOL_TRUE));
+                        if (setTicks(c, command, ptab, cmd, &(a->ticsM), &(a->tics), &(a->unit),
+                                     ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
+                                     (*alog == SW_BOOL_TRUE)))
+                            return;
                     }
                 }
             }
@@ -2211,17 +2246,19 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 pplset_axis *a = &za[i];
                 if (a->enabled) {
                     int *alog;
-                    GET_AXISLOG(alog, a, 0);
+                    alog = getAxisLog(c, a, 0, xa, ya, za);
                     if (!m) {
                         tics_rm(&a->tics);
-                        SET_TICKS(a->tics, a->ticsM, a->unit,
-                                  ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                                  (*alog == SW_BOOL_TRUE));
+                        if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
+                                     ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
+                                     (*alog == SW_BOOL_TRUE)))
+                            return;
                     } else {
                         tics_rm(&a->ticsM);
-                        SET_TICKS(a->ticsM, a->tics, a->unit,
-                                  ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
-                                  (*alog == SW_BOOL_TRUE));
+                        if (setTicks(c, command, ptab, cmd, &(a->ticsM), &(a->tics), &(a->unit),
+                                     ((a->MinSet == SW_BOOL_TRUE) || (a->MaxSet == SW_BOOL_TRUE)),
+                                     (*alog == SW_BOOL_TRUE)))
+                            return;
                     }
                 }
             }
