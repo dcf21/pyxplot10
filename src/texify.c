@@ -42,42 +42,41 @@
 #include "texify.h"
 
 
-#define ENTER_PLAINTEXT \
-    if (*textRm) { \
-        *textRm = 0; \
-        snprintf(out + k, outlen - k, "}"); \
-        k += strlen(out + k); \
-    } \
-    if (*mathMode) { \
-        *mathMode = 0; \
-        snprintf(out + k, outlen - k, "$"); \
-        k += strlen(out + k); \
-    }
+//! texSetMode - Switch the LaTeX being written into plain text, math mode, or roman text within math mode
+//! (\textrm{...}), writing whatever LaTeX is needed to close or open each mode
+//! \param [out] out - The buffer into which LaTeX is being written
+//! \param [in] outlen - The size of the buffer <out>
+//! \param [in,out] k - The position in <out> at which to write; advanced past what is written
+//! \param [in,out] mathMode - Flag indicating whether the LaTeX is currently in math mode
+//! \param [in,out] textRm - Flag indicating whether the LaTeX is currently in a \textrm{...} block
+//! \param [in] wantMath - True to enter math mode; false to return to plain text
+//! \param [in] wantRm - True to enter a \textrm{...} block within math mode (requires <wantMath>)
 
-#define ENTER_MATHMODE \
-    if (!*mathMode) { \
-        *mathMode = 1; \
-        snprintf(out + k, outlen - k, "$\\displaystyle "); \
-        k += strlen(out + k); \
-    } \
-    if (*textRm) { \
-        *textRm = 0; \
-        snprintf(out + k, outlen - k, "}"); \
-        k += strlen(out + k); \
+static void texSetMode(char *out, const int outlen, int *k, int *mathMode, int *textRm, const int wantMath,
+                       const int wantRm) {
+    // Leaving plain text: open math mode
+    if (wantMath && !*mathMode) {
+        *mathMode = 1;
+        snprintf(out + *k, outlen - *k, "$\\displaystyle ");
+        *k += strlen(out + *k);
     }
-
-#define ENTER_TEXTRM \
-    if (!*mathMode) { \
-        *mathMode = 1; \
-        snprintf(out + k, outlen - k, "$\\displaystyle "); \
-        k += strlen(out + k); \
-    } \
-    if (!*textRm) { \
-        *textRm = 1; \
-        snprintf(out + k, outlen - k, "\\textrm{"); \
-        k += strlen(out + k); \
+    // Close or open a \textrm{...} block
+    if (*textRm && !wantRm) {
+        *textRm = 0;
+        snprintf(out + *k, outlen - *k, "}");
+        *k += strlen(out + *k);
+    } else if (wantRm && !*textRm) {
+        *textRm = 1;
+        snprintf(out + *k, outlen - *k, "\\textrm{");
+        *k += strlen(out + *k);
     }
-
+    // Returning to plain text: close math mode
+    if (!wantMath && *mathMode) {
+        *mathMode = 0;
+        snprintf(out + *k, outlen - *k, "$");
+        *k += strlen(out + *k);
+    }
+}
 
 static char *LatexVarNamesFr[] = {
         "alpha", "beta",  "gamma",  "delta", "epsilon", "zeta",  "eta",     "theta", "iota", "kappa", "lambda", "mu",
@@ -101,7 +100,7 @@ static char *LatexVarNamesTo[] = {
 static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, int *mathMode, int *textRm) {
     int i, ji = 0, jg, a, l, m, k = 0, kno_ = 0;
 
-    ENTER_MATHMODE;
+    texSetMode(out, outlen, &k, mathMode, textRm, 1, 0);
     while ((isalnum(in[ji])) || (in[ji] == '_')) {
         a = 0;
         for (i = 0; LatexVarNamesFr[i] != NULL; i++) {
@@ -421,7 +420,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     for (i = k = 0; i < tlen;) {
         int opMultDiv = 0;
         const char o = tokenBuff[i].state; // Get tokenised markup state code
-        ENTER_MATHMODE;
+        texSetMode(out, outlen, &k, mathMode, textRm, 1, 0);
         if (stkpos[i] >= 0) {
             double real = 0, imag = 0;
             pplObj *o = &c->stack[stkpos[i]];
@@ -449,7 +448,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 l -= 2;
                 i++;
             }
-            ENTER_TEXTRM;
+            texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
             if (quoteType == '\'') snprintf(out + k, outlen - k, "`");
             else if (quoteType == '\"') snprintf(out + k, outlen - k, "``");
             k += strlen(out + k);
@@ -458,7 +457,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             if (quoteType == '\'') snprintf(out + k, outlen - k, "'");
             else if (quoteType == '\"') snprintf(out + k, outlen - k, "''");
             k += strlen(out + k);
-            ENTER_MATHMODE;
+            texSetMode(out, outlen, &k, mathMode, textRm, 1, 0);
             i = ei;
         } else if (o == 'C') // string substitution operator
         {
@@ -501,11 +500,11 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         } else if ((o == 'F') || (o == 'H')) // -- or ++ operators
         {
             if (in[i] == '-') {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, "{\\tiny \\raisebox{0.8pt}{\\kern-0.1pt --\\kern0.5pt --}}");
             }
             if (in[i] == '+') {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, "{\\tiny \\raisebox{0.8pt}{\\kern-0.2pt +\\kern-0.2pt +}}");
             }
             k += strlen(out + k);
@@ -642,11 +641,11 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 snprintf(out + k, outlen - k, "!");
                 { i += 1; };
             } else if (markupMatch(in + i, "not")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, " not ");
                 { i += 3; };
             } else if (markupMatch(in + i, "NOT")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, " not ");
                 { i += 3; };
             }
@@ -681,26 +680,26 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 snprintf(out + k, outlen - k, "!=");
                 { i += 2; };
             } else if (markupMatch(in + i, "&&")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, "\\,\\&\\&\\,");
                 { i += 2; };
             } else if (markupMatch(in + i, "and")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, " and ");
                 { i += 3; };
             } else if (markupMatch(in + i, "AND")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, " and ");
                 { i += 3; };
             } else if (markupMatch(in + i, "||")) {
                 snprintf(out + k, outlen - k, "\\,||\\,");
                 { i += 2; };
             } else if (markupMatch(in + i, "or")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, " or ");
                 { i += 2; };
             } else if (markupMatch(in + i, "OR")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, " or ");
                 { i += 2; };
             } else if (markupMatch(in + i, "*")) {
@@ -712,7 +711,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 { i += 1; };
                 opMultDiv = 1;
             } else if (markupMatch(in + i, "%")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, "\\%%");
                 { i += 1; };
             } else if (markupMatch(in + i, "+")) {
@@ -728,7 +727,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 snprintf(out + k, outlen - k, ">");
                 { i += 1; };
             } else if (markupMatch(in + i, "&")) {
-                ENTER_TEXTRM;
+                texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, "\\,\\&\\,");
                 { i += 1; };
             } else if (markupMatch(in + i, "^")) {
@@ -842,7 +841,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         lastOpMultDiv = opMultDiv;
     }
 
-    if (inlen < 0) { ENTER_PLAINTEXT; }
+    if (inlen < 0) { texSetMode(out, outlen, &k, mathMode, textRm, 0, 0); }
     out[k] = '\0';
     free(stkpos);
     stkpos = NULL;
