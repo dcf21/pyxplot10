@@ -1,0 +1,6 @@
+file 'errors.ppl':5: Numerical error: x=-1: Could not evaluate expression <sqrt(x) + 1/(x - 0.5)>. The error, encountered at character position 4, was: 'The function sqrt(z) is not defined at the requested point in parameter space.'
+file 'errors.ppl':5: Numerical error: x=-0.9989995: Could not evaluate expression <sqrt(x) + 1/(x - 0.5)>. The error, encountered at character position 4, was: 'The function sqrt(z) is not defined at the requested point in parameter space.'
+file 'errors.ppl':5: Numerical error: x=-0.997999: Could not evaluate expression <sqrt(x) + 1/(x - 0.5)>. The error, encountered at character position 4, was: 'The function sqrt(z) is not defined at the requested point in parameter space.'
+file 'errors.ppl':5: Numerical error: x=-0.9969985: Could not evaluate expression <sqrt(x) + 1/(x - 0.5)>. The error, encountered at character position 4, was: 'The function sqrt(z) is not defined at the requested point in parameter space.'
+file 'errors.ppl':5: Numerical error: x=-0.995998: Could not evaluate expression <sqrt(x) + 1/(x - 0.5)>. The error, encountered at character position 4, was: 'The function sqrt(z) is not defined at the requested point in parameter space.'
+file 'errors.ppl':5:x=-0.995998:0: Too many errors: no more errors will be shown.

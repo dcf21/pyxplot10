@@ -24,6 +24,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "stringTools/asciidouble.h"
 #include "stringTools/strConstants.h"
 
@@ -34,6 +38,36 @@
 
 static char temp_stringA[BLEN + 1], temp_stringB[BLEN + 1], temp_stringC[BLEN + 1], temp_stringD[BLEN + 1],
         temp_stringE[BLEN + 1];
+
+// Error messages may be reported from several threads at once, e.g. while functions are sampled in parallel. Only one
+// thread may write a message at a time, since messages are assembled in static buffers. The lock is nestable, since
+// the reporting functions call one another.
+#ifdef _OPENMP
+static omp_nest_lock_t reportLockObj;
+
+//! reportLockInit - Initialise the lock which lets only one thread report a message at a time, when Pyxplot starts
+
+static void reportLockInit() __attribute__((constructor));
+static void reportLockInit() {
+    omp_init_nest_lock(&reportLockObj);
+}
+#endif
+
+//! reportLock - Wait until no other thread is reporting a message, and then stop other threads from doing so
+
+static void reportLock() {
+#ifdef _OPENMP
+    omp_set_nest_lock(&reportLockObj);
+#endif
+}
+
+//! reportUnlock - Let other threads report messages again
+
+static void reportUnlock() {
+#ifdef _OPENMP
+    omp_unset_nest_lock(&reportLockObj);
+#endif
+}
 
 //! ppl_error_setstreaminfo - Record the source of the input currently being processed, so that error messages can
 //! report the filename and line number where they occurred
@@ -52,16 +86,9 @@ void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, cons
     return;
 }
 
-//! ppl_error - Report an error to the user on stderr, prefixed with the location in the input where it occurred and
-//! the type of error. If the terminal supports colour, the message is coloured, and up to two character positions
-//! within it can be highlighted in reverse video.
-//! \param [in] context - The error-reporting context
-//! \param [in] ErrType - The type of error, one of the ERR_* constants. ERR_PREFORMED messages are printed verbatim.
-//! \param [in] HighlightPos1 - One-indexed position of the first character in <msg> to highlight, or -1 for none
-//! \param [in] HighlightPos2 - One-indexed position of the second character in <msg> to highlight, or -1 for none
-//! \param [in] msg - The error message (NULL is treated as an empty message)
+//! errorUnlocked - The body of ppl_error(), which is called with the lock held that lets only one thread report at a time
 
-void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
+static void errorUnlocked(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
     unsigned char ApplyHighlighting, reverse = 0;
     int i = 0, j;
 
@@ -189,6 +216,22 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
     return;
 }
 
+//! ppl_error - Report an error to the user on stderr, prefixed with the location in the input where it occurred and
+//! the type of error. If the terminal supports colour, the message is coloured, and up to two character positions
+//! within it can be highlighted in reverse video.
+//! Messages may be reported from several threads at once; only one thread writes a message at a time.
+//! \param [in] context - The error-reporting context
+//! \param [in] ErrType - The type of error, one of the ERR_* constants. ERR_PREFORMED messages are printed verbatim.
+//! \param [in] HighlightPos1 - One-indexed position of the first character in <msg> to highlight, or -1 for none
+//! \param [in] HighlightPos2 - One-indexed position of the second character in <msg> to highlight, or -1 for none
+//! \param [in] msg - The error message (NULL is treated as an empty message)
+
+void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
+    reportLock();
+    errorUnlocked(context, ErrType, HighlightPos1, HighlightPos2, msg);
+    reportUnlock();
+}
+
 //! ppl_fatal - Report a fatal internal error, and terminate the process
 //! \param [in] context - The error-reporting context
 //! \param [in] file - The source code file in which the error occurred
@@ -211,14 +254,9 @@ void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
     exit(1);
 }
 
-//! ppl_warning - Report a warning to the user on stderr, prefixed with the location in the input where it occurred
-//! and the type of warning
-//! \param [in] context - The error-reporting context
-//! \param [in] ErrType - The type of warning, one of the ERR_* constants. ERR_PREFORMED messages are printed
-//! verbatim.
-//! \param [in] msg - The warning message (NULL is treated as an empty message)
+//! warningUnlocked - The body of ppl_warning(), which is called with the lock held that lets only one thread report at a time
 
-void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
+static void warningUnlocked(pplerr_context *context, const int ErrType, char *msg) {
     int i = 0;
 
     if (msg == NULL) msg = "";
@@ -307,11 +345,23 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
     return;
 }
 
-//! ppl_report - Print a report-level message to the user on stdout, coloured if the terminal supports it
+//! ppl_warning - Report a warning to the user on stderr, prefixed with the location in the input where it occurred
+//! and the type of warning
+//! Messages may be reported from several threads at once; only one thread writes a message at a time.
 //! \param [in] context - The error-reporting context
-//! \param [in] msg - The message (NULL is treated as an empty message)
+//! \param [in] ErrType - The type of warning, one of the ERR_* constants. ERR_PREFORMED messages are printed
+//! verbatim.
+//! \param [in] msg - The warning message (NULL is treated as an empty message)
 
-void ppl_report(pplerr_context *context, char *msg) {
+void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
+    reportLock();
+    warningUnlocked(context, ErrType, msg);
+    reportUnlock();
+}
+
+//! reportUnlocked - The body of ppl_report(), which is called with the lock held that lets only one thread report at a time
+
+static void reportUnlocked(pplerr_context *context, char *msg) {
     if (msg == NULL) msg = "";
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
@@ -335,12 +385,20 @@ void ppl_report(pplerr_context *context, char *msg) {
     return;
 }
 
-//! ppl_log - Write a message to the log file <pyxplot.PID.log> in the current working directory, prefixed with a
-//! timestamp and the name of the process that produced it
+//! ppl_report - Print a report-level message to the user on stdout, coloured if the terminal supports it
+//! Messages may be reported from several threads at once; only one thread writes a message at a time.
 //! \param [in] context - The error-reporting context
 //! \param [in] msg - The message (NULL is treated as an empty message)
 
-void ppl_log(pplerr_context *context, char *msg) {
+void ppl_report(pplerr_context *context, char *msg) {
+    reportLock();
+    reportUnlocked(context, msg);
+    reportUnlock();
+}
+
+//! logUnlocked - The body of ppl_log(), which is called with the lock held that lets only one thread report at a time
+
+static void logUnlocked(pplerr_context *context, char *msg) {
     static FILE *logfile = NULL;
     static int latch = 0;
     char linebuffer[LSTR_LENGTH];
@@ -367,6 +425,18 @@ void ppl_log(pplerr_context *context, char *msg) {
             temp_stringD);
     latch = 0;
     return;
+}
+
+//! ppl_log - Write a message to the log file <pyxplot.PID.log> in the current working directory, prefixed with a
+//! timestamp and the name of the process that produced it
+//! Messages may be reported from several threads at once; only one thread writes a message at a time.
+//! \param [in] context - The error-reporting context
+//! \param [in] msg - The message (NULL is treated as an empty message)
+
+void ppl_log(pplerr_context *context, char *msg) {
+    reportLock();
+    logUnlocked(context, msg);
+    reportUnlock();
 }
 
 //! ppl_errorCountTake - Decide whether to report an error, when only a limited number of errors are to be reported

@@ -1,0 +1,8 @@
+# A plot of many samples. The size of its postscript output is compared with that of the serial result; it depends on
+# every point plotted, and the timestamp in the file has a fixed length.
+set term eps
+set output "p.eps"
+set samples 4000
+f(x) = sin(x) * x**2 / 10
+plot [0:30] f(x), cos(x) * 30 with lines
+print os.path.filesize("p.eps")

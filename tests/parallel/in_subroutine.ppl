@@ -1,0 +1,10 @@
+# Commands run within subroutines can see the subroutine's local variables, so are evaluated serially
+subroutine tab(scale) {
+ set samples 2000
+ set output "out.dat"
+ tabulate [0:1] scale * x**2
+}
+call tab(10)
+foreach datum a, b in "out.dat" every 500 {
+ print a, " ", b
+}

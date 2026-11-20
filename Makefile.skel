@@ -41,9 +41,9 @@ VERSION_MIN = 10
 VERSION_REV = 0
 DATE    = 19/11/2026
 
-COMPILE = $(CC) -std=gnu99 -Wall -g `pkg-config --cflags libxml-2.0` `gsl-config --cflags` -c -I $(CWD)/src
+COMPILE = $(CC) -std=gnu99 -Wall -g $(OPENMP) `pkg-config --cflags libxml-2.0` `gsl-config --cflags` -c -I $(CWD)/src
 LIBS    = $(LINK_FFTW) `pkg-config --libs libxml-2.0` `gsl-config --libs` $(LINK_READLINE) -lz -lpng $(LINK_KPATHSEA) -lm
-LINK    = $(CC) -std=gnu99 -Wall -g
+LINK    = $(CC) -std=gnu99 -Wall -g $(OPENMP)
 
 OPTIMISATION = -O3
 
@@ -69,7 +69,7 @@ epsMaker/eps_plot_labelsarrows.c epsMaker/eps_plot_legend.c epsMaker/eps_plot_li
 epsMaker/eps_plot_threedimbuff.c epsMaker/eps_plot_ticking_auto2.c epsMaker/eps_plot_ticking_auto3.c epsMaker/eps_plot_ticking_auto.c \
 epsMaker/eps_plot_ticking.c epsMaker/eps_point.c epsMaker/eps_polygon.c epsMaker/eps_settings.c epsMaker/eps_style.c epsMaker/eps_text.c \
 epsMaker/kpse_wrap.c expressions/dollarOp.c expressions/expCompile.c expressions/expEval.c expressions/expEvalCalculus.c expressions/expEvalOps.c \
-expressions/expEvalSlice.c expressions/fnCall.c expressions/traceback.c input.c mathsTools/dcfmath.c parser/cmdList.c parser/parserCompile.c \
+expressions/expEvalSlice.c expressions/expThreadSafe.c expressions/fnCall.c expressions/traceback.c input.c mathsTools/dcfmath.c parser/cmdList.c parser/parserCompile.c \
 parser/parserExecute.c parser/parserInit.c parser/parserShell.c pyxplot.c readConf.c settings/arrows.c settings/axes.c settings/colors.c \
 settings/epsColors.c settings/labels.c settings/papersizes.c settings/settingsInit.c settings/settingTypes.c settings/textConstants.c \
 settings/withWords.c stringTools/asciidouble.c texify.c userspace/calendars.c userspace/context.c userspace/contextVarDef.c \
@@ -90,7 +90,7 @@ epsMaker/eps_plot_labelsarrows.h epsMaker/eps_plot_legend.h epsMaker/eps_plot_li
 epsMaker/eps_plot_threedimbuff.h epsMaker/eps_plot_ticking_auto2.h epsMaker/eps_plot_ticking_auto3.h epsMaker/eps_plot_ticking_auto.h \
 epsMaker/eps_plot_ticking.h epsMaker/eps_point.h epsMaker/eps_polygon.h epsMaker/eps_settings.h epsMaker/eps_style.h epsMaker/eps_text.h \
 epsMaker/kpse_wrap.h expressions/dollarOp.h expressions/expCompile.h expressions/expCompile_fns.h expressions/expEval.h expressions/expEvalCalculus.h \
-expressions/expEvalOps.h expressions/expEvalSlice.h expressions/fnCall.h expressions/traceback.h expressions/traceback_fns.h input.h \
+expressions/expEvalOps.h expressions/expEvalSlice.h expressions/expThreadSafe.h expressions/fnCall.h expressions/traceback.h expressions/traceback_fns.h input.h \
 mathsTools/dcfmath.h parser/cmdList.h parser/parser.h pplConstants.h pyxplot.h readConf.h settings/arrows.h settings/arrows_fns.h settings/axes_fns.h \
 settings/colors.h settings/epsColors.h settings/labels.h settings/labels_fns.h settings/papersizes.h settings/settings.h settings/settings_fns.h \
 settings/settingTypes.h settings/textConstants.h settings/withWords.h settings/withWords_fns.h stringTools/asciidouble.h stringTools/strConstants.h \

@@ -363,6 +363,7 @@ void ppl_addMagicFunction(dict *n, const char *name, const int id, char *shortde
     f->descriptionShort = shortdesc;
     f->description = desc;
     f->needSelfThis = 0;
+    f->threadSafe = (id == 1); // unit() is a pure function; int_dx() and diff_dx() evaluate expressions themselves
     v.refCount = 1;
     if (pplObjFunc(&v, 1, 1, f) != NULL) ppl_dictAppendCpy(n, name, (void *) &v, sizeof(v));
     return;
@@ -406,6 +407,7 @@ pplFunc *ppl_addSystemFunc(dict *n, const char *name, const int minArgs, const i
     f->descriptionShort = shortdesc;
     f->description = desc;
     f->needSelfThis = 0;
+    f->threadSafe = 1; // Functions with side effects are marked otherwise by markThreadUnsafeFuncs() in defaultVars.c
     v.refCount = 1;
     if (pplObjFunc(&v, 1, 1, f) != NULL) ppl_dictAppendCpy(n, name, (void *) &v, sizeof(v));
     return f;

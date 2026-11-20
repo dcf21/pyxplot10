@@ -32,12 +32,17 @@
 
 #include <gsl/gsl_math.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "coreUtils/errorReport.h"
 #include "userspace/stack.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/dollarOp.h"
 #include "expressions/expCompile_fns.h"
 #include "expressions/expEval.h"
+#include "expressions/expThreadSafe.h"
 #include "expressions/traceback_fns.h"
 #include "parser/cmdList.h"
 #include "parser/parser.h"
@@ -1479,6 +1484,189 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
     return;
 }
 
+// Functions are only sampled in parallel if there are at least this many samples to share between threads
+#define PARALLEL_MIN_SAMPLES 1000
+
+// The number of samples evaluated in parallel at a time, which bounds the memory needed to store their values
+#define PARALLEL_BLOCK_SAMPLES 32768
+
+//! parallelSampler - The state of the parallel evaluation of a list of functions at a raster of points, the first
+//! stage of ppldata_fromFuncs(). The functions are evaluated in blocks of samples, on several threads at once. The
+//! values are then turned into a data table serially, in order, so that the result (including any error messages) is
+//! identical to evaluating the functions serially. Samples at which any function cannot be evaluated are flagged, and
+//! evaluated again serially, which reports the error.
+typedef struct parallelSampler {
+    ppl_context *c; // The Pyxplot context
+    pplExpr **fnlist; // The functions to evaluate
+    int fnlist_len; // The number of functions
+    char *dummyNames[2]; // The names of the dummy variables, e.g. {"x"} or {"x","y"}
+    int nDummy; // The number of dummy variables: 1, or 2 when sampling a grid
+    const double *rasterX, *rasterY; // The values of the dummy variables
+    int rasterXlen; // The number of values of the first dummy variable
+    const pplObj *unitX, *unitY; // The physical units of the dummy variables
+    long nSamples; // The total number of samples
+    int iterDepth; // The depth of recursion, used to prevent infinite recursion
+    long blockStart, blockLen; // The range of samples whose values are currently held
+    pplObj *results; // The value of each function at each sample in the block, indexed [sample * fnlist_len + f]
+    unsigned char *failed; // Flags of the samples in the block at which any function could not be evaluated
+} parallelSampler;
+
+//! parallelSamplerInit - Decide whether a list of functions can be evaluated in parallel, and if so, prepare to do so
+//! \param [out] s - The state of the parallel evaluation
+//! \param [in] c - The Pyxplot context
+//! \param [in] fnlist - The functions to evaluate
+//! \param [in] fnlist_len - The number of functions in <fnlist>
+//! \param [in] dummyNames - The names of the dummy variables
+//! \param [in] nDummy - The number of dummy variables: 1, or 2 when sampling a grid
+//! \param [in] rasterX - The values of the first dummy variable
+//! \param [in] rasterXlen - The number of values in <rasterX>
+//! \param [in] unitX - The physical units of the first dummy variable
+//! \param [in] rasterY - The values of the second dummy variable, if sampling a grid
+//! \param [in] rasterYlen - The number of values in <rasterY>
+//! \param [in] unitY - The physical units of the second dummy variable
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \return True if the functions are to be evaluated in parallel; false if they must be evaluated serially
+
+static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnlist, const int fnlist_len,
+                               char *const *dummyNames, const int nDummy, const double *rasterX, const int rasterXlen,
+                               const pplObj *unitX, const double *rasterY, const int rasterYlen, const pplObj *unitY,
+                               const int iterDepth) {
+    long p;
+    int j;
+    s->results = NULL;
+    s->failed = NULL;
+#ifndef _OPENMP
+    return 0; // Pyxplot was compiled without OpenMP
+#else
+    s->c = c;
+    s->fnlist = fnlist;
+    s->fnlist_len = fnlist_len;
+    s->dummyNames[0] = dummyNames[0];
+    s->dummyNames[1] = dummyNames[1];
+    s->nDummy = nDummy;
+    s->rasterX = rasterX;
+    s->rasterY = rasterY;
+    s->rasterXlen = rasterXlen;
+    s->unitX = unitX;
+    s->unitY = unitY;
+    s->nSamples = (long) rasterXlen * ((nDummy > 1) ? rasterYlen : 1);
+    s->iterDepth = iterDepth;
+    s->blockStart = s->blockLen = 0;
+
+    if ((s->nSamples < PARALLEL_MIN_SAMPLES) || (omp_get_max_threads() < 2)) return 0;
+    for (j = 0; j < fnlist_len; j++)
+        if (!ppl_expThreadSafe(c, fnlist[j], (const char *const *) dummyNames, nDummy)) return 0;
+
+    s->results = (pplObj *) malloc(PARALLEL_BLOCK_SAMPLES * fnlist_len * sizeof(pplObj));
+    s->failed = (unsigned char *) malloc(PARALLEL_BLOCK_SAMPLES);
+    if ((s->results == NULL) || (s->failed == NULL)) {
+        free(s->results);
+        free(s->failed);
+        s->results = NULL;
+        s->failed = NULL;
+        return 0; // Fall back to evaluating the functions serially
+    }
+    for (p = 0; p < PARALLEL_BLOCK_SAMPLES * fnlist_len; p++) {
+        s->results[p].refCount = 1;
+        pplObjZom(&s->results[p], 0);
+    }
+    return 1;
+#endif
+}
+
+//! discardSample - Free the values of the functions evaluated so far at a sample, and flag the sample as failed, so
+//! that it is evaluated again serially
+//! \param [in,out] s - The state of the parallel evaluation
+//! \param [in] q - The number of the sample within the current block
+//! \param [in] nEvaluated - The number of functions which were evaluated at the sample
+
+static void discardSample(parallelSampler *s, const long q, const int nEvaluated) {
+    int g;
+    for (g = 0; g < nEvaluated; g++) {
+        pplObj *r = &s->results[q * s->fnlist_len + g];
+        ppl_garbageObject(r);
+        r->refCount = 1;
+        pplObjZom(r, 0);
+    }
+    s->failed[q] = 1;
+}
+
+//! parallelSamplerFill - Evaluate the functions at a block of samples, on several threads at once
+//! \param [in,out] s - The state of the parallel evaluation
+//! \param [in] start - The number of the first sample in the block
+
+static void parallelSamplerFill(parallelSampler *s, const long start) {
+    s->blockStart = start;
+    s->blockLen = ppl_min(PARALLEL_BLOCK_SAMPLES, s->nSamples - start);
+    memset(s->failed, 0, s->blockLen);
+
+#ifdef _OPENMP
+#pragma omp parallel
+    {
+        // Each thread evaluates the functions in a worker context of its own, with its own dummy variables
+        ppl_context *w = ppl_contextWorkerNew(s->c);
+        pplObj *dummy[2] = {NULL, NULL};
+        long q;
+        int a, k;
+        if (w != NULL) {
+            for (a = 0; a < s->nDummy; a++) {
+                pplObj temp;
+                ppl_contextGetVarPointer(w, s->dummyNames[a], &dummy[a], &temp); // Creates the variable
+                pplObjCpy(dummy[a], (pplObj *) ((a == 0) ? s->unitX : s->unitY), 0, dummy[a]->amMalloced, 1);
+                dummy[a]->imag = 0;
+                dummy[a]->flagComplex = 0;
+            }
+            // Give the worker private copies of the variables the functions read, so that threads do not contend
+            // to update their reference counts. If this fails, the worker reads the shared variables instead.
+            ppl_contextWorkerPrivatise(w, s->c, s->fnlist, s->fnlist_len, (const char *const *) s->dummyNames,
+                                       s->nDummy);
+        }
+
+#pragma omp for schedule(dynamic, 256)
+        for (q = 0; q < s->blockLen; q++) {
+            const long sample = s->blockStart + q;
+            int f;
+            if ((w == NULL) || cancellationFlag) {
+                s->failed[q] = 1; // Evaluated serially later, if at all
+                continue;
+            }
+            dummy[0]->real = s->rasterX[sample % s->rasterXlen];
+            if (s->nDummy > 1) dummy[1]->real = s->rasterY[sample / s->rasterXlen];
+            for (f = 0; f < s->fnlist_len; f++) {
+                const int stkLevelOld = w->stackPtr; // Stack: note its level, to discard the value afterwards
+                const pplObj *ob = ppl_expEval(w, s->fnlist[f], &k, 0, s->iterDepth);
+                // Only plain values may leave the worker; other objects (e.g. functions) could refer to its private
+                // copies of shared variables. Values which are errors, or of other types, are evaluated serially.
+                if (w->errStat.status ||
+                    ((ob->objType != PPLOBJ_NUM) && (ob->objType != PPLOBJ_BOOL) && (ob->objType != PPLOBJ_STR) &&
+                     (ob->objType != PPLOBJ_DATE) && (ob->objType != PPLOBJ_COL))) {
+                    ppl_stackClean(w, stkLevelOld); // Stack: discard anything left by the evaluation
+                    ppl_tbClear(w);
+                    discardSample(s, q, f);
+                    break;
+                }
+                pplObjCpy(&s->results[q * s->fnlist_len + f], (pplObj *) ob, 0, 0, 1);
+                ppl_stackClean(w, stkLevelOld); // Stack: discard the value, now that it has been copied
+            }
+        }
+        ppl_contextWorkerFree(w);
+    }
+#endif
+}
+
+//! parallelSamplerFree - Free the storage used to evaluate functions in parallel, including any values not used
+//! \param [in,out] s - The state of the parallel evaluation
+
+static void parallelSamplerFree(parallelSampler *s) {
+    long q;
+    if (s->results == NULL) return;
+    for (q = 0; q < PARALLEL_BLOCK_SAMPLES * s->fnlist_len; q++) ppl_garbageObject(&s->results[q]);
+    free(s->results);
+    free(s->failed);
+    s->results = NULL;
+    s->failed = NULL;
+}
+
 //! ppldata_fromFuncs - Sample a list of functions at a raster of points, applying the "using", "select" and "sort"
 //! modifiers, into a data table
 //! \param [in] c - The Pyxplot context
@@ -1525,6 +1713,8 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     char buffer[FNAME_LENGTH];
     pplObj colData[USING_ITEMS_MAX + 2];
     pplObj *ordinateVar[2], dummyTemp[2];
+    parallelSampler parallel; // The state of the evaluation of the functions on several threads at once
+    int inParallel = 0; // True if the functions are being evaluated in parallel
 
     // Init
     if (DEBUG) {
@@ -1576,6 +1766,17 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
         const int ilen = rasterXlen, i2len = sampleGrid ? rasterYlen : 1;
         int offset = 1 + (!parametric) + ((!parametric) && sampleGrid);
         long p = 0;
+
+        // If possible, the functions are evaluated in blocks of samples on several threads at once. The values are
+        // turned into a data table below, in order, exactly as if they had been evaluated there.
+        {
+            char *dummyNames[2];
+            dummyNames[0] = parametric ? (sampleGrid ? "u" : "t") : "x";
+            dummyNames[1] = parametric ? "v" : "y";
+            inParallel = parallelSamplerInit(&parallel, c, fnlist, fnlist_len, dummyNames, sampleGrid ? 2 : 1, rasterX,
+                                             rasterXlen, unitX, rasterY, rasterYlen, unitY, iterDepth);
+        }
+
         for (i2 = 0; i2 < i2len; i2++, discontinuity2 = 1)
             for (i = 0; i < ilen; i++, p++) {
                 if (cancellationFlag) goto CANCEL;
@@ -1621,33 +1822,43 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                 pplObjNum(colData + 0, 0, p, 0);
                 if (!parametric) colData[1] = *ordinateVar[0];
                 if ((!parametric) && sampleGrid) colData[2] = *ordinateVar[1];
-                for (j = 0; j < fnlist_len; j++) {
-                    const int stkLevelOld = c->stackPtr;
-                    pplObj *ob;
-                    ob = ppl_expEval(c, fnlist[j], &k, 0, iterDepth);
-                    if (c->errStat.status) {
-                        int errp = c->errStat.errPosExpr;
-                        char *errt = NULL;
-                        if (errp < 0) errp = 0;
-                        if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
-                        else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
-                        else errt = "Fail occurred.";
-                        if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
-                            ppl_snprintfTrunc(
-                                    msg, sizeof(msg),
-                                    "%s: Could not evaluate expression <%s>. The error, encountered at character position %d, was: '%s'",
-                                    buffer, fnlist[j]->ascii, errp, errt);
-                            ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
-                            ppl_errorCountCheck(&c->errcontext, *errCount, buffer, 0);
-                        }
-                        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-                        ppl_tbClear(c);
-                        *status = 1;
-                        break;
+                if (inParallel && (p >= parallel.blockStart + parallel.blockLen))
+                    parallelSamplerFill(&parallel, p); // Evaluate the functions at the next block of samples
+                if (inParallel && (!parallel.failed[p - parallel.blockStart])) {
+                    // The functions have already been evaluated in parallel: take ownership of their values
+                    pplObj *r = &parallel.results[(p - parallel.blockStart) * fnlist_len];
+                    for (j = 0; j < fnlist_len; j++) {
+                        memcpy(&colData[j + offset], &r[j], sizeof(pplObj));
+                        pplObjZom(&r[j], 0);
                     }
-                    pplObjCpy(&colData[j + offset], ob, 0, 0, 1);
-                    ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
-                }
+                } else
+                    for (j = 0; j < fnlist_len; j++) {
+                        const int stkLevelOld = c->stackPtr;
+                        pplObj *ob;
+                        ob = ppl_expEval(c, fnlist[j], &k, 0, iterDepth);
+                        if (c->errStat.status) {
+                            int errp = c->errStat.errPosExpr;
+                            char *errt = NULL;
+                            if (errp < 0) errp = 0;
+                            if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
+                            else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
+                            else errt = "Fail occurred.";
+                            if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
+                                ppl_snprintfTrunc(
+                                        msg, sizeof(msg),
+                                        "%s: Could not evaluate expression <%s>. The error, encountered at character position %d, was: '%s'",
+                                        buffer, fnlist[j]->ascii, errp, errt);
+                                ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+                                ppl_errorCountCheck(&c->errcontext, *errCount, buffer, 0);
+                            }
+                            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
+                            ppl_tbClear(c);
+                            *status = 1;
+                            break;
+                        }
+                        pplObjCpy(&colData[j + offset], ob, 0, 0, 1);
+                        ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
+                    }
                 expectedNrows = (*out)->Nrows + 1;
                 if (!(*status)) {
                     ppldata_ApplyUsingList(c, *out, usingExprs, labelExpr, selectExpr, continuity, &discontinuity2,
@@ -1679,6 +1890,9 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     }
 
 CANCEL:
+    // Free the values of any functions evaluated in parallel which were not used (e.g. if the user pressed Ctrl-C)
+    if (inParallel) parallelSamplerFree(&parallel);
+
     // If data is to be sorted, sort it now
     if ((!sampleGrid) && (sortBy != NULL)) {
         *out = ppldata_sort(c, *out, Ncols - 1, continuity == DATAFILE_CONTINUOUS);

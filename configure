@@ -273,6 +273,20 @@ else
  fi
 fi
 
+# 15b. CHECK TO SEE WHETHER THE COMPILER SUPPORTS OPENMP, WHICH IS USED TO SAMPLE FUNCTIONS ON SEVERAL CORES AT ONCE
+
+echo $ECHO_N "Checking for OpenMP            ............. $ECHO_C"
+if printf '#include <omp.h>\nint main() { return omp_get_max_threads() < 1; }\n' | gcc -fopenmp -x c - -o conf.out > conf.stdout 2> conf.stderr
+then
+ rm -f conf.*
+ echo "YES"
+ echo "OPENMP=-fopenmp" >> Makefile
+else
+ rm -f conf.*
+ echo "NO"
+ echo "OPENMP=" >> Makefile
+fi
+
 # 16. CHECK TO SEE WHETHER THIS SYSTEM HAS LIBXML2 HEADERS
 
 echo $ECHO_N "Checking for libxml2-dev       ............. $ECHO_C"

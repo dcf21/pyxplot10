@@ -1,0 +1,10 @@
+# Errors at some samples are reported exactly as when evaluating serially: the same messages, for the same samples, in
+# the same order, and with the same limit on how many are shown
+set samples 2000
+set output "out.dat"
+tabulate [-1:1] sqrt(x) + 1/(x - 0.5)
+n = 0
+foreach datum a, b in "out.dat" {
+ n++
+}
+print n

@@ -114,6 +114,10 @@ typedef struct ppl_context_struc {
     // canvas
     void *canvas_items;
 
+    // For worker contexts (see expThreadSafe.c): the private copies made of shared function descriptors
+    void **workerClones;
+    int workerNClones;
+
 } ppl_context;
 
 ppl_context *ppl_contextInit();

@@ -1,0 +1,20 @@
+# Expressions which are not safe to evaluate in parallel, e.g. because they use the random number generator or call
+# subroutines, are evaluated serially, so their results are the same as before
+set seed 7
+counter = 0
+subroutine next() {
+ global counter
+ counter = counter + 1
+ return counter
+}
+set samples 2000
+set output "out.dat"
+tabulate [0:1] random.random()
+foreach datum a, b in "out.dat" every 400 {
+ print a, " ", b
+}
+tabulate [0:1] next()
+print counter
+foreach datum a, b in "out.dat" every 500 {
+ print a, " ", b
+}

@@ -74,6 +74,8 @@ ppl_context *ppl_contextInit() {
     ppl_tbClear(out);
 
     out->canvas_items = NULL;
+    out->workerClones = NULL;
+    out->workerNClones = 0;
     out->replotFocus = -1;
     out->algebraErrPos = -1;
 

@@ -1,0 +1,12 @@
+# Sampling with physical units on the x axis, and sampling a grid for a colormap
+set samples 1500
+set output "out.dat"
+tabulate [0*unit(m):3*unit(m)] x**2 + 1*unit(m**2)
+foreach datum a, b in "out.dat" every 300 {
+ print a, " ", b
+}
+set term eps
+set output "grid.eps"
+set samples grid 60x60
+plot [-2:2][-2:2] sin(x*y) * exp(-(x**2 + y**2) / 3) with colormap
+assert os.path.exists("grid.eps")

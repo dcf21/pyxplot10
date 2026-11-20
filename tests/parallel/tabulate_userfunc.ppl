@@ -1,0 +1,13 @@
+# User-defined functions, including recursive and piecewise ones, and global variables, evaluated in parallel
+k = 3
+g(x) = x**2 / (1 + x)
+h(x)[0:10] = x
+h(x)[10:20] = 20 - x
+fact(n) = (n <= 1) ? 1 : n * fact(n - 1)
+f(x) = k * g(x) + h(x) + fact(floor(x) % 7) + phy.c / unit(m/s) * 1e-8
+set samples 3001
+set output "out.dat"
+tabulate [0:20] f(x)
+foreach datum a, b in "out.dat" every 300 {
+ print a, " ", b
+}

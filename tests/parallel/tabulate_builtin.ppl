@@ -1,0 +1,12 @@
+# Functions are sampled on several threads at once when there are enough samples. The expected output of each test in
+# this suite was recorded with OMP_NUM_THREADS=1, which makes Pyxplot evaluate everything serially, so these tests
+# check that parallel evaluation gives exactly the same results.
+set samples 5000
+set output "out.dat"
+tabulate [0:50] sin(x)*exp(-x/10) + besselJ(2, x), atan2(x, 3)
+foreach datum a, b in "out.dat" index 0 every 250 {
+ print a, " ", b
+}
+foreach datum a, b in "out.dat" index 1 every 500 {
+ print a, " ", b
+}

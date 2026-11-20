@@ -54,8 +54,8 @@ Options for a test may be given in comment lines at the top of its script, in th
 * timeout=<seconds> sets how long the test may run before it is killed (default 60).
 
 The environment is made reproducible: HOME points to an empty directory (so the user's own ~/.pyxplotrc is not
-read), the timezone is UTC, and the locale is C. Only the PATH and any sanitizer settings (ASAN_OPTIONS, LSAN_OPTIONS
-and UBSAN_OPTIONS) are passed through from the environment. Any occurrence of the path of the temporary directory in the output
+read), the timezone is UTC, and the locale is C. Only the PATH, any sanitizer settings (ASAN_OPTIONS, LSAN_OPTIONS,
+TSAN_OPTIONS and UBSAN_OPTIONS) and OMP_NUM_THREADS are passed through from the environment. Any occurrence of the path of the temporary directory in the output
 is replaced by <TMPDIR>.
 
 The following environment variables control the tests:
@@ -88,8 +88,10 @@ PYXPLOT: Final[str] = os.path.abspath(os.environ.get("PYXPLOT", os.path.join(TES
 # Default number of seconds a test may run before it is killed
 DEFAULT_TIMEOUT: Final[float] = 60
 
-# Environment variables which configure sanitizers, which are passed through to Pyxplot
-SANITIZER_VARIABLES: Final[List[str]] = ["ASAN_OPTIONS", "LSAN_OPTIONS", "UBSAN_OPTIONS"]
+# Environment variables which configure sanitizers, and the number of threads OpenMP may use, which are passed through
+# to Pyxplot. Setting OMP_NUM_THREADS=1 makes Pyxplot evaluate everything serially.
+SANITIZER_VARIABLES: Final[List[str]] = ["ASAN_OPTIONS", "LSAN_OPTIONS", "UBSAN_OPTIONS", "TSAN_OPTIONS",
+                                         "OMP_NUM_THREADS"]
 
 
 class TestRun(NamedTuple):
@@ -180,7 +182,7 @@ def run_script(script: str, options: Dict[str, str]) -> TestRun:
                                   "LANG": "C", "LC_ALL": "C", "TERM": "dumb"}
 
     # Settings for sanitizers are passed through, so that the tests can be run against a build of Pyxplot with
-    # AddressSanitizer, e.g. with ASAN_OPTIONS=detect_leaks=0:log_path=/tmp/asan
+    # AddressSanitizer, e.g. with ASAN_OPTIONS=detect_leaks=0:log_path=/tmp/asan. So is the number of threads.
     for name in SANITIZER_VARIABLES:
         if name in os.environ:
             env[name] = os.environ[name]

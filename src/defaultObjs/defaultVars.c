@@ -37,6 +37,7 @@
 
 #include "userspace/context.h"
 #include "userspace/pplObj_fns.h"
+#include "userspace/pplObjFunc.h"
 #include "userspace/pplObjUnits.h"
 
 #include "defaultObjs/defaultFuncs.h"
@@ -49,6 +50,49 @@
 #include "defaultObjs/moduleRandom.h"
 #include "defaultObjs/moduleStats.h"
 #include "defaultObjs/moduleTime.h"
+
+//! markModuleThreadUnsafe - Mark every function in a module, and in any modules it contains, as unsafe to call from
+//! several threads at once
+//! \param [in] d - The dictionary of the module's contents
+
+static void markModuleThreadUnsafe(dict *d) {
+    dictIterator *di = ppl_dictIterateInit(d);
+    char *key;
+    pplObj *item;
+    while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
+        if (item->objType == PPLOBJ_FUNC) ((pplFunc *) item->auxil)->threadSafe = 0;
+        else if (item->objType == PPLOBJ_MOD) markModuleThreadUnsafe((dict *) item->auxil);
+    }
+}
+
+//! markThreadUnsafeFuncs - Mark the built-in functions which have side effects, or which use shared state, as unsafe
+//! to call from several threads at once. Expressions which call them are evaluated serially (see expThreadSafe.c).
+//! \param [in] defaults - The default namespace
+
+static void markThreadUnsafeFuncs(dict *defaults) {
+    // Functions which run commands or other code, give access to namespaces, or perform input and output
+    static const char *const unsafe[] = {"call", "eval", "globals", "locals", "open", "texify", "texifyText", NULL};
+    // Modules whose functions all have side effects: os runs processes and touches files; random has a shared state
+    static const char *const unsafeModules[] = {"os", "random", NULL};
+    pplObj *item;
+    int i;
+    for (i = 0; unsafe[i] != NULL; i++) {
+        item = (pplObj *) ppl_dictLookup(defaults, unsafe[i]);
+        if ((item != NULL) && (item->objType == PPLOBJ_FUNC)) ((pplFunc *) item->auxil)->threadSafe = 0;
+    }
+    for (i = 0; unsafeModules[i] != NULL; i++) {
+        item = (pplObj *) ppl_dictLookup(defaults, unsafeModules[i]);
+        if ((item != NULL) && (item->objType == PPLOBJ_MOD)) markModuleThreadUnsafe((dict *) item->auxil);
+    }
+    // time.sleep() and time.sleepUntil() would block worker threads
+    item = (pplObj *) ppl_dictLookup(defaults, "time");
+    if ((item != NULL) && (item->objType == PPLOBJ_MOD)) {
+        pplObj *f = (pplObj *) ppl_dictLookup((dict *) item->auxil, "sleep");
+        if ((f != NULL) && (f->objType == PPLOBJ_FUNC)) ((pplFunc *) f->auxil)->threadSafe = 0;
+        f = (pplObj *) ppl_dictLookup((dict *) item->auxil, "sleepUntil");
+        if ((f != NULL) && (f->objType == PPLOBJ_FUNC)) ((pplFunc *) f->auxil)->threadSafe = 0;
+    }
+}
 
 //! ppl_makeDefaultVars - Populate the default namespace with Pyxplot's built-in variables, functions, types and
 //! modules (ast, colors, os, phy, random, stats, time, etc.)
@@ -853,5 +897,6 @@ void ppl_makeDefaultVars(ppl_context *out) {
                 "string(t,<s>) returns a string representation of the date object t; a format string may optionally be supplied");
     }
 
+    markThreadUnsafeFuncs(out->namespaces[0]);
     return;
 }
