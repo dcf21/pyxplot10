@@ -489,6 +489,29 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
     return;
 }
 
+//! contourProjection - The mapping from positions on the grid of samples of a contour map onto the page
+typedef struct contourProjection {
+    double xo, yo; // The position of the grid's origin on the page, in postscript points
+    double Lx, Ly; // The lengths of the grid's x and y edges on the page, in postscript points
+    double ThetaX, ThetaY; // The directions of the grid's x and y edges on the page, measured clockwise from vertical
+    int XSize, YSize; // The number of samples along each edge of the grid
+} contourProjection;
+
+//! contourToPostscript - Convert a position on the grid of samples of a contour map into a position on the page
+//! \param [in] proj - The mapping from the grid onto the page
+//! \param [in] xpos - The horizontal position on the grid, in units of samples
+//! \param [in] ypos - The vertical position on the grid, in units of samples
+//! \param [out] xps - Set to the horizontal position on the page, in postscript points
+//! \param [out] yps - Set to the vertical position on the page, in postscript points
+
+static void contourToPostscript(const contourProjection *proj, const double xpos, const double ypos, double *xps,
+                                double *yps) {
+    *xps = proj->xo + proj->Lx * xpos / (proj->XSize - 1) * sin(proj->ThetaX) +
+            proj->Ly * ypos / (proj->YSize - 1) * sin(proj->ThetaY);
+    *yps = proj->yo + proj->Lx * xpos / (proj->XSize - 1) * cos(proj->ThetaX) +
+            proj->Ly * ypos / (proj->YSize - 1) * cos(proj->ThetaY);
+}
+
 //! eps_plot_contourmap - Render a dataset as a contourmap, by resampling it onto a regular grid and tracing contours at
 //! the requested levels
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -727,12 +750,6 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     } // Finish looping over contours we are to trace
 
 GOT_CONTOURS:
-
-#define XPOS_TO_POSTSCRIPT \
-    { \
-        xps = xo + Lx * xpos / (XSize - 1) * sin(ThetaX) + Ly * ypos / (YSize - 1) * sin(ThetaY); \
-        yps = yo + Lx * xpos / (XSize - 1) * cos(ThetaX) + Ly * ypos / (YSize - 1) * cos(ThetaY); \
-    }
 
     // Add corners of plot to paths of non-closed contours
     for (cn = 0; cn < cpos; cn++)
@@ -992,13 +1009,13 @@ GOT_CONTOURS:
                 //        double xps, yps; long c=0;
                 //        xpos = clist[cn].posdata[c++];
                 //        ypos = clist[cn].posdata[c++];
-                //        XPOS_TO_POSTSCRIPT;
+                //        contourToPostscript(&proj, xpos, ypos, &xps, &yps);
                 //        fprintf(x->epsbuffer, "newpath %.2f %.2f moveto\n", xps, yps);
                 //        while (c<2*clist[cn].Nvertices_max)
                 //         {
                 //          xpos = clist[cn].posdata[c++];
                 //          ypos = clist[cn].posdata[c++];
-                //          XPOS_TO_POSTSCRIPT;
+                //          contourToPostscript(&proj, xpos, ypos, &xps, &yps);
                 //          fprintf(x->epsbuffer, "%.2f %.2f lineto\n", xps, yps);
                 //         }
                 //        fprintf(x->epsbuffer, "closepath fill\n");
@@ -1019,9 +1036,9 @@ GOT_CONTOURS:
                     double xlab, ylab, wlab, hlab;
                     double bb_top, bb_bottom, ab_left, ab_right;
                     postscriptPage *dviPage;
+                    const contourProjection proj = {xo, yo, Lx, Ly, ThetaX, ThetaY, XSize, YSize};
 
-                    xlab = xo + Lx * xlab0 / (XSize - 1) * sin(ThetaX) + Ly * ylab0 / (YSize - 1) * sin(ThetaY);
-                    ylab = yo + Lx * xlab0 / (XSize - 1) * cos(ThetaX) + Ly * ylab0 / (YSize - 1) * cos(ThetaY);
+                    contourToPostscript(&proj, xlab0, ylab0, &xlab, &ylab);
                     if (x->dvi == NULL) { continue; }
                     dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, page + 1);
                     if (dviPage == NULL) { continue; }
@@ -1051,15 +1068,16 @@ GOT_CONTOURS:
                     double xps, yps;
                     long c = 0;
                     const long n = clist[cn].Nvertices_max;
+                    const contourProjection proj = {xo, yo, Lx, Ly, ThetaX, ThetaY, XSize, YSize};
                     if (n < 1) continue;
                     xpos = clist[cn].posdata[c++];
                     ypos = clist[cn].posdata[c++];
-                    XPOS_TO_POSTSCRIPT;
+                    contourToPostscript(&proj, xpos, ypos, &xps, &yps);
                     fprintf(x->epsbuffer, "newpath %.2f %.2f moveto\n", xps, yps);
                     while (c < 2 * clist[cn].Nvertices_min) {
                         xpos = clist[cn].posdata[c++];
                         ypos = clist[cn].posdata[c++];
-                        XPOS_TO_POSTSCRIPT;
+                        contourToPostscript(&proj, xpos, ypos, &xps, &yps);
                         fprintf(x->epsbuffer, "%.2f %.2f lineto\n", xps, yps);
                     }
                     fprintf(x->epsbuffer, "%sstroke\n", clist[cn].closepath ? "closepath " : "");

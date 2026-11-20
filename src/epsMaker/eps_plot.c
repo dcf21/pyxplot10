@@ -79,6 +79,18 @@
 // wrong length, we do nothing; it will fail in due course in ppl_datafile
 // anyway. If the list is empty, we auto-generate a default list.
 
+//! addFakeUsingItem - Append an expression to the list of "using" expressions for a plot item, to read an extra
+//! column which sets a plot style modifier
+//! \param [in,out] usingList - The list of "using" expressions
+//! \param [in,out] NExpect - The number of expressions in the list; incremented
+//! \param [out] Nusing - Set to the new number of expressions in the list
+//! \param [in] expr - The expression to append (a temporary copy is stored)
+
+static void addFakeUsingItem(pplExpr ***usingList, int *NExpect, int *Nusing, const pplExpr *expr) {
+    (*usingList)[(*NExpect)++] = pplExpr_tmpcpy(expr);
+    *Nusing = *NExpect;
+}
+
 //! eps_plot_AddUsingItemsForWithWords - Extend the list of "using" expressions for a plot item with additional columns,
 //! for any plot style modifiers which are given as expressions to be evaluated for each data point (e.g. "with color
 //! $3")
@@ -139,50 +151,49 @@ int eps_plot_AddUsingItemsForWithWords(ppl_context *c, const withWords *ww, int 
 
     if (ww->linespoints == SW_STYLE_CONTOURMAP) return 0; // Contourplot evaluate expressions in terms of c1
 
-#define ADD_FAKE_USING_ITEM(X) \
-    { \
-        (*usingList)[(*NExpect)++] = pplExpr_tmpcpy(X); \
-        *Nusing = *NExpect; \
-    }
-
     // Now cycle through all with_words which can be item-specific
-    if (ww->EXPlinetype != NULL) ADD_FAKE_USING_ITEM(ww->EXPlinetype);
-    if (ww->EXPlinewidth != NULL) ADD_FAKE_USING_ITEM(ww->EXPlinewidth);
-    if (ww->EXPpointlinewidth != NULL) ADD_FAKE_USING_ITEM(ww->EXPpointlinewidth);
-    if (ww->EXPpointsize != NULL) ADD_FAKE_USING_ITEM(ww->EXPpointsize);
-    if (ww->EXPpointtype != NULL) ADD_FAKE_USING_ITEM(ww->EXPpointtype);
+    if (ww->EXPlinetype != NULL) addFakeUsingItem(usingList, NExpect, Nusing, ww->EXPlinetype);
+    if (ww->EXPlinewidth != NULL) addFakeUsingItem(usingList, NExpect, Nusing, ww->EXPlinewidth);
+    if (ww->EXPpointlinewidth != NULL) addFakeUsingItem(usingList, NExpect, Nusing, ww->EXPpointlinewidth);
+    if (ww->EXPpointsize != NULL) addFakeUsingItem(usingList, NExpect, Nusing, ww->EXPpointsize);
+    if (ww->EXPpointtype != NULL) addFakeUsingItem(usingList, NExpect, Nusing, ww->EXPpointtype);
     if (ww->EXPcolor != NULL) {
-        ADD_FAKE_USING_ITEM(ww->EXPcolor);
+        addFakeUsingItem(usingList, NExpect, Nusing, ww->EXPcolor);
         (*NObjs)++;
     }
     if (ww->EXPfillcolor != NULL) {
-        ADD_FAKE_USING_ITEM(ww->EXPfillcolor);
+        addFakeUsingItem(usingList, NExpect, Nusing, ww->EXPfillcolor);
         (*NObjs)++;
     }
 
     return 0;
 }
 
-#define PROJ_DBL \
-    { \
-        dbl = DataRow[i--]; \
-        if (i < 0) i = 0; \
-        if (!gsl_finite(dbl)) dbl = 0.0; \
-    }
+//! nextColumnDouble - Read the next of the extra data columns which set plot style modifiers, working backwards
+//! from the last column
+//! \param [in] DataRow - The numerical columns of the data point
+//! \param [in,out] i - The number of the column to read; decremented (but not below zero)
+//! \return The value in the column, or zero if it is not finite
 
-#define PROJ0_1 \
-    { \
-        PROJ_DBL; \
-        if (dbl < 0.0) dbl = 0.0; \
-        if (dbl > 1.0) dbl = 1.0; \
-    }
+static double nextColumnDouble(const double *DataRow, int *i) {
+    double dbl = DataRow[(*i)--];
+    if (*i < 0) *i = 0;
+    if (!gsl_finite(dbl)) dbl = 0.0;
+    return dbl;
+}
 
-#define PROJ_INT \
-    { \
-        PROJ_DBL; \
-        if (dbl < INT_MIN) dbl = INT_MIN + 1; \
-        if (dbl > INT_MAX) dbl = INT_MAX - 1; \
-    }
+//! nextColumnInt - Read the next of the extra data columns which set plot style modifiers, clamping it to the range
+//! of an int
+//! \param [in] DataRow - The numerical columns of the data point
+//! \param [in,out] i - The number of the column to read; decremented (but not below zero)
+//! \return The value in the column, or zero if it is not finite
+
+static double nextColumnInt(const double *DataRow, int *i) {
+    double dbl = nextColumnDouble(DataRow, i);
+    if (dbl < INT_MIN) dbl = INT_MIN + 1;
+    if (dbl > INT_MAX) dbl = INT_MAX - 1;
+    return dbl;
+}
 
 //! eps_plot_WithWordsFromUsingItems - Set plot style modifiers which are given as expressions (e.g. "with color $3")
 //! from the extra data columns added by eps_plot_AddUsingItemsForWithWords(), for a single data point
@@ -212,28 +223,28 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
     }
 
     if (ww->EXPpointtype != NULL) {
-        PROJ_INT;
+        dbl = nextColumnInt(DataRow, &i);
         ww->USEpointtype = 1;
         ww->pointtype = (int) dbl;
         ww->AUTOpointtype = 0;
     }
     if (ww->EXPpointsize != NULL) {
-        PROJ_DBL;
+        dbl = nextColumnDouble(DataRow, &i);
         ww->USEpointsize = 1;
         ww->pointsize = dbl;
     }
     if (ww->EXPpointlinewidth != NULL) {
-        PROJ_DBL;
+        dbl = nextColumnDouble(DataRow, &i);
         ww->USEpointlinewidth = 1;
         ww->pointlinewidth = dbl;
     }
     if (ww->EXPlinewidth != NULL) {
-        PROJ_DBL;
+        dbl = nextColumnDouble(DataRow, &i);
         ww->USElinewidth = 1;
         ww->linewidth = dbl;
     }
     if (ww->EXPlinetype != NULL) {
-        PROJ_INT;
+        dbl = nextColumnInt(DataRow, &i);
         ww->USElinetype = 1;
         ww->linetype = (int) dbl;
         ww->AUTOlinetype = 0;
@@ -242,17 +253,28 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
     return;
 }
 
-#define WWCUID(X) \
-    if (!firstValues[i].dimensionless) { \
-        ppl_snprintfTrunc( \
-                msg, sizeof(msg), \
-                "The expression specified for the %s should have been dimensionless, but instead had units of <%s>. Cannot plot this dataset.", \
-                X, ppl_printUnit(c, firstValues + i, NULL, NULL, 0, 1, 0)); \
-        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
-        return 1; \
-    } \
-    i--; \
-    if (i < 0) i = 0;
+//! checkColumnDimensionless - Check that one of the extra data columns which set plot style modifiers is
+//! dimensionless, reporting an error if not
+//! \param [in] c - The Pyxplot context
+//! \param [in] firstValues - The values in the first row of data
+//! \param [in,out] i - The number of the column to check; decremented (but not below zero)
+//! \param [in] name - The name of the plot style modifier, used in error messages, e.g. "point size"
+//! \return Zero if the column is dimensionless, or one if an error was reported
+
+static int checkColumnDimensionless(ppl_context *c, pplObj *firstValues, int *i, const char *name) {
+    if (!firstValues[*i].dimensionless) {
+        char msg[PPL_MSG_LENGTH];
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "The expression specified for the %s should have been dimensionless, but instead had units "
+                          "of <%s>. Cannot plot this dataset.",
+                          name, ppl_printUnit(c, firstValues + *i, NULL, NULL, 0, 1, 0));
+        ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+        return 1;
+    }
+    (*i)--;
+    if (*i < 0) *i = 0;
+    return 0;
+}
 
 //! eps_plot_WithWordsCheckUsingItemsDimLess - Check that the extra data columns used to set plot style modifiers are
 //! dimensionless, reporting an error if not
@@ -266,16 +288,25 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
 
 int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, const withWords *ww, pplObj *firstValues,
                                              const int Ncolumns, const int Ncolumns_obj, int *NDataCols) {
-    char msg[PPL_MSG_LENGTH];
     int i = Ncolumns - 1;
 
     if (ww->linespoints == SW_STYLE_CONTOURMAP) return 0; // Contourplot evaluate expressions in terms of c1
 
-    if (ww->EXPpointtype != NULL) { WWCUID("point type"); }
-    if (ww->EXPpointsize != NULL) { WWCUID("point size"); }
-    if (ww->EXPpointlinewidth != NULL) { WWCUID("point line width"); }
-    if (ww->EXPlinewidth != NULL) { WWCUID("line width"); }
-    if (ww->EXPlinetype != NULL) { WWCUID("line type"); }
+    if (ww->EXPpointtype != NULL) {
+        if (checkColumnDimensionless(c, firstValues, &i, "point type")) return 1;
+    }
+    if (ww->EXPpointsize != NULL) {
+        if (checkColumnDimensionless(c, firstValues, &i, "point size")) return 1;
+    }
+    if (ww->EXPpointlinewidth != NULL) {
+        if (checkColumnDimensionless(c, firstValues, &i, "point line width")) return 1;
+    }
+    if (ww->EXPlinewidth != NULL) {
+        if (checkColumnDimensionless(c, firstValues, &i, "line width")) return 1;
+    }
+    if (ww->EXPlinetype != NULL) {
+        if (checkColumnDimensionless(c, firstValues, &i, "line type")) return 1;
+    }
     if (NDataCols != NULL)
         *NDataCols = i + 1; // The number of columns which contain data which is not from with .... expressions
     return 0;
