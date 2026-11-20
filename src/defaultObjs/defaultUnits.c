@@ -30,6 +30,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf.h>
 
+#include "defaultObjs/physConstants.h"
 #include "coreUtils/errorReport.h"
 #include "stringTools/asciidouble.h"
 #include "coreUtils/list.h"
@@ -409,7 +410,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFs = "astronomical_unit";
     unit_database[unit_pos].nameFp = "astronomical_units";
     unit_database[unit_pos].quantity = "length";
-    unit_database[unit_pos].multiplier = GSL_CONST_MKSA_ASTRONOMICAL_UNIT;
+    unit_database[unit_pos].multiplier = PPL_CONST_AU;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 1;
     unit_pos++;
 
@@ -421,7 +422,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "light_years";
     unit_database[unit_pos].maxPrefix = 9;
     unit_database[unit_pos].quantity = "length";
-    unit_database[unit_pos].multiplier = GSL_CONST_MKSA_LIGHT_YEAR;
+    unit_database[unit_pos].multiplier = PPL_CONST_LIGHT_YEAR;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 1;
     unit_pos++;
 
@@ -432,7 +433,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFs = "parsec";
     unit_database[unit_pos].nameFp = "parsecs";
     unit_database[unit_pos].quantity = "length";
-    unit_database[unit_pos].multiplier = GSL_CONST_MKSA_PARSEC;
+    unit_database[unit_pos].multiplier = PPL_CONST_PARSEC;
     unit_database[unit_pos].maxPrefix = 9;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 1;
     unit_pos++;
@@ -445,7 +446,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "solar_radii";
     unit_database[unit_pos].alt1 = "Rsolar";
     unit_database[unit_pos].quantity = "length";
-    unit_database[unit_pos].multiplier = 6.955e8;
+    unit_database[unit_pos].multiplier = PPL_CONST_R_SUN;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 1;
     unit_pos++;
 
@@ -809,7 +810,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "solar_masses";
     unit_database[unit_pos].alt1 = "Msolar";
     unit_database[unit_pos].quantity = "mass";
-    unit_database[unit_pos].multiplier = NASA_MG_SUN / NASA_G;
+    unit_database[unit_pos].multiplier = PPL_CONST_M_SUN;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_pos++;
 
@@ -820,7 +821,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFs = "earth_mass";
     unit_database[unit_pos].nameFp = "earth_masses";
     unit_database[unit_pos].quantity = "mass";
-    unit_database[unit_pos].multiplier = 5.9742e24;
+    unit_database[unit_pos].multiplier = PPL_CONST_M_EARTH;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_pos++;
 
@@ -833,7 +834,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].alt1 = "Mjove";
     unit_database[unit_pos].alt2 = "Mjovian";
     unit_database[unit_pos].quantity = "mass";
-    unit_database[unit_pos].multiplier = 1.8986e27;
+    unit_database[unit_pos].multiplier = PPL_CONST_M_JUPITER;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_pos++;
 
@@ -1851,7 +1852,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFs = "electronvolt";
     unit_database[unit_pos].nameFp = "electronvolts";
     unit_database[unit_pos].quantity = "energy";
-    unit_database[unit_pos].multiplier = GSL_CONST_MKSA_ELECTRON_VOLT;
+    unit_database[unit_pos].multiplier = PPL_CONST_EV;
     unit_database[unit_pos].minPrefix = -24;
     unit_database[unit_pos].maxPrefix = 24;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
@@ -1866,7 +1867,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFs = "billion_electronvolts";
     unit_database[unit_pos].nameFp = "billion_electronvolts";
     unit_database[unit_pos].quantity = "energy";
-    unit_database[unit_pos].multiplier = 1e9 * GSL_CONST_MKSA_ELECTRON_VOLT;
+    unit_database[unit_pos].multiplier = 1e9 * PPL_CONST_EV;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 2;
     unit_database[unit_pos].exponent[UNIT_TIME] = -2;
@@ -1978,7 +1979,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "solar_luminosities";
     unit_database[unit_pos].alt1 = "Lsolar";
     unit_database[unit_pos].quantity = "power";
-    unit_database[unit_pos].multiplier = 3.839e26;
+    unit_database[unit_pos].multiplier = PPL_CONST_L_SUN;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 2;
     unit_database[unit_pos].exponent[UNIT_TIME] = -3;
@@ -2275,7 +2276,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_lengths";
     unit_database[unit_pos].quantity = "length";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 1.61625281e-35;
+    unit_database[unit_pos].multiplier = ppl_constPlanckLength();
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 1;
     unit_pos++;
 
@@ -2287,7 +2288,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_masses";
     unit_database[unit_pos].quantity = "mass";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 2.1764411e-8;
+    unit_database[unit_pos].multiplier = ppl_constPlanckMass();
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_pos++;
 
@@ -2299,7 +2300,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_times";
     unit_database[unit_pos].quantity = "time";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 5.3912427e-44;
+    unit_database[unit_pos].multiplier = ppl_constPlanckTime();
     unit_database[unit_pos].exponent[UNIT_TIME] = 1;
     unit_pos++;
 
@@ -2311,7 +2312,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_charges";
     unit_database[unit_pos].quantity = "charge";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 1.87554587047e-18;
+    unit_database[unit_pos].multiplier = ppl_constPlanckCharge();
     unit_database[unit_pos].exponent[UNIT_CURRENT] = 1;
     unit_database[unit_pos].exponent[UNIT_TIME] = 1;
     unit_pos++;
@@ -2324,7 +2325,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_temperature";
     unit_database[unit_pos].quantity = "temperature";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 1.41678571e32;
+    unit_database[unit_pos].multiplier = ppl_constPlanckTemperature();
     unit_database[unit_pos].exponent[UNIT_TEMPERATURE] = 1;
     unit_pos++;
 
@@ -2336,7 +2337,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_momentum";
     unit_database[unit_pos].quantity = "momentum";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 6.5248018674330712229902929;
+    unit_database[unit_pos].multiplier = ppl_constPlanckMass() * PPL_CONST_C;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 1;
     unit_database[unit_pos].exponent[UNIT_TIME] = -1;
@@ -2350,7 +2351,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_energy";
     unit_database[unit_pos].quantity = "energy";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 1956085069.7617356777191162109375;
+    unit_database[unit_pos].multiplier = ppl_constPlanckMass() * PPL_CONST_C * PPL_CONST_C;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 2;
     unit_database[unit_pos].exponent[UNIT_TIME] = -2;
@@ -2364,7 +2365,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_force";
     unit_database[unit_pos].quantity = "force";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 1.2102593465942594902618273e+44;
+    unit_database[unit_pos].multiplier = pow(PPL_CONST_C, 4) / PPL_CONST_G;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 1;
     unit_database[unit_pos].exponent[UNIT_TIME] = -2;
@@ -2378,7 +2379,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_power";
     unit_database[unit_pos].quantity = "power";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 3.6282637948422090509290910e+52;
+    unit_database[unit_pos].multiplier = pow(PPL_CONST_C, 5) / PPL_CONST_G;
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 2;
     unit_database[unit_pos].exponent[UNIT_TIME] = -3;
@@ -2392,7 +2393,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_current";
     unit_database[unit_pos].quantity = "current";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 3.4788748621352181073707008e+25;
+    unit_database[unit_pos].multiplier = ppl_constPlanckCharge() / ppl_constPlanckTime();
     unit_database[unit_pos].exponent[UNIT_CURRENT] = 1;
     unit_pos++;
 
@@ -2404,7 +2405,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].nameFp = "planck_voltage";
     unit_database[unit_pos].quantity = "potential";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 1.0429417379546963190438953e+27;
+    unit_database[unit_pos].multiplier = ppl_constPlanckMass() * PPL_CONST_C * PPL_CONST_C / ppl_constPlanckCharge();
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 2;
     unit_database[unit_pos].exponent[UNIT_TIME] = -3;
@@ -2420,7 +2421,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].alt1 = "planck_impedence"; // Misspelling accepted by Pyxplot 0.9 and earlier
     unit_database[unit_pos].quantity = "resistance";
     unit_database[unit_pos].planck = 1;
-    unit_database[unit_pos].multiplier = 2.9979282937316497736901511e+01;
+    unit_database[unit_pos].multiplier = 1 / (4 * M_PI * PPL_CONST_EPSILON_0 * PPL_CONST_C);
     unit_database[unit_pos].exponent[UNIT_MASS] = 1;
     unit_database[unit_pos].exponent[UNIT_LENGTH] = 2;
     unit_database[unit_pos].exponent[UNIT_TIME] = -3;

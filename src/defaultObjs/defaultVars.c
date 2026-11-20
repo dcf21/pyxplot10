@@ -27,6 +27,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf.h>
 
+#include "defaultObjs/physConstants.h"
 #include "coreUtils/errorReport.h"
 #include "coreUtils/dict.h"
 
@@ -196,79 +197,79 @@ void ppl_makeDefaultVars(ppl_context *out) {
         // phy module
         ppl_dictAppendCpy(d, "phy", pplObjModule(&m, 1, 1, 1), sizeof(v));
         d2 = (dict *) m.auxil;
-        pplObjNum(&v, 1, GSL_CONST_MKSA_SPEED_OF_LIGHT, 0);
+        pplObjNum(&v, 1, PPL_CONST_C, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = 1;
         v.exponent[UNIT_TIME] = -1;
         ppl_dictAppendCpy(d2, "c", (void *) &v, sizeof(v)); // Speed of light
-        pplObjNum(&v, 1, GSL_CONST_MKSA_VACUUM_PERMEABILITY, 0);
+        pplObjNum(&v, 1, PPL_CONST_MU_0, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = 1;
         v.exponent[UNIT_MASS] = 1;
         v.exponent[UNIT_TIME] = -2;
         v.exponent[UNIT_CURRENT] = -2;
         ppl_dictAppendCpy(d2, "mu_0", (void *) &v, sizeof(v)); // The permeability of free space
-        pplObjNum(&v, 1, GSL_CONST_MKSA_VACUUM_PERMITTIVITY, 0);
+        pplObjNum(&v, 1, PPL_CONST_EPSILON_0, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = -3;
         v.exponent[UNIT_MASS] = -1;
         v.exponent[UNIT_TIME] = 4;
         v.exponent[UNIT_CURRENT] = 2;
         ppl_dictAppendCpy(d2, "epsilon_0", (void *) &v, sizeof(v)); // The permittivity of free space
-        pplObjNum(&v, 1, GSL_CONST_MKSA_ELECTRON_CHARGE, 0);
+        pplObjNum(&v, 1, PPL_CONST_Q, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_CURRENT] = 1;
         v.exponent[UNIT_TIME] = 1;
         ppl_dictAppendCpy(d2, "q", (void *) &v, sizeof(v)); // The fundamental charge
-        pplObjNum(&v, 1, GSL_CONST_MKSA_PLANCKS_CONSTANT_H, 0);
+        pplObjNum(&v, 1, PPL_CONST_H, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_MASS] = 1;
         v.exponent[UNIT_LENGTH] = 2;
         v.exponent[UNIT_TIME] = -1;
         ppl_dictAppendCpy(d2, "h", (void *) &v, sizeof(v)); // The Planck constant
-        v.real = GSL_CONST_MKSA_PLANCKS_CONSTANT_HBAR;
+        v.real = PPL_CONST_HBAR;
         ppl_dictAppendCpy(d2, "hbar", (void *) &v, sizeof(v)); // The Planck constant / 2pi
-        pplObjNum(&v, 1, GSL_CONST_NUM_AVOGADRO, 0);
+        pplObjNum(&v, 1, PPL_CONST_NA, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_MOLE] = -1;
         ppl_dictAppendCpy(d2, "NA", (void *) &v, sizeof(v)); // The Avogadro constant
-        pplObjNum(&v, 1, 3.839e26, 0);
+        pplObjNum(&v, 1, PPL_CONST_L_SUN, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_MASS] = 1;
         v.exponent[UNIT_LENGTH] = 2;
         v.exponent[UNIT_TIME] = -3;
         ppl_dictAppendCpy(d2, "Lsun", (void *) &v, sizeof(v)); // The solar luminosity
-        pplObjNum(&v, 1, GSL_CONST_MKSA_UNIFIED_ATOMIC_MASS, 0);
+        pplObjNum(&v, 1, PPL_CONST_M_U, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_MASS] = 1;
         ppl_dictAppendCpy(d2, "m_u", (void *) &v, sizeof(v)); // The universal mass constant
-        v.real = GSL_CONST_MKSA_MASS_ELECTRON;
+        v.real = PPL_CONST_M_E;
         ppl_dictAppendCpy(d2, "m_e", (void *) &v, sizeof(v)); // The electron mass
-        v.real = GSL_CONST_MKSA_MASS_PROTON;
+        v.real = PPL_CONST_M_P;
         ppl_dictAppendCpy(d2, "m_p", (void *) &v, sizeof(v)); // The proton mass
-        v.real = GSL_CONST_MKSA_MASS_NEUTRON;
+        v.real = PPL_CONST_M_N;
         ppl_dictAppendCpy(d2, "m_n", (void *) &v, sizeof(v)); // The neutron mass
-        v.real = GSL_CONST_MKSA_MASS_MUON;
+        v.real = PPL_CONST_M_MUON;
         ppl_dictAppendCpy(d2, "m_muon", (void *) &v, sizeof(v)); // The muon mass
-        v.real = NASA_MG_SUN / NASA_G;
+        v.real = PPL_CONST_M_SUN;
         ppl_dictAppendCpy(d2, "Msun", (void *) &v, sizeof(v)); // The solar mass
-        pplObjNum(&v, 1, GSL_CONST_MKSA_RYDBERG / GSL_CONST_MKSA_SPEED_OF_LIGHT / GSL_CONST_MKSA_PLANCKS_CONSTANT_H, 0);
+        pplObjNum(&v, 1, PPL_CONST_RYDBERG, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = -1;
         ppl_dictAppendCpy(d2, "Ry", (void *) &v, sizeof(v)); // The Rydberg constant
-        pplObjNum(&v, 1, GSL_CONST_NUM_FINE_STRUCTURE, 0);
+        pplObjNum(&v, 1, PPL_CONST_ALPHA, 0);
         v.dimensionless = 1;
         ppl_dictAppendCpy(d2, "alpha", (void *) &v, sizeof(v)); // The fine structure constant
-        pplObjNum(&v, 1, 6.955e8, 0);
+        pplObjNum(&v, 1, PPL_CONST_R_SUN, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = 1;
         ppl_dictAppendCpy(d2, "Rsun", (void *) &v, sizeof(v)); // The solar radius
-        pplObjNum(&v, 1, GSL_CONST_MKSA_BOHR_MAGNETON, 0);
+        pplObjNum(&v, 1, PPL_CONST_MU_B, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = 2;
         v.exponent[UNIT_CURRENT] = 1;
         ppl_dictAppendCpy(d2, "mu_b", (void *) &v, sizeof(v)); // The Bohr magneton
-        pplObjNum(&v, 1, GSL_CONST_MKSA_MOLAR_GAS, 0);
+        pplObjNum(&v, 1, PPL_CONST_R, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_MASS] = 1;
         v.exponent[UNIT_LENGTH] = 2;
@@ -276,7 +277,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         v.exponent[UNIT_TEMPERATURE] = -1;
         v.exponent[UNIT_MOLE] = -1;
         ppl_dictAppendCpy(d2, "R", (void *) &v, sizeof(v)); // The gas constant
-        pplObjNum(&v, 1, GSL_CONST_MKSA_BOLTZMANN, 0);
+        pplObjNum(&v, 1, PPL_CONST_KB, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_MASS] = 1;
         v.exponent[UNIT_LENGTH] = 2;
@@ -287,19 +288,19 @@ void ppl_makeDefaultVars(ppl_context *out) {
         v.exponent[UNIT_MASS] = 1;
         v.exponent[UNIT_LENGTH] = 2;
         v.exponent[UNIT_TIME] = -2;
-        pplObjNum(&v, 1, GSL_CONST_MKSA_STEFAN_BOLTZMANN_CONSTANT, 0);
+        pplObjNum(&v, 1, ppl_constSigma(), 0);
         v.dimensionless = 0;
         v.exponent[UNIT_MASS] = 1;
         v.exponent[UNIT_TIME] = -3;
         v.exponent[UNIT_TEMPERATURE] = -4;
         ppl_dictAppendCpy(d2, "sigma", (void *) &v, sizeof(v)); // The Stefan-Boltzmann constant
-        pplObjNum(&v, 1, NASA_G, 0);
+        pplObjNum(&v, 1, PPL_CONST_G, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = 3;
         v.exponent[UNIT_TIME] = -2;
         v.exponent[UNIT_MASS] = -1;
         ppl_dictAppendCpy(d2, "G", (void *) &v, sizeof(v)); // The gravitational constant
-        pplObjNum(&v, 1, GSL_CONST_MKSA_GRAV_ACCEL, 0);
+        pplObjNum(&v, 1, PPL_CONST_GRAV_ACC, 0);
         v.dimensionless = 0;
         v.exponent[UNIT_LENGTH] = 1;
         v.exponent[UNIT_TIME] = -2;

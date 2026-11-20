@@ -1,0 +1,28 @@
+# Before Pyxplot 0.10.0, physical constants took values from CODATA 2006 or earlier, and G from 1986
+# Values below are CODATA 2022, exact SI 2019 definitions, and IAU 2015 nominal solar values
+close(a, b) = abs(a/b - 1) < 1e-9
+assert close(phy.G, 6.67430e-11*unit(m**3/kg/s**2))
+assert close(phy.h, 6.62607015e-34*unit(J*s))
+assert close(phy.hbar, 6.62607015e-34*unit(J*s)/(2*pi))
+assert close(phy.kB, 1.380649e-23*unit(J/K))
+assert close(phy.NA, 6.02214076e23*unit(mol**-1))
+assert close(phy.q, 1.602176634e-19*unit(C))
+assert close(phy.R, 6.02214076e23*1.380649e-23*unit(J/K/mol))
+assert close(phy.epsilon_0, 8.8541878188e-12*unit(F/m))
+assert close(phy.mu_0, 1.25663706127e-6*unit(N/A**2))
+assert close(phy.alpha, 7.2973525643e-3)
+assert close(phy.m_e, 9.1093837139e-31*unit(kg))
+assert close(phy.m_p, 1.67262192595e-27*unit(kg))
+assert close(phy.m_n, 1.67492750056e-27*unit(kg))
+assert close(phy.m_u, 1.66053906892e-27*unit(kg))
+assert close(phy.mu_b, 9.2740100657e-24*unit(J/T))
+assert close(phy.Ry, 10973731.568157*unit(m**-1))
+assert close(phy.sigma, 5.670374419e-8*unit(W/m**2/K**4))
+assert close(phy.Lsun, 3.828e26*unit(W))
+assert close(phy.Rsun, 6.957e8*unit(m))
+assert close(phy.Msun, 1.3271244e20/6.67430e-11*unit(kg))
+assert close(unit(AU), 149597870700*unit(m))
+assert close(unit(eV), 1.602176634e-19*unit(J))
+assert abs(unit(L_planck)/(1.616255e-35*unit(m)) - 1) < 1e-5
+assert abs(unit(M_planck)/(2.176434e-8*unit(kg)) - 1) < 1e-5
+assert close(unit(Z_planck), 1/(4*pi*phy.epsilon_0*phy.c))

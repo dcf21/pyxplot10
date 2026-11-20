@@ -29,6 +29,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_multimin.h>
 
+#include "defaultObjs/physConstants.h"
 #include "coreUtils/dict.h"
 
 #include "settings/settings.h"
@@ -120,7 +121,7 @@ double Lcdm_DA(const double z, const double H, const double OmegaM, const double
     ws = NULL;
 
     if ((result <= 0) || (error > result * 0.01)) return GSL_NAN; // Something went wrong
-    return (GSL_CONST_MKSA_SPEED_OF_LIGHT / H) * result / (1 + z);
+    return (PPL_CONST_C / H) * result / (1 + z);
 }
 
 //! Lcdm_t_from_z - Compute the age of the Universe at a given redshift in a Lambda-CDM cosmology
@@ -219,7 +220,7 @@ static int checkLcdmInputs(pplFuncCall *f, const int h0Index, const char *h0Posi
     pplObj *in = f->in;
     if (ppl_funcCheckUnit(f, &in[h0Index], h0Position, "a recession velocity per unit distance", UNIT_TIME, -1))
         return 1;
-    if (in[h0Index].dimensionless) in[h0Index].real *= 1e3 / (GSL_CONST_MKSA_PARSEC * 1e6); // From km/s/Mpc
+    if (in[h0Index].dimensionless) in[h0Index].real *= 1e3 / (PPL_CONST_PARSEC * 1e6); // From km/s/Mpc
     if (!(in[h0Index + 1].dimensionless && in[h0Index + 2].dimensionless)) {
         *f->status = 1;
         *f->errType = ERR_UNIT;

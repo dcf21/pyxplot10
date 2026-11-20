@@ -31,6 +31,7 @@
 #include <gsl/gsl_const_num.h>
 #include <gsl/gsl_math.h>
 
+#include "defaultObjs/physConstants.h"
 #include "coreUtils/dict.h"
 
 #include "settings/settings.h"
@@ -71,8 +72,8 @@ void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status,
     OUTPUT.exponent[UNIT_MASS] = 1;
     OUTPUT.exponent[UNIT_TIME] = -2;
     OUTPUT.exponent[UNIT_ANGLE] = -2;
-    OUTPUT.real = 2 * GSL_CONST_MKSA_PLANCKS_CONSTANT_H / pow(GSL_CONST_MKSA_SPEED_OF_LIGHT, 2) * pow(in[0].real, 3) /
-            expm1(GSL_CONST_MKSA_PLANCKS_CONSTANT_H * in[0].real / GSL_CONST_MKSA_BOLTZMANN / kelvin.real);
+    OUTPUT.real = 2 * PPL_CONST_H / pow(PPL_CONST_C, 2) * pow(in[0].real, 3) /
+            expm1(PPL_CONST_H * in[0].real / PPL_CONST_KB / kelvin.real);
     if (ppl_funcCheckOutput(&call)) return;
 }
 
@@ -100,6 +101,6 @@ void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *stat
     OUTPUT.dimensionless = 0;
     OUTPUT.exponent[UNIT_TIME] = -1;
     // Wien displacement law: the peak is at h nu / kT = x, the solution of 3(1 - exp(-x)) = x
-    OUTPUT.real = 2.821439372122079 * GSL_CONST_MKSA_BOLTZMANN / GSL_CONST_MKSA_PLANCKS_CONSTANT_H * kelvin.real;
+    OUTPUT.real = 2.821439372122079 * PPL_CONST_KB / PPL_CONST_H * kelvin.real;
     if (ppl_funcCheckOutput(&call)) return;
 }

@@ -1,0 +1,8 @@
+set paperSize        "a4"                     # The current papersize for postscript output (210 mm, 297 mm).
+
+set paperSize        "a0"                     # The current papersize for postscript output (841 mm, 1.189 m).
+
+set paperSize        "c4"                     # The current papersize for postscript output (229 mm, 324 mm).
+
+set paperSize        "japanese_b5"            # The current papersize for postscript output (182 mm, 257 mm).
+

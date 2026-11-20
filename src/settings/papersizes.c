@@ -65,54 +65,73 @@ PaperSize PaperSizeList[129] = {{"crown", 508, 381},
                                 {"END", 0, 0}};
 
 
+//! Sizes 0-10 of each series of paper sizes, in mm (width, height). The ISO A, B and C series are as given in ISO 216
+//! and ISO 269, the Japanese B series in JIS P 0138, and the Swedish D-H series in SIS 014711. The H series is not
+//! defined by SIS 014711, but is the conventional extension of it. The dimensions are listed rather than computed,
+//! because the standards round each size to whole millimetres.
+
+typedef struct PaperSeries {
+    const char *name;
+    int size[11][2];
+} PaperSeries;
+
+static const PaperSeries PaperSeriesList[] = {
+        {"a",
+         {{841, 1189}, {594, 841}, {420, 594}, {297, 420}, {210, 297}, {148, 210},
+          {105, 148}, {74, 105}, {52, 74}, {37, 52}, {26, 37}}},
+        {"b",
+         {{1000, 1414}, {707, 1000}, {500, 707}, {353, 500}, {250, 353}, {176, 250},
+          {125, 176}, {88, 125}, {62, 88}, {44, 62}, {31, 44}}},
+        {"c",
+         {{917, 1297}, {648, 917}, {458, 648}, {324, 458}, {229, 324}, {162, 229},
+          {114, 162}, {81, 114}, {57, 81}, {40, 57}, {28, 40}}},
+        {"japanese_b",
+         {{1030, 1456}, {728, 1030}, {515, 728}, {364, 515}, {257, 364}, {182, 257},
+          {128, 182}, {91, 128}, {64, 91}, {45, 64}, {32, 45}}},
+        {"swedish_d",
+         {{1091, 1542}, {771, 1091}, {545, 771}, {386, 545}, {273, 386}, {193, 273},
+          {136, 193}, {96, 136}, {68, 96}, {48, 68}, {34, 48}}},
+        {"swedish_e",
+         {{878, 1242}, {621, 878}, {439, 621}, {310, 439}, {220, 310}, {155, 220},
+          {110, 155}, {78, 110}, {55, 78}, {39, 55}, {27, 39}}},
+        {"swedish_f",
+         {{1044, 1477}, {738, 1044}, {522, 738}, {369, 522}, {261, 369}, {185, 261},
+          {131, 185}, {92, 131}, {65, 92}, {46, 65}, {33, 46}}},
+        {"swedish_g",
+         {{958, 1354}, {677, 958}, {479, 677}, {339, 479}, {239, 339}, {169, 239},
+          {120, 169}, {85, 120}, {60, 85}, {42, 60}, {30, 42}}},
+        {"swedish_h",
+         {{1139, 1610}, {805, 1139}, {569, 805}, {403, 569}, {285, 403}, {201, 285},
+          {142, 201}, {101, 142}, {71, 101}, {50, 71}, {36, 50}}},
+        {NULL, {{0, 0}}}};
+
 //! ppl_PaperSizeInit - Populate the table of named paper sizes, including the ISO A, B and C series and the Swedish
 //! extensions to them
 
 void ppl_PaperSizeInit() {
-    double height, width;
-    double height2, width2;
     int pos, i, j;
-
-    static char *SeriesNames[] = {"a", "swedish_e", "c", "swedish_g", "b", "swedish_f", "swedish_d", "swedish_h"};
 
     for (pos = 0; (strcmp(PaperSizeList[pos].name, "END") != 0); pos++);
 
     strcpy(PaperSizeList[pos].name, "4A0");
-    height = sqrt(2) * sqrt(4e6 / sqrt(2)); // 4A0 has area four square metres
-    width = sqrt(4e6 / sqrt(2));
-    PaperSizeList[pos].width = width;
-    PaperSizeList[pos].height = height;
-
+    PaperSizeList[pos].width = 1682;
+    PaperSizeList[pos].height = 2378;
     pos++;
 
     strcpy(PaperSizeList[pos].name, "2A0");
-    height = sqrt(2) * sqrt(2e6 / sqrt(2)); // 2A0 has area four square metres
-    width = sqrt(2e6 / sqrt(2));
-    PaperSizeList[pos].width = width;
-    PaperSizeList[pos].height = height;
-
+    PaperSizeList[pos].width = 1189;
+    PaperSizeList[pos].height = 1682;
     pos++;
 
-    for (i = 0; i < 11; i++) {
-        height2 = height / sqrt(2);
-        width2 = width / sqrt(2);
-        ppl_snprintfTrunc(PaperSizeList[pos].name, sizeof(PaperSizeList[pos].name), "japanese_b%d",
-                          i); // Japanese B0 - B11
-        PaperSizeList[pos].width = (width2 + width) / 2;
-        PaperSizeList[pos].height = (height2 + height) / 2;
-        pos++;
-        for (j = 0; j < 8; j++) {
-            ppl_snprintfTrunc(PaperSizeList[pos].name, sizeof(PaperSizeList[pos].name), "%s%d", SeriesNames[j],
-                              i); // Logarithmically-spaced series, including the A, B and C-series.
-            PaperSizeList[pos].height = height2 * pow(2.0, ((float) j / 16));
-            PaperSizeList[pos].width = width2 * pow(2.0, ((float) j / 16));
+    for (j = 0; PaperSeriesList[j].name != NULL; j++)
+        for (i = 0; i < 11; i++) {
+            ppl_snprintfTrunc(PaperSizeList[pos].name, sizeof(PaperSizeList[pos].name), "%s%d",
+                              PaperSeriesList[j].name, i);
+            PaperSizeList[pos].width = PaperSeriesList[j].size[i][0];
+            PaperSizeList[pos].height = PaperSeriesList[j].size[i][1];
             pos++;
         }
-        height = height2;
-        width = width2;
-    }
     strcpy(PaperSizeList[pos].name, "END"); // Marker of end of papersize list
-    return;
 }
 
 //! ppl_PaperSizeByName - Look up the dimensions of a named paper size

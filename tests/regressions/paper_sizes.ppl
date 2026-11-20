@@ -1,0 +1,9 @@
+# Before Pyxplot 0.10.0, ISO paper sizes were computed without rounding, so A4 was 210.2 x 297.3 mm
+set papersize a4
+show papersize
+set papersize a0
+show papersize
+set papersize c4
+show papersize
+set papersize japanese_b5
+show papersize
