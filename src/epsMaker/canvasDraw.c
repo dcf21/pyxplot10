@@ -769,8 +769,6 @@ void canvas_MakeEPSBuffer(EPSComm *x) {
     return;
 }
 
-//! canvas_EPSWrite - Write the final postscript file, with a header giving the overall bounding box, followed by the
-//! postscript fragments from the temporary buffer file
 //! fontListedEarlier - Test whether a font in a list of the fonts used in a DVI file is derived from the same type 1
 //! font as an earlier font in the list, in which case the type 1 font only needs to be included once
 //! \param [in] fonts - The list of fonts (dviFontDetails structures)
@@ -786,6 +784,8 @@ static int fontListedEarlier(list *fonts, const dviFontDetails *font) {
     return 0;
 }
 
+//! canvas_EPSWrite - Write the final postscript file, with a header giving the overall bounding box, followed by the
+//! postscript fragments from the temporary buffer file
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void canvas_EPSWrite(EPSComm *x) {

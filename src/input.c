@@ -301,12 +301,6 @@ restore:
     return;
 }
 
-//! ppl_processLine - Execute a line of input, which may contain several statements separated by semicolons
-//! \param [in] context - The Pyxplot context
-//! \param [in|out] ps - The parser status, which tracks the progress of compiling multi-line blocks of commands
-//! \param [in] in - The line of input
-//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
-//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 //! lineScanState - The state of a scan through a command line: whether it is inside a quoted string (with ' " or `
 //! quotes), and how deeply nested in brackets it is
 typedef struct lineScanState {
@@ -337,6 +331,12 @@ static int lineScanStep(lineScanState *st, const char *line, const int i) {
     return 0;
 }
 
+//! ppl_processLine - Execute a line of input, which may contain several statements separated by semicolons
+//! \param [in] context - The Pyxplot context
+//! \param [in|out] ps - The parser status, which tracks the progress of compiling multi-line blocks of commands
+//! \param [in] in - The line of input
+//! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 //! \return Zero on success, or one if an error occurred
 
 int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int interactive, const int iterDepth) {

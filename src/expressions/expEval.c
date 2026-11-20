@@ -359,6 +359,54 @@ cast_fail:
 }
 
 
+//! assignToVariable - Complete the evaluation of an assignment operator, such as = or +=, by storing the value
+//! assigned in the variable (or vector or matrix element) being assigned to. The stack holds [... o in tmp], where
+//! <o> is the variable, <in> is the right-hand side of the operator, and <tmp> is the value to be assigned.
+//! On success, <tmp> is moved into the stack slot of <o>, where it remains as the result of the operator.
+//! \param [in] context - The Pyxplot context
+//! \param [in,out] o - The stack slot holding the variable being assigned to; overwritten with the assigned value
+//! \param [in] tmp - The stack slot holding the value to assign
+//! \param [in] rhsType - The object type of the right-hand side of the operator
+//! \param [in] inExpr - The expression being evaluated, used in error messages
+//! \param [in] charpos - The position of the operator in the expression, used in error messages
+//! \return Zero on success, or nonzero on failure (in which case an error has been added to the traceback)
+
+static int assignToVariable(ppl_context *context, pplObj *o, pplObj *tmp, const int rhsType, const pplExpr *inExpr,
+                            const int charpos) {
+    tmp->refCount = 1;
+    if (o->self_dval == NULL) {
+        // Assign to a variable, preserving its memory-management flags
+        const int om = o->self_lval->amMalloced;
+        const int rc = o->self_lval->refCount;
+        o->self_lval->amMalloced = 0;
+        o->self_lval->refCount = 1;
+        ppl_garbageObject(o->self_lval);
+        pplObjCpy(o->self_lval, tmp, 0, om, 1);
+        o->self_lval->refCount = rc;
+    } else {
+        // Assign to a vector or matrix element
+        if ((rhsType != PPLOBJ_NUM) || (tmp->flagComplex)) {
+            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                              "Vectors and matrices can only contain real numbers.");
+            ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
+            return 1;
+        }
+        if (!ppl_unitsDimEqual(o, tmp)) {
+            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                              "Cannot insert element with dimensions <%s> into vector with dimensions <%s>.",
+                              ppl_printUnit(context, tmp, NULL, NULL, 0, 1, 0),
+                              ppl_printUnit(context, o, NULL, NULL, 1, 1, 0));
+            ppl_tbAddExpr(context, inExpr, ERR_UNIT, charpos, "");
+            return 1;
+        }
+        *o->self_dval = tmp->real;
+    }
+    ppl_garbageObject(o);
+    memcpy(o, tmp, sizeof(pplObj)); // Stack: move the assigned value <tmp> down into the slot of the variable <o>...
+    ppl_stackPop(context); // ... and pop the top slot, which held <tmp>, leaving [... value in]
+    return 0;
+}
+
 //! ppl_expEval - Evaluate a compiled expression
 //! \param [in] context - The Pyxplot context
 //! \param [in] inExpr - The compiled expression to evaluate
@@ -947,71 +995,38 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     goto cleanup_on_error;
                 }
 
-#define ASSIGN \
-    { \
-        tmp->refCount = 1; \
-        if (o->self_dval == NULL) { \
-            int om = o->self_lval->amMalloced; \
-            int rc = o->self_lval->refCount; \
-            o->self_lval->amMalloced = 0; \
-            o->self_lval->refCount = 1; \
-            ppl_garbageObject(o->self_lval); \
-            pplObjCpy(o->self_lval, tmp, 0, om, 1); \
-            o->self_lval->refCount = rc; \
-        } else /* Assign vector or matrix element */ \
-        { \
-            if ((t2 != PPLOBJ_NUM) || (tmp->flagComplex)) { \
-                sprintf(context->errStat.errBuff, "Vectors and matrices can only contain real numbers."); \
-                ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, ""); \
-                goto cleanup_on_error; \
-            } \
-            if (!ppl_unitsDimEqual(o, tmp)) { \
-                sprintf(context->errStat.errBuff, \
-                        "Cannot insert element with dimensions <%s> into vector with dimensions <%s>.", \
-                        ppl_printUnit(context, tmp, NULL, NULL, 0, 1, 0), \
-                        ppl_printUnit(context, o, NULL, NULL, 1, 1, 0)); \
-                ppl_tbAddExpr(context, inExpr, ERR_UNIT, charpos, ""); \
-                goto cleanup_on_error; \
-            } \
-            *o->self_dval = tmp->real; \
-        } \
-        ppl_garbageObject(o); \
-        memcpy(o, tmp, sizeof(pplObj)); /* The assigned value is moved into the variable... */ \
-        ppl_stackPop(context); /* ... and popped from the stack, where it remains as the result */ \
-    }
-
                 if (t == PPL_ASSIGN) {
                     pplObjCpy(tmp, in, 0, 0, 1);
                     tmp->immutable = 0;
-                    ASSIGN;
+                    if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_ADD) {
                     ppl_opAdd(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
-                    ASSIGN;
+                    if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_SUBTRACT) {
                     ppl_opSub(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
-                    ASSIGN;
+                    if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_MULTIPLY) {
                     ppl_opMul(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
-                    ASSIGN;
+                    if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_DIVIDE) {
                     ppl_opDiv(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
-                    ASSIGN;
+                    if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else {
                     if (o->objType != PPLOBJ_NUM) {
                         ppl_snprintfTrunc(
@@ -1064,7 +1079,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
-                    ASSIGN;
+                    if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                     break;
                 }
                 break;

@@ -720,12 +720,6 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
     return;
 }
 
-//! airy_series_taylor - Compute the coefficients of a Taylor expansion of an Airy function about a point z0, using
-//! the Airy differential equation w'' = z w to generate the higher derivatives
-//! \param [out] dp - The coefficient multiplying the value of the Airy function at z0
-//! \param [out] dq - The coefficient multiplying the derivative of the Airy function at z0
-//! \param [in] zd - The displacement z - z0 of the point at which the function is required
-//! \param [in] z0 - The point about which the expansion is made
 //! airyAddTerm - Add the next term of the Taylor series for an Airy function and its derivative, and advance the
 //! power of (z - z0)
 //! \param [in,out] dp - The sum of the series for the function
@@ -742,6 +736,12 @@ static void airyAddTerm(gsl_complex *dp, gsl_complex *dq, const gsl_complex f, c
     *c = gsl_complex_mul(*c, zd);
 }
 
+//! airy_series_taylor - Compute the coefficients of a Taylor expansion of an Airy function about a point z0, using
+//! the Airy differential equation w'' = z w to generate the higher derivatives
+//! \param [out] dp - The coefficient multiplying the value of the Airy function at z0
+//! \param [out] dq - The coefficient multiplying the derivative of the Airy function at z0
+//! \param [in] zd - The displacement z - z0 of the point at which the function is required
+//! \param [in] z0 - The point about which the expansion is made
 //! \param [in] k - Zero to compute the function itself (Ai or Bi), or one to compute its derivative (Ai' or Bi')
 
 void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_complex z0, const double k) {

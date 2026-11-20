@@ -951,6 +951,15 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
     return 0;
 }
 
+//! closeDataInput - Close the stream from which a data file was being read, unless it is stdin or data was being
+//! read from the command line
+//! \param [in] input - The stream
+//! \param [in] readFromCommandLine - True if data was being read from lines following the command, not a file
+
+static void closeDataInput(FILE *input, const int readFromCommandLine) {
+    if ((!readFromCommandLine) && (input != stdin)) fclose(input);
+}
+
 //! ppldata_fromFile - Read data from a file, applying the "using", "every", "index", "select" and "sort" modifiers,
 //! into a data table
 //! \param [in] c - The Pyxplot context
@@ -983,15 +992,6 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
 //! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
 //! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
 //! suppressed
-//! closeDataInput - Close the stream from which a data file was being read, unless it is stdin or data was being
-//! read from the command line
-//! \param [in] input - The stream
-//! \param [in] readFromCommandLine - True if data was being read from lines following the command, not a file
-
-static void closeDataInput(FILE *input, const int readFromCommandLine) {
-    if ((!readFromCommandLine) && (input != stdin)) fclose(input);
-}
-
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int wildcardMatchNumber, char *filenameOut,

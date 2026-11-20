@@ -831,15 +831,6 @@ static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *s
 // Date methods
 
 
-//! pplmethod_dateToDayOfMonth - Implement the toDayOfMonth(<timezone>) method of dates, which returns the day of the
-//! month of a date object in the current calendar
-//! \param [in] c - The Pyxplot context
-//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
-//! <self_this> member points to the object the method was called on. The return value is written into
-//! in[-1] (OUTPUT).
-//! \param [in] nArgs - The number of arguments passed to the method
-//! \param [out] status - Set to one if an error occurred
-//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
 //! methodTimezoneOffset - Work out the offset from UTC of the timezone in which a date method should work, which is
 //! given as an optional string argument, or else is the timezone set by the user (set timezone)
 //! \param [in] f - The call to the method
@@ -865,6 +856,15 @@ static int methodTimezoneOffset(pplFuncCall *f, const int nArgs, const pplObj *t
     return 0;
 }
 
+//! pplmethod_dateToDayOfMonth - Implement the toDayOfMonth(<timezone>) method of dates, which returns the day of the
+//! month of a date object in the current calendar
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the method. in[-1] is the method object itself, whose
+//! <self_this> member points to the object the method was called on. The return value is written into
+//! in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the method
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,

@@ -1311,17 +1311,6 @@ void ppl_parserLineFree(parserLine *in) {
 }
 
 
-//! ppl_parserCompile - Compile a command line into a sequence of atoms which can be executed by ppl_parserExecute().
-//! Lines which open code blocks, e.g. for loops, are accumulated in the parser status until the block is closed.
-//! \param [in] c - The Pyxplot context
-//! \param [in|out] s - The parser status, which tracks the progress of compiling multi-line blocks of commands
-//! \param [in] srcLineN - The line number of the source of the command, used to report errors
-//! \param [in] srcId - The ID of the source of the command, used to report errors
-//! \param [in] srcFname - The filename of the source of the command, used to report errors
-//! \param [in] line - The command line to compile
-//! \param [in] expandMacros - If true, expand macros and backtick substitutions now; otherwise, if the line contains
-//! any, store it to be compiled when it is executed
-//! \param [in] blockDepth - The depth of nesting of code blocks
 //! quoteStateUpdate - Track whether a scan through a command line is inside a quoted string
 //! \param [in,out] quoteChar - The quote character of the string currently open, or '\0' if outside any string
 //! \param [in] line - The command line
@@ -1379,6 +1368,17 @@ static int appendCharGrowing(ppl_context *c, char **buf, int *len, int *pos, con
     return 0;
 }
 
+//! ppl_parserCompile - Compile a command line into a sequence of atoms which can be executed by ppl_parserExecute().
+//! Lines which open code blocks, e.g. for loops, are accumulated in the parser status until the block is closed.
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] s - The parser status, which tracks the progress of compiling multi-line blocks of commands
+//! \param [in] srcLineN - The line number of the source of the command, used to report errors
+//! \param [in] srcId - The ID of the source of the command, used to report errors
+//! \param [in] srcFname - The filename of the source of the command, used to report errors
+//! \param [in] line - The command line to compile
+//! \param [in] expandMacros - If true, expand macros and backtick substitutions now; otherwise, if the line contains
+//! any, store it to be compiled when it is executed
+//! \param [in] blockDepth - The depth of nesting of code blocks
 //! \return Zero on success, or one if an error occurred, in which case <c->errStat> describes it
 
 int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const long srcId, char *srcFname, char *line,

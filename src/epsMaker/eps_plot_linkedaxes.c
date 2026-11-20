@@ -473,10 +473,6 @@ typedef struct LAUComm {
 
 #define WORSTSCORE_INIT -(DBL_MAX / 1e10)
 
-//! eps_plot_LAUSlave - Cost function passed to the GSL minimiser by eps_plot_LAUFitter(), which evaluates the linkage
-//! expression at a trial point and returns its distance from the target value
-//! \param [in] x - The trial value
-//! \param [in] params - Pointer to the LAUComm structure describing the problem
 //! twinLog - A logarithm which is extended smoothly to values below 1e-200 (including zero and negative values), so
 //! that it can be used to compare values on a logarithmic scale without failing
 //! \param [in] x - The value
@@ -486,6 +482,10 @@ static double twinLog(const double x) {
     return (x > 1e-200) ? log(x) : (2 * log(1e-200) - log(2e-200 - x));
 }
 
+//! eps_plot_LAUSlave - Cost function passed to the GSL minimiser by eps_plot_LAUFitter(), which evaluates the linkage
+//! expression at a trial point and returns its distance from the target value
+//! \param [in] x - The trial value
+//! \param [in] params - Pointer to the LAUComm structure describing the problem
 //! \return The absolute difference between the linkage expression and the target value
 
 double eps_plot_LAUSlave(const gsl_vector *x, void *params) {

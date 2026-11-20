@@ -227,6 +227,15 @@ void ppl_texify_string(const char *in, char *out, const int inlen, const int out
     return;
 }
 
+//! markupMatch - Test whether a string starts with a given piece of markup
+//! \param [in] text - The string to test
+//! \param [in] markup - The markup to look for
+//! \return True if <text> starts with <markup>
+
+static int markupMatch(const char *text, const char *markup) {
+    return strncmp(text, markup, strlen(markup)) == 0;
+}
+
 //! ppl_texify_generic - Render an algebraic expression in LaTeX, e.g. converting sqrt(x) into \sqrt{x}
 //! \param [in] c - The Pyxplot context
 //! \param [in] in - The algebraic expression
@@ -237,15 +246,6 @@ void ppl_texify_string(const char *in, char *out, const int inlen, const int out
 //! \param [in|out] mm_in - Flag indicating whether the LaTeX output is currently in math mode, or NULL to start
 //! outside math mode
 //! \param [in|out] tr_in - Flag indicating whether the LaTeX output is currently in a \textrm block, or NULL to
-//! markupMatch - Test whether a string starts with a given piece of markup
-//! \param [in] text - The string to test
-//! \param [in] markup - The markup to look for
-//! \return True if <text> starts with <markup>
-
-static int markupMatch(const char *text, const char *markup) {
-    return strncmp(text, markup, strlen(markup)) == 0;
-}
-
 //! start outside one
 
 void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, char *out, const int outlen, int *mm_in,

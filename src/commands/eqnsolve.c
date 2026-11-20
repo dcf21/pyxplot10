@@ -138,10 +138,6 @@ static char *printParameterValues(MMComm *data, char *output) {
     return output;
 }
 
-//! MultiMinSlave - Cost function passed to the GSL minimiser by the solve, minimise and maximise commands. It sets
-//! the free parameters to the values requested, and evaluates the expressions being solved or optimised.
-//! \param [in] x - The trial values of the free parameters, in the minimiser's coordinate system
-//! \param [in] params - Pointer to the MMComm structure describing the problem
 //! twinLog - A logarithm which is extended smoothly to values below 1e-200 (including zero and negative values), so
 //! that it can be used to compare values on a logarithmic scale without failing
 //! \param [in] x - The value
@@ -151,6 +147,10 @@ static double twinLog(const double x) {
     return (x > 1e-200) ? log(x) : (2 * log(1e-200) - log(2e-200 - x));
 }
 
+//! MultiMinSlave - Cost function passed to the GSL minimiser by the solve, minimise and maximise commands. It sets
+//! the free parameters to the values requested, and evaluates the expressions being solved or optimised.
+//! \param [in] x - The trial values of the free parameters, in the minimiser's coordinate system
+//! \param [in] params - Pointer to the MMComm structure describing the problem
 //! \return The value of the cost function, or NaN if the expressions could not be evaluated
 
 static double MultiMinSlave(const gsl_vector *x, void *params) {

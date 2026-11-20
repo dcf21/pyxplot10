@@ -75,8 +75,6 @@ static void _ReadConfig_FetchValue(const char *line, char *out) {
     return;
 }
 
-//! ppl_readConfigFile - Read a Pyxplot configuration file, applying the settings in each of its sections
-//! \param [in] c - The Pyxplot context
 //! readConfigCrangeFlag - Read the value of a boolean configuration setting for one of the colour ranges c1-c4
 //! \param [in] c - The Pyxplot context
 //! \param [in] setvalue - The value of the setting
@@ -230,6 +228,8 @@ static int readConfigUnitName(ppl_context *c, const char *setkey, int *pos, char
     return 0;
 }
 
+//! ppl_readConfigFile - Read a Pyxplot configuration file, applying the settings in each of its sections
+//! \param [in] c - The Pyxplot context
 //! \param [in] ConfigFname - The filename of the configuration file
 
 static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {

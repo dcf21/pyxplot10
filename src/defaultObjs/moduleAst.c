@@ -208,14 +208,6 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
 // Lambda Cold Dark Matter Cosmology Wrappers
 
 
-//! pplfunc_Lcdm_age - Implement the function ast.Lcdm_age(H0,w_m,w_l) in the ast module, which returns the current age
-//! of the Universe in an L_CDM cosmology
-//! \param [in] c - The Pyxplot context
-//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
-//! is written into in[-1] (OUTPUT).
-//! \param [in] nArgs - The number of arguments passed to the function
-//! \param [out] status - Set to one if an error occurred
-//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
 //! checkLcdmInputs - Check the cosmological parameters passed to a function which uses a Lambda-CDM cosmology: the
 //! Hubble constant, which may be dimensionless (in km/s/Mpc), and the dimensionless density parameters w_m and w_l
 //! \param [in] f - The call to the built-in function
@@ -256,6 +248,14 @@ static int checkRedshift(pplFuncCall *f) {
     return 1;
 }
 
+//! pplfunc_Lcdm_age - Implement the function ast.Lcdm_age(H0,w_m,w_l) in the ast module, which returns the current age
+//! of the Universe in an L_CDM cosmology
+//! \param [in] c - The Pyxplot context
+//! \param [in|out] in - Array of the arguments passed to the function, in[0] to in[nArgs-1]. The return value
+//! is written into in[-1] (OUTPUT).
+//! \param [in] nArgs - The number of arguments passed to the function
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {

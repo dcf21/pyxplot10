@@ -70,10 +70,6 @@
 #include "pplConstants.h"
 
 
-//! ppl_directive_assert - Implement the assert command, which raises an error if an expression is false, or if a
-//! version requirement is not met
-//! \param [in] c - The Pyxplot context
-//! \param [in] pl - The compiled command line, used to report errors
 //! versionError - Report an error in the version clause of an assert command
 //! \param [in] c - The Pyxplot context
 //! \param [in] pl - The compiled command
@@ -87,6 +83,10 @@ static void versionError(ppl_context *c, const parserLine *pl, const parserOutpu
     ppl_tbAddLine(c, pl, errType, in->stkCharPos[PARSE_assert_version], "");
 }
 
+//! ppl_directive_assert - Implement the assert command, which raises an error if an expression is false, or if a
+//! version requirement is not met
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutput *in) {

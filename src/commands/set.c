@@ -120,30 +120,6 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
 }
 
 
-//! ppl_directive_set - Implement the set and unset commands, which change Pyxplot's settings
-//! \param [in] c - The Pyxplot context
-//! \param [in] pl - The compiled command line, used to report errors
-//! \param [in] in - The parser output for the command, containing the values of its parameters
-//! setTicks - Implement the parts of the set xtics command (and similar) which set where ticks are placed
-//! \param [in] c - The Pyxplot context
-//! \param [in] command - The parser output stack of the command
-//! \param [in] ptab - The table of the positions of the command's parameters in <command>
-//! \param [in] cmd - The name of the command, e.g. "xtics", used in error messages
-//! \param [in,out] t - The tick settings to change
-//! \param [in] tOther - The other set of ticks on the same axis (minor if <t> is major, or vice versa)
-//! \param [in] unit - The physical unit of the axis
-//! \param [in] unitSet - True if the axis has a range set, whose units the tick positions must match
-//! \param [in] amLog - True if the axis is logarithmic
-//! setNoTicks - Remove all ticks from an axis, by giving it an empty list of tick positions
-//! getAxisLog - Find the setting which determines whether an axis is logarithmic. For an axis linked to another
-//! axis, this is the setting of the axis at the end of the chain of links (unless that axis is disabled, or is on
-//! another canvas item, in which case the axis's own setting is used, after being reset to linear).
-//! \param [in] c - The Pyxplot context
-//! \param [in] axis - The axis
-//! \param [in] useDefaults - If true, follow links to the default axes, rather than to <xa>, <ya> and <za>
-//! \param [in] xa - The x axes of the graph
-//! \param [in] ya - The y axes of the graph
-//! \param [in] za - The z axes of the graph
 //! setAutoscaleAxis - Implement set autoscale (or unset autoscale) for one axis
 //! \param [in] c - The Pyxplot context
 //! \param [in] xa - The x axes of the graph
@@ -179,6 +155,15 @@ static void setAutoscaleAxis(ppl_context *c, pplset_axis *xa, pplset_axis *ya, p
     a->max = ad->max;
 }
 
+//! getAxisLog - Find the setting which determines whether an axis is logarithmic. For an axis linked to another
+//! axis, this is the setting of the axis at the end of the chain of links (unless that axis is disabled, or is on
+//! another canvas item, in which case the axis's own setting is used, after being reset to linear).
+//! \param [in] c - The Pyxplot context
+//! \param [in] axis - The axis
+//! \param [in] useDefaults - If true, follow links to the default axes, rather than to <xa>, <ya> and <za>
+//! \param [in] xa - The x axes of the graph
+//! \param [in] ya - The y axes of the graph
+//! \param [in] za - The z axes of the graph
 //! \return Pointer to the setting which determines whether the axis is logarithmic
 
 static int *getAxisLog(ppl_context *c, pplset_axis *axis, const int useDefaults, pplset_axis *xa, pplset_axis *ya,
@@ -210,6 +195,7 @@ static int *getAxisLog(ppl_context *c, pplset_axis *axis, const int useDefaults,
     return out;
 }
 
+//! setNoTicks - Remove all ticks from an axis, by giving it an empty list of tick positions
 //! \param [in,out] t - The tick settings
 
 static void setNoTicks(pplset_tics *t) {
@@ -219,6 +205,16 @@ static void setNoTicks(pplset_tics *t) {
     t->tickStrs[0] = NULL;
 }
 
+//! setTicks - Implement the parts of the set xtics command (and similar) which set where ticks are placed
+//! \param [in] c - The Pyxplot context
+//! \param [in] command - The parser output stack of the command
+//! \param [in] ptab - The table of the positions of the command's parameters in <command>
+//! \param [in] cmd - The name of the command, e.g. "xtics", used in error messages
+//! \param [in,out] t - The tick settings to change
+//! \param [in] tOther - The other set of ticks on the same axis (minor if <t> is major, or vice versa)
+//! \param [in] unit - The physical unit of the axis
+//! \param [in] unitSet - True if the axis has a range set, whose units the tick positions must match
+//! \param [in] amLog - True if the axis is logarithmic
 //! \return Zero on success, or nonzero if an error was reported
 
 static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char *cmd, pplset_tics *t,
@@ -411,6 +407,10 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
     return 0;
 }
 
+//! ppl_directive_set - Implement the set and unset commands, which change Pyxplot's settings
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command, containing the values of its parameters
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive) {
