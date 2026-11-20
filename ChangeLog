@@ -28,11 +28,14 @@
      multi-byte UTF-8 characters count as one character: "Café".len() is 4.
      The isalpha() and isalnum() methods recognise letters in any alphabet.
    - An automated test suite has been added: run it with "make test".
-   - When compiled with OpenMP, the plot and tabulate commands evaluate
+   - When compiled with OpenMP, the plot, tabulate and fit commands evaluate
      functions on all of the computer's cores at once, when this gives the
      same results as evaluating them one at a time: e.g. not when they use
      random numbers or call subroutines. The number of cores used can be
-     limited by setting the environment variable OMP_NUM_THREADS.
+     limited by setting the environment variable OMP_NUM_THREADS. Fits to
+     more than 4096 data points sum their residuals in blocks, so their
+     results may differ in the last digits from earlier versions, but do not
+     depend on the number of cores used.
 
 2012 Sep 19: Pyxplot 0.9.2
    - Version 0.9.2 corrects a large number of minor bugs.

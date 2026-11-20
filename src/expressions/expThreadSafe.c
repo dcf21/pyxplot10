@@ -308,6 +308,58 @@ ppl_context *ppl_contextWorkerNew(ppl_context *parent) {
     return w;
 }
 
+static int privatiseExpr(ppl_context *w, threadSafeCheck *t, const pplExpr *e);
+
+//! cloneFunc - Give a worker context a private shallow copy of a function descriptor. Copying a function object would
+//! share its descriptor, whose reference count every thread would then update. The copy has a reference count of its
+//! own, and is freed by ppl_contextWorkerFree().
+//! \param [in,out] w - The worker context
+//! \param [in] f - The function descriptor
+//! \return The copy, or NULL if memory ran out
+
+static pplFunc *cloneFunc(ppl_context *w, const pplFunc *f) {
+    pplFunc *clone = (pplFunc *) malloc(sizeof(pplFunc));
+    void **clones = (void **) realloc(w->workerClones, (w->workerNClones + 1) * sizeof(void *));
+    if (clones != NULL) w->workerClones = clones;
+    if ((clone == NULL) || (clones == NULL)) {
+        free(clone);
+        return NULL;
+    }
+    memcpy(clone, f, sizeof(pplFunc));
+    clone->refCount = 1; // Held by the worker until ppl_contextWorkerFree()
+    w->workerClones[w->workerNClones++] = clone;
+    return clone;
+}
+
+//! privatiseFuncBody - Give a worker context private copies of the shared variables which a user-defined function
+//! reads. Other kinds of function read no variables.
+//! \param [in,out] w - The worker context
+//! \param [in,out] t - The state of the walk, holding the names bound locally
+//! \param [in] f - The function
+//! \return Zero on success, or nonzero if memory ran out
+
+static int privatiseFuncBody(ppl_context *w, threadSafeCheck *t, const pplFunc *f) {
+    const pplFunc *g;
+    int status = 0;
+    if (f->functionType != PPL_FUNC_USERDEF) return 0;
+    if (t->depth >= MAX_CHECK_DEPTH) return 1;
+    t->depth++;
+    for (g = f; (g != NULL) && (!status); g = g->next) {
+        const int nLocalsOld = t->nLocals;
+        int j, k;
+        if (g->functionPtr == NULL) continue;
+        // The function's arguments are bound in the worker's own namespace, so are not copied
+        for (j = k = 0; (j < g->minArgs) && (g->argList != NULL) && (t->nLocals < MAX_LOCALS); j++) {
+            t->locals[t->nLocals++] = g->argList + k;
+            k += strlen(g->argList + k) + 1;
+        }
+        status = privatiseExpr(w, t, (const pplExpr *) g->functionPtr);
+        t->nLocals = nLocalsOld;
+    }
+    t->depth--;
+    return status;
+}
+
 //! privatiseExpr - Give a worker context private copies of the shared variables which an expression reads, and
 //! which any user-defined functions it calls read. See ppl_contextWorkerPrivatise().
 //! \param [in,out] w - The worker context
@@ -330,41 +382,12 @@ static int privatiseExpr(ppl_context *w, threadSafeCheck *t, const pplExpr *e) {
 
         v.refCount = 1;
         if (obj->objType == PPLOBJ_FUNC) {
-            // Copying a function object would share its descriptor, whose reference count every thread would then
-            // update. Instead, give the worker a shallow copy of the descriptor, with a reference count of its own.
             const pplFunc *f = (const pplFunc *) obj->auxil;
-            pplFunc *clone = (pplFunc *) malloc(sizeof(pplFunc));
-            void **clones = (void **) realloc(w->workerClones, (w->workerNClones + 1) * sizeof(void *));
-            if (clones != NULL) w->workerClones = clones;
-            if ((clone == NULL) || (clones == NULL)) {
-                free(clone);
-                return 1;
-            }
-            memcpy(clone, f, sizeof(pplFunc));
-            clone->refCount = 1; // Held by the worker's namespace until ppl_contextWorkerFree()
-            w->workerClones[w->workerNClones++] = clone;
+            pplFunc *clone = cloneFunc(w, f);
+            if (clone == NULL) return 1;
             pplObjFunc(&v, 1, 0, clone);
             ppl_dictAppendCpy(own, name, &v, sizeof(pplObj));
-
-            // The worker must also have private copies of the variables which a user-defined function reads
-            if (f->functionType == PPL_FUNC_USERDEF) {
-                const pplFunc *g;
-                int nLocalsOld = t->nLocals, status = 0;
-                if (t->depth >= MAX_CHECK_DEPTH) return 1;
-                t->depth++;
-                for (g = f; (g != NULL) && (!status); g = g->next) {
-                    int j, k;
-                    if (g->functionPtr == NULL) continue;
-                    for (j = k = 0; (j < g->minArgs) && (g->argList != NULL) && (t->nLocals < MAX_LOCALS); j++) {
-                        t->locals[t->nLocals++] = g->argList + k;
-                        k += strlen(g->argList + k) + 1;
-                    }
-                    status = privatiseExpr(w, t, (const pplExpr *) g->functionPtr);
-                    t->nLocals = nLocalsOld;
-                }
-                t->depth--;
-                if (status) return status;
-            }
+            if (privatiseFuncBody(w, t, f)) return 1;
         } else {
             if (pplObjCpy(&v, obj, 0, 1, 1) == NULL) return 1;
             ppl_dictAppendCpy(own, name, &v, sizeof(pplObj));
@@ -396,6 +419,48 @@ int ppl_contextWorkerPrivatise(ppl_context *w, ppl_context *parent, pplExpr **ex
     for (i = 0; i < nLocals; i++) t.locals[i] = locals[i];
     for (i = 0; i < nExprs; i++)
         if (privatiseExpr(w, &t, exprs[i])) return 1;
+    return 0;
+}
+
+//! ppl_funcThreadSafe - Test whether a function object may be called on several threads at once, in worker contexts
+//! created by ppl_contextWorkerNew(), without changing the result
+//! \param [in] c - The context in which the function would otherwise be called; its variables are inspected
+//! \param [in] fn - The function object
+//! \return True if the function is safe to call in parallel
+
+int ppl_funcThreadSafe(ppl_context *c, const pplObj *fn) {
+    threadSafeCheck t;
+    if ((c->ns_ptr != 1) || (fn->objType != PPLOBJ_FUNC)) return 0; // Only commands at the top level are supported
+    t.c = c;
+    t.nLocals = 0;
+    t.depth = 0;
+    return funcThreadSafe(&t, (const pplFunc *) fn->auxil);
+}
+
+//! ppl_contextWorkerPrivatiseFunc - Give a worker context a private copy of a function object which it will call,
+//! and private copies of the shared variables the function reads. See ppl_contextWorkerPrivatise().
+//! \param [in,out] w - The worker context
+//! \param [in] parent - The context whose variables the worker shares
+//! \param [in] fn - The function object, which must already have passed ppl_funcThreadSafe()
+//! \param [out] out - Set to the worker's private copy of the function object. It belongs to the worker, and must
+//! not be passed to the garbage collector; it is freed by ppl_contextWorkerFree().
+//! \return Zero on success, or nonzero if memory ran out, in which case <out> is a zombie and <fn> should be called
+//! instead
+
+int ppl_contextWorkerPrivatiseFunc(ppl_context *w, ppl_context *parent, const pplObj *fn, pplObj *out) {
+    threadSafeCheck t;
+    pplFunc *clone;
+    t.c = parent;
+    t.nLocals = 0;
+    t.depth = 0;
+    out->refCount = 1;
+    clone = cloneFunc(w, (const pplFunc *) fn->auxil);
+    if (clone == NULL) {
+        pplObjZom(out, 0);
+        return 1;
+    }
+    pplObjFunc(out, 0, 0, clone);
+    privatiseFuncBody(w, &t, (const pplFunc *) fn->auxil); // If this fails, the function reads the shared variables
     return 0;
 }
 

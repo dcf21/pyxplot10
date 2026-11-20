@@ -1,0 +1,11 @@
+# Fits to many data points are evaluated on several threads at once. The residuals are summed in fixed blocks, so the
+# result is identical whatever the number of threads.
+set samples 30000
+set output "d.dat"
+tabulate [0:10] 3*x + 1 + 0.2*sin(37*x)
+g(x) = x**2
+f(x) = a*x + b0 + c*g(x)/100
+a = 1
+b0 = 0
+c = 0
+fit f(x) withouterrors "d.dat" via a, b0, c

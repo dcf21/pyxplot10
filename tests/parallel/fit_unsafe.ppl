@@ -1,0 +1,10 @@
+# A function which uses the random number generator cannot be evaluated in parallel, so the fit is evaluated serially
+# and gives the same result as before
+set seed 3
+set samples 20000
+set output "d.dat"
+tabulate [0:1] 2*x
+f(x) = a*x + 1e-9*random.random()
+a = 1
+fit f(x) withouterrors "d.dat" via a
+print abs(a - 2) < 1e-6

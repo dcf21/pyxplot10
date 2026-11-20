@@ -1,0 +1,20 @@
+
+Numerical error:
+
+In piped input, line 9, position 0 below:
+
+ fit f(x) withouterrors "d.dat" via a
+/|\
+ |
+The function sqrt(z) is not defined at the requested point in parameter space.
+
+
+Numerical error:
+
+In piped input, line 11, position 0 below:
+
+ fit h(x) withouterrors "d.dat" via a
+/|\
+ |
+The supplied function to fit produces a value which is not a number but has type <string>.
+

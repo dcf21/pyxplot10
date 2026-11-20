@@ -34,12 +34,17 @@
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "commands/fit.h"
 #include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
 #include "coreUtils/memAlloc.h"
 #include "expressions/expCompile_fns.h"
 #include "expressions/expEval.h"
+#include "expressions/expThreadSafe.h"
 #include "expressions/fnCall.h"
 #include "expressions/traceback_fns.h"
 #include "parser/cmdList.h"
@@ -84,7 +89,18 @@ typedef struct fitComm {
     int diff1, diff2; // The numbers of the free parameters currently being differentiated inside GetHessian()
     double diff1step,
             diff2step; // The step size which GetHessian() recommends using for each of the parameters being differentiated
+    int parallel; // True if the function may be evaluated at the data points on several threads at once
 } fitComm;
+
+// The residuals of the data points are summed in blocks of this many points, and the sums of the blocks are then
+// added together in order. This order is the same whether the blocks are summed serially or on several threads at
+// once, so the result does not depend on the number of threads. For fits to no more points than this, the residuals
+// are simply summed in order.
+#define FIT_BLOCK_POINTS 4096
+
+// Fits to at least this many data points (four blocks) are evaluated on several threads at once, if possible. Each
+// thread works on whole blocks; fits to fewer points would give little work to share.
+#define FIT_PARALLEL_MIN_POINTS (4 * FIT_BLOCK_POINTS)
 
 
 //! matrixPrint - Write a GSL matrix as a nested list, e.g. [[1,2],[3,4]]
@@ -112,6 +128,138 @@ static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size,
     return out;
 }
 
+//! fitPoint - Evaluate the function being fitted at one data point, and compute the point's contribution to the
+//! mismatch between the function and the data
+//! \param [in] c - The context in which to evaluate the function (the user's context, or a worker context)
+//! \param [in] p - The fitComm structure describing the fit
+//! \param [in] fn - The function object to call
+//! \param [in] dummy - A dummy expression, used to report errors
+//! \param [in] j - The number of the data point
+//! \param [out] residual - Set to the point's contribution to the negative log-likelihood of the data
+//! \param [out] errText - Buffer of LSTR_LENGTH bytes into which to write an error message, if the function fails
+//! \return Zero on success, or one if the function could not be evaluated
+
+static int fitPoint(ppl_context *c, const fitComm *p, pplObj *fn, pplExpr *dummy, const long j, double *residual,
+                    char *errText) {
+    const int stkLevelOld = c->stackPtr; // Stack: note its level, so that everything pushed can be discarded
+    const double *row = p->dataTable + j * p->NExpect; // The arguments, target value and (perhaps) its uncertainty
+    const pplObj *out;
+    int k;
+
+    // Stack: push the function to call, followed by its arguments
+    ppl_stackPushCopy(c, fn, 1);
+    for (k = 0; k < p->NArgs; k++) {
+        pplObjNum(&c->stack[c->stackPtr], 0, row[k], 0);
+        ppl_unitsDimCpy(&c->stack[c->stackPtr], &p->firstVals[k]);
+        c->stack[c->stackPtr].refCount = 1;
+        c->stackPtr++;
+    }
+
+    // Call the function, which replaces it and its arguments on the stack with its value
+    c->errStat.errMsgExpr[0] = '\0';
+    ppl_fnCall(c, dummy, 0, 1, 1, 1);
+    out = &c->stack[c->stackPtr - 1];
+
+    if (c->errStat.status) {
+        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", c->errStat.errMsgExpr);
+        ppl_tbClear(c);
+        ppl_stackClean(c, stkLevelOld); // Stack: discard anything left by the failed call
+        return 1;
+    }
+    if (out->objType != PPLOBJ_NUM) {
+        ppl_snprintfTrunc(errText, LSTR_LENGTH,
+                          "The supplied function to fit produces a value which is not a number but has type <%s>.",
+                          pplObjTypeNames[out->objType]);
+        ppl_stackClean(c, stkLevelOld); // Stack: discard the function's value
+        return 1;
+    }
+    if (!ppl_unitsDimEqual(out, p->firstVals + p->NArgs)) {
+        ppl_snprintfTrunc(
+                errText, LSTR_LENGTH,
+                "The supplied function to fit produces a value which is dimensionally incompatible with its target value. The function produces a result with dimensions of <%s>, while its target value has dimensions of <%s>.",
+                ppl_printUnit(c, out, NULL, NULL, 0, 1, 0),
+                ppl_printUnit(c, p->firstVals + p->NArgs, NULL, NULL, 1, 1, 0));
+        ppl_stackClean(c, stkLevelOld); // Stack: discard the function's value
+        return 1;
+    }
+
+    // Squared deviation of the function's value from the target value, divided by 2 sigma squared
+    *residual = pow(out->real - row[k], 2) + pow(out->imag, 2);
+    if (p->flagYErrorBars) *residual /= 2 * pow(row[k + 1], 2);
+    else *residual /= 2 * pow(p->sigmaData, 2);
+
+    ppl_stackClean(c, stkLevelOld); // Stack: discard the function's value, now that it has been used
+    return 0;
+}
+
+//! fitResidualParallel - Sum the residuals of the data points in each block, on several threads at once
+//! \param [in] p - The fitComm structure describing the fit
+//! \param [in] nBlocks - The number of blocks of data points
+//! \param [out] blockSums - Set to the sum of the residuals in each block
+//! \param [out] failIndex - Set to the number of the first data point at which the function could not be evaluated,
+//! or to the number of data points if there was none
+//! \param [out] errText - Buffer of LSTR_LENGTH bytes, into which is written the error message for that data point
+
+static void fitResidualParallel(fitComm *p, const long nBlocks, double *blockSums, long *failIndex, char *errText) {
+    *failIndex = p->NDataPoints;
+#ifdef _OPENMP
+#pragma omp parallel
+    {
+        // Each thread calls the function in a worker context of its own, with private copies of the shared variables
+        // it reads. These are made after the trial values of the free parameters have been set, so hold their values.
+        ppl_context *w = ppl_contextWorkerNew(p->c);
+        char *myErrText = (char *) malloc(LSTR_LENGTH);
+        long myFailIndex = p->NDataPoints, b;
+        pplObj ownFn, *fn = p->functionObj;
+        pplExpr dummy;
+        dummy.srcLineN = 0;
+        dummy.srcId = 0;
+        dummy.srcFname = "<dummy>";
+        dummy.ascii = NULL;
+
+        if ((w != NULL) && (myErrText != NULL)) {
+            if (ppl_contextWorkerPrivatiseFunc(w, p->c, p->functionObj, &ownFn) == 0) fn = &ownFn;
+            ppl_stackMustHave(w, p->NArgs + 1);
+        }
+
+#pragma omp for schedule(dynamic, 1)
+        for (b = 0; b < nBlocks; b++) {
+            const long start = b * FIT_BLOCK_POINTS;
+            const long end =
+                    ((start + FIT_BLOCK_POINTS < p->NDataPoints) ? (start + FIT_BLOCK_POINTS) : p->NDataPoints);
+            double sum = 0.0, residual;
+            long j;
+            if ((w == NULL) || (myErrText == NULL) || w->stackFull) {
+                if (start < myFailIndex) { // Report the problem as if it occurred at the start of this block
+                    myFailIndex = start;
+                    if (myErrText != NULL) strcpy(myErrText, "Out of memory, or stack overflow, in the fit command.");
+                }
+                continue;
+            }
+            if (start >= myFailIndex) continue; // A failure earlier in the data has already been found
+            for (j = start; j < end; j++) {
+                if (fitPoint(w, p, fn, &dummy, j, &residual, myErrText)) {
+                    myFailIndex = j;
+                    break;
+                }
+                sum += residual;
+            }
+            blockSums[b] = sum;
+        }
+
+        // The error to report is the one at the first failing data point, as when the points are summed serially
+#pragma omp critical(fitResidualFailure)
+        if (myFailIndex < *failIndex) {
+            *failIndex = myFailIndex;
+            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s",
+                              (myErrText != NULL) ? myErrText : "Out of memory in the fit command.");
+        }
+        free(myErrText);
+        ppl_contextWorkerFree(w); // Frees the worker's private copy of the function too
+    }
+#endif
+}
+
 //! fitResidual - Compute the mismatch between the function being fitted and the data, for the current values of
 //! the free parameters, as the negative log-likelihood of the data
 //! \param [in] p - The fitComm structure describing the fit
@@ -120,18 +268,10 @@ static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size,
 static double fitResidual(fitComm *p) {
     ppl_context *c = p->c;
     char *errText = p->errtext; // A buffer of LSTR_LENGTH bytes
-    const int stkLevelOld = c->stackPtr;
-    int i, k;
-    long int j;
-    double accumulator, residual;
-    pplObj *out;
-    pplExpr dummy;
-
-    // Dummy expression object with dummy line number information
-    dummy.srcLineN = 0;
-    dummy.srcId = 0;
-    dummy.srcFname = "<dummy>";
-    dummy.ascii = NULL;
+    const long nBlocks = (p->NDataPoints + FIT_BLOCK_POINTS - 1) / FIT_BLOCK_POINTS;
+    double accumulator, *blockSums;
+    long b, failIndex;
+    int i;
 
     // Set free parameter values
     for (i = 0; i < p->NFitVars; i++)
@@ -143,8 +283,6 @@ static double fitResidual(fitComm *p) {
             p->varObj[i]->imag = gsl_vector_get(p->paramVals, 2 * i + 1);
         }
 
-    accumulator = 0.0; // Add up sum of square residuals
-
     // Check there's enough space on the stack
     ppl_stackMustHave(c, p->NArgs);
     if (c->stackFull) {
@@ -152,56 +290,48 @@ static double fitResidual(fitComm *p) {
         return GSL_NAN;
     }
 
-    for (j = 0; j < p->NDataPoints; j++) // Loop over all of the data points in the file that we're fitting
-    {
-        // Push the function to call, followed by its arguments
-        ppl_stackPushCopy(c, p->functionObj, 1);
-
-        // Push each argument in turn
-        for (k = 0; k < p->NArgs; k++) {
-            pplObjNum(&c->stack[c->stackPtr], 0, p->dataTable[j * p->NExpect + k], 0);
-            ppl_unitsDimCpy(&c->stack[c->stackPtr], &p->firstVals[k]);
-            c->stack[c->stackPtr].refCount = 1;
-            c->stackPtr++;
-        }
-
-        // Call function
-        c->errStat.errMsgExpr[0] = '\0';
-        ppl_fnCall(c, &dummy, 0, 1, 1, 1);
-        out = &c->stack[c->stackPtr - 1];
-
-        if (c->errStat.status) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", c->errStat.errMsgExpr);
-            ppl_tbClear(c);
-            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-            return GSL_NAN;
-        }
-        if (out->objType != PPLOBJ_NUM) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                              "The supplied function to fit produces a value which is not a number but has type <%s>.",
-                              pplObjTypeNames[out->objType]);
-            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-            return GSL_NAN;
-        }
-        if (!ppl_unitsDimEqual(out, p->firstVals + p->NArgs)) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "The supplied function to fit produces a value which is dimensionally incompatible with its target value. The function produces a result with dimensions of <%s>, while its target value has dimensions of <%s>.",
-                    ppl_printUnit(c, out, NULL, NULL, 0, 1, 0),
-                    ppl_printUnit(c, p->firstVals + p->NArgs, NULL, NULL, 1, 1, 0));
-            ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
-            return GSL_NAN;
-        }
-        residual = pow(out->real - p->dataTable[j * p->NExpect + k], 2) +
-                pow(out->imag, 2); // Calculate squared deviation of function result from desired result
-        if (p->flagYErrorBars)
-            residual /= 2 * pow(p->dataTable[j * p->NExpect + k + 1], 2); // Divide square residual by 2 sigma squared.
-        else residual /= 2 * pow(p->sigmaData, 2);
-        accumulator += residual; // ... and sum
-
-        ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
+    blockSums = (double *) malloc(((nBlocks > 0) ? nBlocks : 1) * sizeof(double));
+    if (blockSums == NULL) {
+        strcpy(errText, "Out of memory in the fit command.");
+        return GSL_NAN;
     }
 
+    if (p->parallel) {
+        fitResidualParallel(p, nBlocks, blockSums, &failIndex, errText);
+    } else {
+        // Sum the residuals of the data points serially, block by block
+        pplExpr dummy; // Dummy expression object with dummy line number information
+        dummy.srcLineN = 0;
+        dummy.srcId = 0;
+        dummy.srcFname = "<dummy>";
+        dummy.ascii = NULL;
+        failIndex = p->NDataPoints;
+        for (b = 0; (b < nBlocks) && (failIndex == p->NDataPoints); b++) {
+            const long start = b * FIT_BLOCK_POINTS;
+            const long end =
+                    ((start + FIT_BLOCK_POINTS < p->NDataPoints) ? (start + FIT_BLOCK_POINTS) : p->NDataPoints);
+            double sum = 0.0, residual;
+            long j;
+            for (j = start; j < end; j++) {
+                if (fitPoint(c, p, p->functionObj, &dummy, j, &residual, errText)) {
+                    failIndex = j;
+                    break;
+                }
+                sum += residual;
+            }
+            blockSums[b] = sum;
+        }
+    }
+
+    if (failIndex < p->NDataPoints) {
+        free(blockSums);
+        return GSL_NAN; // errText describes the failure
+    }
+
+    // Add up the sums of the blocks, in order
+    accumulator = 0.0;
+    for (b = 0; b < nBlocks; b++) accumulator += blockSums[b];
+    free(blockSums);
     return accumulator;
 }
 
@@ -715,6 +845,12 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     dataComm.dataTable = localDataTable;
     dataComm.flagYErrorBars = (NExpect == Nargs + 2);
     dataComm.sigmaData = 1.0;
+#ifdef _OPENMP
+    dataComm.parallel =
+            (NDataPoints >= FIT_PARALLEL_MIN_POINTS) && (omp_get_max_threads() > 1) && ppl_funcThreadSafe(c, funcObj);
+#else
+    dataComm.parallel = 0;
+#endif
     dataComm.errtext = (char *) ppl_memAlloc_incontext(LSTR_LENGTH, contextLocalVec);
     scratchPad = (char *) ppl_memAlloc_incontext(LSTR_LENGTH, contextLocalVec);
     if ((scratchPad == NULL) || (dataComm.errtext == NULL)) {

@@ -26,10 +26,12 @@
 #include "userspace/context.h"
 
 int ppl_expThreadSafe(ppl_context *c, const pplExpr *e, const char *const *locals, int nLocals);
+int ppl_funcThreadSafe(ppl_context *c, const pplObj *fn);
 
 ppl_context *ppl_contextWorkerNew(ppl_context *parent);
 int ppl_contextWorkerPrivatise(ppl_context *w, ppl_context *parent, pplExpr **exprs, int nExprs,
                                const char *const *locals, int nLocals);
+int ppl_contextWorkerPrivatiseFunc(ppl_context *w, ppl_context *parent, const pplObj *fn, pplObj *out);
 void ppl_contextWorkerFree(ppl_context *w);
 
 #endif

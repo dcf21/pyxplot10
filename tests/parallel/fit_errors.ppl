@@ -1,0 +1,11 @@
+# test: mode=stdin
+# If the function cannot be evaluated at some data points, the error reported is the one at the first such point,
+# exactly as when the points are evaluated serially
+set samples 30000
+set output "d.dat"
+tabulate [-10:10] x
+f(x) = a*sqrt(x - 3)
+a = 1
+fit f(x) withouterrors "d.dat" via a
+h(x) = (x < 5) ? a*x : "not a number"
+fit h(x) withouterrors "d.dat" via a
