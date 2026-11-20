@@ -49,6 +49,44 @@ const char *SIprefixes_latex[] = {"y", "z", "a", "f", "p", "n", "\\upmu ", "m", 
 
 // NB: The LaTeX upmu character is defined by the {upgreek} package
 
+//! printOneNumber - Render a single number using a printf-style format string supplied by the user
+//! \param [out] out - The buffer into which to write the number
+//! \param [in] len - The space available in <out>; nothing is written if this is zero or less
+//! \param [in] formatString - The printf-style format string, e.g. "%.3f"
+//! \param [in] requiredArgs - The number of arguments required by <formatString>, including the number itself; any
+//! others are integer field widths or precisions, given as *
+//! \param [in] intArg - The type of number required by <formatString>: 0 for a double, 1 for an int, or 2 for an
+//! unsigned int
+//! \param [in] arg1i - The first integer argument required by <formatString>
+//! \param [in] arg2i - The second integer argument required by <formatString>
+//! \param [in] x - The number to render
+//! \return The number of characters written
+
+static int printOneNumber(char *out, const int len, const char *formatString, const int requiredArgs, const int intArg,
+                          const int arg1i, const int arg2i, const double x) {
+    if (len <= 0) return 0;
+    out[0] = '\0';
+    if (intArg == 0) {
+        // Print a double
+        if (requiredArgs == 1) snprintf(out, len, formatString, x);
+        if (requiredArgs == 2) snprintf(out, len, formatString, arg1i, x);
+        if (requiredArgs == 3) snprintf(out, len, formatString, arg1i, arg2i, x);
+    } else if (intArg == 1) {
+        // Print an integer
+        const int xi = (int) x;
+        if (requiredArgs == 1) snprintf(out, len, formatString, xi);
+        if (requiredArgs == 2) snprintf(out, len, formatString, arg1i, xi);
+        if (requiredArgs == 3) snprintf(out, len, formatString, arg1i, arg2i, xi);
+    } else if (intArg == 2) {
+        // Print an unsigned integer
+        const unsigned int xi = (unsigned int) x;
+        if (requiredArgs == 1) snprintf(out, len, formatString, xi);
+        if (requiredArgs == 2) snprintf(out, len, formatString, arg1i, xi);
+        if (requiredArgs == 3) snprintf(out, len, formatString, arg1i, arg2i, xi);
+    }
+    return (int) strlen(out);
+}
+
 //! ppl_unitsNumericDisplayWithFormat - Render a quantity as a string using a printf-style format string, followed
 //! by its physical units
 //! \param [in] c - The Pyxplot context
@@ -112,33 +150,12 @@ char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const 
     } else {
         if (in->flagComplex) output[i++] = '('; // open brackets on complex number
 
-#define PRINTFORM(X) \
-    { \
-        if (intArg == 0) { \
-            if (requiredArgs == 1) \
-                snprintf(output + i, maxLen - i - 4, formatString, X); /* Print a double (real part) */ \
-            if (requiredArgs == 2) snprintf(output + i, maxLen - i - 4, formatString, arg1i, X); \
-            if (requiredArgs == 3) snprintf(output + i, maxLen - i - 4, formatString, arg1i, arg2i, X); \
-        } else if (intArg == 1) { \
-            int xi = (int) X; \
-            if (requiredArgs == 1) snprintf(output + i, maxLen - i - 4, formatString, xi); /* Print an integer */ \
-            if (requiredArgs == 2) snprintf(output + i, maxLen - i - 4, formatString, arg1i, xi); \
-            if (requiredArgs == 3) snprintf(output + i, maxLen - i - 4, formatString, arg1i, arg2i, xi); \
-        } else if (intArg == 2) { \
-            unsigned int xi = (unsigned int) X; \
-            if (requiredArgs == 1) \
-                snprintf(output + i, maxLen - i - 4, formatString, xi); /* Print an unsigned integer */ \
-            if (requiredArgs == 2) snprintf(output + i, maxLen - i - 4, formatString, arg1i, xi); \
-            if (requiredArgs == 3) snprintf(output + i, maxLen - i - 4, formatString, arg1i, arg2i, xi); \
-        } \
-    }
-
-        PRINTFORM(numberOutReal);
-        i += strlen(output + i);
+        i += printOneNumber(output + i, maxLen - i - 4, formatString, requiredArgs, intArg, arg1i, arg2i,
+                            numberOutReal);
         if (in->flagComplex) {
             output[i++] = '+';
-            PRINTFORM(numberOutImag);
-            i += strlen(output + i);
+            i += printOneNumber(output + i, maxLen - i - 4, formatString, requiredArgs, intArg, arg1i, arg2i,
+                                numberOutImag);
             output[i++] = 'i';
             output[i++] = ')'; // close brackets on complex number
         }
