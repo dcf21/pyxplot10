@@ -57,61 +57,122 @@ void eps_plot_labelsarrows_YieldUpText(EPSComm *x) {
     return;
 }
 
-#define FETCH_AXES(SYSTEM, XA, XAXES, AXISN, XIN, XOUT) \
-    { \
-        XOUT = XIN.real; \
-        if (SYSTEM == SW_SYSTEM_FIRST) { \
-            XA = &(XAXES[1]); \
-        } else if (SYSTEM == SW_SYSTEM_SECOND) { \
-            XA = &(XAXES[2]); \
-        } else if (SYSTEM == SW_SYSTEM_AXISN) { \
-            if ((AXISN < 0) || (AXISN >= MAX_AXES)) { \
-                XA = NULL; \
-                XOUT = 0.0; \
-                ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Axis number out of range"); \
-            } else { \
-                XA = &(XAXES[AXISN]); \
-            } \
-        } else { \
-            XA = NULL; \
-            XOUT = 0.0; \
-        } \
-        if (XA != NULL) { \
-            if (!XA->RangeFinalised) { XA = &(XAXES[1]); } /* Default to first axis if desired axis doesn't exist */ \
-            if (XA->HardUnitSet && (!ppl_unitsDimEqual(&(XIN), &(XA->HardUnit)))) { \
-                ppl_snprintfTrunc( \
-                        msg, sizeof(msg), \
-                        "Position specified for %s dimensionally incompatible with the range specified for the axis. Position has units of <%s> while axis has units of <%s>.", \
-                        ItemName, ppl_printUnit(x->c, &(XIN), NULL, NULL, 0, 1, 0), \
-                        ppl_printUnit(x->c, &(XA->HardUnit), NULL, NULL, 1, 1, 0)); \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
-                XA = NULL; \
-                XOUT = 0.5; \
-                status = 1; \
-            } \
-            if (XA->DataUnitSet && (!ppl_unitsDimEqual(&(XIN), &(XA->DataUnit)))) { \
-                ppl_snprintfTrunc( \
-                        msg, sizeof(msg), \
-                        "Position specified for %s dimensionally incompatible with data plotted against the axis. Position has units of <%s> while axis has units of <%s>.", \
-                        ItemName, ppl_printUnit(x->c, &(XIN), NULL, NULL, 0, 1, 0), \
-                        ppl_printUnit(x->c, &(XA->DataUnit), NULL, NULL, 1, 1, 0)); \
-                ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg); \
-                XA = NULL; \
-                XOUT = 0.5; \
-                status = 1; \
-            } \
-            if (!XA->RangeFinalised) { \
-                XA = NULL; \
-                XOUT = 0.5; \
-            } \
-        } \
+//! fetchAxis - Find the axis against which one coordinate of an arrow or text label is positioned, and check that the
+//! coordinate's physical units are compatible with that axis
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] system - The coordinate system of the coordinate, one of the SW_SYSTEM_* constants
+//! \param [in] axes - The axes of the graph in the direction of the coordinate (e.g. the x axes)
+//! \param [in] axisN - The number of the axis, for the SW_SYSTEM_AXISN coordinate system
+//! \param [in] in - The coordinate
+//! \param [in] ItemName - The name of the arrow or label, used in error messages
+//! \param [out] axisOut - Set to the axis, or NULL if the coordinate is not positioned against an axis
+//! \param [out] out - Set to the value of the coordinate, or to a default position if there is no usable axis
+//! \return Zero on success, or one if the coordinate's units were incompatible with the axis (an error is reported)
+
+static int fetchAxis(EPSComm *x, const int system, pplset_axis *axes, const int axisN, const pplObj *in,
+                     const char *ItemName, pplset_axis **axisOut, double *out) {
+    char msg[PPL_MSG_LENGTH];
+    pplset_axis *a;
+    *out = in->real;
+    *axisOut = NULL;
+    if (system == SW_SYSTEM_FIRST) {
+        a = &axes[1];
+    } else if (system == SW_SYSTEM_SECOND) {
+        a = &axes[2];
+    } else if (system == SW_SYSTEM_AXISN) {
+        if ((axisN < 0) || (axisN >= MAX_AXES)) {
+            *out = 0.0;
+            ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Axis number out of range");
+            return 0;
+        }
+        a = &axes[axisN];
+    } else {
+        // Page and graph coordinates are not positioned against any axis
+        *out = 0.0;
+        return 0;
     }
 
-#define ADD_PAGE_COORDINATES(SYSTEM, XIN, THETA_X) \
-    if ((SYSTEM == SW_SYSTEM_PAGE) || (SYSTEM == SW_SYSTEM_GRAPH)) { \
-        xpos_ += XIN.real * sin(THETA_X) * M_TO_PS; \
-        ypos_ += XIN.real * cos(THETA_X) * M_TO_PS; \
+    if (!a->RangeFinalised) { a = &axes[1]; } // Default to first axis if desired axis doesn't exist
+    if (a->HardUnitSet && (!ppl_unitsDimEqual(in, &a->HardUnit))) {
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Position specified for %s dimensionally incompatible with the range specified for the axis. "
+                          "Position has units of <%s> while axis has units of <%s>.",
+                          ItemName, ppl_printUnit(x->c, in, NULL, NULL, 0, 1, 0),
+                          ppl_printUnit(x->c, &a->HardUnit, NULL, NULL, 1, 1, 0));
+        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+        *out = 0.5;
+        return 1;
     }
+    if (a->DataUnitSet && (!ppl_unitsDimEqual(in, &a->DataUnit))) {
+        ppl_snprintfTrunc(msg, sizeof(msg),
+                          "Position specified for %s dimensionally incompatible with data plotted against the axis. "
+                          "Position has units of <%s> while axis has units of <%s>.",
+                          ItemName, ppl_printUnit(x->c, in, NULL, NULL, 0, 1, 0),
+                          ppl_printUnit(x->c, &a->DataUnit, NULL, NULL, 1, 1, 0));
+        ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+        *out = 0.5;
+        return 1;
+    }
+    if (!a->RangeFinalised) {
+        *out = 0.5;
+        return 0;
+    }
+    *axisOut = a;
+    return 0;
+}
+
+//! addPageCoordinates - Add the offset of a coordinate given in the page or graph coordinate systems to a position
+//! \param [in] system - The coordinate system of the coordinate, one of the SW_SYSTEM_* constants
+//! \param [in] in - The coordinate, in metres
+//! \param [in] theta - The direction on the page in which the coordinate's axis points, measured clockwise from
+//! vertical
+//! \param [in,out] xpos - The horizontal position, in postscript points
+//! \param [in,out] ypos - The vertical position, in postscript points
+
+static void addPageCoordinates(const int system, const pplObj *in, const double theta, double *xpos, double *ypos) {
+    if ((system == SW_SYSTEM_PAGE) || (system == SW_SYSTEM_GRAPH)) {
+        *xpos += in->real * sin(theta) * M_TO_PS;
+        *ypos += in->real * cos(theta) * M_TO_PS;
+    }
+}
+
+//! clipArrowEnd - Clip one end of an arrow to one face of the graph, if it lies beyond that face, by moving it along
+//! the arrow to the face. If the end of the arrow which bears an arrow head is clipped, the head is removed.
+//! \param [in,out] pos - Pointers to the arrays of the arrow's {x, y, depth, xap, yap, zap} coordinates; each array has
+//! two elements, for the start and the end of the arrow. xap, yap and zap are the fractional positions along the
+//! graph's x, y and z axes.
+//! \param [in] grad - The rate of change of each of the arrow's coordinates with respect to xap, yap and zap
+//! \param [in] xyz - Which axis the face is perpendicular to: 0 for x, 1 for y, 2 for z
+//! \param [in] apv - The fractional axis position of the face: 0 or 1
+//! \param [in] P - Which end of the arrow to clip: 0 for its start, 1 for its end
+//! \param [in,out] ArrowType - The style of arrow head, one of the SW_ARROWTYPE_* constants
+//! \return True if the arrow lies entirely beyond the face, and should not be drawn
+
+static int clipArrowEnd(double *pos[6], const double grad[3][6], const int xyz, const double apv, const int P,
+                        int *ArrowType) {
+    const double *ap = pos[3 + xyz]; // The fractional axis positions of the ends of the arrow along this axis
+    const double t = ap[P];
+    int k;
+    if (!(apv ? (t > 1) : (t < 0))) return 0; // This end of the arrow lies inside the face
+    if (ap[1 - P] < 0.0) return 1; // Both ends lie beyond the face
+    for (k = 0; k < 6; k++) pos[k][P] += grad[xyz][k] * (apv - t);
+
+    if (P == 0) {
+        if (*ArrowType == SW_ARROWTYPE_TWOWAY) *ArrowType = SW_ARROWTYPE_HEAD;
+    } else {
+        if (*ArrowType == SW_ARROWTYPE_HEAD) *ArrowType = SW_ARROWTYPE_NOHEAD;
+        if (*ArrowType == SW_ARROWTYPE_TWOWAY) {
+            // Reverse the arrow, so that its remaining head is at its end
+            for (k = 0; k < 6; k++) {
+                const double tmp = pos[k][0];
+                pos[k][0] = pos[k][1];
+                pos[k][1] = tmp;
+            }
+            *ArrowType = SW_ARROWTYPE_HEAD;
+        }
+    }
+    return 0;
+}
 
 //! eps_plot_labelsarrows - Draw the text labels and arrows on a graph
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -123,7 +184,6 @@ void eps_plot_labelsarrows_YieldUpText(EPSComm *x) {
 
 void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origin_y, const double width,
                            const double height, const double zdepth) {
-    char msg[PPL_MSG_LENGTH];
     int pageno, hal, val;
     char ItemName[64];
     pplarrow_object *ai;
@@ -147,12 +207,16 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
         int status = 0, xrn0, yrn0, zrn0, xrn1, yrn1, zrn1;
         int ArrowType = ai->pplarrow_style;
         ppl_snprintfTrunc(ItemName, sizeof(ItemName), "arrow %d on plot %d", ai->id, x->current->id);
-        FETCH_AXES(ai->system_x0, xa0, x->current->XAxes, ai->axis_x0, ai->x0, xin0);
-        FETCH_AXES(ai->system_y0, ya0, x->current->YAxes, ai->axis_y0, ai->y0, yin0);
-        if (x->current->ThreeDim) { FETCH_AXES(ai->system_z0, za0, x->current->ZAxes, ai->axis_z0, ai->z0, zin0); }
-        FETCH_AXES(ai->system_x1, xa1, x->current->XAxes, ai->axis_x1, ai->x1, xin1);
-        FETCH_AXES(ai->system_y1, ya1, x->current->YAxes, ai->axis_y1, ai->y1, yin1);
-        if (x->current->ThreeDim) { FETCH_AXES(ai->system_z1, za1, x->current->ZAxes, ai->axis_z1, ai->z1, zin1); }
+        status |= fetchAxis(x, ai->system_x0, x->current->XAxes, ai->axis_x0, &ai->x0, ItemName, &xa0, &xin0);
+        status |= fetchAxis(x, ai->system_y0, x->current->YAxes, ai->axis_y0, &ai->y0, ItemName, &ya0, &yin0);
+        if (x->current->ThreeDim) {
+            status |= fetchAxis(x, ai->system_z0, x->current->ZAxes, ai->axis_z0, &ai->z0, ItemName, &za0, &zin0);
+        }
+        status |= fetchAxis(x, ai->system_x1, x->current->XAxes, ai->axis_x1, &ai->x1, ItemName, &xa1, &xin1);
+        status |= fetchAxis(x, ai->system_y1, x->current->YAxes, ai->axis_y1, &ai->y1, ItemName, &ya1, &yin1);
+        if (x->current->ThreeDim) {
+            status |= fetchAxis(x, ai->system_z1, x->current->ZAxes, ai->axis_z1, &ai->z1, ItemName, &za1, &zin1);
+        }
         if (!status)
             for (xrn0 = 0; xrn0 <= ((xa0 != NULL) ? xa0->AxisValueTurnings : 0); xrn0++)
                 for (yrn0 = 0; yrn0 <= ((ya0 != NULL) ? ya0->AxisValueTurnings : 0); yrn0++)
@@ -181,16 +245,20 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                                         continue;
                                     xpos_ = xpos[0];
                                     ypos_ = ypos[0];
-                                    ADD_PAGE_COORDINATES(ai->system_x0, ai->x0, theta_x);
-                                    ADD_PAGE_COORDINATES(ai->system_y0, ai->y0, theta_y);
-                                    if (x->current->ThreeDim) { ADD_PAGE_COORDINATES(ai->system_z0, ai->z0, theta_z); }
+                                    addPageCoordinates(ai->system_x0, &ai->x0, theta_x, &xpos_, &ypos_);
+                                    addPageCoordinates(ai->system_y0, &ai->y0, theta_y, &xpos_, &ypos_);
+                                    if (x->current->ThreeDim) {
+                                        addPageCoordinates(ai->system_z0, &ai->z0, theta_z, &xpos_, &ypos_);
+                                    }
                                     xpos[0] = xpos_;
                                     ypos[0] = ypos_;
                                     xpos_ = xpos[1];
                                     ypos_ = ypos[1];
-                                    ADD_PAGE_COORDINATES(ai->system_x1, ai->x1, theta_x);
-                                    ADD_PAGE_COORDINATES(ai->system_y1, ai->y1, theta_y);
-                                    if (x->current->ThreeDim) { ADD_PAGE_COORDINATES(ai->system_z1, ai->z1, theta_z); }
+                                    addPageCoordinates(ai->system_x1, &ai->x1, theta_x, &xpos_, &ypos_);
+                                    addPageCoordinates(ai->system_y1, &ai->y1, theta_y, &xpos_, &ypos_);
+                                    if (x->current->ThreeDim) {
+                                        addPageCoordinates(ai->system_z1, &ai->z1, theta_z, &xpos_, &ypos_);
+                                    }
                                     xpos[1] = xpos_;
                                     ypos[1] = ypos_;
 
@@ -229,53 +297,20 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                                                  (zap[1] == zap[0]) ? 0.0 : (xap[1] - xap[0]) / (zap[1] - zap[0]),
                                                  (zap[1] == zap[0]) ? 0.0 : (yap[1] - yap[0]) / (zap[1] - zap[0]),
                                                  1.0}};
+                                        double *pos[6] = {xpos, ypos, depth, xap, yap, zap};
 
-#define CLIP(XAP, XYZ, XAPV, P) \
-    if (XAPV ? (XAP[P] > 1) : (XAP[P] < 0)) { \
-        const double t = XAP[P]; \
-        if (XAP[1 - P] < 0.0) continue; \
-        xpos[P] += grad[XYZ][0] * (XAPV - t); \
-        ypos[P] += grad[XYZ][1] * (XAPV - t); \
-        depth[P] += grad[XYZ][2] * (XAPV - t); \
-        xap[P] += grad[XYZ][3] * (XAPV - t); \
-        yap[P] += grad[XYZ][4] * (XAPV - t); \
-        zap[P] += grad[XYZ][5] * (XAPV - t); \
-\
-        if (P == 0) { \
-            if (ArrowType == SW_ARROWTYPE_TWOWAY) ArrowType = SW_ARROWTYPE_HEAD; \
-        } else { \
-            if (ArrowType == SW_ARROWTYPE_HEAD) ArrowType = SW_ARROWTYPE_NOHEAD; \
-            if (ArrowType == SW_ARROWTYPE_TWOWAY) { \
-                double t1 = xpos[0], t2 = ypos[0], t3 = depth[0], t4 = xap[0], t5 = yap[0], t6 = zap[0]; \
-                xpos[0] = xpos[1]; \
-                ypos[0] = ypos[1]; \
-                depth[0] = depth[1]; \
-                xap[0] = xap[1]; \
-                yap[0] = yap[1]; \
-                zap[0] = zap[1]; \
-                xpos[1] = t1; \
-                ypos[1] = t2; \
-                depth[1] = t3; \
-                xap[1] = t4; \
-                yap[1] = t5; \
-                zap[1] = t6; \
-                ArrowType = SW_ARROWTYPE_HEAD; \
-            } \
-        } \
-    }
-
-                                        CLIP(xap, 0, 0.0, 0);
-                                        CLIP(xap, 0, 1.0, 0);
-                                        CLIP(xap, 0, 0.0, 1);
-                                        CLIP(xap, 0, 1.0, 1);
-                                        CLIP(yap, 1, 0.0, 0);
-                                        CLIP(yap, 1, 1.0, 0);
-                                        CLIP(yap, 1, 0.0, 1);
-                                        CLIP(yap, 1, 1.0, 1);
-                                        CLIP(zap, 2, 0.0, 0);
-                                        CLIP(zap, 2, 1.0, 0);
-                                        CLIP(zap, 2, 0.0, 1);
-                                        CLIP(zap, 2, 1.0, 1);
+                                        if (clipArrowEnd(pos, grad, 0, 0.0, 0, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 0, 1.0, 0, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 0, 0.0, 1, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 0, 1.0, 1, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 1, 0.0, 0, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 1, 1.0, 0, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 1, 0.0, 1, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 1, 1.0, 1, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 2, 0.0, 0, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 2, 1.0, 0, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 2, 0.0, 1, &ArrowType)) continue;
+                                        if (clipArrowEnd(pos, grad, 2, 1.0, 1, &ArrowType)) continue;
                                     }
 
                                     ppl_withWordsMerge(x->c, &ww, &ai->style, &ww_default, NULL, NULL, NULL, 1);
@@ -310,9 +345,11 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
             double xpos_, ypos_, depth, xap, yap, zap, theta_x, theta_y, theta_z;
             int status = 0, xrn, yrn, zrn;
             ppl_snprintfTrunc(ItemName, sizeof(ItemName), "label %d on plot %d", li->id, x->current->id);
-            FETCH_AXES(li->system_x, xa, x->current->XAxes, li->axis_x, li->x, xin);
-            FETCH_AXES(li->system_y, ya, x->current->YAxes, li->axis_y, li->y, yin);
-            if (x->current->ThreeDim) { FETCH_AXES(li->system_z, za, x->current->ZAxes, li->axis_z, li->z, zin); }
+            status |= fetchAxis(x, li->system_x, x->current->XAxes, li->axis_x, &li->x, ItemName, &xa, &xin);
+            status |= fetchAxis(x, li->system_y, x->current->YAxes, li->axis_y, &li->y, ItemName, &ya, &yin);
+            if (x->current->ThreeDim) {
+                status |= fetchAxis(x, li->system_z, x->current->ZAxes, li->axis_z, &li->z, ItemName, &za, &zin);
+            }
             if (!status)
                 for (xrn = 0; xrn <= ((xa != NULL) ? xa->AxisValueTurnings : 0); xrn++)
                     for (yrn = 0; yrn <= ((ya != NULL) ? ya->AxisValueTurnings : 0); yrn++)
@@ -322,9 +359,11 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                             eps_plot_GetPosition(&xpos_, &ypos_, &depth, &xap, &yap, &zap, &theta_x, &theta_y, &theta_z,
                                                  x->current->ThreeDim, xin, yin, zin, xa, ya, za, xrn, yrn, zrn,
                                                  &x->current->settings, origin_x, origin_y, width, height, zdepth, 0);
-                            ADD_PAGE_COORDINATES(li->system_x, li->x, theta_x);
-                            ADD_PAGE_COORDINATES(li->system_y, li->y, theta_y);
-                            if (x->current->ThreeDim) { ADD_PAGE_COORDINATES(li->system_z, li->z, theta_z); }
+                            addPageCoordinates(li->system_x, &li->x, theta_x, &xpos_, &ypos_);
+                            addPageCoordinates(li->system_y, &li->y, theta_y, &xpos_, &ypos_);
+                            if (x->current->ThreeDim) {
+                                addPageCoordinates(li->system_z, &li->z, theta_z, &xpos_, &ypos_);
+                            }
                             if (li->HAlign != 0) hal = li->HAlign;
                             else hal = x->current->settings.TextHAlign;
                             if (li->VAlign != 0) val = li->VAlign;
