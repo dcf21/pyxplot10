@@ -255,6 +255,49 @@ static int hebrewMonthLengths[6][13] = {
         {30, 29, 30, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29}, // Regular   Embolismic Year
         {30, 30, 30, 29, 30, 30, 29, 30, 29, 30, 29, 30, 29}}; // Complete  Embolismic Year
 
+//! ppl_floorDiv - Integer division rounding towards minus infinity, unlike C's division, which rounds towards zero
+//! \param [in] a - The dividend
+//! \param [in] b - The divisor, which must be positive
+//! \return floor(a / b)
+
+static long ppl_floorDiv(const long a, const long b) { return (a >= 0) ? (a / b) : -((-a + b - 1) / b); }
+
+//! ppl_floorMod - The remainder of integer division rounding towards minus infinity, which unlike C's % operator, is
+//! never negative
+//! \param [in] a - The dividend
+//! \param [in] b - The divisor, which must be positive
+//! \return a - b * floor(a / b), in the range 0 to b-1
+
+static long ppl_floorMod(const long a, const long b) { return a - b * ppl_floorDiv(a, b); }
+
+//! ppl_dayNumberToCalendar - Convert a Julian Day number into a date in the Julian or Gregorian calendar, using the
+//! algorithm of Meeus, Astronomical Algorithms (1998), Chapter 7. Meeus requires a positive Julian Date, because it
+//! takes the integer parts of quantities by truncation; taking them with floor() extends it to all dates.
+//! \param [in] a - The Julian Day number, i.e. the Julian Date at noon on the required day
+//! \param [in] gregorian - If true, use the (proleptic) Gregorian calendar; otherwise use the Julian calendar
+//! \param [out] year - The year, numbered astronomically, so that 1 BC is year 0 (optional)
+//! \param [out] month - The month number, 1-12
+//! \param [out] day - The day of the month (optional)
+
+static void ppl_dayNumberToCalendar(const long a, const int gregorian, int *year, int *month, int *day) {
+    long b, c, d, e, f;
+    if (!gregorian) {
+        // c = the day number, offset so that it counts from a March 1 before the start of the Julian period
+        c = a + 1524;
+    } else {
+        // b = the number of centuries since AD 400, less those century years which were leap years; c is then the day
+        // number as if every century year had been a leap year
+        b = (long) floor((a - 1867216.25) / 36524.25);
+        c = a + b - ppl_floorDiv(b, 4) + 1525;
+    }
+    d = (long) floor((c - 122.1) / 365.25); // Number of 365.25 day periods, starting the year at the start of March
+    e = (long) floor(365.25 * d);           // Number of days accounted for by these
+    f = (long) floor((c - e) / 30.6001);    // Number of 30.6001 day periods (a.k.a. months) in the remainder
+    if (day != NULL) *day = (int) (c - e - (long) floor(30.6001 * f));
+    *month = (int) (f - 1 - 12 * (f >= 14));
+    if (year != NULL) *year = (int) (d - 4715 - (*month >= 3));
+}
+
 //! ppl_getHebrewNewYears - Compute the dates of three consecutive Hebrew new years, starting with the one which
 //! falls in the year before a specified Gregorian year
 //! \param [in] ct - The Pyxplot context
@@ -265,33 +308,34 @@ static int hebrewMonthLengths[6][13] = {
 
 void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearNumbers, double *JDs, int *YearTypes) {
     int i;
-    long X, C, S, A, a, b, j, D, MONTH = 3;
+    long X, C, S, A, a, b, j, D, Qint, MONTH = 3;
     double Q, JD, r;
 
     for (i = 0; i < 3; i++) // Return THREE new year numbers and Julian Day numbers, and YearTypes for the first two.
     {
         X = GregYear - 1 + i;
-        C = X / 100;
-        S = (3 * C - 5) / 4;
+        C = ppl_floorDiv(X, 100);
+        S = ppl_floorDiv(3 * C - 5, 4);
         A = X + 3760;
-        a = (12 * X + 12) % 19; // Work out the date of the passover in the Hebrew year A
-        b = X % 4;
+        a = ppl_floorMod(12 * X + 12, 19); // Work out the date of the passover in the Hebrew year A
+        b = ppl_floorMod(X, 4);
         Q = -1.904412361576 + 1.554241796621 * a + 0.25 * b - 0.003177794022 * X + S;
-        j = (((long) Q) + 3 * X + 5 * b + 2 - S) % 7;
-        r = Q - ((long) Q);
+        Qint = (long) floor(Q);
+        j = ppl_floorMod(Qint + 3 * X + 5 * b + 2 - S, 7);
+        r = Q - Qint;
 
-        if ((j == 2) || (j == 4) || (j == 6)) D = ((long) Q) + 23;
-        else if ((j == 1) && (a > 6) && (r >= 0.632870370)) D = ((long) Q) + 24;
-        else if ((j == 0) && (a > 11) && (r >= 0.897723765)) D = ((long) Q) + 23;
-        else D = ((long) Q) + 22; // D is day when 15 Nisan falls after 1st March in the Gregorian year X
+        if ((j == 2) || (j == 4) || (j == 6)) D = Qint + 23;
+        else if ((j == 1) && (a > 6) && (r >= 0.632870370)) D = Qint + 24;
+        else if ((j == 0) && (a > 11) && (r >= 0.897723765)) D = Qint + 23;
+        else D = Qint + 22; // D is day when 15 Nisan falls after 1st March in the Gregorian year X
 
-        b = (X / 400) - (X / 100) + (X / 4); // Gregorian calendar
+        b = ppl_floorDiv(X, 400) - ppl_floorDiv(X, 100) + ppl_floorDiv(X, 4); // Gregorian calendar
         JD = 365.0 * X - 679004.0 + 2400000.5 + b + floor(30.6001 * (MONTH + 1)) + D;
 
         YearNumbers[i] = A + 1;
         JDs[i] = JD + 163; // 1 Tishri (New Year) for next year falls 163 days after 15 Nisan
 
-        a = (A + 1) % 19;
+        a = ppl_floorMod(A + 1, 19);
         if ((a == 0) || (a == 3) || (a == 6) || (a == 8) || (a == 11) || (a == 14) || (a == 17)) YearTypes[i] = 3;
         else YearTypes[i] = 0;
     }
@@ -333,7 +377,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
         *status = 1;
         ppl_snprintfTrunc(
                 errText, LSTR_LENGTH,
-                "Supplied year number must be positive for the Hebrew calendar; the calendar is undefined prior to 4760 BC, corresponding to Hebrew year AM 1.");
+                "Supplied year number must be positive for the Hebrew calendar; the calendar is undefined prior to 3761 BC, corresponding to Hebrew year AM 1.");
         return 0.0;
     }
 
@@ -362,25 +406,24 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
 //! \param [in] status - Unused
 //! \param [in] errText - Unused
 
-void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, const int *status,
-                            const char *errText) {
-    long a, c, d, e, f;
+void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
+                            char *errText) {
     int i, j;
     int JulMon, JulYr;
     int YearNumbers[3], YearTypes[3];
     double JDs[3];
     double JD = (UT / 86400.0) + 2440587.5;
 
-    // First work out date in Julian calendar
-    a = JD +
-            0.5; // Number of whole Julian days. b = Number of centuries since the Council of Nicaea. c = Julian Day number as if century leap years happened.
-    c = a + 1524;
-    d = (c - 122.1) / 365.25; // Number of 365.25 periods, starting the year at the end of February
-    e = 365 * d + d / 4; // Number of days accounted for by these
-    f = (c - e) / 30.6001; // Number of 30.6001 days periods (a.k.a. months) in remainder
-    //JulDay = (int)floor(c-e-(int)(30.6001*f));
-    JulMon = (int) floor(f - 1 - 12 * (f >= 14));
-    JulYr = (int) floor(d - 4715 - (JulMon >= 3));
+    if (JD < 347997.5) {
+        *status = 1;
+        ppl_snprintfTrunc(
+                errText, SSTR_LENGTH,
+                "The Hebrew calendar is undefined prior to 3761 BC Oct 7, corresponding to AM 1 Tishri 1.");
+        return;
+    }
+
+    // First work out the year in the Julian calendar
+    ppl_dayNumberToCalendar((long) floor(UT / 86400.0) + 2440588, 0, &JulYr, &JulMon, NULL);
 
     ppl_getHebrewNewYears(ct, JulYr, YearNumbers, JDs, YearTypes);
     i = (JD < JDs[1]) ? 0 : 1;
@@ -464,7 +507,7 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
 
 void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
                              char *errText) {
-    long a, b, c, d, e, f;
+    long d;
     int JulDay, JulMon, JulYr;
     long W, N, A, B, C, C2, D, Q, R, J, K, O, H, JJ, CL, DL, S, m;
     double C1;
@@ -478,26 +521,8 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
         return;
     }
 
-    // First work out date in Julian calendar
-    a = JD +
-            0.5; // Number of whole Julian days. b = Number of centuries since the Council of Nicaea. c = Julian Day number as if century leap years happened.
-    b = 0;
-    c = a + 1524;
-    d = (c - 122.1) / 365.25; // Number of 365.25 periods, starting the year at the end of February
-    e = 365 * d + d / 4; // Number of days accounted for by these
-    f = (c - e) / 30.6001; // Number of 30.6001 days periods (a.k.a. months) in remainder
-    JulDay = (int) floor(c - e - (int) (30.6001 * f));
-    JulMon = (int) floor(f - 1 - 12 * (f >= 14));
-    JulYr = (int) floor(d - 4715 - (JulMon >= 3));
-
-    //alpha = (JD-1867216.25)/36524.25; // See pages 75-76 of "Astronomical Algorithms", by Jean Meeus
-
-    //if (JD<2299161)  beta = (JD+0.5);
-    //else             beta = (JD+0.5) + 1 + alpha - ((long)(alpha/4));
-
-    c = (b - 122.1) / 365.25;
-    d = 365.25 * c;
-    e = (b - d) / 30.6001;
+    // First work out the date in the Julian calendar
+    ppl_dayNumberToCalendar((long) floor(UT / 86400.0) + 2440588, 0, &JulYr, &JulMon, &JulDay);
 
     W = 2 - (JulYr % 4 == 0);
     N = ((long) ((275 * JulMon) / 9)) - W * ((long) ((JulMon + 9) / 12)) + JulDay - 30;
@@ -614,10 +639,10 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
     }
 
     if (ReqDate <= LastJulian) {
-        b = -2 + ((year + 4716) / 4) - 1179;
+        b = -2 + ppl_floorDiv(year + 4716, 4) - 1179;
     } // Julian calendar
     else if (ReqDate >= FirstGregorian) {
-        b = (year / 400) - (year / 100) + (year / 4);
+        b = ppl_floorDiv(year, 400) - ppl_floorDiv(year, 100) + ppl_floorDiv(year, 4);
     } // Gregorian calendar
     else {
         *status = 1;
@@ -649,7 +674,7 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
 
 void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, int *hour, int *min,
                       double *sec, int *status, char *errText) {
-    long a, b, c, d, e, f;
+    long a;
     double DayFraction;
     int temp;
     const double JD = (UT / 86400.0) + 2440587.5;
@@ -674,22 +699,10 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
     else if (ct->set->term_current.CalendarOut == SW_CALENDAR_ISLAMIC)
         return ppl_islamicFromUnixTime(ct, UT, year, month, day, status, errText);
 
-    a = JD +
-            0.5; // Number of whole Julian days. b = Number of centuries since the Council of Nicaea. c = Julian Day number as if century leap years happened.
-    if (a < ppl_switchOverJD(ct)) {
-        b = 0;
-        c = a + 1524;
-    } // Julian calendar
-    else {
-        b = (a - 1867216.25) / 36524.25;
-        c = a + b - (b / 4) + 1525;
-    } // Gregorian calendar
-    d = (c - 122.1) / 365.25; // Number of 365.25 periods, starting the year at the end of February
-    e = 365 * d + d / 4; // Number of days accounted for by these
-    f = (c - e) / 30.6001; // Number of 30.6001 days periods (a.k.a. months) in remainder
-    if (day != NULL) *day = (int) floor(c - e - (int) (30.6001 * f));
-    *month = (int) floor(f - 1 - 12 * (f >= 14));
-    if (year != NULL) *year = (int) floor(d - 4715 - (*month >= 3));
+    // a = the number of the day (the Julian Date at noon on that day), counted from midnight so that it matches the
+    // time of day worked out above
+    a = (long) floor(UT / 86400.0) + 2440588;
+    ppl_dayNumberToCalendar(a, a >= ppl_switchOverJD(ct), year, month, day);
     return;
 }
 

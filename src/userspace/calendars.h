@@ -31,8 +31,8 @@ char *ppl_getWeekDayName(ppl_context *ct, int i);
 void ppl_getHebrewNewYears(const ppl_context *ct, int GregYear, int *YearNumbers, double *JDs, int *YearTypes);
 double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, int day, int hour, int min, int sec, int *status,
                             char *errText);
-void ppl_hebrewFromUnixTime(ppl_context *ct, double UT, int *year, int *month, int *day, const int *status,
-                            const char *errText);
+void ppl_hebrewFromUnixTime(ppl_context *ct, double UT, int *year, int *month, int *day, int *status,
+                            char *errText);
 double ppl_islamicToUnixTime(const ppl_context *ct, int year, int month, int day, int hour, int min, int sec,
                              int *status, char *errText);
 void ppl_islamicFromUnixTime(const ppl_context *ct, double UT, int *year, int *month, int *day, int *status,

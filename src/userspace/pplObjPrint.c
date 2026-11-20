@@ -82,8 +82,11 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 int year, month, day, hour, minute;
                 double second;
                 ppl_fromUnixTime(c, o->real, &year, &month, &day, &hour, &minute, &second, &status, msg);
-                snprintf(out, outlen, "time.fromCalendar(%d,%d,%d,%d,%d,%.4f,\"UTC\")", year, month, day, hour, minute,
-                         second);
+                if (status) // The date cannot be expressed in the current calendar, e.g. it precedes its epoch
+                    snprintf(out, outlen, "time.fromJD(%.17g)", o->real / 86400.0 + 2440587.5);
+                else
+                    snprintf(out, outlen, "time.fromCalendar(%d,%d,%d,%d,%d,%.4f,\"UTC\")", year, month, day, hour,
+                             minute, second);
             } else {
                 int status = 0;
                 char timezone[FNAME_LENGTH];
@@ -92,6 +95,8 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 ppl_calendarTimezoneOffset(c, o->real, timezone, &offset);
                 ppl_dateString(c, out, outlen, o->real + offset, NULL, timezone, &status, msg);
                 ppl_calendarTimezoneUnset(c);
+                // If the date cannot be expressed in the current calendar, e.g. it precedes its epoch, show its Julian Date
+                if (status) snprintf(out, outlen, "time.fromJD(%.10g)", o->real / 86400.0 + 2440587.5);
             }
             break;
         case PPLOBJ_COL: {

@@ -1,0 +1,42 @@
+# Dates before 4717 BC, and dates in the Hebrew calendar before about AD 900, were converted incorrectly before
+# Pyxplot 0.10.0, because the calendar algorithms rounded negative quantities towards zero rather than down.
+# Expected Julian Dates were computed independently, from the standard integer formulae for Julian Day numbers and,
+# for the Hebrew calendar, the algorithm of Dershowitz & Reingold, Calendrical Calculations.
+load "testlib.ppl"
+
+# Julian calendar (the default British calendar is Julian before 1752); years are numbered astronomically
+d = time.fromJD(-3100015.5)
+assert d.toYear() == -13200
+assert d.toMonthNum() == 8
+assert d.toDayOfMonth() == 15
+assert d.toDayWeekName() == "Saturday"
+print d
+assert time.fromCalendar(-13198, 1, 1, 0, 0, 0).toJD() == -3099511.5
+assert time.fromCalendar(-13200, 8, 15, 0, 0, 0).toJD() == -3100015.5
+assert time.fromCalendar(-7450, 2, 24, 0, 0, 0).toJD() == -1000000.5
+print time.fromJD(-1000000.5)
+
+# The day starting at the first midnight before JD 0, and a time of day within it
+assert time.fromCalendar(-4713, 12, 31, 0, 0, 0).toJD() == -1.5
+print time.fromJD(-1.25)
+
+# Around JD -1400, where Meeus's day count c = JD + 1524 passes 122; -4716 is a Julian leap year
+assert time.fromCalendar(-4716, 2, 29, 0, 0, 0).toJD() == -1402.5
+print time.fromJD(-1402.5)
+print time.fromJD(-1401.5)
+
+# Proleptic Gregorian calendar; -1000 is not a Gregorian leap year
+set calendar gregorian
+assert time.fromCalendar(-1000, 3, 1, 0, 0, 0).toJD() == 1355876.5
+assert time.fromCalendar(-1000, 2, 28, 0, 0, 0).toJD() == 1355875.5
+print time.fromJD(1355876.5)
+
+# Hebrew calendar: AM 1 Tishri 1 fell on Monday 3761 BC Oct 7 (Julian), JD 347997.5
+set calendar hebrew
+assert time.fromCalendar(1, 1, 1, 0, 0, 0).toJD() == 347997.5
+assert time.fromCalendar(2, 1, 1, 0, 0, 0).toJD() == 348352.5
+assert time.fromCalendar(4615, 1, 1, 0, 0, 0).toJD() == 2033219.5
+assert time.fromCalendar(5786, 1, 1, 0, 0, 0).toJD() == 2460941.5
+print time.fromJD(347997.5)
+# Dates before the epoch of the Hebrew calendar cannot be expressed in it, so are shown as Julian Dates
+print time.fromJD(347996.5)

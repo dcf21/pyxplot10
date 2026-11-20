@@ -46,6 +46,12 @@
      - The index blocks written by the tabulate command were labelled from 1,
        though the index modifier counts them from 0.
      - The show command described minor ticks as major ticks.
+     - Dates before 4717 BC were converted to and from calendar dates
+       incorrectly, e.g. time.fromJD(-3100015.5) gave the month "???" and a
+       negative day of the month, and dates in the Hebrew calendar before
+       about AD 900 were up to a month out. Dates which cannot be expressed in
+       the current calendar, e.g. before the start of the Hebrew calendar, are
+       printed as Julian Dates rather than as blank lines.
    - The unit planck_impedence has been renamed planck_impedance; the old
      spelling is still accepted.
    - Physical constants have been updated to their CODATA 2022 values, or their
