@@ -1300,44 +1300,6 @@ void ppl_parserLineFree(parserLine *in) {
     return;
 }
 
-#define LOOP_OVER_LINE \
-    { \
-        int i; \
-        char quoteChar; \
-        for (i = 0, quoteChar = '\0'; line[i] != '\0'; i++) { \
-            if ((quoteChar == '\0') && (line[i] == '\'')) quoteChar = '\''; \
-            else if ((quoteChar == '\0') && (line[i] == '\"')) quoteChar = '\"'; \
-            else if ((quoteChar == '\'') && (line[i] == '\'') && (line[i - 1] != '\\')) quoteChar = '\0'; \
-            else if ((quoteChar == '\"') && (line[i] == '\"') && (line[i - 1] != '\\')) quoteChar = '\0';
-
-#define LOOP_END(X) \
-    else if (X) { \
-        if (obPos > obLen - 16) { \
-            obLen += LSTR_LENGTH; \
-            outbuff = (char *) realloc(outbuff, obLen); \
-            if (outbuff == NULL) { \
-                sprintf(c->errStat.errBuff, "Out of memory."); \
-                fail = 1; \
-                break; \
-            } \
-        } \
-        outbuff[obPos++] = line[i]; \
-    } \
-    } \
-    }
-
-#define TEST_FOR_MACROS \
-    containsMacros = 0; \
-    LOOP_OVER_LINE \
-    else if ((quoteChar == '\0') && (line[i] == '`')) { \
-        containsMacros = 1; \
-        break; \
-    } \
-    else if ((quoteChar == '\0') && (line[i] == '@')) { \
-        containsMacros = 1; \
-        break; \
-    } \
-    LOOP_END(0)
 
 //! ppl_parserCompile - Compile a command line into a sequence of atoms which can be executed by ppl_parserExecute().
 //! Lines which open code blocks, e.g. for loops, are accumulated in the parser status until the block is closed.
@@ -1350,6 +1312,63 @@ void ppl_parserLineFree(parserLine *in) {
 //! \param [in] expandMacros - If true, expand macros and backtick substitutions now; otherwise, if the line contains
 //! any, store it to be compiled when it is executed
 //! \param [in] blockDepth - The depth of nesting of code blocks
+//! quoteStateUpdate - Track whether a scan through a command line is inside a quoted string
+//! \param [in,out] quoteChar - The quote character of the string currently open, or '\0' if outside any string
+//! \param [in] line - The command line
+//! \param [in] i - The position in <line> of the next character to scan
+//! \return True if the character opened or closed a quoted string
+
+static int quoteStateUpdate(char *quoteChar, const char *line, const int i) {
+    const char ch = line[i];
+    if ((ch != '\'') && (ch != '\"')) return 0;
+    if (*quoteChar == '\0') {
+        *quoteChar = ch;
+        return 1;
+    }
+    if ((*quoteChar == ch) && ((i == 0) || (line[i - 1] != '\\'))) {
+        *quoteChar = '\0';
+        return 1;
+    }
+    return 0;
+}
+
+//! lineContainsMacros - Test whether a command line contains macros to be substituted, i.e. `shell commands` or
+//! @variable names, outside quoted strings
+//! \param [in] line - The command line
+//! \return True if the line contains macros
+
+static int lineContainsMacros(const char *line) {
+    char quoteChar = '\0';
+    int i;
+    for (i = 0; line[i] != '\0'; i++) {
+        if (quoteStateUpdate(&quoteChar, line, i)) continue;
+        if ((quoteChar == '\0') && ((line[i] == '`') || (line[i] == '@'))) return 1;
+    }
+    return 0;
+}
+
+//! appendCharGrowing - Append a character to a malloced buffer, enlarging the buffer as needed
+//! \param [in] c - The Pyxplot context
+//! \param [in,out] buf - Pointer to the buffer
+//! \param [in,out] len - The size of the buffer
+//! \param [in,out] pos - The position at which to append the character, which is advanced past it
+//! \param [in] ch - The character to append
+//! \return Zero on success, or nonzero if memory ran out (in which case an error message is in c->errStat.errBuff)
+
+static int appendCharGrowing(ppl_context *c, char **buf, int *len, int *pos, const char ch) {
+    if (*pos > *len - 16) {
+        char *grown = (char *) realloc(*buf, *len + LSTR_LENGTH);
+        if (grown == NULL) {
+            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
+            return 1;
+        }
+        *buf = grown;
+        *len += LSTR_LENGTH;
+    }
+    (*buf)[(*pos)++] = ch;
+    return 0;
+}
+
 //! \return Zero on success, or one if an error occurred, in which case <c->errStat> describes it
 
 int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const long srcId, char *srcFname, char *line,
@@ -1371,7 +1390,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
     // Deal with macros and ` ` substitutions
     if (!expandMacros) {
         int fail = 0;
-        TEST_FOR_MACROS;
+        containsMacros = lineContainsMacros(line);
         if (containsMacros && (s != NULL) &&
             !fail) // If we're not expanding macros at this stage, flag this parserLine as containing macros, and exit
         {
@@ -1410,138 +1429,155 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
         ;
         for (l = 0; (l < 16) && !fail; l++) // Repeatedly test for and substitute macros; nested macros are allowed
         {
-            TEST_FOR_MACROS;
+            containsMacros = lineContainsMacros(line);
             if (fail || !containsMacros) break;
             {
                 outbuff = (char *) malloc(obLen);
                 obPos = 0;
-                if (outbuff != NULL) LOOP_OVER_LINE
+                if (outbuff != NULL) {
+                    char quoteChar = '\0';
+                    int i;
+                    for (i = 0; line[i] != '\0'; i++) {
+                        // Quotation marks are copied to the output as they are
+                        if (quoteStateUpdate(&quoteChar, line, i)) {
+                            if (appendCharGrowing(c, &outbuff, &obLen, &obPos, line[i])) {
+                                fail = 1;
+                                break;
+                            }
+                            continue;
+                        }
 
-                // First, substitute for ` ` expressions
-                else if ((quoteChar == '\0') && (line[i] == '`')) {
-                    int is = ++i, status;
-                    char *key = NULL;
-                    FILE *substPipe;
-                    for (; ((line[i] != '\0') && (line[i] != '`')); i++); // Find end of ` ` expression
-                    if (line[i] != '`') {
-                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Mismatched `");
-                        fail = 1;
-                        break;
-                    }
-                    key = (char *) malloc(i - is + 1); // Put macro name into a string
-                    if (key == NULL) {
-                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-                        fail = 1;
-                        break;
-                    }
-                    strncpy(key, line + is, i - is);
-                    key[i - is] = '\0';
-                    if (DEBUG) {
-                        ppl_snprintfTrunc(msg, sizeof(msg), "Shell substitution with command '%s'.", key);
-                        ppl_log(&c->errcontext, msg);
-                    }
-                    if ((substPipe = popen(key, "r")) == NULL) {
-                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                                          "Could not spawl shell substitution command '%s'.", key);
-                        fail = 1;
-                        goto shellSubstErr;
-                    }
-                    while ((!feof(substPipe)) && (!ferror(substPipe))) {
-                        if (fscanf(substPipe, "%c", outbuff + obPos) == EOF) break;
-                        if (outbuff[obPos] == '\n') outbuff[obPos] = ' ';
-                        if (outbuff[obPos] != '\0') obPos++;
-                        if (obPos > obLen - 16) {
-                            obLen += LSTR_LENGTH;
-                            outbuff = (char *) realloc(outbuff, obLen);
-                            if (outbuff == NULL) {
+                        // First, substitute for ` ` expressions
+                        if ((quoteChar == '\0') && (line[i] == '`')) {
+                            int is = ++i, status;
+                            char *key = NULL;
+                            FILE *substPipe;
+                            for (; ((line[i] != '\0') && (line[i] != '`')); i++); // Find end of ` ` expression
+                            if (line[i] != '`') {
+                                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Mismatched `");
+                                fail = 1;
+                                break;
+                            }
+                            key = (char *) malloc(i - is + 1); // Put macro name into a string
+                            if (key == NULL) {
                                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                                 fail = 1;
                                 break;
                             }
-                        }
-                    }
-                    status = pclose(substPipe);
-                    if (fail) goto shellSubstErr;
+                            strncpy(key, line + is, i - is);
+                            key[i - is] = '\0';
+                            if (DEBUG) {
+                                ppl_snprintfTrunc(msg, sizeof(msg), "Shell substitution with command '%s'.", key);
+                                ppl_log(&c->errcontext, msg);
+                            }
+                            if ((substPipe = popen(key, "r")) == NULL) {
+                                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                                  "Could not spawl shell substitution command '%s'.", key);
+                                fail = 1;
+                                goto shellSubstErr;
+                            }
+                            while ((!feof(substPipe)) && (!ferror(substPipe))) {
+                                if (fscanf(substPipe, "%c", outbuff + obPos) == EOF) break;
+                                if (outbuff[obPos] == '\n') outbuff[obPos] = ' ';
+                                if (outbuff[obPos] != '\0') obPos++;
+                                if (obPos > obLen - 16) {
+                                    obLen += LSTR_LENGTH;
+                                    outbuff = (char *) realloc(outbuff, obLen);
+                                    if (outbuff == NULL) {
+                                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                                          "Out of memory.");
+                                        fail = 1;
+                                        break;
+                                    }
+                                }
+                            }
+                            status = pclose(substPipe);
+                            if (fail) goto shellSubstErr;
 
-                    if (WIFEXITED(status)) {
-                        int ec = WEXITSTATUS(status);
-                        if (ec) {
-                            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                                              "Command failure during ` ` substitution (exit code %d).", ec);
-                            fail = 1;
-                            goto shellSubstErr;
-                        }
-                    } else if (WIFSIGNALED(status)) {
-                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                                          "Command failure during ` ` substitution (terminated by signal %d).",
-                                          WTERMSIG(status));
-                        fail = 1;
-                        goto shellSubstErr;
-                    } else {
-                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                                          "Command failure during ` ` substitution (fail happened).");
-                        fail = 1;
-                        goto shellSubstErr;
-                    }
+                            if (WIFEXITED(status)) {
+                                int ec = WEXITSTATUS(status);
+                                if (ec) {
+                                    ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                                      "Command failure during ` ` substitution (exit code %d).", ec);
+                                    fail = 1;
+                                    goto shellSubstErr;
+                                }
+                            } else if (WIFSIGNALED(status)) {
+                                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                                  "Command failure during ` ` substitution (terminated by signal %d).",
+                                                  WTERMSIG(status));
+                                fail = 1;
+                                goto shellSubstErr;
+                            } else {
+                                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                                  "Command failure during ` ` substitution (fail happened).");
+                                fail = 1;
+                                goto shellSubstErr;
+                            }
 
-                shellSubstErr:
-                    if (key != NULL) {
-                        free(key);
-                        key = NULL;
-                    }
-                    if (fail) break;
-                }
-
-                // Second, substitute for macros
-                else if ((quoteChar == '\0') && (line[i] == '@')) {
-                    int is = ++i, j, got = 0;
-                    char *key = NULL;
-                    for (; (isalnum(line[i]) || (line[i] == '_')); i++); // Find end of macro name
-                    key = (char *) malloc(i - is + 1); // Put macro name into a string
-                    if (key == NULL) {
-                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
-                        fail = 1;
-                        break;
-                    }
-                    strncpy(key, line + is, i - is);
-                    key[i - is] = '\0';
-                    for (j = 1; j >= 0; j--) {
-                        pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[j], key);
-                        if (obj == NULL) continue;
-                        if ((obj->objType == PPLOBJ_GLOB) || (obj->objType == PPLOBJ_ZOM)) continue;
-                        if (obj->objType != PPLOBJ_STR) {
-                            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                                              "Attempt to expand a macro, \"%s\", which is not a string variable.",
-                                              key);
-                            got = -1;
-                            break;
+                        shellSubstErr:
+                            if (key != NULL) {
+                                free(key);
+                                key = NULL;
+                            }
+                            if (fail) break;
                         }
-                        if (obPos + strlen((char *) obj->auxil) > obLen - 16) {
-                            obLen += strlen((char *) obj->auxil) + LSTR_LENGTH;
-                            outbuff = (char *) realloc(outbuff, obLen);
-                            if (outbuff == NULL) {
-                                got = -2;
+
+                        // Second, substitute for macros
+                        else if ((quoteChar == '\0') && (line[i] == '@')) {
+                            int is = ++i, j, got = 0;
+                            char *key = NULL;
+                            for (; (isalnum(line[i]) || (line[i] == '_')); i++); // Find end of macro name
+                            key = (char *) malloc(i - is + 1); // Put macro name into a string
+                            if (key == NULL) {
+                                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
+                                fail = 1;
                                 break;
                             }
+                            strncpy(key, line + is, i - is);
+                            key[i - is] = '\0';
+                            for (j = 1; j >= 0; j--) {
+                                pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[j], key);
+                                if (obj == NULL) continue;
+                                if ((obj->objType == PPLOBJ_GLOB) || (obj->objType == PPLOBJ_ZOM)) continue;
+                                if (obj->objType != PPLOBJ_STR) {
+                                    ppl_snprintfTrunc(
+                                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                            "Attempt to expand a macro, \"%s\", which is not a string variable.", key);
+                                    got = -1;
+                                    break;
+                                }
+                                if (obPos + strlen((char *) obj->auxil) > obLen - 16) {
+                                    obLen += strlen((char *) obj->auxil) + LSTR_LENGTH;
+                                    outbuff = (char *) realloc(outbuff, obLen);
+                                    if (outbuff == NULL) {
+                                        got = -2;
+                                        break;
+                                    }
+                                }
+                                strcpy(outbuff + obPos, (char *) obj->auxil);
+                                obPos += strlen(outbuff + obPos);
+                                got = 1;
+                                break;
+                            }
+                            if (got == 0) {
+                                ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                                  "Undefined macro, \"%s\".", key);
+                            }
+                            free(key);
+                            key = NULL;
+                            if (got <= 0) {
+                                fail = 1;
+                                break;
+                            }
+                            i--;
+                        } else if (appendCharGrowing(c, &outbuff, &obLen, &obPos, line[i])) {
+                            // Any other character is copied to the output
+                            fail = 1;
+                            break;
                         }
-                        strcpy(outbuff + obPos, (char *) obj->auxil);
-                        obPos += strlen(outbuff + obPos);
-                        got = 1;
-                        break;
-                    }
-                    if (got == 0) {
-                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Undefined macro, \"%s\".",
-                                          key);
-                    }
-                    free(key);
-                    key = NULL;
-                    if (got <= 0) {
-                        fail = 1;
-                        break;
-                    }
-                    i--;
+                    } // Loop over characters
                 }
-                LOOP_END(1);
                 outbuff[obPos++] = '\0';
 
                 // Clean up after macro substitution

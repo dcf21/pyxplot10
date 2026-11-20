@@ -307,6 +307,36 @@ restore:
 //! \param [in] in - The line of input
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! lineScanState - The state of a scan through a command line: whether it is inside a quoted string (with ' " or `
+//! quotes), and how deeply nested in brackets it is
+typedef struct lineScanState {
+    char quoteChar; // The quote character of the string currently open, or '\0' if outside any string
+    int bracketLevel; // The number of round brackets currently open
+} lineScanState;
+
+//! lineScanStep - Update the state of a scan through a command line, for the next character
+//! \param [in,out] st - The state of the scan
+//! \param [in] line - The command line
+//! \param [in] i - The position in <line> of the next character
+//! \return True if the character was a bracket or quotation mark, which changed the state
+
+static int lineScanStep(lineScanState *st, const char *line, const int i) {
+    const char ch = line[i];
+    const int escaped = (i > 0) && (line[i - 1] == '\\');
+    if (st->quoteChar == '\0') {
+        if (ch == '(') st->bracketLevel++;
+        else if (ch == ')') st->bracketLevel--;
+        else if ((ch == '\'') || (ch == '\"') || (ch == '`')) st->quoteChar = ch;
+        else return 0;
+        return 1;
+    }
+    if ((ch == st->quoteChar) && !escaped) {
+        st->quoteChar = '\0';
+        return 1;
+    }
+    return 0;
+}
+
 //! \return Zero on success, or one if an error occurred
 
 int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int interactive, const int iterDepth) {
@@ -355,42 +385,31 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
         inputLineBuffer = in;
     }
 
-#define LOOP_OVER_LINE \
-    { \
-        int bracketLevel = 0; \
-        char quoteChar = '\0'; \
-        for (i = 0; inputLineBuffer[i] != '\0'; i++) { \
-            if ((quoteChar == '\0') && (inputLineBuffer[i] == '(')) bracketLevel++; \
-            else if ((quoteChar == '\0') && (inputLineBuffer[i] == ')')) bracketLevel--; \
-            else if ((quoteChar == '\0') && (inputLineBuffer[i] == '\'')) quoteChar = '\''; \
-            else if ((quoteChar == '\0') && (inputLineBuffer[i] == '\"')) quoteChar = '\"'; \
-            else if ((quoteChar == '\'') && (inputLineBuffer[i] == '\'') && (inputLineBuffer[i - 1] != '\\')) \
-                quoteChar = '\0'; \
-            else if ((quoteChar == '\"') && (inputLineBuffer[i] == '\"') && (inputLineBuffer[i - 1] != '\\')) \
-                quoteChar = '\0'; \
-            else if ((quoteChar == '\0') && (inputLineBuffer[i] == '`')) quoteChar = '`'; \
-            else if ((quoteChar == '`') && (inputLineBuffer[i] == '`') && (inputLineBuffer[i - 1] != '\\')) \
-                quoteChar = '\0';
-
-#define LOOP_END \
-    } \
-    }
 
     // Cut comments off the ends of lines
-    LOOP_OVER_LINE
-    else if ((quoteChar == '\0') && (inputLineBuffer[i] == '#')) break; LOOP_END
+    {
+        lineScanState st = {'\0', 0};
+        for (i = 0; inputLineBuffer[i] != '\0'; i++) {
+            if (lineScanStep(&st, inputLineBuffer, i)) continue;
+            if ((st.quoteChar == '\0') && (inputLineBuffer[i] == '#')) break;
+        }
+    }
     inputLineBuffer[i] = '\0';
 
     // Loop over semicolon-separated line segments
-    LOOP_OVER_LINE
-    else if ((quoteChar == '\0') && (bracketLevel == 0) && (inputLineBuffer[i] == ';')) {
-        inputLineBuffer[i] = '\0';
-        status = ppl_ProcessStatement(context, ps, inputLineBuffer, interactive, iterDepth);
-        if (status) break;
-        inputLineBuffer = inputLineBuffer + i + 1;
-        i = -1;
+    {
+        lineScanState st = {'\0', 0};
+        for (i = 0; inputLineBuffer[i] != '\0'; i++) {
+            if (lineScanStep(&st, inputLineBuffer, i)) continue;
+            if ((st.quoteChar == '\0') && (st.bracketLevel == 0) && (inputLineBuffer[i] == ';')) {
+                inputLineBuffer[i] = '\0';
+                status = ppl_ProcessStatement(context, ps, inputLineBuffer, interactive, iterDepth);
+                if (status) break;
+                inputLineBuffer = inputLineBuffer + i + 1;
+                i = -1;
+            }
+        }
     }
-    LOOP_END
 
     if (!status) status = ppl_ProcessStatement(context, ps, inputLineBuffer, interactive, iterDepth);
     if (context->inputLineAddBuffer != NULL) {
