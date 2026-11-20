@@ -1,0 +1,5 @@
+# test: status=0
+# Warnings do not change the exit status
+set log x
+plot [-1:1] x
+print "done"

@@ -1,0 +1,50 @@
+
+Type error:
+
+In piped input, line 4, position 5 below:
+
+ v[2] = "x"
+     /|\
+      |
+Vectors and matrices can only contain real numbers.
+
+
+Unit error:
+
+In piped input, line 5, position 5 below:
+
+ v[2] = 2 * unit(m)
+     /|\
+      |
+Cannot insert element with dimensions <m> into vector with dimensions <>.
+
+
+Range error:
+
+In piped input, line 6, position 11 below:
+
+ v[2] = sqrt(-1)
+           /|\
+            |
+The function sqrt(z) is not defined at the requested point in parameter space.
+
+
+Syntax error:
+
+In piped input, line 7, position 2 below:
+
+At this point, was expecting the end of the command.
+   |
+  \|/
+ 3 = 4
+
+
+Type error:
+
+In piped input, line 9, position 2 below:
+
+ s -= 1
+  /|\
+   |
+Attempt to implicitly cast string to number failed: string is not a valid number.
+

@@ -1,0 +1,10 @@
+# testlib.ppl
+#
+# Helper functions shared by Pyxplot's tests. Each test is run in a directory into which this file has been copied,
+# so a test may use these helpers after:   load "testlib.ppl"
+
+# approx(a, b) - True if a and b are equal to within a relative precision of 1e-9. Works with physical units.
+approx(a, b) = (a == b) or (abs(a - b) <= 1e-9 * max(abs(a), abs(b)))
+
+# approxAbs(a, b, tol) - True if a and b differ by no more than tol
+approxAbs(a, b, tol) = abs(a - b) <= tol

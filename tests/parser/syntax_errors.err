@@ -1,0 +1,111 @@
+
+Syntax error:
+
+In piped input, line 3, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print 1 +
+         /|\
+          |
+At this point, was expecting a literal value or a bracketed expression or a unary operator or a variable name.
+
+
+Syntax error:
+
+In piped input, line 4, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print (1 +* 2)
+          /|\
+           |
+At this point, was expecting a literal value or a bracketed expression or a unary operator or a variable name.
+
+
+Syntax error:
+
+In piped input, line 5, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print sin(
+         /|\
+          |
+Mismatched ( )
+
+
+Syntax error:
+
+In piped input, line 6, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print [1, 2, , 3]
+             /|\
+              |
+At this point, was expecting a literal value or a bracketed expression or a unary operator or a variable name.
+
+
+Type error:
+
+In piped input, line 7, position 6 below:
+ print {'a': 1, 'b'}
+In piped input, line 7, position 0 below:
+
+ {'a': 1, 'b'}
+/|\
+ |
+Dictionary keys must be strings; supplied key has type <number>.
+
+
+Syntax error:
+
+In piped input, line 8, position 14 below:
+
+At this point, was expecting the end of the command.
+               |
+              \|/
+ nosuchcommand 3
+
+
+Syntax error:
+
+In piped input, line 9, position 4 below:
+
+ set nosuchsetting 1
+    /|\
+     |
+Unrecognised set option 'nosuchsetting'.
+
+piped input:10: Range error: Multiplot item numbers must be in the range 0 to 32767.
+
+Syntax error:
+
+In piped input, line 11, position 4 below:
+
+At this point, was expecting an expression (value), or the end of the command.
+     |
+    \|/
+ x = 1 ? 2
+    /|\
+     |
+Unexpected junk left on stack.
+
+
+Syntax error:
+
+In piped input, line 12, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print "unterminated
+      /|\
+       |
+Mismatched quote.
+

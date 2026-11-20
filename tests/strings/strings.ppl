@@ -1,0 +1,32 @@
+# Tests of string operations and string methods
+load "testlib.ppl"
+
+s = "Hello World"
+assert s.len() == 11
+assert s.upper() == "HELLO WORLD"
+assert s.lower() == "hello world"
+assert s[0] == "H"
+assert s[0:5] == "Hello"
+assert s[-5:] == "World"
+assert "a" + "b" == "ab"
+assert "abc" < "abd"
+assert s.find("World") == 6
+assert s.find("xyz") == -1
+assert s.beginsWith("Hell")
+assert s.endsWith("rld")
+assert "  pad  ".strip() == "pad"
+assert "a,b,c".splitOn(",") == ["a", "b", "c"]
+assert "a b  c".split() == ["a", "b", "c"]
+assert "a,b;c".findAll(",") == [1]
+assert "abc1".isalnum()
+assert !"abc1".isalpha()
+assert "123".isdigit()
+assert "  x ".lstrip() == "x "
+assert " x  ".rstrip() == " x"
+assert "x".len() == 1
+assert "".len() == 0
+
+# Strings containing escaped quotes
+t = "a\"b"
+assert t.len() == 3
+assert 'single' == "single"

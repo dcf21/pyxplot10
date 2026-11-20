@@ -1,0 +1,11 @@
+# Tests of macro substitution: @variable is replaced by the value of a string variable, and `command` by the output
+# of a shell command. Quotation marks around strings must survive substitution.
+x = "3"
+print "val is", @x
+print "a\"b", @x, 'c'
+y = "print \"q\""
+@y
+cmd = "print 'from macro'"
+@cmd
+print `echo 1+2`
+print "`not substituted inside quotes`", "@x"

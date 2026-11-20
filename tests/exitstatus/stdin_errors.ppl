@@ -1,0 +1,4 @@
+# test: mode=stdin
+# Errors in piped input are reported, and Pyxplot carries on, but exits with status 1
+print 1/0
+print "carried on"

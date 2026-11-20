@@ -1,0 +1,27 @@
+# Smoke tests of plotting: each plot must be produced without any errors or warnings
+set term eps
+set output "lines.eps"
+plot sin(x) title "$\sin(x)$", cos(x) with points
+set output "styles.eps"
+set samples 12
+plot [0:5] x**2 with boxes, x with steps, x:x:0.5 with yerrorbars, x:x:0.5 with yerrorshaded
+set output "colormap.eps"
+set samples grid 20x20
+plot [-2:2][-2:2] x*y with colormap
+set output "contour.eps"
+plot [-2:2][-2:2] x**2 - y**2 with contourmap
+set output "surface.eps"
+plot 3d [-2:2][-2:2] x*y with surface
+set output "arrows.eps"
+set arrow 1 from -5, 0 to 5, 0 with twoway
+set label 1 "label" at 0, 0
+plot [-1:1] x
+set output "pie.eps"
+piechart '--' using 1 label auto
+1
+2
+3
+END
+foreach f in ["lines", "styles", "colormap", "contour", "surface", "arrows", "pie"] {
+ assert os.path.exists("%s.eps" % (f)) "%s.eps was not created" % (f)
+}

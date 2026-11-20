@@ -1,0 +1,6 @@
+# Text containing non-ASCII UTF-8 characters must be typeset without errors
+set term eps
+set output "utf8.eps"
+set title "Café"
+plot x title "Zürich"
+assert os.path.exists("utf8.eps")

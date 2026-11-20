@@ -1,0 +1,8 @@
+# conjugate() crashed Pyxplot with a double free before Pyxplot 0.10.0
+load "testlib.ppl"
+set numerics complex
+z = 3 + 4 * i
+assert conjugate(z) == 3 - 4 * i
+assert conjugate(z * unit(s)) == (3 - 4 * i) * unit(s)
+assert conjugate(2) == 2
+assert z == 3 + 4 * i

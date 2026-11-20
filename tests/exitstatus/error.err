@@ -1,0 +1,13 @@
+
+Numerical error:
+
+In file 'error.ppl', line 3, position 6 below:
+ print 1/0
+In file 'error.ppl', line 3, position 1 below:
+
+ 1/0
+ /|\
+  |
+Division by zero error.
+
+File error: Aborting.

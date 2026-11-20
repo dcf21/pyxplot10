@@ -1,0 +1,14 @@
+# Tests of how quantities with physical units are displayed
+print 2 * unit(km)
+print 3 * unit(kg * m / s**2)
+print 1500 * unit(m)
+print 1 * unit(m**-1)
+print 5 * unit(m) / unit(s)
+set unit display full
+print 2 * unit(km)
+set unit display abbreviated
+set unit scheme imperial
+print 1 * unit(m)
+set unit scheme si
+set unit of length cm
+print 1 * unit(m)

@@ -1,0 +1,73 @@
+# Tests of loops: for, foreach, while and do, with break and continue
+load "testlib.ppl"
+
+total = 0
+for i = 1 to 10 {
+ total += i
+}
+assert total == 55
+
+total = 0
+for i = 10 to 1 step -2 {
+ total += i
+}
+assert total == 30
+
+total = 0
+foreach x in [1, 2, 3, 4, 5] {
+ if (x == 2) {
+  continue
+ }
+ if (x == 4) {
+  break
+ }
+ total += x
+}
+assert total == 4
+
+keys = []
+foreach k in {"a": 1, "b": 2} {
+ call keys.append(k)
+}
+assert keys.sort() == ["a", "b"]
+
+total = 0
+foreach v in vector(7, 8, 9) {
+ total += v
+}
+assert total == 24
+
+n = 0
+while (n < 5) {
+ n++
+}
+assert n == 5
+
+n = 0
+do {
+ n++
+} while (n < 0)
+assert n == 1
+
+# Nested loops, broken out of by name
+count = 0
+for i = 0 to 4 loopname outer {
+ for j = 0 to 4 {
+  if (j == 2) {
+   break outer
+  }
+  count++
+ }
+}
+assert count == 2
+
+# Conditionals
+x = 5
+if (x > 3) {
+ y = "big"
+} else if (x > 1) {
+ y = "medium"
+} else {
+ y = "small"
+}
+assert y == "big"

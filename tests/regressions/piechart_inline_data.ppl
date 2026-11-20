@@ -1,0 +1,9 @@
+# Pie charts of data supplied inline, without labels, crashed Pyxplot before Pyxplot 0.10.0
+set term eps
+set output "pie.eps"
+piechart '--' using 1
+1
+2
+3
+END
+assert os.path.exists("pie.eps")

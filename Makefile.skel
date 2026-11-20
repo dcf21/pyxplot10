@@ -260,5 +260,10 @@ clean:
 
 afresh: clean all
 
-test:
+# Run the automated tests in tests/, then check that the examples in the manual run without errors
+test: test-unit
 	+$(MAKE) -C doc test-examples
+
+# Run the automated tests in tests/ against the Pyxplot binary in bin/
+test-unit: $(LOCAL_BINDIR)/pyxplot
+	PYXPLOT=$(LOCAL_BINDIR)/pyxplot python3 tests/test_pyxplot.py

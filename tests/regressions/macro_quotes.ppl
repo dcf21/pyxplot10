@@ -1,0 +1,4 @@
+# Macro substitution stripped quotation marks from the command line before Pyxplot 0.10.0, so that
+# print "val is", @x became print val is, 3
+x = "3"
+print "val is", @x

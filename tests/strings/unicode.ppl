@@ -1,0 +1,18 @@
+# Strings are stored as UTF-8. Their lengths, indices, slices and the positions returned by find() are counted in
+# characters, not bytes, so that multi-byte characters such as é and ☕ count as one character each.
+assert "Café".len() == 4
+s = "Café ☕ Zürich"
+assert s.len() == 13
+assert s[3] == "é"
+assert s[5] == "☕"
+assert s[-1] == "h"
+assert s[-6] == "Z"
+assert s[0:4] == "Café"
+assert s[7:] == "Zürich"
+assert s[:-7] == "Café ☕"
+assert s.find("Zürich") == 7
+assert s.findAll("ü") == [8]
+assert s.find("x") == -1
+assert (s[0:5] + s[5:]) == s
+assert "".len() == 0
+assert "ü".upper().len() == 1

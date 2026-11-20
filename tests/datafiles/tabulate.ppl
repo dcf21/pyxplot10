@@ -1,0 +1,17 @@
+# Tests of the tabulate command, which writes a function to a data file. The file is read back and printed.
+set samples 5
+set output "squares.out.dat"
+tabulate [0:4] x**2
+foreach datum a, b in "squares.out.dat" {
+ print a, " ", b
+}
+set samples 3
+set output "two.out.dat"
+tabulate [0:2] x, 2*x
+# Each function is written to a separate index block of the file. Index blocks are numbered from 0.
+foreach datum a, b in "two.out.dat" index 0 {
+ print "x: ", a, " ", b
+}
+foreach datum a, b in "two.out.dat" index 1 {
+ print "2x: ", a, " ", b
+}

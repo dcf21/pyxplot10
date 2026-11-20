@@ -1,0 +1,13 @@
+# Tests of date objects and calendars
+load "testlib.ppl"
+
+d = time.fromCalendar(2000, 1, 1, 12, 0, 0)
+assert d.toYear() == 2000
+assert d.toMonthName() == "January"
+assert d.toDayWeekName() == "Saturday"
+assert approx(d.toJD(), 2451545.0)
+assert approx(time.fromJD(2451545.0).toUnix(), d.toUnix())
+d2 = time.fromCalendar(2000, 3, 1, 0, 0, 0)
+assert approx((d2 - d) / unit(day), 59.5)
+print d.str("%Y-%m-%d %H:%M:%S")
+print time.fromCalendar(2026, 11, 20, 0, 0, 0)

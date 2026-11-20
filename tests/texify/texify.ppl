@@ -1,0 +1,13 @@
+# Tests of the texify() function, which renders an expression in LaTeX
+alpha_1 = 2
+f(x) = sin(x)**2 / alpha_1
+print texify('f(x) + alpha_1')
+print texify('alpha_1 * unit(m)')
+print texify("'a string' + 'b'")
+print texify('3*unit(kg*m/s**2) + 2*unit(N)')
+print texify('sqrt(beta_2) + 1')
+print texify('1e10 + 2*i')
+print texify('x>2 and not y')
+print texify('gamma')
+print texify('[1, "b"]')
+print texify('int_dx(x**2, 0, 1)')

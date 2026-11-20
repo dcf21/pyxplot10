@@ -1,0 +1,12 @@
+# Dates in the Hebrew and Islamic calendars were displayed and entered incorrectly before Pyxplot 0.10.0.
+# 1 January 2000 is 23 Tevet 5760 in the Hebrew calendar, and 24 Ramadan 1420 in the Islamic calendar.
+d = time.fromCalendar(2000, 1, 1, 12, 0, 0)
+set calendar out hebrew
+print d
+set calendar out islamic
+print d
+set calendar out gregorian
+set calendar in hebrew
+print time.fromCalendar(5760, 4, 23, 12, 0, 0)
+set calendar in islamic
+print time.fromCalendar(1420, 9, 24, 12, 0, 0)

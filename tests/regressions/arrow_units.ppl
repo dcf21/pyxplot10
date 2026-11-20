@@ -1,0 +1,7 @@
+# An arrow positioned with units incompatible with its axis's range crashed Pyxplot before Pyxplot 0.10.0
+set term eps
+set output "arrow.eps"
+set xrange [0*unit(m):1*unit(m)]
+set arrow 1 from 1*unit(s), 0 to 0.5*unit(m), 1
+plot x
+print "survived"

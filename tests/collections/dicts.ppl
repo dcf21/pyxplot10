@@ -1,0 +1,14 @@
+# Tests of dictionaries
+load "testlib.ppl"
+
+d = {"a": 1, "b": 2}
+assert d["a"] == 1
+d["c"] = 3
+assert d.len() == 3
+assert d.hasKey("b")
+assert !d.hasKey("z")
+assert d.keys().sort() == ["a", "b", "c"]
+assert d.values().sort() == [1, 2, 3]
+call d.delete("a")
+assert !d.hasKey("a")
+assert d.len() == 2

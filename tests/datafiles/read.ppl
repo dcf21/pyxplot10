@@ -1,0 +1,38 @@
+# Tests of reading data files, with the using, every, index and select modifiers
+load "testlib.ppl"
+
+total = 0
+foreach datum a, b in "squares.dat" {
+ total += b
+}
+assert total == 55
+
+total = 0
+foreach datum a in "squares.dat" using 2 {
+ total += a
+}
+assert total == 55
+
+total = 0
+foreach datum a in "squares.dat" using $1 * 10 select ($1 > 2) {
+ total += a
+}
+assert total == 120
+
+n = 0
+foreach datum a in "squares.dat" index 1 {
+ n++
+}
+assert n == 2
+
+# Fitting
+f(x) = a * x**b
+a = 1
+b = 1
+fit f(x) withouterrors "squares.dat" via a, b
+assert approxAbs(a, 1, 1e-6)
+assert approxAbs(b, 2, 1e-6)
+
+# Interpolation
+interpolate linear g() "squares.dat"
+assert approx(g(2.5), 6.5)

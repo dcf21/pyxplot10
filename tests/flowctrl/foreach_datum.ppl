@@ -1,0 +1,13 @@
+# Tests of the foreach datum command, which loops over the rows of a data file
+total = 0
+foreach datum a, b in '--' {
+ total += a * b
+ if (a > 2) {
+  break
+ }
+}
+1 2
+3 4
+5 6
+END
+print total

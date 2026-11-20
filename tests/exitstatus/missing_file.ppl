@@ -1,0 +1,4 @@
+# test: status=1
+# Loading a script which does not exist is an error
+load "no_such_file.ppl"
+print "after"

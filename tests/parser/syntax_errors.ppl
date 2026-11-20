@@ -1,0 +1,12 @@
+# test: mode=stdin
+# Syntax errors, which should be reported with the position of the problem and a list of what was expected
+print 1 +
+print (1 +* 2)
+print sin(
+print [1, 2, , 3]
+print {'a': 1, 'b'}
+nosuchcommand 3
+set nosuchsetting 1
+plot item 9999999 x
+x = 1 ? 2
+print "unterminated

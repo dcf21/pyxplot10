@@ -1,0 +1,60 @@
+
+Unit error:
+
+In piped input, line 3, position 6 below:
+ print 1 * unit(m) + 1 * unit(s)
+In piped input, line 3, position 12 below:
+
+ 1 * unit(m) + 1 * unit(s)
+            /|\
+             |
+Attempt to add quantities with conflicting dimensions: left operand has units of <m>, while right operand has units of <s>.
+
+
+Unit error:
+
+In piped input, line 4, position 6 below:
+ print 1 * unit(m) < 1 * unit(kg)
+In piped input, line 4, position 12 below:
+
+ 1 * unit(m) < 1 * unit(kg)
+            /|\
+             |
+Attempt to compare a quantity with dimensions of <m> with one with dimensions of <kg>.
+
+
+Unit error:
+
+In piped input, line 5, position 6 below:
+ print sin(1 * unit(m))
+In piped input, line 5, position 3 below:
+
+ sin(1 * unit(m))
+   /|\
+    |
+The first argument to the sin(z) function must be an angle. Supplied input has dimensions of <m>.
+
+
+Unit error:
+
+In piped input, line 6, position 6 below:
+ print unit(nosuchunit)
+In piped input, line 6, position 4 below:
+
+ unit(nosuchunit)
+    /|\
+     |
+No such unit.
+
+
+Unit error:
+
+In piped input, line 7, position 6 below:
+ print 2 ** (1 * unit(m))
+In piped input, line 7, position 2 below:
+
+ 2 ** (1 * unit(m))
+  /|\
+   |
+Exponent should be dimensionless, but instead has dimensions of <m>.
+

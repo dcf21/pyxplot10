@@ -1,0 +1,11 @@
+
+File error:
+
+In file 'missing_file.ppl', line 3, position 5 below:
+
+ load "no_such_file.ppl"
+     /|\
+      |
+Could not access file 'no_such_file.ppl'.
+
+File error: Aborting.

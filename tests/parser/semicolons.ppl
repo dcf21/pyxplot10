@@ -1,0 +1,4 @@
+# Several commands may be given on one line, separated by semicolons, except within brackets and strings
+a = 1 ; b = 2 ; print a + b
+print "x;y" ; print 'z;w'
+print [1, 2] ; print "done"  # Comments after commands are ignored ; print "not printed"

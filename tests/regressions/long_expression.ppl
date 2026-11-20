@@ -1,0 +1,16 @@
+# Expressions longer than the initial size of the tokeniser's buffer, including within brackets, lists and
+# dictionaries, which make the buffer grow while a bracketed sub-expression is being tokenised
+load "testlib.ppl"
+n = 3000
+s = "1"
+for i = 1 to n {
+ s += "+1"
+}
+x = 0
+y = []
+cmd = "x = 1 + (" + s + ") + 2"
+@cmd
+assert x == n + 4
+cmd = "y = [" + s + ", " + s + "]"
+@cmd
+assert y == [n + 1, n + 1]

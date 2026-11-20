@@ -1,0 +1,4 @@
+# An error in a script makes Pyxplot stop running it, and exit with status 1
+print "before"
+print 1/0
+print "after"

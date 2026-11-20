@@ -1,0 +1,11 @@
+
+Assertion error:
+
+In file 'assertion.ppl', line 2, position 7 below:
+
+ assert 1 == 2 "one is not two"
+       /|\
+        |
+one is not two
+
+File error: Aborting.

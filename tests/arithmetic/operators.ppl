@@ -1,0 +1,56 @@
+# Tests of Pyxplot's arithmetic, comparison, logical and bitwise operators, and their precedence
+load "testlib.ppl"
+
+# Arithmetic
+assert 1 + 2 == 3
+assert 7 - 10 == -3
+assert 6 * 7 == 42
+assert 7 / 2 == 3.5
+assert 2 ** 10 == 1024
+assert 2 ** -1 == 0.5
+assert 7 % 3 == 1
+assert -7 % 3 == 2  # Modulo is floored, as in Python: the result takes the sign of the divisor
+assert 7 % -3 == -2
+assert -7.5 % 2 == 0.5
+assert approx(7.5 % 2, 1.5)
+
+# Precedence and associativity
+assert 2 + 3 * 4 == 14
+assert (2 + 3) * 4 == 20
+assert 2 ** 3 ** 2 == 512
+assert -2 ** 2 == -4
+assert 10 - 4 - 3 == 3
+assert 64 / 4 / 2 == 8
+
+# Comparisons
+assert 1 < 2
+assert 2 > 1
+assert 2 <= 2
+assert 3 >= 2
+assert 3 != 4
+assert !(3 == 4)
+
+# Logical operators
+assert (1 and 1)
+assert !(1 and 0)
+assert (0 or 1)
+assert !(0 or 0)
+assert not 0
+assert (true and not false)
+
+# Bitwise operators
+assert (12 & 10) == 8
+assert (12 | 10) == 14
+assert (12 ^ 10) == 6
+assert ~0 == -1
+assert 1 << 4 == 16
+assert 256 >> 4 == 16
+
+# Ternary operator
+assert (1 ? 2 : 3) == 2
+assert (0 ? 2 : 3) == 3
+
+# Floating point
+assert approx(0.1 + 0.2, 0.3)
+assert approx(1e300 * 10, 1e301)
+assert approx(sqrt(2) ** 2, 2)

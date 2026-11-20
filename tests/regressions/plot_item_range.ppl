@@ -1,0 +1,6 @@
+# test: mode=stdin
+# Out-of-range multiplot item numbers crashed Pyxplot before Pyxplot 0.10.0
+set term eps
+set output "x.eps"
+plot item 9999999 x
+print "survived"

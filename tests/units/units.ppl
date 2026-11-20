@@ -1,0 +1,24 @@
+# Tests of arithmetic with physical units
+load "testlib.ppl"
+
+assert approx(1 * unit(km), 1000 * unit(m))
+assert approx(1 * unit(inch), 2.54 * unit(cm))
+assert approx(1 * unit(hour), 3600 * unit(s))
+assert approx(unit(km) / unit(m), 1000)
+assert approx((2 * unit(m)) * (3 * unit(m)), 6 * unit(m**2))
+assert approx(sqrt(4 * unit(m**2)), 2 * unit(m))
+assert approx(1 * unit(N), 1 * unit(kg * m / s**2))
+assert approx(1 * unit(J), 1 * unit(N * m))
+assert approx(1 * unit(W), 1 * unit(J / s))
+assert approx((10 * unit(m)) / (2 * unit(s)), 5 * unit(m / s))
+
+# Temperature conversions
+assert approx((0 * unit(oC)) / unit(K), 273.15)
+assert approx((32 * unit(oF)) / unit(oC), 0)
+
+# Comparison of quantities with the same dimensions but different units
+assert 1 * unit(km) > 999 * unit(m)
+assert 1 * unit(km) < 1001 * unit(m)
+
+# Physical constants
+assert approx(phy.c, 299792458 * unit(m / s))

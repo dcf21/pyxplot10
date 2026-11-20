@@ -1,0 +1,20 @@
+# Tests of vectors and matrices
+load "testlib.ppl"
+
+v = vector(1, 2, 3)
+w = vector(4, 5, 6)
+assert v.len() == 3
+assert v + w == vector(5, 7, 9)
+assert 2 * v == vector(2, 4, 6)
+assert v * w == 32
+assert approx(v.norm(), sqrt(14))
+
+m = matrix([1, 2], [3, 4])
+assert m.size() == vector(2, 2)
+assert approx(m.det(), -2)
+assert m.transpose() == matrix([1, 3], [2, 4])
+assert m * vector(1, 1) == vector(3, 7)
+assert m * m == matrix([7, 10], [15, 22])
+inv = m.inv()
+assert approx((m * inv)[0][0], 1)
+assert approxAbs((m * inv)[0][1], 0, 1e-12)

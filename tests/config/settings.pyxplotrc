@@ -1,0 +1,11 @@
+[settings]
+c2range_min = 3
+c2range_max = auto
+c3range_max = bad
+fontsize = 2
+[units]
+furlong/fur/\mathrm{fur}/furlongs/furs/\mathrm{furs}:length = 201.168 m
+glob////:wibble = 2 furlong
+blob////:blobness =
+[variables]
+myvar = 42

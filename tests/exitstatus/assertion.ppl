@@ -1,0 +1,2 @@
+# A failed assertion makes Pyxplot exit with status 1
+assert 1 == 2 "one is not two"

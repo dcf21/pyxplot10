@@ -1,0 +1,4 @@
+# Commands after quit are not run, and Pyxplot exits with status 0
+print "before"
+quit
+print 1/0

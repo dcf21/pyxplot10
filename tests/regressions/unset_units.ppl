@@ -1,0 +1,10 @@
+# The commands "unset unit preferred" and "unset unit of" did not work before Pyxplot 0.10.0
+print 1 * unit(W / Hz)
+set unit preferred W/Hz
+print 1 * unit(W / Hz)
+unset unit preferred
+print 1 * unit(W / Hz)
+set unit of length cm
+print 1 * unit(m)
+unset unit of length
+print 1 * unit(m)

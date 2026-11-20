@@ -1,0 +1,41 @@
+# Tests of user-defined functions and subroutines
+load "testlib.ppl"
+
+f(x) = x**2 + 1
+assert f(3) == 10
+
+# Functions of several variables
+g(x, y) = x * y + 1
+assert g(2, 3) == 7
+
+# Functions defined piecewise over ranges of their arguments
+h(x)[0:1] = x
+h(x)[1:2] = 2 - x
+assert approx(h(0.5), 0.5)
+assert approx(h(1.5), 0.5)
+
+# Recursive functions
+fact(n) = (n <= 1) ? 1 : n * fact(n - 1)
+assert fact(10) == 3628800
+
+# Functions are evaluated with the current values of global variables
+k = 2
+p(x) = k * x
+assert p(5) == 10
+k = 3
+assert p(5) == 15
+
+# Subroutines
+subroutine addTwo(a, b) {
+ return a + b
+}
+assert addTwo(2, 5) == 7
+
+subroutine sign(x) {
+ if (x < 0) {
+  return -1
+ }
+ return 1
+}
+assert sign(-4) == -1
+assert sign(4) == 1

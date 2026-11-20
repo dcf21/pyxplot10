@@ -1,0 +1,9 @@
+set c2range          [3:*] renormalise noreverse # The range of values represented by different colors in the colormap plot style, and by contours in the contourmap plot style.
+
+set fontSize         2                        # Sets the font size of text output: 1.0 is the default, and other values multiply this default size.
+
+202.168 m
+603.504 m
+402.336 m
+2 blob
+42

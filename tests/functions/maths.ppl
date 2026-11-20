@@ -1,0 +1,34 @@
+# Tests of Pyxplot's built-in mathematical functions
+load "testlib.ppl"
+
+assert approx(sin(pi / 6), 0.5)
+assert approx(cos(pi / 3), 0.5)
+assert approx(tan(pi / 4), 1)
+assert approx(asin(1), pi / 2)
+assert approx(atan2(1, 1), pi / 4)
+assert approx(sin(90 * unit(deg)), 1)
+assert approx(sqrt(16), 4)
+assert approx(exp(1), e)
+assert approx(log(e), 1)
+assert approx(log10(1000), 3)
+assert approx(abs(-3.5), 3.5)
+assert floor(2.7) == 2
+assert ceil(2.1) == 3
+assert floor(-2.5) == -3
+assert round(2.5) == 3
+assert approx(hypot(3, 4), 5)
+assert max(3, 9, 2) == 9
+assert min(3, 9, 2) == 2
+assert approx(gamma(5), 24)
+assert approx(stats.binomialPDF(2, 0.5, 4), 0.375)  # Arguments are (k, p, n)
+assert approx(erf(0), 0)
+assert approx(besselJ(0, 0), 1)
+assert approx(zeta(2), pi**2 / 6)
+assert approx(radians(180), pi)
+assert approx(degrees(pi), 180)
+assert sgn(-4) == -1
+assert sgn(0) == 0
+assert heaviside(1) == 1
+assert approx(sinh(0), 0)
+assert approx(cosh(0), 1)
+assert approx(ln(e**2), 2)

@@ -1,0 +1,19 @@
+# Tests of arithmetic with complex numbers
+load "testlib.ppl"
+
+set numerics complex
+z = 3 + 4 * i
+assert Re(z) == 3
+assert Im(z) == 4
+assert abs(z) == 5
+assert approx(arg(i), pi / 2)
+assert conjugate(z) == 3 - 4 * i
+assert approx(sqrt(-4), 2 * i)
+assert approx(exp(i * pi), -1)
+assert approx((1 + i) * (1 - i), 2)
+assert approx(i ** 2, -1)
+
+# With complex arithmetic switched off, functions with complex results return NaN
+set numerics real
+set numerics errors quiet
+assert !(sqrt(-4) == sqrt(-4))

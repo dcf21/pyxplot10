@@ -1,0 +1,7 @@
+# test: mode=stdin
+# Errors raised by arithmetic on quantities with incompatible physical units
+print 1 * unit(m) + 1 * unit(s)
+print 1 * unit(m) < 1 * unit(kg)
+print sin(1 * unit(m))
+print unit(nosuchunit)
+print 2 ** (1 * unit(m))

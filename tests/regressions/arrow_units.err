@@ -1,0 +1,3 @@
+file 'arrow_units.ppl':6: Numerical error: Position specified for arrow 1 on plot 1 dimensionally incompatible with the range specified for the axis. Position has units of <s> while axis has units of <m>.
+file 'arrow_units.ppl':6: Numerical error: Position specified for arrow 1 on plot 1 dimensionally incompatible with data plotted against the axis. Position has units of <> while axis has units of <m>.
+file 'arrow_units.ppl':6: Numerical error: Position specified for arrow 1 on plot 1 dimensionally incompatible with data plotted against the axis. Position has units of <> while axis has units of <m>.

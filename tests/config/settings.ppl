@@ -1,0 +1,9 @@
+# test: status=0
+# Tests that settings, units and variables are read from a configuration file. The illegal value given for
+# c3range_max produces a warning, but is not an error.
+show c2range fontsize
+print unit(furlong) + unit(m)
+print 3*unit(furs)
+print unit(glob)
+print 2*unit(blob)
+print myvar

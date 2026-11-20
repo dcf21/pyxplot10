@@ -1,0 +1,58 @@
+# Tests of the assignment operators, including fused operator-assignments and assignment to vector elements
+load "testlib.ppl"
+
+a = 3
+assert a == 3
+a += 2
+assert a == 5
+a -= 1
+assert a == 4
+a *= 3
+assert a == 12
+a /= 4
+assert a == 3
+a **= 2
+assert a == 9
+a %= 4
+assert a == 1
+a <<= 3
+assert a == 8
+a >>= 1
+assert a == 4
+a |= 3
+assert a == 7
+a &= 5
+assert a == 5
+a ^= 1
+assert a == 4
+
+# Increment and decrement operators
+b = 10
+b++
+assert b == 11
+b--
+assert b == 10
+assert b++ == 10
+assert b == 11
+assert ++b == 12
+assert --b == 11
+
+# The value of an assignment is the value assigned
+c = (d = 5) + 1
+assert c == 6
+assert d == 5
+
+# Strings can be extended with +=
+s = "abc"
+s += "def"
+assert s == "abcdef"
+
+# Assignment to vector and matrix elements
+v = vector(1, 2, 3)
+v[1] = 7
+assert v[1] == 7
+v[0] *= 3
+assert v[0] == 3
+m = matrix([1, 2], [3, 4])
+m[1][0] = 9
+assert m[1][0] == 9

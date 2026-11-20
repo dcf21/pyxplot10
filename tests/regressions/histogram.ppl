@@ -1,0 +1,14 @@
+# The histogram command used memory after freeing it before Pyxplot 0.10.0
+load "testlib.ppl"
+histogram h() '--' binwidth 1 binorigin 0.5
+1
+2
+2
+3
+3
+3
+END
+assert approx(h(1), 1)
+assert approx(h(2), 2)
+assert approx(h(3), 3)
+assert h(10) == 0
