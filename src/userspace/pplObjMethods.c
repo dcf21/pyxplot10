@@ -556,12 +556,15 @@ static void pplmethod_strisalpha(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
-    int i, l = strlen(s), out = 1;
-    for (i = 0; i < l; i++)
-        if (!isalpha(s[i])) {
+    int p = 0, out = 1;
+    while (s[p] != '\0') {
+        // Decode each UTF-8 character in turn, so that letters such as é are recognised
+        const long cp = ppl_utf8NextChar(s, &p);
+        if (!ppl_utf8IsAlpha(cp)) {
             out = 0;
             break;
         }
+    }
     pplObjBool(&OUTPUT, 0, out);
 }
 
@@ -580,12 +583,15 @@ static void pplmethod_strisdigit(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
-    int i, l = strlen(s), out = 1;
-    for (i = 0; i < l; i++)
-        if (!isdigit(s[i])) {
+    int p = 0, out = 1;
+    while (s[p] != '\0') {
+        // Decode each UTF-8 character in turn, so that letters such as é are recognised
+        const long cp = ppl_utf8NextChar(s, &p);
+        if (!ppl_utf8IsDigit(cp)) {
             out = 0;
             break;
         }
+    }
     pplObjBool(&OUTPUT, 0, out);
 }
 
@@ -604,12 +610,15 @@ static void pplmethod_strisalnum(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
-    int i, l = strlen(s), out = 1;
-    for (i = 0; i < l; i++)
-        if (!isalnum(s[i])) {
+    int p = 0, out = 1;
+    while (s[p] != '\0') {
+        // Decode each UTF-8 character in turn, so that letters such as é are recognised
+        const long cp = ppl_utf8NextChar(s, &p);
+        if (!(ppl_utf8IsAlpha(cp) || ppl_utf8IsDigit(cp))) {
             out = 0;
             break;
         }
+    }
     pplObjBool(&OUTPUT, 0, out);
 }
 
@@ -4136,23 +4145,28 @@ void pplObjMethodsInit(ppl_context *c) {
     ppl_addSystemMethod(
             pplObjMethods[PPLOBJ_STR], "find", 1, 1, 0, 0, 0, 0, (void *) &pplmethod_strFind, "find(x)",
             "\\mathrm{find}@<@1@>",
-            "find(x) returns the position of the first occurrence of x in a string, or -1 if it is not found");
-    ppl_addSystemMethod(pplObjMethods[PPLOBJ_STR], "findAll", 1, 1, 0, 0, 0, 0, (void *) &pplmethod_strFindAll,
-                        "findAll(x)", "\\mathrm{findAll}@<@1@>",
-                        "findAll(x) returns a list of the positions where the substring x occurs in a string");
+            "find(x) returns the position, in characters, of the first occurrence of x in a string, or -1 if it is not "
+            "found");
+    ppl_addSystemMethod(
+            pplObjMethods[PPLOBJ_STR], "findAll", 1, 1, 0, 0, 0, 0, (void *) &pplmethod_strFindAll, "findAll(x)",
+            "\\mathrm{findAll}@<@1@>",
+            "findAll(x) returns a list of the positions, in characters, where the substring x occurs in a string");
     ppl_addSystemMethod(
             pplObjMethods[PPLOBJ_STR], "isalnum", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_strisalnum, "isalnum()",
             "\\mathrm{isalnum}@<@>",
-            "isalnum() returns a boolean indicating whether all of the characters of a string are alphanumeric");
+            "isalnum() returns a boolean indicating whether all of the characters of a string are letters (in any "
+            "alphabet) or the digits 0-9");
     ppl_addSystemMethod(
             pplObjMethods[PPLOBJ_STR], "isalpha", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_strisalpha, "isalpha()",
             "\\mathrm{isalpha}@<@>",
-            "isalpha() returns a boolean indicating whether all of the characters of a string are alphabetic");
-    ppl_addSystemMethod(pplObjMethods[PPLOBJ_STR], "isdigit", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_strisdigit,
-                        "isdigit()", "\\mathrm{isdigit}@<@>",
-                        "isdigit() returns a boolean indicating whether all of the characters of a string are numeric");
+            "isalpha() returns a boolean indicating whether all of the characters of a string are letters, in any "
+            "alphabet");
+    ppl_addSystemMethod(
+            pplObjMethods[PPLOBJ_STR], "isdigit", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_strisdigit, "isdigit()",
+            "\\mathrm{isdigit}@<@>",
+            "isdigit() returns a boolean indicating whether all of the characters of a string are the digits 0-9");
     ppl_addSystemMethod(pplObjMethods[PPLOBJ_STR], "len", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_strLen, "len()",
-                        "\\mathrm{len}@<@>", "len() returns the length of a string");
+                        "\\mathrm{len}@<@>", "len() returns the length of a string, in characters");
     ppl_addSystemMethod(pplObjMethods[PPLOBJ_STR], "lower", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_strLower, "lower()",
                         "\\mathrm{lower}@<@>", "lower() converts a string to lowercase");
     ppl_addSystemMethod(pplObjMethods[PPLOBJ_STR], "split", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_strSplit, "split()",

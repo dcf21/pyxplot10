@@ -15,11 +15,18 @@
        incompatible with its axis.
      - Macro substitution (@variable) removed quotation marks from commands.
      - texify() inserted an empty \mathrm{} after function calls.
+     - Dictionary items without values, e.g. {'a':1, 'b'}, and ternary
+       operators without a colon, e.g. 1 ? 2, gave misleading error messages
+       instead of syntax errors.
+     - Warnings about the ranges of logarithmic axes were given twice.
+     - The index blocks written by the tabulate command were labelled from 1,
+       though the index modifier counts them from 0.
    - Pyxplot now exits with status 1 if any error occurs while running a
      script or piped input, so that failures can be detected by the shell.
    - The lengths, indices and slices of strings, and the positions returned by
      find() and findAll(), count characters rather than bytes, so that
      multi-byte UTF-8 characters count as one character: "Café".len() is 4.
+     The isalpha() and isalnum() methods recognise letters in any alphabet.
    - An automated test suite has been added: run it with "make test".
 
 2012 Sep 19: Pyxplot 0.9.2

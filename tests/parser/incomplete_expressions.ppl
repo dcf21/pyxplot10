@@ -1,0 +1,9 @@
+# test: mode=stdin
+# Dictionary items without a value, and ternary operators without a :, are syntax errors
+print {'a': 1, 'b'}
+print {'b'}
+x = 1 ? 2
+print [1 ? 2, 3]
+print {}
+print {'a': 0 ? 1 : 2, 'b': [1, 2]}
+print 0 ? 1 : 1 ? 5 : 6

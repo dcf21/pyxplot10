@@ -342,7 +342,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
 
     // Loop over datasets being tabulated
     pos = PARSE_tabulate_0tabulate_list;
-    j = 1;
+    j = 0; // Index blocks are numbered from zero, as they are by the index modifier when the data are read back
     while (stk[pos].objType == PPLOBJ_NUM) {
         char *format, datafname[FNAME_LENGTH] = "";
         int w, errCount = 5;

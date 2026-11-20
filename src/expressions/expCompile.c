@@ -738,6 +738,27 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         if (t.scanpos == oldpos) break; // We've got stuck
     }
 
+    // Every ? of a ternary operator must be matched by a :
+    if ((t.state == 'U') && (tertiaryDepth > 0)) {
+        *errPos = t.scanpos;
+        *errType = ERR_SYNTAX;
+        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Expecting : to complete the ternary operator a ? b : c");
+        *end = -1;
+        *outlen = 0;
+        return;
+    }
+
+    // In a dictionary literal, the last key must be followed by a colon and a value, just as the others are (which is
+    // checked when the comma after each item is reached). Empty dictionaries are not passed to the tokeniser.
+    if ((t.state == 'U') && isDict && ((nDictItems == 0) || (nCommaItems >= 2))) {
+        *errPos = t.scanpos;
+        *errType = ERR_SYNTAX;
+        ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "Expecting : followed by value for dictionary key");
+        *end = -1;
+        *outlen = 0;
+        return;
+    }
+
     if (t.state == 'U') // We reached t.state U... end of expression
     {
         *errPos = -1;

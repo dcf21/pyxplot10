@@ -16,3 +16,12 @@ assert s.find("x") == -1
 assert (s[0:5] + s[5:]) == s
 assert "".len() == 0
 assert "ü".upper().len() == 1
+
+# Character classes recognise letters in any alphabet, regardless of the user's locale. Digits are 0-9 only.
+assert "café".isalpha()
+assert "Ωμέγα".isalpha()
+assert !"☕".isalpha()
+assert "Zürich2".isalnum()
+assert !"Zürich 2".isalnum()
+assert "0123".isdigit()
+assert !"١٢".isdigit()

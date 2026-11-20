@@ -1,2 +1,1 @@
-file 'warning.ppl':4: Numerical warning: Range for logarithmic axis x1 set below zero; defaulting to 1e-10.
-file 'warning.ppl':4: Numerical warning: Range for logarithmic axis x1 set below zero; defaulting to 1e-10.
+file 'warning.ppl':4: Numerical warning: Minimum of range for logarithmic axis x1 is zero or negative; defaulting to 1e-10.

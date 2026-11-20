@@ -1,0 +1,52 @@
+
+Syntax error:
+
+In piped input, line 3, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print {'a': 1, 'b'}
+                  /|\
+                   |
+Expecting : followed by value for dictionary key
+
+
+Syntax error:
+
+In piped input, line 4, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print {'b'}
+          /|\
+           |
+Expecting : followed by value for dictionary key
+
+
+Syntax error:
+
+In piped input, line 5, position 4 below:
+
+At this point, was expecting an expression (value), or the end of the command.
+     |
+    \|/
+ x = 1 ? 2
+         /|\
+          |
+Expecting : to complete the ternary operator a ? b : c
+
+
+Syntax error:
+
+In piped input, line 6, position 6 below:
+
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print [1 ? 2, 3]
+               /|\
+                |
+Expecting : to complete the ternary operator a ? b : c
+

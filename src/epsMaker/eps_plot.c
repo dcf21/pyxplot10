@@ -422,6 +422,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
             axes[i].AxisLinearInterpolation = NULL;
             axes[i].CrossedAtZero = 0;
             axes[i].MinUsedSet = axes[i].MaxUsedSet = axes[i].DataUnitSet = axes[i].RangeFinalised = 0;
+            axes[i].RangeWarningsGiven = 0;
             axes[i].FinalActive = axes[i].enabled;
             axes[i].MinUsed = axes[i].MaxUsed = axes[i].MinFinal = axes[i].MaxFinal = 0.0;
             axes[i].LogFinal = axes[i].log;

@@ -222,12 +222,12 @@ Objects of type \texttt{number} have no methods other than those common to all t
 \methdef{append($x$)}{appends the string $x$ to the end of a string.}
 \methdef{beginsWith($x$)}{returns a boolean indicating whether a string begins with the substring $x$.}
 \methdef{endsWith($x$)}{returns a boolean indicating whether a string ends with the substring $x$.}
-\methdef{find($x$)}{returns the position of the first occurrence of $x$ in a string, or $-1$ if it is not found.}
-\methdef{findAll($x$)}{returns a list of the positions where the substring $x$ occurs in a string.}
-\methdef{isalnum()}{returns a boolean indicating whether all of the characters of a string are alphanumeric.}
-\methdef{isalpha()}{returns a boolean indicating whether all of the characters of a string are alphabetic.}
-\methdef{isdigit()}{returns a boolean indicating whether all of the characters of a string are numeric.}
-\methdef{len()}{returns the length of a string.}
+\methdef{find($x$)}{returns the position, in characters, of the first occurrence of $x$ in a string, or $-1$ if it is not found.}
+\methdef{findAll($x$)}{returns a list of the positions, in characters, where the substring $x$ occurs in a string.}
+\methdef{isalnum()}{returns a boolean indicating whether all of the characters of a string are letters (in any alphabet) or the digits 0--9.}
+\methdef{isalpha()}{returns a boolean indicating whether all of the characters of a string are letters, in any alphabet.}
+\methdef{isdigit()}{returns a boolean indicating whether all of the characters of a string are the digits 0--9.}
+\methdef{len()}{returns the length of a string, in characters. A character outside the ASCII character set, such as \'e, counts as one character, even though it is stored as several bytes.}
 \methdef{lower()}{converts a string to lowercase.}
 \methdef{lstrip()}{strips whitespace off the beginning of a string.}
 \methdef{split()}{returns a list of all the whitespace-separated words in a string.}

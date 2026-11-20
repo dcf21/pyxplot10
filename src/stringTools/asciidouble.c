@@ -26,7 +26,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <locale.h>
 #include <stdarg.h>
+#include <wctype.h>
 
 #include "settings/settings.h"
 
@@ -876,6 +878,79 @@ int ppl_utf8CharIndex(const char *in, const int byteOffset) {
     for (i = 0; (i < byteOffset) && (in[i] != '\0'); i++)
         if (!utf8IsContinuation(in[i])) n++;
     return n;
+}
+
+//! ppl_utf8NextChar - Decode the next character of a UTF-8 string
+//! \param [in] in - The string
+//! \param [in,out] pos - The byte offset of the character to decode; advanced to the start of the next character
+//! \return The Unicode code point of the character, or -1 if the bytes at <pos> are not valid UTF-8 (in which case
+//! <pos> is advanced by one byte)
+
+long ppl_utf8NextChar(const char *in, int *pos) {
+    const unsigned char *s = (const unsigned char *) in + *pos;
+    long codePoint;
+    int nBytes, i;
+    if (s[0] < 0x80) {
+        nBytes = 1;
+        codePoint = s[0];
+    } else if ((s[0] & 0xE0) == 0xC0) {
+        nBytes = 2;
+        codePoint = s[0] & 0x1F;
+    } else if ((s[0] & 0xF0) == 0xE0) {
+        nBytes = 3;
+        codePoint = s[0] & 0x0F;
+    } else if ((s[0] & 0xF8) == 0xF0) {
+        nBytes = 4;
+        codePoint = s[0] & 0x07;
+    } else {
+        (*pos)++; // A continuation byte, or a byte which never appears in UTF-8
+        return -1;
+    }
+    for (i = 1; i < nBytes; i++) {
+        if ((s[i] & 0xC0) != 0x80) {
+            (*pos)++; // A multi-byte character which is cut short
+            return -1;
+        }
+        codePoint = (codePoint << 6) | (s[i] & 0x3F);
+    }
+    *pos += nBytes;
+    return codePoint;
+}
+
+//! utf8Locale - Fetch a locale which classifies Unicode characters (e.g. as letters), regardless of the user's own
+//! locale setting
+//! \return The locale, or (locale_t) 0 if no UTF-8 locale is available
+
+static locale_t utf8Locale() {
+    static int tried = 0;
+    static locale_t locale = (locale_t) 0;
+    if (!tried) {
+        tried = 1;
+        locale = newlocale(LC_CTYPE_MASK, "C.UTF-8", (locale_t) 0);
+        if (locale == (locale_t) 0) locale = newlocale(LC_CTYPE_MASK, "en_US.UTF-8", (locale_t) 0);
+    }
+    return locale;
+}
+
+//! ppl_utf8IsAlpha - Test whether a Unicode character is a letter, in any alphabet
+//! \param [in] codePoint - The Unicode code point of the character, or -1 for an invalid character
+//! \return True if the character is a letter
+
+int ppl_utf8IsAlpha(const long codePoint) {
+    locale_t locale;
+    if (codePoint < 0) return 0;
+    if (codePoint < 0x80) return isalpha((int) codePoint);
+    locale = utf8Locale();
+    if (locale == (locale_t) 0) return 0; // Without a UTF-8 locale, non-ASCII characters cannot be classified
+    return iswalpha_l((wint_t) codePoint, locale);
+}
+
+//! ppl_utf8IsDigit - Test whether a Unicode character is one of the decimal digits 0-9
+//! \param [in] codePoint - The Unicode code point of the character, or -1 for an invalid character
+//! \return True if the character is a digit
+
+int ppl_utf8IsDigit(const long codePoint) {
+    return (codePoint >= '0') && (codePoint <= '9');
 }
 
 //! ppl_strWildcardTest - Test whether a string matches a wildcard pattern, in which ? matches any single character

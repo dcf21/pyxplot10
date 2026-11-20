@@ -79,8 +79,11 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 
     // First of all, work out what axis range to use
     if (!axis->RangeFinalised) {
-        // Work out axis range
+        // Work out axis range. The range may be worked out more than once while a graph is drawn (a provisional range
+        // is needed to sample functions), but any warnings about it are only given once.
         unsigned char MinSet = 1;
+        const int giveWarnings = !axis->RangeWarningsGiven;
+        axis->RangeWarningsGiven = 1;
 
         if (axis->HardMinSet) axis->MinFinal = axis->HardMin;
         else if (axis->MinUsedSet) axis->MinFinal = axis->MinUsed;
@@ -94,16 +97,18 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         // Check that log axes do not venture too close to zero
         if ((axis->LogFinal == SW_BOOL_TRUE) && (axis->MaxFinal <= 1e-200)) {
             axis->MaxFinal = logmin;
-            ppl_snprintfTrunc(msg, sizeof(msg), "Range for logarithmic axis %c%d set below zero; defaulting to 1e-10.",
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Maximum of range for logarithmic axis %c%d is zero or negative; defaulting to 1e-10.",
                               "xyzc"[axis->xyz], axis->axis_n);
-            ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
+            if (giveWarnings) ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
         }
         if (!MinSet) axis->MinFinal = (axis->LogFinal == SW_BOOL_TRUE) ? (axis->MaxFinal / 100) : (axis->MaxFinal - 20);
         if ((axis->LogFinal == SW_BOOL_TRUE) && (axis->MinFinal <= 1e-200)) {
             axis->MinFinal = logmin;
-            ppl_snprintfTrunc(msg, sizeof(msg), "Range for logarithmic axis %c%d set below zero; defaulting to 1e-10.",
+            ppl_snprintfTrunc(msg, sizeof(msg),
+                              "Minimum of range for logarithmic axis %c%d is zero or negative; defaulting to 1e-10.",
                               "xyzc"[axis->xyz], axis->axis_n);
-            ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
+            if (giveWarnings) ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
         }
 
         // If there's no spread of data on the axis, make a spread up
@@ -114,7 +119,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                         msg, sizeof(msg),
                         "Specified minimum and maximum range limits for axis %c%d are equal; reverting to alternative limits.",
                         "xyzc"[axis->xyz], axis->axis_n);
-                ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
+                if (giveWarnings) ppl_warning(&x->c->errcontext, ERR_NUMERICAL, msg);
             }
             if (axis->LogFinal != SW_BOOL_TRUE) {
                 const double step = ppl_max(1.0, 1e-3 * fabs(axis->MinFinal));

@@ -37,9 +37,12 @@ Version 0.10.0 is a major refactoring of Pyxplot's source code, which has been r
 \item Crashes in the {\tt conjugate()} function, in pie charts of unlabelled data supplied inline, and when an arrow or label was positioned with units incompatible with its axis.
 \item Macro substitution ({\tt @variable}) removed quotation marks from commands.
 \item {\tt texify()} inserted an empty {\tt \textbackslash mathrm\{\}} after function calls.
+\item Dictionary items without values, e.g.\ {\tt \{'a':1, 'b'\}}, and ternary operators without a colon, e.g.\ {\tt 1 ? 2}, gave misleading error messages instead of syntax errors.
+\item Warnings about the ranges of logarithmic axes were given twice.
+\item The index blocks written by the {\tt tabulate} command were labelled from 1, though the {\tt index} modifier counts them from 0.
 \end{itemize}
 
-\noindent Pyxplot now exits with status 1 if any error occurs while running a script or piped input, so that failures can be detected by the shell. The lengths, indices and slices of strings, and the positions returned by the {\tt find()} and {\tt findAll()} methods, now count characters rather than bytes, so that multi-byte UTF-8 characters such as {\tt \'e} count as one character. An automated test suite has been added, which may be run with {\tt make test}.
+\noindent Pyxplot now exits with status 1 if any error occurs while running a script or piped input, so that failures can be detected by the shell. The lengths, indices and slices of strings, and the positions returned by the {\tt find()} and {\tt findAll()} methods, now count characters rather than bytes, so that multi-byte UTF-8 characters such as {\tt \'e} count as one character, and the {\tt isalpha()} and {\tt isalnum()} methods recognise letters in any alphabet. An automated test suite has been added, which may be run with {\tt make test}.
 
 \subsection*{2012 Sep 19: Pyxplot 0.9.2}
 

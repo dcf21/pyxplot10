@@ -75,6 +75,9 @@ int ppl_strWildcardTest(const char *test, const char *wildcard);
 int ppl_utf8Length(const char *in);
 int ppl_utf8ByteOffset(const char *in, int charIndex);
 int ppl_utf8CharIndex(const char *in, int byteOffset);
+long ppl_utf8NextChar(const char *in, int *pos);
+int ppl_utf8IsAlpha(long codePoint);
+int ppl_utf8IsDigit(long codePoint);
 
 int ppl_snprintfTrunc(char *out, size_t size, const char *format, ...) __attribute__((format(printf, 3, 4)));
 

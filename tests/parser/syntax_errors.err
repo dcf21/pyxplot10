@@ -51,16 +51,17 @@ At this point, was expecting an expression (expression), or the end of the comma
 At this point, was expecting a literal value or a bracketed expression or a unary operator or a variable name.
 
 
-Type error:
+Syntax error:
 
 In piped input, line 7, position 6 below:
- print {'a': 1, 'b'}
-In piped input, line 7, position 0 below:
 
- {'a': 1, 'b'}
-/|\
- |
-Dictionary keys must be strings; supplied key has type <number>.
+At this point, was expecting an expression (expression), or the end of the command.
+       |
+      \|/
+ print {'a': 1, 'b'}
+                  /|\
+                   |
+Expecting : followed by value for dictionary key
 
 
 Syntax error:
@@ -92,9 +93,9 @@ At this point, was expecting an expression (value), or the end of the command.
      |
     \|/
  x = 1 ? 2
-    /|\
-     |
-Unexpected junk left on stack.
+         /|\
+          |
+Expecting : to complete the ternary operator a ? b : c
 
 
 Syntax error:

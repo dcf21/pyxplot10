@@ -99,6 +99,7 @@ typedef struct pplset_axis {
     int *AxisTurnings;
     unsigned char CrossedAtZero;
     unsigned char MinUsedSet, MaxUsedSet, DataUnitSet, RangeFinalised, FinalActive;
+    unsigned char RangeWarningsGiven; // Set once any warnings about this axis's range have been given in this redraw
     double PhysicalLengthMajor, PhysicalLengthMinor;
     int xyz, axis_n, canvas_id, FirstTextID;
     double MinUsed, MaxUsed, MinFinal, MaxFinal, *OrdinateRaster;
