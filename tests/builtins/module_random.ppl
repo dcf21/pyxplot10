@@ -1,0 +1,46 @@
+# Tests of the functions in the random module. With a fixed seed, the samples are reproducible; their means are
+# checked against the means of the distributions, to within several standard errors of a sample of 20000.
+load "testlib.ppl"
+set seed 1234
+n = 20000
+
+subroutine sampleMean(f) {
+ total = 0
+ for j = 1 to n {
+  total += f()
+ }
+ return total / n
+}
+
+r() = random.random()
+g() = random.gaussian(2)
+b() = random.binomial(0.3, 10)
+c() = random.chisq(4)
+l() = random.lognormal(0.5, 0.2)
+p() = random.poisson(3.5)
+t() = random.tdist(10)
+
+assert abs(sampleMean(r) - 0.5) < 0.01  # Uniform on [0,1): standard error 0.002
+assert abs(sampleMean(g)) < 0.06  # Gaussian of sigma 2: standard error 0.014
+assert abs(sampleMean(b) - 3) < 0.06  # Binomial: mean n*p = 3, standard error 0.010
+assert abs(sampleMean(c) - 4) < 0.1  # Chi-squared: mean nu = 4, standard error 0.020
+assert abs(sampleMean(l) - exp(0.5 + 0.2**2 / 2)) < 0.02  # Lognormal: mean exp(zeta+sigma**2/2)
+assert abs(sampleMean(p) - 3.5) < 0.07  # Poisson: mean 3.5, standard error 0.013
+assert abs(sampleMean(t)) < 0.05  # t-distribution: mean 0, standard error 0.008
+
+# Samples lie within the ranges of their distributions
+for j = 1 to 1000 {
+ x = random.random()
+ assert (x >= 0) and (x < 1)
+ k = random.binomial(0.5, 6)
+ assert (k >= 0) and (k <= 6) and (k == floor(k))
+ assert random.poisson(2) >= 0
+ assert random.chisq(3) >= 0
+ assert random.lognormal(0, 1) > 0
+}
+
+# The same seed gives the same sequence
+set seed 99
+x1 = random.random()
+set seed 99
+assert random.random() == x1

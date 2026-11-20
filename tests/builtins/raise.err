@@ -1,0 +1,20 @@
+
+Range error:
+
+In piped input, line 3, position 5 below:
+
+ raise(exceptions.range, "Value out of range")
+     /|\
+      |
+Value out of range
+
+
+Numerical error:
+
+In piped input, line 4, position 5 below:
+
+ raise(exceptions.numerical, "A numerical problem")
+     /|\
+      |
+A numerical problem
+

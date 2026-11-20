@@ -505,6 +505,7 @@ void pplfunc_acosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     } else {
         { z = gsl_complex_arccosh_real(in[0].real); }
     };
+    ppl_funcSetComplexOutput(&OUTPUT, z);
     if (ppl_funcCheckOutput(&call)) return;
 }
 
@@ -881,7 +882,8 @@ void pplfunc_besseli(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     char *FunctionDescription = "besseli(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
-    OUTPUT.real = gsl_sf_bessel_il_scaled((int) in[0].real, in[1].real);
+    // GSL only provides the scaled function exp(-|x|) i_l(x), so the scaling is removed
+    OUTPUT.real = gsl_sf_bessel_il_scaled((int) in[0].real, in[1].real) * exp(fabs(in[1].real));
     if (ppl_funcCheckOutput(&call)) return;
 }
 
@@ -953,7 +955,8 @@ void pplfunc_besselk(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     char *FunctionDescription = "besselk(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
-    OUTPUT.real = gsl_sf_bessel_kl_scaled((int) in[0].real, in[1].real);
+    // GSL only provides the scaled function exp(x) k_l(x), so the scaling is removed
+    OUTPUT.real = gsl_sf_bessel_kl_scaled((int) in[0].real, in[1].real) * exp(-in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
 }
 
@@ -2249,7 +2252,8 @@ void pplfunc_len(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     int t = in->objType;
     if ((t == PPLOBJ_DICT) || (t == PPLOBJ_MOD) || (t == PPLOBJ_USER)) OUTPUT.real = ((dict *) in->auxil)->length;
     else if (t == PPLOBJ_LIST) OUTPUT.real = ((list *) in->auxil)->length;
-    else if ((t == PPLOBJ_STR) || (t == PPLOBJ_EXC)) OUTPUT.real = strlen((char *) in->auxil);
+    else if ((t == PPLOBJ_STR) || (t == PPLOBJ_EXC))
+        OUTPUT.real = ppl_utf8Length((char *) in->auxil); // Length in characters, as for the len() method
     else if (t == PPLOBJ_VEC) OUTPUT.real = ((pplVector *) in->auxil)->v->size;
     else if (t == PPLOBJ_MAT) OUTPUT.real = ((pplMatrix *) in->auxil)->m->size1;
     else {

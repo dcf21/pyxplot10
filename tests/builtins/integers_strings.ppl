@@ -1,0 +1,46 @@
+# Tests of the built-in functions which act on integers and strings
+load "testlib.ppl"
+
+# Factors and primes
+assert factors(12) == [1, 2, 3, 4, 6, 12]
+assert factors(1) == [1]
+assert factors(13) == [1, 13]
+assert primeFactors(360) == [2, 2, 2, 3, 3, 5]
+assert primeFactors(97) == [97]
+assert prime(2)
+assert prime(97)
+assert !prime(1)
+assert !prime(91)  # 7 * 13
+assert gcd(12, 18) == 6
+assert gcd(12, 18, 27) == 3
+assert hcf(48, 36) == 12
+assert lcm(4, 6) == 12
+assert lcm(2, 3, 4) == 12
+
+# Roman numerals and ordinals
+assert romanNumeral(1994) == "MCMXCIV"
+assert romanNumeral(4) == "IV"
+assert romanNumeral(3888) == "MMMDCCCLXXXVIII"
+assert ordinal(1) == "1st"
+assert ordinal(2) == "2nd"
+assert ordinal(3) == "3rd"
+assert ordinal(4) == "4th"
+assert ordinal(11) == "11th"
+assert ordinal(12) == "12th"
+assert ordinal(13) == "13th"
+assert ordinal(21) == "21st"
+assert ordinal(112) == "112th"
+
+# Characters
+assert chr(65) == "A"
+assert chr(97) == "a"
+assert ord("A") == 65
+assert ord("hello") == 104  # The code of the first character
+assert ord(chr(120)) == 120
+
+# Lengths of objects
+assert len("hello") == 5
+assert len("Café") == 4  # Characters, not bytes
+assert len([1, 2, 3]) == 3
+assert len({"a": 1, "b": 2}) == 2
+assert len(vector(1, 2, 3, 4)) == 4

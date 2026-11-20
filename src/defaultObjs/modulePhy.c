@@ -99,7 +99,7 @@ void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *stat
     if (*status) kelvin.real = GSL_NAN;
     OUTPUT.dimensionless = 0;
     OUTPUT.exponent[UNIT_TIME] = -1;
-    OUTPUT.real = 2.821439 * GSL_CONST_MKSA_BOLTZMANN / GSL_CONST_MKSA_PLANCKS_CONSTANT_H *
-            kelvin.real; // Wien displacement law
+    // Wien displacement law: the peak is at h nu / kT = x, the solution of 3(1 - exp(-x)) = x
+    OUTPUT.real = 2.821439372122079 * GSL_CONST_MKSA_BOLTZMANN / GSL_CONST_MKSA_PLANCKS_CONSTANT_H * kelvin.real;
     if (ppl_funcCheckOutput(&call)) return;
 }

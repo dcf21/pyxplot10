@@ -68,6 +68,7 @@ The following environment variables control the tests:
 
 import glob
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -348,6 +349,85 @@ def make_test_classes() -> List[Tuple[str, type]]:
             class_name: str = "Test" + "".join(word.capitalize() for word in suite.split("_"))
             classes.append((class_name, type(class_name, (PyxplotScriptTest,), methods)))
     return classes
+
+
+# A Pyxplot script which lists the full name of every built-in function, including those in modules, e.g. "sin" or
+# "os.path.exists", one per line
+LIST_FUNCTIONS_SCRIPT: Final[str] = """
+subroutine listFunctions(m, prefix) {
+ foreach k in m.keys() {
+  if (typeOf(m[k]) == types.function) {
+   print prefix + k
+  }
+  if (typeOf(m[k]) == types.module) {
+   call listFunctions(m[k], prefix + k + ".")
+  }
+ }
+}
+call listFunctions(defaults, "")
+"""
+
+
+def list_builtin_functions() -> List[str]:
+    """
+    Ask Pyxplot for the full names of all of its built-in functions.
+
+    :return:
+        List of the names, e.g. ["abs", ..., "os.path.exists", ...]
+    """
+
+    with tempfile.TemporaryDirectory(prefix="pyxplot_test_") as home_dir:
+        env: Dict[str, str] = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": home_dir, "TZ": "UTC",
+                               "LANG": "C", "LC_ALL": "C"}
+        proc = subprocess.run([PYXPLOT, "-"], input=LIST_FUNCTIONS_SCRIPT.encode("utf-8"), capture_output=True,
+                              env=env, cwd=home_dir, timeout=DEFAULT_TIMEOUT)
+    if proc.returncode != 0:
+        raise RuntimeError("Could not list Pyxplot's built-in functions: {}".format(proc.stderr.decode()))
+    return proc.stdout.decode("utf-8").split()
+
+
+def function_call_pattern(name: str) -> str:
+    """
+    Make a regular expression which matches a call to a built-in function in a Pyxplot script.
+
+    :param name:
+        The full name of the function, e.g. "sin" or "os.path.exists"
+    :return:
+        The regular expression
+    """
+
+    # int_d and diff_d are called with the name of their dummy variable appended, e.g. int_dx() or diff_dy()
+    if name in ("int_d", "diff_d"):
+        return r"(?<![\w.])" + name + r"\w+\s*\("
+    return r"(?<![\w.])" + re.escape(name) + r"\s*\("
+
+
+class TestBuiltinCoverage(unittest.TestCase):
+    """
+    Check that the tests call every one of Pyxplot's built-in functions at least once, so that a function added to
+    Pyxplot without a test makes the tests fail.
+    """
+
+    def test_every_builtin_function_is_tested(self) -> None:
+        """
+        builtins/coverage: every built-in function is called in at least one test script
+        """
+
+        if not os.access(PYXPLOT, os.X_OK):
+            self.fail("Cannot find the Pyxplot binary <{}>. Run make first.".format(PYXPLOT))
+
+        # Gather the code of every test script, ignoring comments
+        code: List[str] = []
+        for script in glob.glob(os.path.join(TESTS_DIR, "*", "*.ppl")):
+            with open(script, encoding="utf-8") as f:
+                code.extend(line.split("#")[0] for line in f)
+        all_code: Final[str] = "\n".join(code)
+
+        functions: Final[List[str]] = list_builtin_functions()
+        self.assertGreater(len(functions), 100, "Too few built-in functions were listed")
+        untested: Final[List[str]] = [name for name in functions
+                                      if not re.search(function_call_pattern(name), all_code)]
+        self.assertEqual([], untested, "These built-in functions are not called by any test")
 
 
 # Create a TestCase class for each suite of tests, so that unittest can find them

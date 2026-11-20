@@ -1,0 +1,87 @@
+# Tests of the built-in functions which act on objects, types and the namespace
+load "testlib.ppl"
+
+# Types and classes
+assert typeOf(1) == types.number
+assert typeOf("a") == types.string
+assert typeOf([1]) == types.list
+assert typeOf({"a": 1}) == types.dictionary
+assert typeOf(vector(1)) == types.vector
+assert typeOf(sin) == types.function
+assert typeOf(true) == types.boolean
+assert typeOf(rgb(1, 0, 0)) == types.color
+assert typeOf(1) != types.string
+assert classOf(1) == types.number  # The class of a number is the type object types.number
+assert classOf("a") == types.string
+
+# Comparison
+assert cmp(1, 2) == -1
+assert cmp(2, 1) == 1
+assert cmp(3, 3) == 0
+assert cmp("abc", "abd") == -1
+
+# Copies: copy() copies only the outermost data structure; deepcopy() copies nested ones too
+a = [1, [2, 3]]
+b = copy(a)
+d = deepcopy(a)
+call b.append(4)
+call a[1].append(9)
+assert a == [1, [2, 3, 9]]
+assert b == [1, [2, 3, 9], 4]  # Shares the inner list with a
+assert d == [1, [2, 3]]  # Shares nothing with a
+
+# Ranges of numbers
+assert range(4) == vector(0, 1, 2, 3)
+assert range(2, 6) == vector(2, 3, 4, 5)
+assert range(1, 10, 3) == vector(1, 4, 7)
+assert range(5, 1, -2) == vector(5, 3)
+assert lrange(1, 1000, 10) == vector(1, 10, 100)
+assert approx(lrange(1, 100, 1e1)[1], 10)
+
+# Vector cross products
+assert cross(vector(1, 0, 0), vector(0, 1, 0)) == vector(0, 0, 1)
+assert cross(vector(1, 2, 3), vector(4, 5, 6)) == vector(-3, 6, -3)
+
+# Calling functions with arguments from a list, and evaluating strings
+f(x, y) = x * 10 + y
+assert call(f, [3, 4]) == 34
+assert call(max, [1, 5, 2]) == 5
+assert eval("1 + 2 * 3") == 7
+x = 4
+assert eval("x**2") == 16
+
+# The namespaces of variables
+myGlobal = 42
+assert globals()["myGlobal"] == 42
+subroutine localsTest(arg) {
+ myLocal = arg + 1
+ return locals()["myLocal"]
+}
+assert localsTest(5) == 6
+
+# Physical units
+assert unit(m) == 100 * unit(cm)
+assert approx(unit(2 * km / hour), (2000 / 3600) * unit(m / s))
+
+# Rendering in LaTeX
+assert texify("x**2") == "$\\displaystyle x\\,*\\kern-1.5pt *\\,\\,2$"
+assert texify("sqrt(b) + 1") == "$\\displaystyle \\sqrt{b}+1$"
+assert texifyText("50% & $5") == "50\\% \\& \\$5"
+assert texify("range(5)") == "$\\displaystyle \\mathrm{range}\\left( 5\\right) $"
+assert texify("hyperg_2F1(1,2,3,0.5)") == "$\\displaystyle {}_2\\mathrm{F}_1\\left( 1,2,3,0.5\\right) $"
+
+# Numerical integration and differentiation, whose dummy variables are named after int_d and diff_d
+assert approxAbs(int_dx(x**2, 0, 3), 9, 1e-8)
+assert approxAbs(int_dt(exp(-t), 0, 50), 1, 1e-8)
+assert approxAbs(diff_dx(x**3, 2), 12, 1e-5)
+assert approxAbs(diff_dy(sin(y), 0), 1, 1e-6)
+
+# Files
+fh = open("test.txt", "w")
+call fh.write(e"line one\nline two\n")  # Escape codes such as \n need an e prefix
+call fh.close()
+fh = open("test.txt")
+assert fh.readline() == "line one"  # The newline at the end of each line is removed
+assert fh.readline() == "line two"
+assert fh.eof() or (fh.readline() == "")
+call fh.close()

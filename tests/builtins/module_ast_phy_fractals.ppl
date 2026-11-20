@@ -1,0 +1,35 @@
+# Tests of the functions in the ast, phy and fractals modules. Cosmological reference values were computed
+# independently by integrating the Friedmann equation for a flat Universe with H0=70 km/s/Mpc, w_m=0.3, w_l=0.7.
+load "testlib.ppl"
+near(a, b, tol) = abs(a / b - 1) < tol  # Agreement to a relative precision <tol>
+
+Mpc = 3.0856775814913673e22 * unit(m)
+Gyr = 3.15576e16 * unit(s)
+assert near(ast.Lcdm_age(70, 0.3, 0.7), 13.466983947 * Gyr, 1e-6)
+assert near(ast.Lcdm_DM(1, 70, 0.3, 0.7), 3303.8288059 * Mpc, 1e-6)
+assert approx(ast.Lcdm_DL(1, 70, 0.3, 0.7), 2 * ast.Lcdm_DM(1, 70, 0.3, 0.7))  # DL = (1+z) DM
+assert approx(ast.Lcdm_DA(1, 70, 0.3, 0.7), ast.Lcdm_DM(1, 70, 0.3, 0.7) / 2)  # DA = DM / (1+z)
+assert approx(ast.Lcdm_angscale(1, 70, 0.3, 0.7), ast.Lcdm_DA(1, 70, 0.3, 0.7) / unit(rad))
+assert near(ast.Lcdm_t(1, 70, 0.3, 0.7), 7.715337004 * Gyr, 1e-6)
+assert near(ast.Lcdm_z(ast.Lcdm_t(1, 70, 0.3, 0.7), 70, 0.3, 0.7), 1, 1e-6)  # Lcdm_z inverts Lcdm_t
+
+# Greenwich mean sidereal time at the J2000.0 epoch is 280.46061837 degrees
+assert near(ast.siderealTime(time.fromCalendar(2000, 1, 1, 12, 0, 0)), radians(280.46061837), 1e-6)
+# The phase of the Moon is 0 at new moon (6 Jan 2000, 18:14 UT) and pi at full moon (21 Jan 2000, 04:40 UT)
+assert abs(ast.moonPhase(time.fromCalendar(2000, 1, 6, 18, 14, 0))) < 0.01
+assert abs(ast.moonPhase(time.fromCalendar(2000, 1, 21, 4, 40, 0)) - pi) < 0.01
+
+# The Planck function, and the frequency of its peak from Wien's displacement law (2.821439 kT/h)
+T = 5000 * unit(K)
+nu = 3e14 * unit(Hz)
+planck = 2 * phy.h * nu**3 / phy.c**2 / (exp(phy.h * nu / (phy.kB * T)) - 1) / unit(sterad)
+assert near(phy.Bv(nu, T), planck, 1e-9)
+assert near(phy.Bvmax(T), 2.821439372 * phy.kB * T / phy.h, 1e-8)
+
+# Fractals: points in the set never diverge, so the maximum number of iterations is returned
+set numerics complex
+assert fractals.mandelbrot(0, 50) == 50
+assert fractals.mandelbrot(-1, 50) == 50
+assert fractals.mandelbrot(2 + 2 * i, 50) < 2
+assert fractals.julia(0, 0, 50) == 50
+assert fractals.julia(3, 0, 50) < 2

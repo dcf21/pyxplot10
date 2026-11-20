@@ -113,8 +113,10 @@ example:
 
 Special characters such as tabs and newlines can be inserted into strings using
 escape codes such as {\tt $\backslash$t} and {\tt $\backslash$n}; see
-Table~\ref{tab:escape_sequences2} for a list of these. The following string is
-split over three lines:
+Table~\ref{tab:escape_sequences2} for a list of these. These escape codes are
+only recognised in strings prefixed with the character {\tt e}; in other
+strings, only quote characters and backslashes may be escaped. The following
+string is split over three lines:
 
 \vspace{3mm}
 \input{fragments/tex/fs_print4.tex}

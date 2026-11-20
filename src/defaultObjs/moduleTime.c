@@ -131,8 +131,10 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
     }
     if (nArgs > 6) ppl_calendarTimezoneSet(c, 1, (char *) in[6].auxil);
     else ppl_calendarTimezoneSet(c, 0, NULL);
+    // The seconds may have a fractional part, which is added after converting the whole seconds
     t = ppl_toUnixTime(c, (int) in[0].real, (int) in[1].real, (int) in[2].real, (int) in[3].real, (int) in[4].real,
-                       (int) in[5].real, status, errText);
+                       (int) floor(in[5].real), status, errText) +
+            (in[5].real - floor(in[5].real));
     ppl_calendarTimezoneOffset(c, t, NULL, &offset);
     ppl_calendarTimezoneUnset(c);
     pplObjDate(&OUTPUT, 0, t - offset);
@@ -221,7 +223,7 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     if (nArgs > 2) // Format specified
     {
         format = (char *) in[2].auxil;
-        ppl_timeDiffStr(c, out, 8192, in[0].real, in[1].real, format, status, errText);
+        ppl_timeDiffStr(c, out, 8192, in[1].real, in[0].real, format, status, errText); // The interval from t1 to t2
         if (*status) {
             *errType = ERR_NUMERICAL;
             return;
@@ -254,6 +256,15 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     pplObjStr(&OUTPUT, 0, 1, out);
 }
 
+//! currentUnixTime - Read the current time, to a precision of better than a second
+//! \return The current unix time, in seconds
+
+static double currentUnixTime() {
+    struct timespec now;
+    if (clock_gettime(CLOCK_REALTIME, &now) != 0) return (double) time(NULL);
+    return now.tv_sec + now.tv_nsec * 1e-9;
+}
+
 //! pplfunc_timenow - Implement the function time.now() in the time module, which returns a date object representing the
 //! current time
 //! \param [in] c - The Pyxplot context
@@ -267,7 +278,7 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
 void pplfunc_timenow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "now()";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    pplObjDate(&OUTPUT, 0, (double) time(NULL));
+    pplObjDate(&OUTPUT, 0, currentUnixTime());
     if (ppl_funcCheckOutput(&call)) return;
 }
 
@@ -368,7 +379,7 @@ void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     int i;
-    const double p = in[0].real - time(NULL);
+    const double p = in[0].real - currentUnixTime();
     char *FunctionDescription = "sleepUntil(d)";
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
     if (in[0].objType != PPLOBJ_DATE) {

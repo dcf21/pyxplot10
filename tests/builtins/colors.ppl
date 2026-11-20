@@ -1,0 +1,30 @@
+# Tests of the built-in functions which create colors
+load "testlib.ppl"
+
+red = rgb(1, 0, 0)
+assert red.componentsRGB() == vector(1, 0, 0)
+assert approx(rgb(0.2, 0.4, 0.6).componentsRGB()[1], 0.4)
+assert hsb(0, 1, 1) == red  # Hue 0 is red
+assert approx(hsb(1/3, 1, 1).componentsRGB()[1], 1)  # Hue 1/3 is green
+assert cmyk(0, 1, 1, 0) == red
+assert approx(cmyk(0, 0, 0, 0.25).componentsRGB()[0], 0.75)
+assert gray(0.5) == rgb(0.5, 0.5, 0.5)
+assert grey(0.5) == gray(0.5)
+assert gray(0) == rgb(0, 0, 0)
+
+# Monochromatic light: green at 530nm, and red at 650nm
+g = colors.wavelength(530 * unit(nm), 1).componentsRGB()
+assert (g[1] > g[0]) and (g[1] > g[2])
+r = colors.wavelength(650 * unit(nm), 1).componentsRGB()
+assert (r[0] > r[1]) and (r[0] > r[2])
+
+# The color of a spectrum. A flat (equal-energy) spectrum is nearly neutral, though slightly pink, since it is not the
+# daylight spectrum which sRGB treats as white. The brightness scales with norm. A narrow line in the blue is blue.
+flat(l) = 1
+w = colors.spectrum(flat, 1).componentsRGB()
+assert (min(w[0], w[1], w[2]) > 0.6 * max(w[0], w[1], w[2])) and (w[0] >= w[2])
+w2 = colors.spectrum(flat, 0.5).componentsRGB()
+assert approx(w2[0], w[0] / 2) and approx(w2[1], w[1] / 2) and approx(w2[2], w[2] / 2)
+blueLine(l) = exp(-((l - 450 * unit(nm)) / (5 * unit(nm)))**2)
+b = colors.spectrum(blueLine, 1).componentsRGB()
+assert (b[2] > b[0]) and (b[2] > b[1])

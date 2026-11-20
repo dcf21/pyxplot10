@@ -19,6 +19,19 @@
        operators without a colon, e.g. 1 ? 2, gave misleading error messages
        instead of syntax errors.
      - Warnings about the ranges of logarithmic axes were given twice.
+     - acosh() returned zero for all real arguments.
+     - besseli() and besselk() returned exponentially scaled values.
+     - Type objects all compared as equal, e.g. types.number == types.string.
+     - time.intervalStr() gave negative intervals when a format was given.
+     - time.fromCalendar() discarded fractions of a second, and dates lost
+       microseconds of precision when converted back to calendar dates.
+     - time.now() had a resolution of only one second.
+     - After os.chdir() was given a relative path, os.getcwd() returned it
+       unchanged, and Pyxplot returned to the wrong directory after plotting.
+     - phy.Bvmax() used an imprecise value of Wien's constant.
+     - texify() produced unbalanced LaTeX for some functions, including
+       range() and the hypergeometric functions.
+     - The help text of sinc() described the normalised sinc function.
      - The index blocks written by the tabulate command were labelled from 1,
        though the index modifier counts them from 0.
    - Pyxplot now exits with status 1 if any error occurs while running a
@@ -27,7 +40,8 @@
      find() and findAll(), count characters rather than bytes, so that
      multi-byte UTF-8 characters count as one character: "Café".len() is 4.
      The isalpha() and isalnum() methods recognise letters in any alphabet.
-   - An automated test suite has been added: run it with "make test".
+   - An automated test suite has been added: run it with "make test". It
+     calls every built-in function, and fails if a new function is untested.
    - When compiled with OpenMP, the plot, tabulate and fit commands evaluate
      functions on all of the computer's cores at once, when this gives the
      same results as evaluating them one at a time: e.g. not when they use

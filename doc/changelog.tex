@@ -39,6 +39,16 @@ Version 0.10.0 is a major refactoring of Pyxplot's source code, which has been r
 \item {\tt texify()} inserted an empty {\tt \textbackslash mathrm\{\}} after function calls.
 \item Dictionary items without values, e.g.\ {\tt \{'a':1, 'b'\}}, and ternary operators without a colon, e.g.\ {\tt 1 ? 2}, gave misleading error messages instead of syntax errors.
 \item Warnings about the ranges of logarithmic axes were given twice.
+\item {\tt acosh()} returned zero for all real arguments.
+\item {\tt besseli()} and {\tt besselk()} returned exponentially scaled values.
+\item Type objects all compared as equal, e.g.\ {\tt types.number == types.string}.
+\item {\tt time.intervalStr()} gave negative intervals when a format was given.
+\item {\tt time.fromCalendar()} discarded fractions of a second, and dates lost microseconds of precision when converted back to calendar dates.
+\item {\tt time.now()} had a resolution of only one second.
+\item After {\tt os.chdir()} was given a relative path, {\tt os.getcwd()} returned it unchanged, and Pyxplot returned to the wrong directory after plotting.
+\item {\tt phy.Bvmax()} used an imprecise value of Wien's constant.
+\item {\tt texify()} produced unbalanced \latexdcf\ for some functions, including {\tt range()} and the hypergeometric functions.
+\item The help text of {\tt sinc()} described the normalised sinc function.
 \item The index blocks written by the {\tt tabulate} command were labelled from 1, though the {\tt index} modifier counts them from 0.
 \end{itemize}
 

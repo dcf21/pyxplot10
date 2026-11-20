@@ -365,7 +365,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
                           "\\mathrm{exists}@<@0@>",
                           "exists(x) returns a boolean flag indicating whether a file with pathname x exists");
         ppl_addSystemFunc(d3, "expanduser", 1, 1, 0, 0, 0, 0, (void *) &pplfunc_osPathExpandUser, "expanduser(x)",
-                          "\\mathrm{expanduser@<@0@>",
+                          "\\mathrm{expanduser}@<@0@>",
                           "expanduser(x) returns its argument with ~s indicating home directories expanded");
         ppl_addSystemFunc(d3, "filesize", 1, 1, 0, 0, 0, 0, (void *) &pplfunc_osPathFilesize, "filesize(x)",
                           "\\mathrm{filesize}@<@0@>",
@@ -559,16 +559,16 @@ void ppl_makeDefaultVars(ppl_context *out) {
         ppl_addSystemFunc(d, "hsb", 3, 3, 1, 1, 1, 1, (void *) &pplfunc_hsb, "hsb(h,s,b)", "\\mathrm{hsb}@<@1,@2,@3@>",
                           "hsb(h,s,b) returns a color with specified hue, saturation and brightness in the range 0-1");
         ppl_addSystemFunc(d, "hyperg_0F1", 2, 2, 1, 1, 1, 1, (void *) &pplfunc_hyperg_0F1, "hyperg_0F1(c,x)",
-                          "\\mathrm{hyperg\\_}_0\\mathrm{F}_1}@<@1,@2@>",
+                          "{}_0\\mathrm{F}_1@<@1,@2@>",
                           "hyperg_0F1(c,x) evaluates the hypergeometric function 0F1(c,x)");
         ppl_addSystemFunc(d, "hyperg_1F1", 3, 3, 1, 1, 1, 1, (void *) &pplfunc_hyperg_1F1, "hyperg_1F1(a,b,x)",
-                          "\\mathrm{hyperg\\_}_1\\mathrm{F}_1}@<@1,@2,@3@>",
+                          "{}_1\\mathrm{F}_1@<@1,@2,@3@>",
                           "hyperg_1F1(a,b,x) evaluates the confluent hypergeometric function 1F1(a,b,x)");
         ppl_addSystemFunc(d, "hyperg_2F0", 3, 3, 1, 1, 1, 1, (void *) &pplfunc_hyperg_2F0, "hyperg_2F0(a,b,x)",
-                          "\\mathrm{hyperg\\_}_2\\mathrm{F}_0}@<@1,@2,@3@>",
+                          "{}_2\\mathrm{F}_0@<@1,@2,@3@>",
                           "hyperg_2F0(a,b,x) evaluates the hypergeometric function 2F0(a,b,x)");
         ppl_addSystemFunc(d, "hyperg_2F1", 4, 4, 1, 1, 1, 1, (void *) &pplfunc_hyperg_2F1, "hyperg_2F1(a,b,c,x)",
-                          "\\mathrm{hyperg\\_}_2\\mathrm{F}_1}@<@1,@2,@3,@4@>",
+                          "{}_2\\mathrm{F}_1@<@1,@2,@3,@4@>",
                           "hyperg_2F1(a,b,c,x) evaluates the Gauss hypergeometric function 2F1(a,b,c,x)");
         ppl_addSystemFunc(d, "hyperg_U", 3, 3, 1, 1, 1, 1, (void *) &pplfunc_hyperg_U, "hyperg_U(a,b,x)",
                           "\\mathrm{hyperg\\_U}@<@1,@2,@3@>",
@@ -617,7 +617,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         ppl_addSystemFunc(d, "ln", 1, 1, 1, 1, 0, 1, (void *) &pplfunc_log, "ln(z)", "\\mathrm{ln}@<@1@>",
                           "ln(x) is an alias for log(x): it returns the natural logarithm of x");
         ppl_addSystemFunc(
-                d, "lrange", 1, 3, 1, 1, 1, 0, (void *) &pplfunc_lrange, "lrange([f],l,[s])", "\\mathrm{lrange@<@0@>",
+                d, "lrange", 1, 3, 1, 1, 1, 0, (void *) &pplfunc_lrange, "lrange([f],l,[s])", "\\mathrm{lrange}@<@0@>",
                 "lrange([f],l,[s]) returns a vector of numbers between f and l with uniform multiplicative spacing s");
         ppl_addSystemFunc(d, "max", 0, 1e9, 0, 0, 0, 0, (void *) &pplfunc_max, "max(x,...)", "\\mathrm{max}@<@0@>",
                           "max(x,...) returns the greatest of its arguments");
@@ -642,9 +642,9 @@ void ppl_makeDefaultVars(ppl_context *out) {
         ppl_addSystemFunc(d, "radians", 1, 1, 1, 1, 1, 0, (void *) &pplfunc_radians, "radians(x)",
                           "\\mathrm{radians}@<@1@>", "radians(x) converts angles measured in degrees into radians");
         ppl_addSystemFunc(d, "raise", 2, 2, 0, 0, 0, 0, (void *) &pplfunc_raise, "raise(e,s)",
-                          "\\mathrm{raise@<@1,@2@>", "raise(e,s) raises the exception e, with error string s");
+                          "\\mathrm{raise}@<@1,@2@>", "raise(e,s) raises the exception e, with error string s");
         ppl_addSystemFunc(
-                d, "range", 1, 3, 1, 1, 1, 0, (void *) &pplfunc_range, "range([f],l,[s])", "\\mathrm{range@<@0@>",
+                d, "range", 1, 3, 1, 1, 1, 0, (void *) &pplfunc_range, "range([f],l,[s])", "\\mathrm{range}@<@0@>",
                 "range([f],l,[s]) returns a vector of uniformly-spaced numbers between f and l, with stepsize s");
         ppl_addSystemFunc(d, "Re", 1, 1, 1, 1, 0, 0, (void *) &pplfunc_real, "Re(z)", "\\mathrm{Re}@<@1@>",
                           "Re(z) returns the magnitude of the real part of z");
@@ -672,7 +672,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
                 "sin(x) returns the sine of x. If x is dimensionless, it is assumed to be measured in radians");
         ppl_addSystemFunc(
                 d, "sinc", 1, 1, 1, 1, 0, 0, (void *) &pplfunc_sinc, "sinc(z)", "\\mathrm{sinc}@<@1@>",
-                "sinc(x) returns the function sin(pi*x)/(pi*x). If x is dimensionless, it is assumed to be measured in radians. The output is dimensionless");
+                "sinc(x) returns the function sin(x)/x. If x is dimensionless, it is assumed to be measured in radians. The output is dimensionless");
         ppl_addSystemFunc(
                 d, "sinh", 1, 1, 1, 1, 0, 0, (void *) &pplfunc_sinh, "sinh(z)", "\\mathrm{sinh}@<@1@>",
                 "sinh(x) returns the hyperbolic sine of x. x may either be a dimensionless number or may have units of angle");
@@ -868,7 +868,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         d2 = (dict *) m.auxil;
         ppl_addSystemFunc(
                 d2, "fromCalendar", 6, 7, 0, 0, 0, 0, (void *) &pplfunc_timefromCalendar,
-                "fromCalendar(year,month,day,hour,min,sec)", "\\mathrm{fromCalendar@<@1@>",
+                "fromCalendar(year,month,day,hour,min,sec)", "\\mathrm{fromCalendar}@<@1@>",
                 "fromCalendar(year,month,day,hour,min,sec) creates a date object from the specified calendar date. See also 'set calendar'");
         ppl_addSystemFunc(d2, "fromJD", 1, 1, 1, 1, 1, 1, (void *) &pplfunc_timefromJD, "fromJD(t)",
                           "\\mathrm{fromJD}@<@1@>", "fromJD(t) creates a date object from the specified Julian date");

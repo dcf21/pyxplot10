@@ -1,0 +1,27 @@
+# Tests of the functions in the time module
+load "testlib.ppl"
+
+d = time.fromCalendar(2000, 1, 1, 12, 0, 0)
+assert approx(d.toJD(), 2451545)  # The J2000.0 epoch
+assert time.fromJD(2451545) == d
+assert time.fromMJD(51544.5) == d  # MJD = JD - 2400000.5
+assert time.fromUnix(946728000) == d
+assert time.fromUnix(0) == time.fromCalendar(1970, 1, 1, 0, 0, 0)
+assert time.fromCalendar(2000, 1, 1, 12, 0, 30.5).toSecond() == 30.5  # Fractions of a second are kept
+assert time.fromCalendar(1969, 12, 31, 23, 59, 58).toSecond() == 58  # Times before 1970 are negative unix times
+
+# Intervals between dates
+d2 = time.fromCalendar(2000, 1, 3, 13, 30, 15)
+assert approx(time.interval(d2, d), (2 * 24 + 1.5) * unit(hour) + 15 * unit(s))
+assert time.intervalStr(d2, d) == "2 days 1 hour 30 minutes 15 seconds"
+assert time.intervalStr(d2, d, "%D days %h hours %m minutes %s seconds; %H hours") == "2 days 1 hours 30 minutes 15 seconds; 49 hours"
+assert time.string(d, "%Y-%m-%d %H:%M") == "2000-01-1 12:00"
+assert time.string(d).len() > 0
+
+# The current time, and sleeping
+t0 = time.now()
+assert t0 > time.fromCalendar(2020, 1, 1, 0, 0, 0)
+call time.sleep(0.05)
+assert time.interval(time.now(), t0) >= 0.05 * unit(s)
+call time.sleepUntil(time.fromUnix(time.now().toUnix() + 0.05))
+assert time.interval(time.now(), t0) >= 0.1 * unit(s)

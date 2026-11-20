@@ -1,0 +1,5 @@
+# test: mode=stdin
+# raise(e,s) raises the exception e, with the error string s
+raise(exceptions.range, "Value out of range")
+raise(exceptions.numerical, "A numerical problem")
+print "carried on"

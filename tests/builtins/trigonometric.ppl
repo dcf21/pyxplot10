@@ -1,0 +1,53 @@
+# Tests of the built-in trigonometric and hyperbolic functions, and their inverses
+load "testlib.ppl"
+
+x = 0.7
+# Each function, checked against its definition in terms of sin, cos and exp
+assert approx(sin(pi / 6), 0.5)
+assert approx(cos(pi / 3), 0.5)
+assert approx(tan(pi / 4), 1)
+assert approx(sin(90 * unit(deg)), 1)
+assert approx(sec(x), 1 / cos(x))
+assert approx(csc(x), 1 / sin(x))
+assert approx(cosec(x), 1 / sin(x))
+assert approx(cot(x), cos(x) / sin(x))
+assert approx(sinh(x), (exp(x) - exp(-x)) / 2)
+assert approx(cosh(x), (exp(x) + exp(-x)) / 2)
+assert approx(tanh(x), sinh(x) / cosh(x))
+assert approx(sech(x), 1 / cosh(x))
+assert approx(csch(x), 1 / sinh(x))
+assert approx(cosech(x), 1 / sinh(x))
+assert approx(coth(x), cosh(x) / sinh(x))
+assert approx(sin(x)**2 + cos(x)**2, 1)
+
+# The inverse functions undo the functions. Angles are dimensionless (in radians) by default.
+assert approx(asin(sin(x)), x)
+assert approx(acos(cos(x)), x)
+assert approx(atan(tan(x)), x)
+assert approx(asec(sec(x)), x)
+assert approx(acsc(csc(x)), x)
+assert approx(acosec(cosec(x)), x)
+assert approx(acot(cot(x)), x)
+assert approx(asinh(sinh(x)), x)
+assert approx(acosh(cosh(x)), x)
+assert approx(atanh(tanh(x)), x)
+assert approx(asech(sech(x)), x)
+assert approx(acsch(csch(x)), x)
+assert approx(acosech(cosech(x)), x)
+assert approx(acoth(coth(x)), x)
+assert approx(asin(1), pi / 2)
+
+# atan2(x,y) is the arctangent of x/y, taking account of the signs of both
+assert approx(atan2(1, 1), pi / 4)
+assert approx(atan2(-1, -1), -3 * pi / 4)
+assert approx(atan2(1, 0), pi / 2)
+
+# sinc(x) is sin(x)/x, with x in radians (not the normalised sinc function sin(pi*x)/(pi*x))
+assert approx(sinc(0.5), sin(0.5) / 0.5)
+assert approx(sinc(pi / 2), 2 / pi)
+assert sinc(0) == 1
+
+# When angles are given dimensions, the inverse trigonometric functions return angles in radians
+set unit angle nodimensionless
+assert approx(asin(1), pi / 2 * unit(rad))
+assert approx(sin(30 * unit(deg)), 0.5)

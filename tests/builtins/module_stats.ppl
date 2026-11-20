@@ -1,0 +1,25 @@
+# Tests of the functions in the stats module. Reference values were computed independently with SciPy.
+load "testlib.ppl"
+near(a, b) = abs(a - b) <= 1e-9 * max(abs(b), 1e-12)
+
+assert near(stats.gaussianPDF(0.7, 1.5), 0.23852228611197934)
+assert near(stats.gaussianCDF(0.7, 1.5), 0.6796308090987296)
+assert near(stats.gaussianCDFi(0.8, 1.5), 1.2624318503593714)
+assert near(stats.chisqPDF(2.5, 3), 0.1807223926681813)
+assert near(stats.chisqCDF(2.5, 3), 0.5247089166569795)
+assert near(stats.chisqCDFi(0.6, 3), 2.94616607310195)
+assert near(stats.tdistPDF(0.7, 4), 0.2809088317119511)
+assert near(stats.tdistCDF(0.7, 4), 0.738749917203275)
+assert near(stats.tdistCDFi(0.9, 4), 1.5332062740589432)
+assert near(stats.lognormalPDF(2, 0.3, 0.5), 0.2928578490934949)
+assert near(stats.lognormalCDF(2, 0.3, 0.5), 0.7841524723713562)
+assert near(stats.lognormalCDFi(0.7, 0.3, 0.5), 1.7545286693131936)
+assert near(stats.poissonPDF(3, 2.5), 0.21376301724973648)
+assert near(stats.poissonCDF(3, 2.5), 0.7575761331330662)
+assert near(stats.binomialPDF(3, 0.3, 10), 0.26682793199999977)  # Arguments are (k, p, n)
+assert near(stats.binomialCDF(3, 0.3, 10), 0.6496107184000002)
+
+# The inverse cumulative distribution functions invert the cumulative distribution functions
+assert near(stats.gaussianCDF(stats.gaussianCDFi(0.3, 2), 2), 0.3)
+assert near(stats.chisqCDF(stats.chisqCDFi(0.3, 5), 5), 0.3)
+assert near(stats.tdistCDF(stats.tdistCDFi(0.3, 7), 7), 0.3)

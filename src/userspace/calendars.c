@@ -661,11 +661,12 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
         return;
     }
 
-    // Work out hours, minutes and seconds
-    DayFraction = (JD + 0.5) - floor(JD + 0.5);
-    if (hour != NULL) *hour = (int) floor(24 * DayFraction);
-    if (min != NULL) *min = (int) floor(fmod(1440 * DayFraction, 60));
-    if (sec != NULL) *sec = fmod(86400 * DayFraction, 60);
+    // Work out hours, minutes and seconds. Julian days begin at noon, so days begin at midnight on JD+0.5. The time
+    // of day is worked out from the unix time, which is more precise than the Julian date (which is a large number).
+    DayFraction = UT - 86400.0 * floor(UT / 86400.0); // Seconds since midnight
+    if (hour != NULL) *hour = (int) floor(DayFraction / 3600);
+    if (min != NULL) *min = (int) floor(fmod(DayFraction / 60, 60));
+    if (sec != NULL) *sec = fmod(DayFraction, 60);
 
     // Now work out calendar date
     if (ct->set->term_current.CalendarOut == SW_CALENDAR_HEBREW)

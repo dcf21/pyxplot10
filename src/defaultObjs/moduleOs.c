@@ -69,8 +69,12 @@ void pplfunc_osChdir(ppl_context *c, pplObj *in, const int nArgs, int *status, i
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.chdir() encountered an error: %s", strerror(errno));
         return;
     }
-    strncpy(c->errcontext.session_default.cwd, (char *) in[0].auxil, FNAME_LENGTH);
-    c->errcontext.session_default.cwd[FNAME_LENGTH - 1] = '\0';
+    // Record the absolute path of the new working directory, to which Pyxplot returns after, e.g., making plots in a
+    // temporary directory. The path supplied may be relative.
+    if (getcwd(c->errcontext.session_default.cwd, FNAME_LENGTH) == NULL) {
+        strncpy(c->errcontext.session_default.cwd, (char *) in[0].auxil, FNAME_LENGTH);
+        c->errcontext.session_default.cwd[FNAME_LENGTH - 1] = '\0';
+    }
 }
 
 //! pplfunc_osGetCwd - Implement the function os.getcwd() in the os module, which returns the path of the current

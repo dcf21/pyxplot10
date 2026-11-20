@@ -1,0 +1,55 @@
+# Tests of the functions in the os and os.path modules. Each test runs in a fresh directory, with HOME set to an
+# empty directory of its own.
+load "testlib.ppl"
+
+# Information about the process and the system
+assert os.getpid() > 0
+assert os.getppid() > 0
+assert os.getpgrp() > 0
+assert os.getuid() >= 0
+assert os.geteuid() >= 0
+assert os.getgid() >= 0
+assert os.getegid() >= 0
+assert typeOf(os.gethostname()) == types.string
+assert typeOf(os.getlogin()) == types.string
+assert typeOf(os.getrealname()) == types.string
+assert typeOf(os.gethomedir()) == types.string
+assert os.uname()["sysname"].len() > 0
+
+# Files and directories
+start = os.getcwd()
+fh = open("data.txt", "w")
+call fh.write("12345")
+call fh.close()
+assert os.path.exists("data.txt")
+assert !os.path.exists("no_such_file")
+assert os.path.filesize("data.txt") == 5 * unit(B)
+assert os.stat("data.txt")["size"] == 5 * unit(B)
+assert os.glob("*.txt") == ["data.txt"]
+assert os.path.join("a", "b", "c.txt") == "a/b/c.txt"
+assert os.path.expanduser("~/x") == os.path.join(os.gethomedir(), "x")
+assert typeOf(os.path.atime("data.txt")) == types.date
+assert typeOf(os.path.ctime("data.txt")) == types.date
+assert abs(time.interval(time.now(), os.path.mtime("data.txt"))) < 60 * unit(s)
+
+# Running commands
+assert os.system("exit 3") != 0
+assert os.system("touch made_by_shell") == 0
+assert os.path.exists("made_by_shell")
+p = os.popen("echo hello")
+assert p.readline() == "hello"
+call p.close()
+tf = os.tmpfile()
+call tf.write("temporary")
+call tf.close()
+
+# Changing directory
+assert os.system("mkdir subdir") == 0
+call os.chdir("subdir")
+assert os.getcwd() == os.path.join(start, "subdir")  # The full path, even though a relative one was given
+set term eps
+set output "plot.eps"
+plot x  # Plots are made in a temporary directory, after which Pyxplot must return to subdir
+assert os.path.exists(os.path.join(start, "subdir", "plot.eps"))
+call os.chdir(start)
+assert os.getcwd() == start

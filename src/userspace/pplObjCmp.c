@@ -304,8 +304,13 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         if (a->real > b->real) return 1;
         if (a->real == b->real) return 0;
         return -2;
-    } else if ((t1o == 4) || (t1o == 14) || (t1o == 15)) // 4 - strings; 14 - data type; 15 - exception
+    } else if ((t1o == 4) || (t1o == 15)) // 4 - strings; 15 - exception
         return SGN(strcmp((const char *) a->auxil, (const char *) b->auxil));
+    else if (t1o == 14) // 14 - data types, which are compared by their identity numbers (auxil is not a string)
+    {
+        const int id1 = ((const pplType *) a->auxil)->id, id2 = ((const pplType *) b->auxil)->id;
+        return (id1 < id2) ? -1 : ((id1 > id2) ? 1 : 0);
+    }
     else if (t1o == 5) // 5 - colors
     {
         double h1, s1, b1, h2, s2, b2;
