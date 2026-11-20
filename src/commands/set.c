@@ -205,6 +205,22 @@ static void setNoTicks(pplset_tics *t) {
     t->tickStrs[0] = NULL;
 }
 
+//! unsetTicks - Implement unset xtics (and similar) for one axis, removing its tick settings and restoring their
+//! default values (if the axis's physical units match those of the default axis)
+//! \param [in,out] a - The axis
+//! \param [in] ad - The default settings of the axis
+//! \param [in] minorOnly - If true, only reset the minor ticks
+
+static void unsetTicks(pplset_axis *a, pplset_axis *ad, const int minorOnly) {
+    const int unitsMatch = ppl_unitsDimEqual(&a->unit, &ad->unit);
+    if (!minorOnly) {
+        tics_rm(&a->tics);
+        if (unitsMatch) tics_cp(&a->tics, &ad->tics);
+    }
+    tics_rm(&a->ticsM);
+    if (unitsMatch) tics_cp(&a->ticsM, &ad->ticsM);
+}
+
 //! setTicks - Implement the parts of the set xtics command (and similar) which set where ticks are placed
 //! \param [in] c - The Pyxplot context
 //! \param [in] command - The parser output stack of the command
@@ -2267,72 +2283,34 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         const int m = (command[PARSE_unset_tics_minor].objType == PPLOBJ_STR);
 
-#define IDE if (ppl_unitsDimEqual(&a->unit, &ad->unit))
-
         if (command[PARSE_unset_tics_axis].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_unset_tics_axis].real);
             const int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
                 if (j == 1) {
                     pplset_axis *a = &ya[i], *ad = &c->set->YAxesDefault[i];
-                    if (!m) {
-                        tics_rm(&a->tics);
-                        IDE tics_cp(&a->tics, &ad->tics);
-                    }
-                    tics_rm(&a->ticsM);
-                    IDE tics_cp(&a->ticsM, &ad->ticsM);
+                    unsetTicks(a, ad, m);
                 } else if (j == 2) {
                     pplset_axis *a = &za[i], *ad = &c->set->ZAxesDefault[i];
-                    if (!m) {
-                        tics_rm(&a->tics);
-                        IDE tics_cp(&a->tics, &ad->tics);
-                    }
-                    tics_rm(&a->ticsM);
-                    IDE tics_cp(&a->ticsM, &ad->ticsM);
+                    unsetTicks(a, ad, m);
                 } else {
                     pplset_axis *a = &xa[i], *ad = &c->set->XAxesDefault[i];
-                    if (!m) {
-                        tics_rm(&a->tics);
-                        IDE tics_cp(&a->tics, &ad->tics);
-                    }
-                    tics_rm(&a->ticsM);
-                    IDE tics_cp(&a->ticsM, &ad->ticsM);
+                    unsetTicks(a, ad, m);
                 }
             }
         } else {
             int i;
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i], *ad = &c->set->XAxesDefault[i];
-                if (a->enabled) {
-                    if (!m) {
-                        tics_rm(&a->tics);
-                        IDE tics_cp(&a->tics, &ad->tics);
-                    }
-                    tics_rm(&a->ticsM);
-                    IDE tics_cp(&a->ticsM, &ad->ticsM);
-                }
+                if (a->enabled) { unsetTicks(a, ad, m); }
             }
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i], *ad = &c->set->YAxesDefault[i];
-                if (a->enabled) {
-                    if (!m) {
-                        tics_rm(&a->tics);
-                        IDE tics_cp(&a->tics, &ad->tics);
-                    }
-                    tics_rm(&a->ticsM);
-                    IDE tics_cp(&a->ticsM, &ad->ticsM);
-                }
+                if (a->enabled) { unsetTicks(a, ad, m); }
             }
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i], *ad = &c->set->ZAxesDefault[i];
-                if (a->enabled) {
-                    if (!m) {
-                        tics_rm(&a->tics);
-                        IDE tics_cp(&a->tics, &ad->tics);
-                    }
-                    tics_rm(&a->ticsM);
-                    IDE tics_cp(&a->ticsM, &ad->ticsM);
-                }
+                if (a->enabled) { unsetTicks(a, ad, m); }
             }
         }
     } else if (strcmp_set && (strcmp(setoption, "timezone") == 0)) /* set timezone */

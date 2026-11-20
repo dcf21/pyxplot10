@@ -374,6 +374,16 @@ cleanup:
     return;
 }
 
+//! foreachStop - Test whether a foreach loop should stop iterating, because an error occurred, or a break, continue,
+//! return or exit statement was executed, or the user pressed Ctrl-C
+//! \param [in] c - The Pyxplot context
+//! \return True if the loop should stop
+
+static int foreachStop(const ppl_context *c) {
+    return c->errStat.status || c->shellBroken || c->shellContinued || c->shellReturned || c->shellExiting ||
+            cancellationFlag;
+}
+
 //! ppl_directive_foreach - Implement the foreach loop, which iterates over the items in a list, vector or
 //! dictionary, or over files matching a wildcard
 //! \param [in] c - The Pyxplot context
@@ -397,10 +407,6 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
     else c->shellLoopName[iterDepth] = NULL;
     c->shellBreakable = 1;
 
-#define FOREACH_STOP \
-    (c->errStat.status || c->shellBroken || c->shellContinued || c->shellReturned || c->shellExiting || \
-     cancellationFlag)
-
     if (iter->objType == PPLOBJ_STR) // Iterate over string: treat this as a filename to glob
     {
         int i, j;
@@ -416,9 +422,9 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
             fName[k++] = '\0';
         }
         if (wordexp(fName, &w, 0) != 0) goto cleanup; // No matches
-        for (i = 0; i < w.we_wordc && !FOREACH_STOP; i++) {
+        for (i = 0; i < w.we_wordc && !foreachStop(c); i++) {
             if (glob(w.we_wordv[i], 0, NULL, &g) != 0) continue;
-            for (j = 0; j < g.gl_pathc && !FOREACH_STOP; j++) {
+            for (j = 0; j < g.gl_pathc && !foreachStop(c); j++) {
                 pplObj *varObj, vartmp;
                 ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
                 pplObjStr(varObj, varObj->amMalloced, 0, g.gl_pathv[j]);
@@ -443,7 +449,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         gsl_vector *vin = ((pplVector *) iter->auxil)->v;
         const int vinl = vin->size;
         int i;
-        for (i = 0; i < vinl && !FOREACH_STOP; i++) {
+        for (i = 0; i < vinl && !foreachStop(c); i++) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
             pplObjNum(varObj, varObj->amMalloced, gsl_vector_get(vin, i), 0);
@@ -467,7 +473,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         list *lin = (list *) iter->auxil;
         listIterator *li = ppl_listIterateInit(lin);
         pplObj *obj;
-        while (((obj = (pplObj *) ppl_listIterate(&li)) != NULL) && !FOREACH_STOP) {
+        while (((obj = (pplObj *) ppl_listIterate(&li)) != NULL) && !foreachStop(c)) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
             pplObjCpy(varObj, obj, 0, varObj->amMalloced, 1);
@@ -492,7 +498,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         dictIterator *di = ppl_dictIterateInit(din);
         pplObj *obj;
         char *key, *cpy;
-        while (((obj = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) && !FOREACH_STOP) {
+        while (((obj = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) && !foreachStop(c)) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
             cpy = (char *) malloc(strlen(key) + 1);
@@ -637,9 +643,9 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
 
     // Loop over data table
     blk = data->first;
-    while ((blk != NULL) && !FOREACH_STOP) {
+    while ((blk != NULL) && !foreachStop(c)) {
         int j;
-        for (j = 0; ((j < blk->blockPosition) && !FOREACH_STOP); j++) {
+        for (j = 0; ((j < blk->blockPosition) && !foreachStop(c)); j++) {
             const int stkLevelOld = c->stackPtr;
             int k, inRange = 1;
 
