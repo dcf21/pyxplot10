@@ -1,0 +1,4 @@
+set mx1tics          inwards autofreq         # Sets where the minor ticks are placed along the x1 axis, and how they appear.
+
+set mc1tics          inwards autofreq         # Sets where the minor ticks are placed along the c1 axis, and how they appear.
+

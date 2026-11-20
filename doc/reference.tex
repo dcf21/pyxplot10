@@ -42,7 +42,7 @@ angle, e.g.\ {\tt 0.25*unit(rev)}, or as a dimensionless number of degrees, e.g.
 Replaceable tokens labelled {\tt <vector>} represent a physical position on the
 vector-graphics canvas, and can be specified either as two comma-separated
 co-ordinates, or as a two-component vector. In either case, the co-ordinates
-may either have physical demensions of length, or be a dimensionless number of
+may either have physical dimensions of length, or be a dimensionless number of
 centimeters.
 
 Replaceable tokens labelled {\tt <graph\_vector>} are similar, but represent a
@@ -768,7 +768,7 @@ each iteration should be comma separated.
 global { <variable name> }
 \end{verbatim}
 
-The \indcmdt{global} command may be used within subroutines, which have their
+The \indcmdt{global} may be used within subroutines, which have their
 own private variable namespaces, to specify that the named variables should
 refer to the global namespace. If multiple variables are specified, their names
 should be comma separated.
@@ -1092,6 +1092,19 @@ let <variable name> = <value>
 The \indcmdt{let} sets the named variable to equal {\tt value}.
 
 
+\section{line}\indcmd{line}
+
+\begin{verbatim}
+line [ item <id> ] [from] <vector> to <vector>
+                 [ with { <option> } ]
+\end{verbatim}
+
+The \indcmdt{line} draws a straight line segment between two points on the
+current multiplot canvas. It has the same syntax as the {\tt arrow} command,
+but uses the default arrow style of \indkeyt{nohead}. See the entry for the
+{\tt arrow} command for more details.
+
+
 \section{list}\indcmd{list}
 
 \begin{verbatim}
@@ -1146,9 +1159,9 @@ load '*.script'
 local { <variable name> }
 \end{verbatim}
 
-The \indcmdt{global} command may be used within subroutines, which have their
+The \indcmdt{local} may be used within subroutines, which have their
 own private variable namespaces. It specifies that the named variables should,
-from now on, refer to the local namespace, even if the \indcmdt{global} command
+from now on, refer to the local namespace, even if the \indcmdt{global}
 has previously been used to reference the global namespace. If multiple
 variables are specified, their names should be comma separated.
 
@@ -1172,7 +1185,7 @@ $\cos(x)$ is sought:
 \noindent Note that this particular example doesn't work when complex
 arithmetic is enabled, since $\cos(x)$ diverges to $\infty$ at $x=\infty i$.
 
-Various caveats apply the {\tt maximize} command, as well as to the {\tt
+Various caveats apply to the {\tt maximize} command, as well as to the {\tt
 minimize} and {\tt solve} commands.  All of these commands operate by searching
 numerically for optimal sets of input parameters to meet the criteria set by
 the user. As with all numerical algorithms, there is no guarantee that the {\it
@@ -1210,7 +1223,7 @@ $\cos(x)$ is sought:
 arithmetic is enabled, since $\cos(x)$ diverges to $-\infty$ at $x=\pi+\infty
 i$.
 
-Various caveats apply the {\tt minimize} command, as well as to the {\tt
+Various caveats apply to the {\tt minimize} command, as well as to the {\tt
 maximize} and {\tt solve} commands.  All of these commands operate by searching
 numerically for optimal sets of input parameters to meet the criteria set by
 the user. As with all numerical algorithms, there is no guarantee that the {\it
@@ -1459,6 +1472,33 @@ be deleted and subsequently restored with the {\tt delete} and {\tt undelete}
 commands respectively.
 
 
+\section{polygon}\indcmd{polygon}
+
+\begin{verbatim}
+polygon [ item <id> ] <list of vectors>
+                      [ with { <option> } ]
+\end{verbatim}
+
+The \indcmdt{polygon} draws a closed polygon on the current multiplot canvas,
+whose vertices are at the positions given in the supplied list of vectors. Each
+position may be specified either as a two-element list, or as a vector, whose
+components may either have physical dimensions of length, or be dimensionless
+numbers of centimetres. Keywords such as \indkeyt{color}, \indkeyt{fillcolor},
+\indkeyt{linewidth} and \indkeyt{linetype} have the same syntax and meaning
+following the keyword \indmodt{with} as in the {\tt plot} command. The
+following example would draw a triangle filled in red, with a blue outline:
+
+\begin{verbatim}
+polygon [[0,0],[2,0],[1,1]] with fillcolor red color blue
+\end{verbatim}
+
+All vector graphics objects placed on multiplot canvases receive unique
+identification numbers which count sequentially from one, and which may be
+listed using the {\tt list} command.  By reference to these numbers, they can
+be deleted and subsequently restored with the {\tt delete} and {\tt undelete}
+commands respectively.
+
+
 \section{print}\indcmd{print}
 
 \begin{verbatim}
@@ -1592,6 +1632,19 @@ reset
 The \indcmdt{reset} reverts the values of all settings that have been changed
 with the {\tt set} command back to their default values. It also clears the
 current multiplot canvas.
+
+
+\section{return}\indcmd{return}
+
+\begin{verbatim}
+return [ <value> ]
+\end{verbatim}
+
+The \indcmdt{return} may only be used within subroutines. It terminates the
+execution of the subroutine, and returns the specified value to the caller. If
+no value is specified, or if a subroutine ends without reaching a {\tt return}
+statement, then a value of zero is returned. See the entry for the {\tt
+subroutine} command for more details.
 
 
 \section{save}\indcmd{save}
@@ -1933,7 +1986,7 @@ horizontal midpoints between them. The specified width may have any physical
 units, but must be real and finite.
 
 
-\subsection{c1format}\indcmd{set x1format}
+\subsection{c1format}\indcmd{set c1format}
 
 \begin{verbatim}
 set c1format ( auto | <format> )
@@ -1957,6 +2010,23 @@ is used. An optional rotation angle may be specified to rotate axis labels
 clockwise by arbitrary angles. The angle should be specified either as a
 dimensionless number of degrees, or as a quantity with physical dimensions of
 angle.
+
+
+\subsection{c1tics}\indcmd{set c1tics}
+
+\begin{verbatim}
+set [m]c1tics
+      [ ( axis | border | inward | outward | both ) ]
+      [ ( autofreq
+        | [<minimum>,] <increment> [, <maximum>]
+        | "(" {[ <label> ] <position>} ")"
+      ) ]
+\end{verbatim}
+
+The {\tt c1tics} setting is used to specify the positions of the ticks along
+the color scale bars drawn alongside plots which make use of the
+\indpst{colormap} plot style. It has similar syntax to the {\tt set xtics}
+command; the {\tt set mc1tics} command configures the minor ticks.
 
 
 \subsection{calendar}\indcmd{set calendar}
@@ -2176,7 +2246,7 @@ be passed to it.  This program should take the name of the file to be filtered
 as the final option on its command line, immediately following any command-line
 switches specified above.  It should output a suitable Pyxplot \datafile on its
 standard output stream for Pyxplot to read.  For example, to filter all files
-that end in {\tt .foo} through the a program called {\tt defoo} using the {\tt
+that end in {\tt .foo} through a program called {\tt defoo} using the {\tt
 --text} option one would type:
 
 \begin{verbatim}
@@ -3933,6 +4003,27 @@ The \indcmdt{spline} is an alias for the {\tt interpolate spline} command.
 See the entry for the {\tt interpolate} command for more details.
 
 
+\section{subroutine}\indcmd{subroutine}
+
+\begin{verbatim}
+subroutine <name>( { <variable> } )
+ {
+  ...
+ }
+\end{verbatim}
+
+The \indcmdt{subroutine} defines a new subroutine, which takes the
+comma-separated list of named arguments, and which executes the supplied block
+of commands whenever it is called. Once defined, subroutines can be used
+anywhere in algebraic expressions, just as functions can be. The value passed
+to the {\tt return} statement is returned to the caller; if no value is
+returned, the subroutine returns zero. The {\tt call} command may be used to
+call a subroutine and discard its return value. Subroutines have their own
+private variable namespaces; the {\tt global} command may be used within them
+to refer to global variables. See Section~\ref{sec:subroutines} for more
+details.
+
+
 \section{swap}\indcmd{swap}
 
 \begin{verbatim}
@@ -4174,4 +4265,30 @@ while (j < 50)
   j = j + i
  }
 \end{verbatim}
+
+
+\section{with}\indcmd{with}
+
+\begin{verbatim}
+with <module>
+ {
+  ...
+ }
+\end{verbatim}
+
+The \indcmdt{with} executes the supplied block of commands with the members of
+the specified module or class instance available as if they were local
+variables. Any variables which are set within the block are stored in that
+module or class instance. For example:
+
+\begin{verbatim}
+m = module()
+m.a = 1
+with m
+ {
+  b = a + 1
+ }
+print m.b
+\end{verbatim}
+
 

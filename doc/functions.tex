@@ -134,7 +134,7 @@ namespace, are listed in subsections below.
 \funcdef{open($x$[,$y$])}{opens the file $x$ with string access mode $y$, and returns a file handle object.}
 \funcdef{ord($s$)}{returns the ASCII code of the first character of the string $s$.}
 \funcdef{ordinal($x$)}{returns an ordinal string, for example, ``1st'', ``2nd'' or ``3rd'', for any positive dimensionless real number $x$.}
-\funcdef{pow($x,y$)}{returns $x$ to the power of $y$, where $x$ and $y$ may both be complex numbers and $x$ may have any physical dimensions but $y$ must be dimensionless. It not not permitted for $y$ to be complex if $x$ is not dimensionless, since this would lead to an output with complex physical dimensions.}
+\funcdef{pow($x,y$)}{returns $x$ to the power of $y$, where $x$ and $y$ may both be complex numbers and $x$ may have any physical dimensions but $y$ must be dimensionless. It is not permitted for $y$ to be complex if $x$ is not dimensionless, since this would lead to an output with complex physical dimensions.}
 \funcdef{prime($x$)}{returns one if floor($x$) is a prime number and zero otherwise.}
 \funcdef{primeFactors($x$)}{returns a list of the prime factors of the integer $x$.}
 \funcdef{radians($x$)}{takes a real input which should either have physical units of angle, or be dimensionless, in which case it is assumed to be measured in degrees. The output is the dimensionless number of radians in $x$.}
@@ -176,8 +176,8 @@ The \texttt{ast} module contains specialist functions for astronomy and cosmolog
 \funcdef{ast.Lcdm\_\-DM($z$,\-$H_0$,\-$\Omega_\mathrm{M}$,\-$\Omega_\Uplambda$)}{returns the proper motion distance of objects at a redshift of $z$ in a standard $\Uplambda_\mathrm{CDM}$ cosmology. For details, see the {\tt ast.Lcdm\_age()} function above. The returned value has dimensions of distance.}
 \funcdef{ast.Lcdm\_\-t($z$,\-$H_0$,\-$\Omega_\mathrm{M}$,\-$\Omega_\Uplambda$)}{returns the lookback time to objects at a redshift of $z$ in a standard $\Uplambda_\mathrm{CDM}$ cosmology. For details, see the {\tt ast.Lcdm\_age()} function above. The returned value has dimensions of time. To find the age of the Universe at a redshift of $z$, this value should be subtracted from the output of the {\tt ast.Lcdm\_age()} function.}
 \funcdef{ast.Lcdm\_\-z($t$,\-$H_0$,\-$\Omega_\mathrm{M}$,\-$\Omega_\Uplambda$)}{returns the redshift corresponding to a lookback time of $t$ in a standard $\Uplambda_\mathrm{CDM}$ cosmology. For details, see the {\tt ast.Lcdm\_age()} function above. The returned value is dimensionless.}
-\funcdef{ast.moonphase($d$)}{returns the phase of the Moon, with dimensions of angle, at the time of the supplied date object $d$. If $d$ is numerical, it is assumed to be a Unix time.}
-\funcdef{ast.sidereal\_\-time($d$)}{returns the sidereal time at Greenwich, with dimensions of angle, at the time of the supplied date object $d$. If $d$ is numerical, it is assumed to be a Unix time. The returned sidereal time is equal to the right ascension of the stars which are transiting the Greenwich meridian at that time. This function uses the expression for sidereal time adopted in 1982 by the International Astronomical Union (IAU), and which is reproduced in Chapter~12 of Jean Meeus' book {\it Astronomical Algorithms} (1998).}
+\funcdef{ast.moonPhase($d$)}{returns the phase of the Moon, with dimensions of angle, at the time of the supplied date object $d$. If $d$ is numerical, it is assumed to be a Unix time.}
+\funcdef{ast.sidereal\-Time($d$)}{returns the sidereal time at Greenwich, with dimensions of angle, at the time of the supplied date object $d$. If $d$ is numerical, it is assumed to be a Unix time. The returned sidereal time is equal to the right ascension of the stars which are transiting the Greenwich meridian at that time. This function uses the expression for sidereal time adopted in 1982 by the International Astronomical Union (IAU), and which is reproduced in Chapter~12 of Jean Meeus' book {\it Astronomical Algorithms} (1998).}
 
 \subsection{The \texttt{colors} module}
 
@@ -305,7 +305,7 @@ If universal time is used, the timezone may be specified as {\tt UTC}.
 \funcdef{time.fromMJD($t$)}{creates a date object from the specified numerical modified Julian date.}
 \funcdef{time.fromUnix($t$)}{creates a date object from the specified numerical Unix time.}
 \funcdef{time.interval($t_2,t_1$)}{returns the numerical time interval between date objects $t_1$ and $t_2$, with physical units of time.}
-\funcdef{time.intervalStr($t_2,t_1,format$)}{returns a string representation of the time interval elapsed between the first and second supplied date objects. The third input is used to control the format of the output, with the following tokens being substituted for:
+\funcdef{time.intervalStr($t_2,t_1,<format>$)}{returns a string representation of the time interval elapsed between the first and second supplied date objects. The optional third input is used to control the format of the output, with the following tokens being substituted for:
 \begin{longtable}{|>{\columncolor{LightGrey}}l|>{\columncolor{LightGrey}}l|}
 \hline \endfoot
 \hline

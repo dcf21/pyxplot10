@@ -1,0 +1,3 @@
+# The unit planck_impedence was renamed planck_impedance in Pyxplot 0.10.0; the old spelling is still accepted
+assert unit(planck_impedance) == unit(Z_planck)
+assert unit(planck_impedence) == unit(Z_planck)

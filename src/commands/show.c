@@ -205,9 +205,8 @@ static void showTicks(ppl_context *c, char *out, const size_t outLen, char *item
                       char *buf, char *buf2, const pplset_tics *T, const pplset_tics *TD, pplObj *U, const pplObj *UD,
                       const int amLog, const int amLogD, const char axisLetter, const int axisNumber) {
     int m, n;
-    ppl_snprintfTrunc(buf2, FNAME_LENGTH,
-                      "Sets where the major ticks are placed along the %c%d axis, and how they appear", axisLetter,
-                      axisNumber);
+    ppl_snprintfTrunc(buf2, FNAME_LENGTH, "Sets where the %s ticks are placed along the %c%d axis, and how they appear",
+                      (name[0] == 'm') ? "minor" : "major", axisLetter, axisNumber);
     ppl_snprintfTrunc(
             buf, LSTR_LENGTH, "%s ",
             *(char **) ppl_fetchSettingName(&c->errcontext, T->tickDir, SW_TICDIR_INT, SW_TICDIR_STR, sizeof(char *)));

@@ -45,6 +45,13 @@
        getPos(), which have units of bytes.
      - The index blocks written by the tabulate command were labelled from 1,
        though the index modifier counts them from 0.
+     - The show command described minor ticks as major ticks.
+   - The unit planck_impedence has been renamed planck_impedance; the old
+     spelling is still accepted.
+   - The documentation has been checked against the source code: commands,
+     settings and configuration-file options that were missing have been
+     documented, and errors in the names, defaults and syntax given for others
+     have been corrected.
    - Pyxplot now exits with status 1 if any error occurs while running a
      script or piped input, so that failures can be detected by the shell.
    - The lengths, indices and slices of strings, and the positions returned by

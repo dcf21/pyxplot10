@@ -152,6 +152,7 @@ colKey = on
 colKeyPos = Right
 color = on
 contours = 12
+contours_label = off
 c1Range_log = false
 c1Range_max = 0
 c1Range_max_Auto = true
@@ -189,7 +190,7 @@ grid = off
 gridAxisX = 1
 gridAxisY = 1
 gridAxisZ = 1
-gridMajColor = grey70
+gridMajColor = grey60
 gridMinColor = grey85
 key = on
 keyColumns = 0
@@ -273,9 +274,7 @@ baseline_pointSize = 1.0
 pi = 3.14159265358979
 
 [colors]
-palette = black, red, blue, magenta, cyan, brown, salmon, gray,
-green, navyBlue, periwinkle, pineGreen, seaGreen, greenYellow,
-orange, carnationPink, plum
+palette = black, red, blue, magenta, cyan, brown, salmon, gray, green, navyBlue, periwinkle, pineGreen, seaGreen, greenYellow, orange, carnationPink, plum
 
 [latex]
 preamble =
@@ -410,11 +409,17 @@ The {\tt settings} section can contain any of the following settings in any orde
 
                Sets whether output should be color ({\tt on}) or monochrome ({\tt off}).
                \\
-{\tt contour} & {\bf Possible values:} Any integer.
+{\tt contours} & {\bf Possible values:} Any integer.
 
-               {\bf Analogous set command:} \indcmdts{set contour}
+               {\bf Analogous set command:} \indcmdts{set contours}
 
                Sets the number of contours which are drawn in the \indpst{contourmap} plot style.
+               \\
+{\tt contours\_label} & {\bf Possible values:} {\tt on}, {\tt off}.
+
+               {\bf Analogous set command:} {\tt set contours label}
+
+               Sets whether each contour drawn in the {\tt contourmap} plot style is labelled with the ordinate value that it follows.
                \\
 {\tt c?Range\_log} & {\bf Possible values:} {\tt true}, {\tt false}.
 
@@ -899,7 +904,7 @@ The {\tt styling} section can contain any of the following settings in any order
                \\
 {\tt colorScale\_width} & {\bf Possible values:} Any floating-point number.
 
-               Sets the width of the color scale bars drawn alonside plots drawn using the {\tt colormap} plot style. A value of 1.0 corresponds to Pyxplot's width; other values differ from this multiplicatively.
+               Sets the width of the color scale bars drawn alongside plots drawn using the {\tt colormap} plot style. A value of 1.0 corresponds to Pyxplot's width; other values differ from this multiplicatively.
                \\
 {\tt grid\_majLineWidth} & {\bf Possible values:} Any floating-point number.
 

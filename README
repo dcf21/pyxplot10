@@ -115,7 +115,7 @@ before running the configure script below.
 
 3. INSTALLATION FROM SOURCE ARCHIVE
 
-First, download the required archive can be downloaded from the front page of
+First, download the required archive from the front page of the
 Pyxplot website -- <http://www.pyxplot.org.uk>. It is assumed that the packages
 listed above have already been installed; if they are not, you will need to
 either install them yourself, if you have superuser access to your machine, or
@@ -145,7 +145,7 @@ sudo make install
 
 By default, the Pyxplot executable installs to /usr/local/bin/pyxplot.  If
 desired, this installation path may be modified in the file Makefile.skel, by
-changing the variable USRDIR in the first line to an alternative desired
+changing the variable USRDIR near the top of the file to an alternative desired
 installation location.
 
 Pyxplot may now be started by any system user, simply by typing:

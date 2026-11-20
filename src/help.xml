@@ -452,11 +452,11 @@ The exit command can be used to quit Pyxplot. If multiple command files, or a mi
 
 fft#{#\labrange\rab#}#\labfunction#name\rab()\\####of#(#\labfilename\rab#|#\labfunction#name\rab()#)\\####[#using#{#\labexpression\rab#}#]\\\\ifft#{#\labrange\rab#}#\labfunction#name\rab()\\####of#(#\labfilename\rab#|#\labfunction#name\rab()#)\\####[#using#{#\labexpression\rab#}#]\\
 
-The fft command calculates Fourier transforms of data files or functions. Transforms can be performed on datasets with arbitrary numbers of dimensions. To transform an algebraic expression with ndegrees of freedom, it must be wrapped in a function of the form f(i,i,...,i). To transform an n-dimensional dataset stored in a data file, the samples must be arranged on a regular linearly-spaced grid and stored in row-major order. For each dimension of the transform, a range specification must be provided to the fft command in the form 
+The fft command calculates Fourier transforms of data files or functions. Transforms can be performed on datasets with arbitrary numbers of dimensions. To transform an algebraic expression with n degrees of freedom, it must be wrapped in a function of the form f(i,i,...,i). To transform an n-dimensional dataset stored in a data file, the samples must be arranged on a regular linearly-spaced grid and stored in row-major order. For each dimension of the transform, a range specification must be provided to the fft command in the form 
 
 [#\labminimum\rab#:#\labmaximum\rab#:#\labstep\rab#]\\
 
-When data from a data file is being transformed, the specified range(s) must precisely match those of the samples read from the file; the first ncolumns of data should contain the values of the nreal-space coordinates, and the n+1th column should contain the data to be transformed. After the range(s), a function name should be provided for the output transform: a function of narguments with this name will be generated to represent the transformed data. Note that this function is in general complex - i.e. it has a non-zero imaginary component. Complex numerics can be enabled using the set numerics complex command and the fft command is of little use without doing so. The using, index, every and select modifiers can be used to specify how data will be sampled from the input function or data file in an analogous manner to how they are used in the plot command. The ifft command calculates inverse Fourier transforms; it has the same syntax as the fft command. 
+When data from a data file is being transformed, the specified range(s) must precisely match those of the samples read from the file; the first n columns of data should contain the values of the n real-space coordinates, and the n+1th column should contain the data to be transformed. After the range(s), a function name should be provided for the output transform: a function of n arguments with this name will be generated to represent the transformed data. Note that this function is in general complex - i.e. it has a non-zero imaginary component. Complex numerics can be enabled using the set numerics complex command and the fft command is of little use without doing so. The using, index, every and select modifiers can be used to specify how data will be sampled from the input function or data file in an analogous manner to how they are used in the plot command. The ifft command calculates inverse Fourier transforms; it has the same syntax as the fft command. 
 
   </fft>
   <fit>
@@ -504,14 +504,14 @@ plot#####\##Create#blank#plot\\foreach#sigma#in#(1,#2,#3)\\#{\\##replot#1/sigma*
 
 foreach#{#\labvariable\rab#}#in#[#{#\labrange\rab#}#]\\####(#\labfilename\rab#|#{#\labexpression\rab#}#|#{#\labvector#obj\rab#}#)\\####[#every#{#\labexpression\rab#}#]\\####[#index#\labvalue\rab#]#[#select#\labexpression\rab#]\\####[#using#{#\labexpression\rab#}#]\\##\labcode\rab\\
 
-The foreach datum command executes a series of commands for each data pointread from a data fileor function. It takes a similar set of modifiers to the plot command; the list of variables to be read from the supplied data on each iteration should be comma separated. 
+The foreach datum command executes a series of commands for each data point read from a data file or function. It takes a similar set of modifiers to the plot command; the list of variables to be read from the supplied data on each iteration should be comma separated. 
 
   </foreach_datum>
   <global>
 
 global#{#\labvariable#name\rab#}\\
 
-The global command command may be used within subroutines, which have their own private variable namespaces, to specify that the named variables should refer to the global namespace. If multiple variables are specified, their names should be comma separated. 
+The global command may be used within subroutines, which have their own private variable namespaces, to specify that the named variables should refer to the global namespace. If multiple variables are specified, their names should be comma separated. 
 
   </global>
   <help>
@@ -609,6 +609,13 @@ let#\labvariable#name\rab#=#\labvalue\rab\\
 The let command sets the named variable to equal value. 
 
   </let>
+  <line>
+
+line#[#item#\labid\rab#]#[from]#\labvector\rab#to#\labvector\rab\\#################[#with#{#\laboption\rab#}#]\\
+
+The line command draws a straight line segment between two points on the current multiplot canvas. It has the same syntax as the arrow command, but uses the default arrow style of nohead. See arrow for more details. 
+
+  </line>
   <list>
 
 list\\
@@ -639,7 +646,7 @@ load#'*.script'\\
 
 local#{#\labvariable#name\rab#}\\
 
-The global command command may be used within subroutines, which have their own private variable namespaces. It specifies that the named variables should, from now on, refer to the local namespace, even if the global command command has previously been used to reference the global namespace. If multiple variables are specified, their names should be comma separated. 
+The local command may be used within subroutines, which have their own private variable namespaces. It specifies that the named variables should, from now on, refer to the local namespace, even if the global command has previously been used to reference the global namespace. If multiple variables are specified, their names should be comma separated. 
 
   </local>
   <maximize>
@@ -648,7 +655,7 @@ maximize#\labexpression\rab#via#{#\labvariable\rab#}\\
 
 The maximize command can be used to find the maxima of algebraic expressions. A single algebraic expression should be supplied for optimisation, together with a comma-separated list of the variables with respect to which it should be optimised. In the following example, a maximum of the sinusoidal function cos(x) is sought:  <input>
 
-</input>  Note that this particular example doesn't work when complex arithmetic is enabled, since cos(x) diverges to infinity at x=infinityi. Various caveats apply the maximize command, as well as to the minimize and solve commands. All of these commands operate by searching numerically for optimal sets of input parameters to meet the criteria set by the user. As with all numerical algorithms, there is no guarantee that the locally optimum solutions returned are the globally optimum solutions. It is always advisable to double-check that the answers returned agree with common sense. These commands can often find solutions to equations when these solutions are either very large or very small, but they usually work best when the solution they are looking for is roughly of order unity. Pyxplot does have mechanisms which attempt to correct cases where the supplied initial guess turns out to be many orders of magnitude different from the true solution, but it cannot be guaranteed not to wildly overshoot and produce unexpected results in such cases. To reiterate, it is always advisable to double-check that the answers returned agree with common sense. 
+</input>  Note that this particular example doesn't work when complex arithmetic is enabled, since cos(x) diverges to infinity at x=infinity*i. Various caveats apply to the maximize command, as well as to the minimize and solve commands. All of these commands operate by searching numerically for optimal sets of input parameters to meet the criteria set by the user. As with all numerical algorithms, there is no guarantee that the locally optimum solutions returned are the globally optimum solutions. It is always advisable to double-check that the answers returned agree with common sense. These commands can often find solutions to equations when these solutions are either very large or very small, but they usually work best when the solution they are looking for is roughly of order unity. Pyxplot does have mechanisms which attempt to correct cases where the supplied initial guess turns out to be many orders of magnitude different from the true solution, but it cannot be guaranteed not to wildly overshoot and produce unexpected results in such cases. To reiterate, it is always advisable to double-check that the answers returned agree with common sense. 
 
   </maximize>
   <minimize>
@@ -657,7 +664,7 @@ minimize#\labexpression\rab#via#{#\labvariable\rab#}\\
 
 The minimize command can be used to find the minima of algebraic expressions. A single algebraic expression should be supplied for optimisation, together with a comma-separated list of the variables with respect to which it should be optimised. In the following example, a minimum of the sinusoidal function cos(x) is sought:  <input>
 
-</input>  Note that this particular example doesn't work when complex arithmetic is enabled, since cos(x) diverges to -infinity at x=pi+infinityi. Various caveats apply the minimize command, as well as to the maximize and solve commands. All of these commands operate by searching numerically for optimal sets of input parameters to meet the criteria set by the user. As with all numerical algorithms, there is no guarantee that the locally optimum solutions returned are the globally optimum solutions. It is always advisable to double-check that the answers returned agree with common sense. These commands can often find solutions to equations when these solutions are either very large or very small, but they usually work best when the solution they are looking for is roughly of order unity. Pyxplot does have mechanisms which attempt to correct cases where the supplied initial guess turns out to be many orders of magnitude different from the true solution, but it cannot be guaranteed not to wildly overshoot and produce unexpected results in such cases. To reiterate, it is always advisable to double-check that the answers returned agree with common sense. 
+</input>  Note that this particular example doesn't work when complex arithmetic is enabled, since cos(x) diverges to -infinity at x=pi+infinity*i. Various caveats apply to the minimize command, as well as to the maximize and solve commands. All of these commands operate by searching numerically for optimal sets of input parameters to meet the criteria set by the user. As with all numerical algorithms, there is no guarantee that the locally optimum solutions returned are the globally optimum solutions. It is always advisable to double-check that the answers returned agree with common sense. These commands can often find solutions to equations when these solutions are either very large or very small, but they usually work best when the solution they are looking for is roughly of order unity. Pyxplot does have mechanisms which attempt to correct cases where the supplied initial guess turns out to be many orders of magnitude different from the true solution, but it cannot be guaranteed not to wildly overshoot and produce unexpected results in such cases. To reiterate, it is always advisable to double-check that the answers returned agree with common sense. 
 
   </minimize>
   <move>
@@ -730,7 +737,7 @@ The with modifier controls the style in which data should be plotted. For exampl
 
 plot#"data.dat"#index#1#using#4:5#with#lines\\
 
- specifies that data should be plotted using lines connecting each data pointto its neighbors. More generally, the with modifier can be followed by a range of settings which fine-tune the manner in which the data are displayed; for example, the statement 
+ specifies that data should be plotted using lines connecting each data point to its neighbors. More generally, the with modifier can be followed by a range of settings which fine-tune the manner in which the data are displayed; for example, the statement 
 
 plot#"data.dat"#with#lines#linewidth#2.0\\
 
@@ -762,6 +769,13 @@ point#[#item#\labid\rab#]#[at]#\labvector\rab#[#label#\labstring\rab#]\\########
 The point command allows a single point to be plotted on the current multiplot canvas independently of any graph. It is equivalent to plotting a data file containing a single datum and with invisible axes. If an optional label is specified then the text string provided is rendered next to the point. The with modifier allows the style of the point to be specified using similar options to those accepted by the plot command. All vector graphics objects placed on multiplot canvases receive unique identification numbers which count sequentially from one, and which may be listed using the list command. By reference to these numbers, they can be deleted and subsequently restored with the delete and undelete commands respectively. 
 
   </point>
+  <polygon>
+
+polygon#[#item#\labid\rab#]#\lablist#of#vectors\rab\\######################[#with#{#\laboption\rab#}#]\\
+
+The polygon command draws a closed polygon on the current multiplot canvas, whose vertices are at the positions given in the supplied list of vectors. Each position may be specified either as a two-element list, or as a vector, whose components may either have physical dimensions of length, or be dimensionless numbers of centimetres. Keywords such as color, fillcolor, linewidth and linetype have the same syntax and meaning following the keyword with as in the plot command. All vector graphics objects placed on multiplot canvases receive unique identification numbers which count sequentially from one, and which may be listed using the list command. By reference to these numbers, they can be deleted and subsequently restored with the delete and undelete commands respectively. 
+
+  </polygon>
   <print>
 
 print#{#\labexpression\rab#}\\
@@ -839,6 +853,13 @@ reset\\
 The reset command reverts the values of all settings that have been changed with the set command back to their default values. It also clears the current multiplot canvas. 
 
   </reset>
+  <return>
+
+return#[#\labvalue\rab#]\\
+
+The return command may only be used within subroutines. It terminates the execution of the subroutine, and returns the specified value to the caller. If no value is specified, or if a subroutine ends without reaching a return statement, then a value of zero is returned. See subroutine for more details. 
+
+  </return>
   <save>
 
 save#\labfilename\rab\\
@@ -1020,6 +1041,13 @@ set#c1label#\labtext\rab#[#rotate#\labangle\rab#]\\
 The setting c1label sets the label which should be written alongside the color scale bars drawn next to plots when the colormap plot style is used. An optional rotation angle may be specified to rotate axis labels clockwise by arbitrary angles. The angle should be specified either as a dimensionless number of degrees, or as a quantity with physical dimensions of angle. 
 
    </c1label>
+   <c1tics>
+
+set#[m]c1tics\\######[#(#axis#|#border#|#inward#|#outward#|#both#)#]\\######[#(#autofreq\\########|#[\labminimum\rab,]#\labincrement\rab#[,#\labmaximum\rab]\\########|#"("#{[#\lablabel\rab#]#\labposition\rab}#")"\\######)#]\\
+
+The c1tics setting is used to specify the positions of the ticks along the color scale bars drawn alongside plots which make use of the colormap plot style. It has similar syntax to the set xtics command; the set mc1tics command configures the minor ticks. 
+
+   </c1tics>
    <calendar>
 
 set#calendar#[#(#input#|#output#)#]#\labcalendar\rab\\
@@ -1110,7 +1138,7 @@ set#nodisplay\\...\\set#display\\refresh\\
 
 set#filter#\labfilename#wildcard\rab#\labfilter#command\rab\\
 
-The set filter command allows input filter programs to be specified to allow Pyxplot to deal with file types that are not in the plaintext format which it ordinarily expects. Firstly the pattern used to recognise the filenames of the data files to which the filter should apply to must be specified; the standard wildcard characters * and ? may be used. Then a filter program should be specified, along with any necessary command-line switches which should be passed to it. This program should take the name of the file to be filtered as the final option on its command line, immediately following any command-line switches specified above. It should output a suitable Pyxplot data fileon its standard output stream for Pyxplot to read. For example, to filter all files that end in .foo through the a program called defoo using the -text option one would type: 
+The set filter command allows input filter programs to be specified to allow Pyxplot to deal with file types that are not in the plaintext format which it ordinarily expects. Firstly the pattern used to recognise the filenames of the data files to which the filter should apply to must be specified; the standard wildcard characters * and ? may be used. Then a filter program should be specified, along with any necessary command-line switches which should be passed to it. This program should take the name of the file to be filtered as the final option on its command line, immediately following any command-line switches specified above. It should output a suitable Pyxplot data file on its standard output stream for Pyxplot to read. For example, to filter all files that end in .foo through a program called defoo using the -text option one would type: 
 
 set#filter#"*.foo"#"/usr/local/bin/defoo#--text"\\
 
@@ -2140,6 +2168,13 @@ spline#[#\labrange\rab#]#\labfunction#name\rab()\\#######(#\labfilename\rab#|#{#
 The spline command is an alias for the interpolate spline command. See the entry for the interpolate command for more details. 
 
   </spline>
+  <subroutine>
+
+subroutine#\labname\rab(#{#\labvariable\rab#}#)\\#{\\##...\\#}\\
+
+The subroutine command defines a new subroutine, which takes the comma-separated list of named arguments, and which executes the supplied block of commands whenever it is called. Once defined, subroutines can be used anywhere in algebraic expressions, just as functions can be. The value passed to the return statement is returned to the caller; if no value is returned, the subroutine returns zero. The call command may be used to call a subroutine and discard its return value. Subroutines have their own private variable namespaces; the global command may be used within them to refer to global variables. 
+
+  </subroutine>
   <swap>
 
 swap#\labitem1\rab#\labitem2\rab\\
@@ -2234,5 +2269,12 @@ The while command executes a block of commands repeatedly, checking the provided
 i#=#1\\j#=#1\\while#(j#\lab#50)\\#{\\##print#j\\##i#=#i#+#j\\##print#i\\##j#=#j#+#i\\#}\\
 
   </while>
+  <with>
+
+with#\labmodule\rab\\#{\\##...\\#}\\
+
+The with command executes the supplied block of commands with the members of the specified module or class instance available as if they were local variables. Any variables which are set within the block are stored in that module or class instance. 
+
+  </with>
 
 </help>

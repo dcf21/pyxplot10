@@ -55,7 +55,10 @@ Version 0.10.0 is a major refactoring of Pyxplot's source code, which has been r
 \item The {\tt eigenvectors()} method of matrices returned the rows of the matrix of eigenvectors rather than its columns, so did not return the eigenvectors. {\tt eigenvalues()} and {\tt eigenvectors()} now both list their results in order of ascending eigenvalue.
 \item The {\tt setPos()} method of files rejected the positions returned by {\tt getPos()}, which have units of bytes.
 \item The index blocks written by the {\tt tabulate} command were labelled from 1, though the {\tt index} modifier counts them from 0.
+\item The {\tt show} command described minor ticks as major ticks.
 \end{itemize}
+
+\noindent The unit {\tt planck\_impedence} has been renamed {\tt planck\_impedance}; the old spelling is still accepted. The documentation has been checked against the source code: commands, settings and configuration-file options that were missing have been documented, and errors in the names, defaults and syntax given for others have been corrected.
 
 \noindent Pyxplot now exits with status 1 if any error occurs while running a script or piped input, so that failures can be detected by the shell. The lengths, indices and slices of strings, and the positions returned by the {\tt find()} and {\tt findAll()} methods, now count characters rather than bytes, so that multi-byte UTF-8 characters such as {\tt \'e} count as one character, and the {\tt isalpha()} and {\tt isalnum()} methods recognise letters in any alphabet. An automated test suite has been added, which may be run with {\tt make test}. When compiled with OpenMP, the {\tt plot}, {\tt tabulate} and {\tt fit} commands evaluate functions on all of the computer's cores at once, when this gives the same results as evaluating them one at a time: e.g.\ not when they use random numbers or call subroutines. The number of cores used can be limited by setting the environment variable {\tt OMP\_NUM\_THREADS}. Fits to more than 4096 data points sum their residuals in blocks, so their results may differ in the last digits from earlier versions, but do not depend on the number of cores used.
 

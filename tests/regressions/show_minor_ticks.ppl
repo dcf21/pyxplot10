@@ -1,0 +1,3 @@
+# Before Pyxplot 0.10.0, the show command described minor ticks as major ticks
+show mxtics
+show mc1tics

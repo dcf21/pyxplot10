@@ -2411,12 +2411,13 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].exponent[UNIT_CURRENT] = -1;
     unit_pos++;
 
-    unit_database[unit_pos].nameAs = "Z_planck"; // Planck Impedence
+    unit_database[unit_pos].nameAs = "Z_planck"; // Planck Impedance
     unit_database[unit_pos].nameAp = "Z_planck";
     unit_database[unit_pos].nameLs = "Z_P";
     unit_database[unit_pos].nameLp = "Z_P";
-    unit_database[unit_pos].nameFs = "planck_impedence";
-    unit_database[unit_pos].nameFp = "planck_impedence";
+    unit_database[unit_pos].nameFs = "planck_impedance";
+    unit_database[unit_pos].nameFp = "planck_impedance";
+    unit_database[unit_pos].alt1 = "planck_impedence"; // Misspelling accepted by Pyxplot 0.9 and earlier
     unit_database[unit_pos].quantity = "resistance";
     unit_database[unit_pos].planck = 1;
     unit_database[unit_pos].multiplier = 2.9979282937316497736901511e+01;

@@ -1700,7 +1700,7 @@ set c1range [*:*] renormalise noreverse
 set colormap gray(c1)
 \end{verbatim}
 
-The \indcmdt{set c<n>range} command specifies how the values of $c_n$ are
+The \indcmdt{set c<n>range} specifies how the values of $c_n$ are
 processed before being used in the expressions supplied to the \indcmdt{set
 colormap}. It has the following syntax:
 
@@ -1747,7 +1747,7 @@ In the next example, three circular pools of red, green, and blue illumination a
 
 \centerline{\includegraphics[width=8cm]{examples/eps/ex_spectrum_colmix1}}
 
-The same is possible with CMYK colors, to demonstrate how substractive color mixing works:
+The same is possible with CMYK colors, to demonstrate how subtractive color mixing works:
 
 \vspace{2mm}
 \input{examples/tex/ex_spectrum_colmix2_1.tex}
@@ -1771,7 +1771,7 @@ The function {\tt colors.spectrum(spectrum,normalisation)} takes a function as i
 
 \centerline{\includegraphics[width=8cm]{examples/eps/ex_spectrum_bbcol}}
 
-As a final example, we use this function to plot the interference pattern seen when a wedge of stressed plastic, a birefrigent material, is viewed between crossed polars:
+As a final example, we use this function to plot the interference pattern seen when a wedge of stressed plastic, a birefringent material, is viewed between crossed polars:
 
 \vspace{2mm}
 \input{examples/tex/ex_spectrum_biref_1.tex}
@@ -1817,12 +1817,12 @@ Recognised positions are {\tt top}, {\tt bottom}, {\tt left} and {\tt right}.
 and {\tt outside} is an alias for {\tt right}.
 
 The format of the ticks along such scale bars may be set using the \indcmdt{set
-c1format} command, which is similar in syntax to the {\tt set xformat} command
+c1format}, which is similar in syntax to the {\tt set xformat} command
 (see Section~\ref{sec:set_xformat}), but which uses {\tt c} as its dummy
 variable.
 
 The positions of the ticks along color scale bars may be set using the
-\indcmdt{set c1tics} command, which has similar syntax to the {\tt set xtics}
+\indcmdt{set c1tics}, which has similar syntax to the {\tt set xtics}
 command.
 
 \example{ex:mandelbrot}{An image of the Mandelbrot set}{
@@ -1972,7 +1972,7 @@ supplied to the {\tt set view} command rotates the plot in the $(x,y)$ plane,
 and the second angle tips the plot up in the plane containing the $z$-axis and
 the normal to the user's two-dimensional display.
 
-The \indcmdt{replot} command may be used to add additional datasets to
+The \indcmdt{replot} may be used to add additional datasets to
 three-dimensional plots in an entirely analogous fashion to two-dimensional
 plots.
 
