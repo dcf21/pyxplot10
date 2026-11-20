@@ -290,21 +290,19 @@ void GraphLegend_YieldUpText(EPSComm *x) {
     return;
 }
 
-#define LOOP_OVER_DATASETS \
-    { \
-        int iDataSet = -1; /* iDataSet counts over all data sets, even ones that we skip because they have no data */ \
-        pd = x->current->plotitems; \
-        while (pd != NULL) { \
-            iDataSet++; \
-            if ((pd->NoTitleSet) || (pd->TitleFinal == NULL) || (pd->TitleFinal[0] == '\0')) { \
-                pd = pd->next; \
-                continue; \
-            } /* no title set */
+//! titledDataset - Find the next dataset on a graph which has a title, and so appears in the legend
+//! \param [in] pd - The dataset at which to start looking
+//! \param [in,out] iDataSet - The number of the dataset; incremented for each dataset examined, including those
+//! skipped because they have no title
+//! \return The first dataset at or after <pd> which has a title, or NULL if there are no more
 
-#define END_LOOP_OVER_DATASETS \
-    pd = pd->next; \
-    } \
+static canvas_plotdesc *titledDataset(canvas_plotdesc *pd, int *iDataSet) {
+    for (; pd != NULL; pd = pd->next) {
+        (*iDataSet)++;
+        if ((!pd->NoTitleSet) && (pd->TitleFinal != NULL) && (pd->TitleFinal[0] != '\0')) return pd;
     }
+    return NULL;
+}
 
 //! GraphLegend_ArrangeToHeight - Lay out all of the items in a graph's legend in columns, with a maximum column height
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -324,22 +322,27 @@ void GraphLegend_ArrangeToHeight(const EPSComm *x, const double TrialHeight, dou
     *AttainedHeight = 0.0;
     for (i = 0; i < MAX_LEGEND_COLUMNS; i++) ColumnNItems[i] = 0;
     ColumnX[0] = 0.0;
-    LOOP_OVER_DATASETS;
-    if ((ColumnYPos > 0) && (pd->TitleFinal_height > TrialHeight - ColumnYPos) && (ColumnNo < MAX_LEGEND_COLUMNS - 1)) {
-        ColumnHeight[ColumnNo] = ColumnYPos;
-        ColumnX[ColumnNo + 1] = ColumnX[ColumnNo] + ColumnWidth;
-        ColumnYPos = ColumnWidth = 0.0;
-        ColumnNo++;
+    {
+        int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
+        for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
+             pd = titledDataset(pd->next, &iDataSet)) {
+            if ((ColumnYPos > 0) && (pd->TitleFinal_height > TrialHeight - ColumnYPos) &&
+                (ColumnNo < MAX_LEGEND_COLUMNS - 1)) {
+                ColumnHeight[ColumnNo] = ColumnYPos;
+                ColumnX[ColumnNo + 1] = ColumnX[ColumnNo] + ColumnWidth;
+                ColumnYPos = ColumnWidth = 0.0;
+                ColumnNo++;
+            }
+            ColumnNItems[ColumnNo]++;
+            pd->TitleFinal_col = ColumnNo;
+            pd->TitleFinal_xpos = ColumnX[ColumnNo];
+            pd->TitleFinal_ypos =
+                    -ColumnYPos; // Minus sign since postscript measures height from bottom, and legend runs down page
+            ColumnYPos += pd->TitleFinal_height;
+            if (ColumnWidth < pd->TitleFinal_width) ColumnWidth = pd->TitleFinal_width;
+            if (ColumnYPos > *AttainedHeight) *AttainedHeight = ColumnYPos;
+        }
     }
-    ColumnNItems[ColumnNo]++;
-    pd->TitleFinal_col = ColumnNo;
-    pd->TitleFinal_xpos = ColumnX[ColumnNo];
-    pd->TitleFinal_ypos =
-            -ColumnYPos; // Minus sign since postscript measures height from bottom, and legend runs down page
-    ColumnYPos += pd->TitleFinal_height;
-    if (ColumnWidth < pd->TitleFinal_width) ColumnWidth = pd->TitleFinal_width;
-    if (ColumnYPos > *AttainedHeight) *AttainedHeight = ColumnYPos;
-    END_LOOP_OVER_DATASETS;
     ColumnHeight[ColumnNo] = ColumnYPos;
     ColumnX[ColumnNo + 1] = ColumnX[ColumnNo] + ColumnWidth;
     *Ncolumns = ColumnNo + 1;
@@ -369,39 +372,41 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
 
     // Loop over all legend items to calculate their individual heights and widths, as well as the combined height of all of them
     pageno = x->LaTeXpageno = x->current->LegendTextID;
-    LOOP_OVER_DATASETS;
-    // Fetch dimensions of requested page of postscript
-    if (x->dvi == NULL) {
-        pd->TitleFinal_width = 0;
-        pd->TitleFinal_height = 0;
-        pd = pd->next;
-        pageno++;
-        continue;
+    {
+        int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
+        for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
+             pd = titledDataset(pd->next, &iDataSet)) {
+            // Fetch dimensions of requested page of postscript
+            if (x->dvi == NULL) {
+                pd->TitleFinal_width = 0;
+                pd->TitleFinal_height = 0;
+                pageno++;
+                continue;
+            }
+            dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
+            if (dviPage == NULL) {
+                pd->TitleFinal_width = 0;
+                pd->TitleFinal_height = 0;
+                pageno++;
+                continue;
+            } // Such doom will trigger errors later
+            //bb_left   = dviPage->boundingBox[0];
+            bb_bottom = dviPage->boundingBox[1];
+            //bb_right  = dviPage->boundingBox[2];
+            bb_top = dviPage->boundingBox[3];
+            ab_left = dviPage->textSizeBox[0];
+            ab_bottom = dviPage->textSizeBox[1];
+            ab_right = dviPage->textSizeBox[2];
+            ab_top = dviPage->textSizeBox[3];
+            height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
+            height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
+            pd->TitleFinal_height = ((height2 < height1) ? height2 : height1) * fs;
+            pd->TitleFinal_width = ((ab_right - ab_left) + MARGIN_HSIZE) * fs;
+            CombinedHeight += pd->TitleFinal_height;
+            if (MinimumHeight < pd->TitleFinal_height) MinimumHeight = pd->TitleFinal_height;
+            pageno++;
+        }
     }
-    dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
-    if (dviPage == NULL) {
-        pd->TitleFinal_width = 0;
-        pd->TitleFinal_height = 0;
-        pd = pd->next;
-        pageno++;
-        continue;
-    } // Such doom will trigger errors later
-    //bb_left   = dviPage->boundingBox[0];
-    bb_bottom = dviPage->boundingBox[1];
-    //bb_right  = dviPage->boundingBox[2];
-    bb_top = dviPage->boundingBox[3];
-    ab_left = dviPage->textSizeBox[0];
-    ab_bottom = dviPage->textSizeBox[1];
-    ab_right = dviPage->textSizeBox[2];
-    ab_top = dviPage->textSizeBox[3];
-    height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
-    height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
-    pd->TitleFinal_height = ((height2 < height1) ? height2 : height1) * fs;
-    pd->TitleFinal_width = ((ab_right - ab_left) + MARGIN_HSIZE) * fs;
-    CombinedHeight += pd->TitleFinal_height;
-    if (MinimumHeight < pd->TitleFinal_height) MinimumHeight = pd->TitleFinal_height;
-    pageno++;
-    END_LOOP_OVER_DATASETS;
 
     // If number of columns is manually specified, repeatedly reduce height of legend until the desired number of columns is exceeded.
     if (x->current->settings.KeyColumns > 0) {
@@ -448,12 +453,16 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
         if (ColumnHeight[j] >= TrialHeight - LEGEND_VGAP_MAXIMUM * (ColumnNItems[j] - 1)) {
             double GapPerItem = (TrialHeight - ColumnHeight[j]) / (ColumnNItems[j] - 1), gap = 0.0;
             if (gsl_finite(GapPerItem)) {
-                LOOP_OVER_DATASETS;
-                if (pd->TitleFinal_col == j) {
-                    pd->TitleFinal_ypos -= gap;
-                    gap += GapPerItem;
+                {
+                    int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
+                    for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
+                         pd = titledDataset(pd->next, &iDataSet)) {
+                        if (pd->TitleFinal_col == j) {
+                            pd->TitleFinal_ypos -= gap;
+                            gap += GapPerItem;
+                        }
+                    }
                 }
-                END_LOOP_OVER_DATASETS;
             }
         }
     AttainedHeight = TrialHeight;
@@ -462,9 +471,13 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
         (ColumnX[Ncolumns] >= width - 2 * LEGEND_MARGIN - LEGEND_HGAP_MAXIMUM * (Ncolumns - 1))) {
         const double GapPerColumn = (width - 2 * LEGEND_MARGIN - ColumnX[Ncolumns]) / Ncolumns;
         if (gsl_finite(GapPerColumn)) {
-            LOOP_OVER_DATASETS;
-            pd->TitleFinal_xpos += pd->TitleFinal_col * GapPerColumn;
-            END_LOOP_OVER_DATASETS;
+            {
+                int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
+                for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
+                     pd = titledDataset(pd->next, &iDataSet)) {
+                    pd->TitleFinal_xpos += pd->TitleFinal_col * GapPerColumn;
+                }
+            }
             for (j = 0; j < Ncolumns; j++) ColumnX[j] += j * GapPerColumn;
             ColumnX[Ncolumns] += (Ncolumns - 1) * GapPerColumn;
         }
@@ -624,50 +637,58 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
 
     xoff += x->current->settings.KeyXOff.real * M_TO_PS;
     yoff += x->current->settings.KeyYOff.real * M_TO_PS;
-    LOOP_OVER_DATASETS;
-    pd->TitleFinal_xpos += xoff;
-    pd->TitleFinal_ypos += yoff;
-    END_LOOP_OVER_DATASETS;
+    {
+        int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
+        for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
+             pd = titledDataset(pd->next, &iDataSet)) {
+            pd->TitleFinal_xpos += xoff;
+            pd->TitleFinal_ypos += yoff;
+        }
+    }
 
     // Finally loop over all datasets to display legend items
-    LOOP_OVER_DATASETS
-    int xyzaxis[3];
-    pplset_axis *a1, *a2, *a3, *axissets[3];
-    dataTable *data = x->current->plotdata[iDataSet];
-    if ((data == NULL) || (data->Nrows < 1)) {
-        x->LaTeXpageno++;
-        return;
-    } // No data present
-    axissets[0] = x->current->XAxes;
-    axissets[1] = x->current->YAxes;
-    axissets[2] = x->current->ZAxes;
-    a1 = &axissets[pd->axis1xyz][pd->axis1];
-    a2 = &axissets[pd->axis2xyz][pd->axis2];
-    a3 = &axissets[pd->axis3xyz][pd->axis3];
-    xyzaxis[pd->axis1xyz] = 0;
-    xyzaxis[pd->axis2xyz] = 1;
-    xyzaxis[pd->axis3xyz] = 2;
-    eps_plot_LegendIcon(x, iDataSet, pd, pd->TitleFinal_xpos + MARGIN_HSIZE_LEFT / 2,
-                        pd->TitleFinal_ypos - pd->TitleFinal_height / 2, MARGIN_HSIZE_LEFT, a1, a2, a3, xyzaxis[0],
-                        xyzaxis[1], xyzaxis[2]);
-    pageno = x->LaTeXpageno++;
-    ppl_withWordsZero(x->c, &ww);
-    if (x->current->settings.TextColor > 0) {
-        ww.color = x->current->settings.TextColor;
-        ww.USEcolor = 1;
-    } else {
-        ww.Col1234Space = x->current->settings.TextCol1234Space;
-        ww.color1 = x->current->settings.TextColor1;
-        ww.color2 = x->current->settings.TextColor2;
-        ww.color3 = x->current->settings.TextColor3;
-        ww.color4 = x->current->settings.TextColor4;
-        ww.USEcolor1234 = 1;
+    {
+        int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
+        for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
+             pd = titledDataset(pd->next, &iDataSet)) {
+            int xyzaxis[3];
+            pplset_axis *a1, *a2, *a3, *axissets[3];
+            dataTable *data = x->current->plotdata[iDataSet];
+            if ((data == NULL) || (data->Nrows < 1)) {
+                x->LaTeXpageno++;
+                return;
+            } // No data present
+            axissets[0] = x->current->XAxes;
+            axissets[1] = x->current->YAxes;
+            axissets[2] = x->current->ZAxes;
+            a1 = &axissets[pd->axis1xyz][pd->axis1];
+            a2 = &axissets[pd->axis2xyz][pd->axis2];
+            a3 = &axissets[pd->axis3xyz][pd->axis3];
+            xyzaxis[pd->axis1xyz] = 0;
+            xyzaxis[pd->axis2xyz] = 1;
+            xyzaxis[pd->axis3xyz] = 2;
+            eps_plot_LegendIcon(x, iDataSet, pd, pd->TitleFinal_xpos + MARGIN_HSIZE_LEFT / 2,
+                                pd->TitleFinal_ypos - pd->TitleFinal_height / 2, MARGIN_HSIZE_LEFT, a1, a2, a3,
+                                xyzaxis[0], xyzaxis[1], xyzaxis[2]);
+            pageno = x->LaTeXpageno++;
+            ppl_withWordsZero(x->c, &ww);
+            if (x->current->settings.TextColor > 0) {
+                ww.color = x->current->settings.TextColor;
+                ww.USEcolor = 1;
+            } else {
+                ww.Col1234Space = x->current->settings.TextCol1234Space;
+                ww.color1 = x->current->settings.TextColor1;
+                ww.color2 = x->current->settings.TextColor2;
+                ww.color3 = x->current->settings.TextColor3;
+                ww.color4 = x->current->settings.TextColor4;
+                ww.USEcolor1234 = 1;
+            }
+            eps_core_SetColor(x, &ww, 1);
+            if (eps_core_isVisible(x))
+                canvas_EPSRenderTextItem(x, NULL, pageno, (pd->TitleFinal_xpos + MARGIN_HSIZE_LEFT) / M_TO_PS,
+                                         (pd->TitleFinal_ypos - pd->TitleFinal_height / 2) / M_TO_PS, SW_HALIGN_LEFT,
+                                         SW_VALIGN_CENT, x->CurrentColor, fs, 0.0, NULL, NULL);
+        }
     }
-    eps_core_SetColor(x, &ww, 1);
-    if (eps_core_isVisible(x))
-        canvas_EPSRenderTextItem(x, NULL, pageno, (pd->TitleFinal_xpos + MARGIN_HSIZE_LEFT) / M_TO_PS,
-                                 (pd->TitleFinal_ypos - pd->TitleFinal_height / 2) / M_TO_PS, SW_HALIGN_LEFT,
-                                 SW_VALIGN_CENT, x->CurrentColor, fs, 0.0, NULL, NULL);
-    END_LOOP_OVER_DATASETS
     return;
 }
