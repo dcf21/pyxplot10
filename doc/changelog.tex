@@ -56,6 +56,7 @@ Version 0.10.0 is a major refactoring of Pyxplot's source code, which has been r
 \item The {\tt setPos()} method of files rejected the positions returned by {\tt getPos()}, which have units of bytes.
 \item The index blocks written by the {\tt tabulate} command were labelled from 1, though the {\tt index} modifier counts them from 0.
 \item The {\tt show} command described minor ticks as major ticks.
+\item Warnings written by the PostScript viewer, e.g.\ about missing X fonts, were reported as errors, and made scripts exit with status 1.
 \item Dates before 4717\,BC were converted to and from calendar dates incorrectly, e.g.\ {\tt time.fromJD(-3100015.5)} gave the month ``???'' and a negative day of the month, and dates in the Hebrew calendar before about AD\,900 were up to a month out. Dates which cannot be expressed in the current calendar, e.g.\ before the start of the Hebrew calendar, are printed as Julian Dates rather than as blank lines.
 \end{itemize}
 

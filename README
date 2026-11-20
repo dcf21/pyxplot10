@@ -101,6 +101,26 @@ line:
 
 sudo apt-get install fftw3-dev gcc ghostscript gv imagemagick libc6-dev libcfitsio3-dev libgsl0-dev libkpathsea-dev libpng12-dev libreadline-dev libxml2-dev make texlive-latex-extra texlive-latex-recommended texlive-fonts-extra texlive-fonts-recommended wget zlib1g-dev
 
+Users of Ubuntu 26.04 need to change the system's AppArmor security settings
+for Pyxplot to be able to display plots on the screen. Ubuntu 26.04 confines
+Ghostscript with an AppArmor profile (/etc/apparmor.d/gs) which does not allow it
+to connect to the X display. Ghostview relies on Ghostscript to draw its pages,
+so Pyxplot's X11 terminals show only a blank page; output to files, e.g. in eps,
+pdf or png format, is not affected. The kernel log reports the problem with
+messages such as:
+
+apparmor="DENIED" operation="connect" profile="gs" ... peer_addr="@/tmp/.X11-unix/X0"
+
+To allow Ghostscript to connect to the X display, while keeping the profile's
+other restrictions, add the following line to the local additions to the
+profile, and then reload it, by typing:
+
+echo 'include <abstractions/X>' | sudo tee -a /etc/apparmor.d/local/gs
+sudo apparmor_parser -r /etc/apparmor.d/gs
+
+Alternatively, Pyxplot can be told to use a viewer which does not run the
+Ghostscript executable, e.g. by typing "set viewer okular" within Pyxplot.
+
 Users of MacOS X can find the above software in the following MacPorts packages:
 
 cfitsio, fftw-3, ghostscript, gsl-devel, gv, ImageMagick, libpng, libxml2,

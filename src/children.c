@@ -188,7 +188,13 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
             if (strncmp(linebuffer, SED_COMMAND, strlen(SED_COMMAND)) == 0)
                 ppl_error(&context->errcontext, ERR_GENERIC, -1, -1,
                           "A problem was encounter with the supplied regular expression.");
-            else ppl_error(&context->errcontext, ERR_GENERIC, -1, -1, linebuffer);
+            else if (strncmp(linebuffer, "Warning:", 8) == 0) {
+                // Messages such as X toolkit font warnings from ghostview are not errors: they should neither be
+                // labelled as errors, nor make Pyxplot exit with a non-zero status. ppl_warning() adds its own prefix.
+                char *text = linebuffer + 8;
+                while (*text == ' ') text++;
+                ppl_warning(&context->errcontext, ERR_GENERIC, text);
+            } else ppl_error(&context->errcontext, ERR_GENERIC, -1, -1, linebuffer);
         }
     return;
 }
