@@ -22,12 +22,10 @@
 #ifndef _PPL_EPS_CORE_H
 #define _PPL_EPS_CORE_H 1
 
-#define IF_NOT_INVISIBLE if (x->CurrentColor[0] != '\0')
-
-
 #include "epsMaker/eps_comm.h"
 
 void eps_core_clear(EPSComm *x);
+int eps_core_isVisible(const EPSComm *x);
 void eps_core_WritePSColor(EPSComm *x);
 void eps_core_SetColor(EPSComm *x, withWords *ww, unsigned char WritePS);
 void eps_core_SetFillColor(EPSComm *x, withWords *ww);

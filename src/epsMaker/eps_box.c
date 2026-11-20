@@ -75,7 +75,7 @@ void eps_box_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "%.2f rotate\n", r * 180 / M_PI);
 
     // Fill box
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         fprintf(x->epsbuffer,
                 "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
                 x1 - xo, y1 - yo, x1 - xo, y2 - yo, x2 - xo, y2 - yo, x2 - xo, y1 - yo);
@@ -93,10 +93,10 @@ void eps_box_RenderEPS(EPSComm *x) {
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, lw, lt, 0.0);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Stroke outline of box
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         fprintf(x->epsbuffer,
                 "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nstroke\n",
                 x1 - xo, y1 - yo, x1 - xo, y2 - yo, x2 - xo, y2 - yo, x2 - xo, y1 - yo);

@@ -987,7 +987,7 @@ GOT_CONTOURS:
             if (pass == 1) {
                 //      eps_core_SetFillColor(x, &pd->ww_final);
                 //      eps_core_SwitchTo_FillColor(x,1);
-                //      IF_NOT_INVISIBLE
+                //      if (eps_core_isVisible(x))
                 //       {
                 //        double xps, yps; long c=0;
                 //        xpos = clist[cn].posdata[c++];
@@ -1047,7 +1047,7 @@ GOT_CONTOURS:
             else if (pass == 3) {
                 eps_core_SetColor(x, &pd->ww_final, 1);
                 eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.linewidth, pd->ww_final.linetype, 0);
-                IF_NOT_INVISIBLE {
+                if (eps_core_isVisible(x)) {
                     double xps, yps;
                     long c = 0;
                     const long n = clist[cn].Nvertices_max;
@@ -1087,7 +1087,7 @@ GOT_CONTOURS:
                 }
                 eps_core_SetColor(x, &ww, 1);
 
-                IF_NOT_INVISIBLE {
+                if (eps_core_isVisible(x)) {
                     const double xlab =
                             (clist[cn].posdata[2 * ((i) % n) + 0] + clist[cn].posdata[2 * ((i + 1) % n) + 0]) / 2;
                     const double ylab =

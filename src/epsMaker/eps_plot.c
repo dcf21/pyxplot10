@@ -1227,10 +1227,11 @@ void eps_plot_RenderEPS(EPSComm *x) {
             ww.USEcolor1234 = 1;
         }
         eps_core_SetColor(x, &ww, 1);
-        IF_NOT_INVISIBLE canvas_EPSRenderTextItem(
-                x, NULL, pageno, (x->current->ThreeDim ? origin_x : (origin_x + width / 2)) / M_TO_PS,
-                x->current->PlotTopMargin / M_TO_PS + 4e-3, SW_HALIGN_CENT, SW_VALIGN_BOT, x->CurrentColor,
-                x->current->settings.FontSize, 0.0, NULL, NULL);
+        if (eps_core_isVisible(x))
+            canvas_EPSRenderTextItem(x, NULL, pageno,
+                                     (x->current->ThreeDim ? origin_x : (origin_x + width / 2)) / M_TO_PS,
+                                     x->current->PlotTopMargin / M_TO_PS + 4e-3, SW_HALIGN_CENT, SW_VALIGN_BOT,
+                                     x->CurrentColor, x->current->settings.FontSize, 0.0, NULL, NULL);
     }
 
     // Final newline at end of canvas item

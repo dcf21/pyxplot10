@@ -104,10 +104,12 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
     if (with_data->USElinetype) lt = with_data->linetype;
     else lt = 1;
 
-    if (!ThreeDim) { IF_NOT_INVISIBLE eps_core_SetLinewidth(x, lw, lt, 0.0); }
+    if (!ThreeDim) {
+        if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
+    }
 
     // Factor two ends of arrow into EPS file's bounding box
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         eps_core_PlotBoundingBox(x, x1, y1, lw, 1);
         eps_core_PlotBoundingBox(x, x2, y2, lw, 1);
     }
@@ -134,7 +136,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                 EPS_ARROW_HEADSIZE * lw_scale * cos(direction + M_PI) * (1.0 - EPS_ARROW_CONSTRICT) *
                         cos(EPS_ARROW_ANGLE / 2);
 
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
                     "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
@@ -168,7 +170,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
         y4 = y2 -
                 EPS_ARROW_HEADSIZE * lw_scale * cos(direction) * (1.0 - EPS_ARROW_CONSTRICT) * cos(EPS_ARROW_ANGLE / 2);
 
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
                     "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
@@ -186,7 +188,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
     }
 
     // Draw stalk of arrow
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         if (!ThreeDim) {
             fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nstroke\n", xstart, ystart, xend, yend);
         } else {

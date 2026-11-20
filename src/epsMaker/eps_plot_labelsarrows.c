@@ -335,19 +335,20 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                             ygap2 = xgap * sin(li->rotation) + ygap * cos(li->rotation);
                             ppl_withWordsMerge(x->c, &ww, &li->style, &ww_default, NULL, NULL, NULL, 1);
                             eps_core_SetColor(x, &ww, 0);
-                            IF_NOT_INVISIBLE if ((gsl_finite(xpos_)) && (gsl_finite(ypos_)) && (gsl_finite(depth))) {
-                                char *colstr = NULL, *text = NULL;
-                                colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
-                                if (colstr != NULL) {
-                                    double fs = x->current->settings.FontSize;
-                                    if (li->fontsizeSet) fs = li->fontsize;
-                                    strcpy(colstr, x->CurrentColor);
-                                    canvas_EPSRenderTextItem(x, &text, pageno, xpos_ / M_TO_PS + xgap2,
-                                                             ypos_ / M_TO_PS + ygap2, hal, val, x->CurrentColor, fs,
-                                                             li->rotation, NULL, NULL);
-                                    if (text != NULL) ThreeDimBuffer_writeps(x, depth, 1, 1, 0, 1, colstr, text);
+                            if (eps_core_isVisible(x))
+                                if ((gsl_finite(xpos_)) && (gsl_finite(ypos_)) && (gsl_finite(depth))) {
+                                    char *colstr = NULL, *text = NULL;
+                                    colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
+                                    if (colstr != NULL) {
+                                        double fs = x->current->settings.FontSize;
+                                        if (li->fontsizeSet) fs = li->fontsize;
+                                        strcpy(colstr, x->CurrentColor);
+                                        canvas_EPSRenderTextItem(x, &text, pageno, xpos_ / M_TO_PS + xgap2,
+                                                                 ypos_ / M_TO_PS + ygap2, hal, val, x->CurrentColor, fs,
+                                                                 li->rotation, NULL, NULL);
+                                        if (text != NULL) ThreeDimBuffer_writeps(x, depth, 1, 1, 0, 1, colstr, text);
+                                    }
                                 }
-                            }
                         }
             pageno++;
         }

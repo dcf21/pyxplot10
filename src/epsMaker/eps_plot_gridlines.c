@@ -38,6 +38,31 @@
 #include "epsMaker/eps_plot_gridlines.h"
 #include "epsMaker/eps_settings.h"
 
+//! setGridColor - Set the colour and line width with which to draw major or minor grid lines
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] ww - Workspace into which to write the style of the grid lines
+//! \param [in] major - True for major grid lines; false for minor grid lines
+
+static void setGridColor(EPSComm *x, withWords *ww, const int major) {
+    const pplset_graph *s = &x->current->settings;
+    ppl_withWordsZero(x->c, ww);
+    if ((major ? s->GridMajColor : s->GridMinColor) > 0) {
+        ww->color = major ? s->GridMajColor : s->GridMinColor;
+        ww->USEcolor = 1;
+    } else {
+        ww->Col1234Space = major ? s->GridMajCol1234Space : s->GridMinCol1234Space;
+        ww->color1 = major ? s->GridMajColor1 : s->GridMinColor1;
+        ww->color2 = major ? s->GridMajColor2 : s->GridMinColor2;
+        ww->color3 = major ? s->GridMajColor3 : s->GridMinColor3;
+        ww->color4 = major ? s->GridMajColor4 : s->GridMinColor4;
+        ww->USEcolor1234 = 1;
+    }
+    eps_core_SetColor(x, ww, 1);
+    if (eps_core_isVisible(x))
+        eps_core_SetLinewidth(x, (major ? EPS_GRID_MAJLINEWIDTH : EPS_GRID_MINLINEWIDTH) * EPS_DEFAULT_LINEWIDTH, 1,
+                              0.0);
+}
+
 //! eps_plot_gridlines - Draw the major and minor grid lines of a graph
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 //! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
@@ -53,40 +78,6 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
     pplset_axis *axes;
     unsigned char *GridLines;
     withWords ww;
-
-#define MAJOR_GRIDCOL \
-    /* Set color for major axis axes */ \
-    ppl_withWordsZero(x->c, &ww); \
-    if (x->current->settings.GridMajColor > 0) { \
-        ww.color = x->current->settings.GridMajColor; \
-        ww.USEcolor = 1; \
-    } else { \
-        ww.Col1234Space = x->current->settings.GridMajCol1234Space; \
-        ww.color1 = x->current->settings.GridMajColor1; \
-        ww.color2 = x->current->settings.GridMajColor2; \
-        ww.color3 = x->current->settings.GridMajColor3; \
-        ww.color4 = x->current->settings.GridMajColor4; \
-        ww.USEcolor1234 = 1; \
-    } \
-    eps_core_SetColor(x, &ww, 1); \
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, EPS_GRID_MAJLINEWIDTH *EPS_DEFAULT_LINEWIDTH, 1, 0.0);
-
-#define MINOR_GRIDCOL \
-    /* Set color for minor axis axes */ \
-    ppl_withWordsZero(x->c, &ww); \
-    if (x->current->settings.GridMinColor > 0) { \
-        ww.color = x->current->settings.GridMinColor; \
-        ww.USEcolor = 1; \
-    } else { \
-        ww.Col1234Space = x->current->settings.GridMinCol1234Space; \
-        ww.color1 = x->current->settings.GridMinColor1; \
-        ww.color2 = x->current->settings.GridMinColor2; \
-        ww.color3 = x->current->settings.GridMinColor3; \
-        ww.color4 = x->current->settings.GridMinColor4; \
-        ww.USEcolor1234 = 1; \
-    } \
-    eps_core_SetColor(x, &ww, 1); \
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, EPS_GRID_MINLINEWIDTH *EPS_DEFAULT_LINEWIDTH, 1, 0.0);
 
     if (x->current->settings.grid != SW_ONOFF_ON) return; // Grid lines are off
 
@@ -134,12 +125,12 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
                     if (k != 0) {
                         TLP = axes[i].TickListPositions;
                         TLS = axes[i].TickListStrings;
-                        MAJOR_GRIDCOL;
+                        setGridColor(x, &ww, 1);
                     } // Major ticks
                     else {
                         TLP = axes[i].MTickListPositions;
                         TLS = axes[i].MTickListStrings;
-                        MINOR_GRIDCOL;
+                        setGridColor(x, &ww, 0);
                     } // Minor ticks
                     if (TLP != NULL) {
                         for (l = 0; TLS[l] != NULL; l++) // Loop over all ticks along this axis

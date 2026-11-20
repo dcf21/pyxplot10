@@ -69,7 +69,7 @@ void eps_circ_RenderEPS(EPSComm *x) {
     eps_core_SwitchTo_FillColor(x, 1);
 
     // Fill circle
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         if (!x->current->xfset)
             fprintf(x->epsbuffer, "newpath\n%.2f %.2f %.2f 0 360 arc\nclosepath\nfill\n", xpos, ypos, r);
         else
@@ -90,10 +90,10 @@ void eps_circ_RenderEPS(EPSComm *x) {
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, lw, lt, 0.0);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Stroke outline of circle
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         if (!x->current->xfset)
             fprintf(x->epsbuffer, "newpath\n%.2f %.2f %.2f 0 360 arc\nclosepath\nstroke\n", xpos, ypos, r);
         else

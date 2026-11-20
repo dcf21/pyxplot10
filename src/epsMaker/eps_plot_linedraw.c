@@ -33,6 +33,52 @@
 #include "epsMaker/eps_plot_threedimbuff.h"
 #include "epsMaker/eps_settings.h"
 
+//! lineClip - A line segment being clipped to the faces of a graph, and pointers to where to store the points at which
+//! it crosses them. The first crossing found is written to element 0 of each array, and the second to element 1.
+typedef struct lineClip {
+    double x1, y1, z1; // The first end of the line segment, in postscript points
+    double x2, y2, z2; // The second end of the line segment, in postscript points
+    double *cx[2], *cy[2], *cz[2]; // Set to the positions of the crossing points
+    unsigned char *face[2]; // Set to the faces of the graph crossed at the crossing points
+    double *AxisPos[2]; // Set to the fractional positions along those faces of the crossing points
+    int *NCrossings; // Incremented for each crossing point found
+} lineClip;
+
+//! clipAgainstFace - Find whether a line segment crosses one face of a graph, and if so, record the crossing point.
+//! The face is the plane where the axis-fractional coordinate <a> equals <pos>, within the square where the other two
+//! coordinates <b> and <c> lie between 0 and 1.
+//! \param [in,out] lc - The line segment, and where to store the crossing point
+//! \param [in] a1 - The coordinate normal to the face, at the first end of the segment, as a fraction along its axis
+//! \param [in] a2 - The coordinate normal to the face, at the second end of the segment
+//! \param [in] b1 - The first coordinate in the plane of the face, at the first end of the segment
+//! \param [in] b2 - The first coordinate in the plane of the face, at the second end of the segment
+//! \param [in] c1 - The second coordinate in the plane of the face, at the first end of the segment
+//! \param [in] c2 - The second coordinate in the plane of the face, at the second end of the segment
+//! \param [in] pos - The value of <a> at the face: 0 or 1
+//! \param [in] sgn - 1 if the inside of the graph lies in the direction of increasing <a> from the face, or -1
+//! \param [in] face - The FACE_* constant to record for the face
+
+static void clipAgainstFace(lineClip *lc, const double a1, const double a2, const double b1, const double b2,
+                            const double c1, const double c2, const double pos, const double sgn,
+                            const unsigned char face) {
+    double fr, bCross, cCross;
+    int n;
+    if (a2 == a1) return; // The segment is parallel to the face
+    fr = (pos - a1) / (a2 - a1); // Fractional position along the segment where it meets the plane of the face
+    if (!((fr >= 0) && (fr <= 1))) return; // Written this way so that NaN is rejected
+    bCross = b1 + (b2 - b1) * fr;
+    cCross = c1 + (c2 - c1) * fr;
+    if (!((bCross >= 0.0) && (bCross <= 1.0) && (cCross >= 0.0) && (cCross <= 1.0))) return;
+    // A segment entering the graph through this face records the crossing as its first; one leaving, as its second
+    n = ((a1 * sgn) < (a2 * sgn)) ? 0 : 1;
+    *lc->cx[n] = lc->x1 + (lc->x2 - lc->x1) * fr;
+    *lc->cy[n] = lc->y1 + (lc->y2 - lc->y1) * fr;
+    *lc->cz[n] = lc->z1 + (lc->z2 - lc->z1) * fr;
+    *lc->face[n] = face;
+    *lc->AxisPos[n] = bCross;
+    (*lc->NCrossings)++;
+}
+
 //! LineDraw_FindCrossingPoints - Find where a line segment between two points crosses the edges of a graph, so that it
 //! can be clipped
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -68,7 +114,9 @@ void LineDraw_FindCrossingPoints(const EPSComm *x, const double x1, const double
                                  int *Inside2, double *cx1, double *cy1, double *cz1, double *cx2, double *cy2,
                                  double *cz2, unsigned char *face1, double *AxisPos1, unsigned char *face2,
                                  double *AxisPos2, int *NCrossings) {
-    double fr, cx, cy, cz;
+    lineClip lc = {
+            x1,        y1, z1, x2, y2, z2, {cx1, cx2}, {cy1, cy2}, {cz1, cz2}, {face1, face2}, {AxisPos1, AxisPos2},
+            NCrossings};
 
     *Inside1 = ((xap1 >= 0.0) && (xap1 <= 1.0) && (yap1 >= 0.0) && (yap1 <= 1.0) && (zap1 >= 0.0) && (zap1 <= 1.0));
     *Inside2 = ((xap2 >= 0.0) && (xap2 <= 1.0) && (yap2 >= 0.0) && (yap2 <= 1.0) && (zap2 >= 0.0) && (zap2 <= 1.0));
@@ -83,41 +131,12 @@ void LineDraw_FindCrossingPoints(const EPSComm *x, const double x1, const double
     *AxisPos1 = *AxisPos2 = -1;
     if ((*Inside1) && (*Inside2)) return; // If both points are inside canvas, don't need to find clip-region crossings
 
-#define DOCLIP(XAP1, XAP2, YAP1, YAP2, ZAP1, ZAP2, POS, SGN, FACE) \
-    if (XAP2 != XAP1) { \
-        fr = (POS - XAP1) / (XAP2 - XAP1); \
-        if ((fr >= 0) && (fr <= 1)) { \
-            double yleft, zleft; \
-            yleft = YAP1 + (YAP2 - YAP1) * fr; \
-            zleft = ZAP1 + (ZAP2 - ZAP1) * fr; \
-            if ((yleft >= 0.0) && (yleft <= 1.0) && (zleft >= 0.0) && (zleft <= 1.0)) { \
-                cx = x1 + (x2 - x1) * fr; \
-                cy = y1 + (y2 - y1) * fr; \
-                cz = z1 + (z2 - z1) * fr; \
-                if ((XAP1 * SGN) < (XAP2 * SGN)) { \
-                    *cx1 = cx; \
-                    *cy1 = cy; \
-                    *cz1 = cz; \
-                    *face1 = FACE; \
-                    *AxisPos1 = yleft; \
-                } else { \
-                    *cx2 = cx; \
-                    *cy2 = cy; \
-                    *cz2 = cz; \
-                    *face2 = FACE; \
-                    *AxisPos2 = yleft; \
-                } \
-                (*NCrossings)++; \
-            } \
-        } \
-    }
-
-    DOCLIP(zap1, zap2, xap1, xap2, yap1, yap2, 0.0, 1.0, 0); // front
-    DOCLIP(zap1, zap2, xap1, xap2, yap1, yap2, 1.0, -1.0, 0); // back
-    DOCLIP(xap1, xap2, yap1, yap2, zap1, zap2, 0.0, 1.0, FACE_LEFT); // left
-    DOCLIP(xap1, xap2, yap1, yap2, zap1, zap2, 1.0, -1.0, FACE_RIGHT); // right
-    DOCLIP(yap1, yap2, xap1, xap2, zap1, zap2, 0.0, 1.0, FACE_BOTTOM); // bottom
-    DOCLIP(yap1, yap2, xap1, xap2, zap1, zap2, 1.0, -1.0, FACE_TOP); // top
+    clipAgainstFace(&lc, zap1, zap2, xap1, xap2, yap1, yap2, 0.0, 1.0, 0); // front
+    clipAgainstFace(&lc, zap1, zap2, xap1, xap2, yap1, yap2, 1.0, -1.0, 0); // back
+    clipAgainstFace(&lc, xap1, xap2, yap1, yap2, zap1, zap2, 0.0, 1.0, FACE_LEFT); // left
+    clipAgainstFace(&lc, xap1, xap2, yap1, yap2, zap1, zap2, 1.0, -1.0, FACE_RIGHT); // right
+    clipAgainstFace(&lc, yap1, yap2, xap1, xap2, zap1, zap2, 0.0, 1.0, FACE_BOTTOM); // bottom
+    clipAgainstFace(&lc, yap1, yap2, xap1, xap2, zap1, zap2, 1.0, -1.0, FACE_TOP); // top
     return;
 }
 

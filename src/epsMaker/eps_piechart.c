@@ -316,6 +316,29 @@ void eps_pie_YieldUpText(EPSComm *x) {
     return;
 }
 
+//! labelMargin - Measure how comfortably a point on the edge of a label lies within the wedge of a pie chart that
+//! it labels
+//! \param [in] X - The horizontal position of the point, relative to the centre of the pie chart
+//! \param [in] Y - The vertical position of the point, relative to the centre of the pie chart
+//! \param [in] a - The central angle of the wedge, measured clockwise from vertical
+//! \param [in] size - The angular size of the wedge
+//! \param [in] rad - The radius of the pie chart
+//! \return The smallest of the margins between the point and the edges of the wedge, as a fraction of the wedge's
+//! angular size or radius; negative if the point lies outside the wedge
+
+static double labelMargin(const double X, const double Y, const double a, const double size, const double rad) {
+    const double r = hypot(X, Y);
+    double theta = fmod(atan2(X, Y) - a, 2 * M_PI);
+    double margin;
+    if (theta < -M_PI) theta += 2 * M_PI;
+    if (theta > M_PI) theta -= 2 * M_PI;
+    margin = theta + size / 2; // Margin from the anticlockwise edge of the wedge
+    margin = fmin(margin, size / 2 - theta); // Margin from the clockwise edge
+    margin = fmin(margin, r / rad); // Margin from the centre of the pie
+    margin = fmin(margin, (rad - r) / rad); // Margin from the rim of the pie
+    return margin;
+}
+
 //! eps_pie_RenderEPS - Render a piechart canvas item to postscript, placing each segment's label inside, outside or in
 //! a key, as requested
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -376,9 +399,9 @@ void eps_pie_RenderEPS(EPSComm *x) {
             size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 360.0;
             eps_core_SetFillColor(x, &ww);
             eps_core_SwitchTo_FillColor(x, 1);
-            IF_NOT_INVISIBLE fprintf(x->epsbuffer,
-                                     "newpath\n%.2f %.2f %.2f %.2f %.2f arc\n%.2f %.2f lineto\nclosepath\nfill\n", xpos,
-                                     ypos, rad, 90 - angle - size, 90 - angle, xpos, ypos);
+            if (eps_core_isVisible(x))
+                fprintf(x->epsbuffer, "newpath\n%.2f %.2f %.2f %.2f %.2f arc\n%.2f %.2f lineto\nclosepath\nfill\n",
+                        xpos, ypos, rad, 90 - angle - size, 90 - angle, xpos, ypos);
             angle += size;
             WedgeNumber++;
         }
@@ -396,10 +419,11 @@ void eps_pie_RenderEPS(EPSComm *x) {
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, lw, lt, 0.0);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Draw circumference of piechart
-    IF_NOT_INVISIBLE fprintf(x->epsbuffer, "newpath\n%.2f %.2f %.2f 0 360 arc\nclosepath\nstroke\n", xpos, ypos, rad);
+    if (eps_core_isVisible(x))
+        fprintf(x->epsbuffer, "newpath\n%.2f %.2f %.2f 0 360 arc\nclosepath\nstroke\n", xpos, ypos, rad);
 
     // Draw pie wedges one-by-one
     Ncolumns = x->current->plotdata[0]->Ncolumns_real;
@@ -408,9 +432,9 @@ void eps_pie_RenderEPS(EPSComm *x) {
     while (blk != NULL) {
         for (j = 0; j < blk->blockPosition; j++) {
             size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 360.0;
-            IF_NOT_INVISIBLE fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nclosepath\nstroke\n",
-                                     xpos, ypos, xpos + rad * sin(angle * M_PI / 180),
-                                     ypos + rad * cos(angle * M_PI / 180));
+            if (eps_core_isVisible(x))
+                fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nclosepath\nstroke\n", xpos, ypos,
+                        xpos + rad * sin(angle * M_PI / 180), ypos + rad * cos(angle * M_PI / 180));
             angle += size;
         }
         blk = blk->next;
@@ -437,7 +461,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     }
     eps_core_SetColor(x, &ww_txt, 1);
 
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         int ItemNo = 0;
         double *TextWidth, *TextHeight, TotalHeight = 0.0;
         double height1, height2, bb_top, bb_bottom, ab_left, ab_right, ab_top, ab_bottom;
@@ -490,31 +514,24 @@ void eps_pie_RenderEPS(EPSComm *x) {
                     best_label_rpos = 0.7;
                     best_label_margin = -1e10;
                     for (label_rpos = 0.7; label_rpos >= 0.3; label_rpos -= 0.05) {
-                        double r, theta, t;
                         min_margin = 1e10;
 
-#define CHECK_POSITION(X, Y) \
-    r = hypot(X, Y); \
-    theta = fmod(atan2(X, Y) - a, 2 * M_PI); \
-    if (theta < -M_PI) theta += 2 * M_PI; \
-    if (theta > M_PI) theta -= 2 * M_PI; \
-    t = theta + size / 2; \
-    if (t < min_margin) min_margin = t; \
-    t = size / 2 - theta; \
-    if (t < min_margin) min_margin = t; \
-    t = r / rad; \
-    if (t < min_margin) min_margin = t; \
-    t = (rad - r) / rad; \
-    if (t < min_margin) min_margin = t;
-
-                        CHECK_POSITION(rad * sin(a) * label_rpos - TextWidth[ItemNo] / 2,
-                                       rad * cos(a) * label_rpos - TextHeight[ItemNo] / 2);
-                        CHECK_POSITION(rad * sin(a) * label_rpos - TextWidth[ItemNo] / 2,
-                                       rad * cos(a) * label_rpos + TextHeight[ItemNo] / 2);
-                        CHECK_POSITION(rad * sin(a) * label_rpos + TextWidth[ItemNo] / 2,
-                                       rad * cos(a) * label_rpos - TextHeight[ItemNo] / 2);
-                        CHECK_POSITION(rad * sin(a) * label_rpos + TextWidth[ItemNo] / 2,
-                                       rad * cos(a) * label_rpos + TextHeight[ItemNo] / 2);
+                        min_margin =
+                                fmin(min_margin,
+                                     labelMargin(rad * sin(a) * label_rpos - TextWidth[ItemNo] / 2,
+                                                 rad * cos(a) * label_rpos - TextHeight[ItemNo] / 2, a, size, rad));
+                        min_margin =
+                                fmin(min_margin,
+                                     labelMargin(rad * sin(a) * label_rpos - TextWidth[ItemNo] / 2,
+                                                 rad * cos(a) * label_rpos + TextHeight[ItemNo] / 2, a, size, rad));
+                        min_margin =
+                                fmin(min_margin,
+                                     labelMargin(rad * sin(a) * label_rpos + TextWidth[ItemNo] / 2,
+                                                 rad * cos(a) * label_rpos - TextHeight[ItemNo] / 2, a, size, rad));
+                        min_margin =
+                                fmin(min_margin,
+                                     labelMargin(rad * sin(a) * label_rpos + TextWidth[ItemNo] / 2,
+                                                 rad * cos(a) * label_rpos + TextHeight[ItemNo] / 2, a, size, rad));
                         if (min_margin > best_label_margin) {
                             best_label_margin = min_margin;
                             best_label_rpos = label_rpos;
@@ -569,10 +586,10 @@ void eps_pie_RenderEPS(EPSComm *x) {
                         else vtop = ypos + rad * cos(a) * 1.08;
                         if (vtop > vtitle) vtitle = vtop;
                         eps_core_SetColor(x, &ww, 1);
-                        IF_NOT_INVISIBLE fprintf(x->epsbuffer,
-                                                 "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nclosepath\nstroke\n",
-                                                 xpos + rad * sin(a), ypos + rad * cos(a), xpos + rad * sin(a) * 1.05,
-                                                 ypos + rad * cos(a) * 1.05);
+                        if (eps_core_isVisible(x))
+                            fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nclosepath\nstroke\n",
+                                    xpos + rad * sin(a), ypos + rad * cos(a), xpos + rad * sin(a) * 1.05,
+                                    ypos + rad * cos(a) * 1.05);
                         eps_core_SetColor(x, &ww_txt, 1);
                         canvas_EPSRenderTextItem(x, NULL, pageno, (xpos + rad * sin(a) * 1.08) / M_TO_PS,
                                                  (ypos + rad * cos(a) * 1.08) / M_TO_PS, hal, val, x->CurrentColor,
@@ -609,7 +626,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                         // Fill icon
                         eps_core_SetFillColor(x, &ww);
                         eps_core_SwitchTo_FillColor(x, 1);
-                        IF_NOT_INVISIBLE {
+                        if (eps_core_isVisible(x)) {
                             fprintf(x->epsbuffer,
                                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath fill\n",
                                     h, v - s, h, v + s, h + 2 * s, v + s, h + 2 * s, v - s);
@@ -623,7 +640,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                         eps_core_SetColor(x, &ww, 1);
                         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * ww.linewidth, ww.USElinetype ? ww.linetype : 1,
                                               0);
-                        IF_NOT_INVISIBLE {
+                        if (eps_core_isVisible(x)) {
                             fprintf(x->epsbuffer,
                                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath stroke\n",
                                     h, v - s, h, v + s, h + 2 * s, v + s, h + 2 * s, v - s);

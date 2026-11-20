@@ -90,7 +90,7 @@ void eps_point_RenderEPS(EPSComm *x) {
 
     // Display point
     eps_core_SetColor(x, &ww, 1);
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         // Set linewidth and linetype of point
         if (ww.USElinewidth) lw_scale = ww.pointlinewidth;
         else lw_scale = x->current->settings.LineWidth;

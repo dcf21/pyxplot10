@@ -625,9 +625,10 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
         ww.USEcolor1234 = 1;
     }
     eps_core_SetColor(x, &ww, 1);
-    IF_NOT_INVISIBLE canvas_EPSRenderTextItem(x, NULL, pageno, (pd->TitleFinal_xpos + MARGIN_HSIZE_LEFT) / M_TO_PS,
-                                              (pd->TitleFinal_ypos - pd->TitleFinal_height / 2) / M_TO_PS,
-                                              SW_HALIGN_LEFT, SW_VALIGN_CENT, x->CurrentColor, fs, 0.0, NULL, NULL);
+    if (eps_core_isVisible(x))
+        canvas_EPSRenderTextItem(x, NULL, pageno, (pd->TitleFinal_xpos + MARGIN_HSIZE_LEFT) / M_TO_PS,
+                                 (pd->TitleFinal_ypos - pd->TitleFinal_height / 2) / M_TO_PS, SW_HALIGN_LEFT,
+                                 SW_VALIGN_CENT, x->CurrentColor, fs, 0.0, NULL, NULL);
     END_LOOP_OVER_DATASETS
     return;
 }

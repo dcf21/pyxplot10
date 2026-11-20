@@ -67,7 +67,7 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, lw, lt, 0.0);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Set up postscript axes so that a unit circle produces the desired ellipse
     fprintf(x->epsbuffer, "gsave\n");
@@ -80,7 +80,7 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     eps_core_SwitchTo_FillColor(x, 1);
 
     // Fill ellipse
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         if (!x->current->arcset) fprintf(x->epsbuffer, "0 0 1 0 360 arc\nclosepath\nfill\n");
         else
             fprintf(x->epsbuffer, "0 0 1 %.2f %.2f arc\n0 0 lineto\nclosepath\nfill\n",
@@ -92,7 +92,7 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     eps_core_SetColor(x, &ww, 1);
 
     // Make path representing the outline of ellipse
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         if (!x->current->arcset)
             fprintf(x->epsbuffer,
                     "0 0 1 0 360 arc\nclosepath\n"); // NB: Leave this path unstroked until we've done a grestore
@@ -116,8 +116,9 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "%f %f scale\n", a_inv, b_inv);
 
     // Now we can stroke the path of the ellipse
-    IF_NOT_INVISIBLE fprintf(x->epsbuffer,
-                             "stroke\n"); // Stroke outline AFTER grestore, so that linewidth is not scaled.
+    if (eps_core_isVisible(x))
+        fprintf(x->epsbuffer,
+                "stroke\n"); // Stroke outline AFTER grestore, so that linewidth is not scaled.
 
     // Undo scaling of postscript axes
     fprintf(x->epsbuffer, "grestore\n");

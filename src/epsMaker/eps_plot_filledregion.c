@@ -213,24 +213,33 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
     return inside;
 }
 
-#define PS_POINT(X, Y) \
-    { \
-        if (DEBUG) { \
-            ppl_snprintfTrunc(msg, sizeof(msg), "Hopping to (%e,%e).", X, Y); \
-            ppl_log(&fr->x->c->errcontext, msg); \
-        } \
-        if (first_subpath) { \
-            fprintf(fr->x->epsbuffer, "newpath "); \
-            first_subpath = 0; \
-        } \
-        if (first_point) { \
-            fprintf(fr->x->epsbuffer, "%.2f %.2f moveto\n", X, Y); \
-            first_point = 0; \
-        } else { \
-            fprintf(fr->x->epsbuffer, "%.2f %.2f lineto\n", X, Y); \
-        } \
-        eps_core_BoundingBox(fr->x, X, Y, linewidth * EPS_DEFAULT_LINEWIDTH); \
+//! psPoint - Add a point to the postscript path which outlines a filled region
+//! \param [in] fr - The filled region being drawn
+//! \param [in] X - The horizontal position of the point, in postscript points
+//! \param [in] Y - The vertical position of the point, in postscript points
+//! \param [in,out] first_subpath - Flag indicating whether no subpath has been started yet; set to false
+//! \param [in,out] first_point - Flag indicating whether this is the first point in its subpath; set to false
+//! \param [in] linewidth - The line width with which the path is to be stroked, used to compute its bounding box
+
+static void psPoint(FilledRegionHandle *fr, const double X, const double Y, unsigned char *first_subpath,
+                    unsigned char *first_point, const double linewidth) {
+    if (DEBUG) {
+        char msg[PPL_MSG_LENGTH];
+        ppl_snprintfTrunc(msg, sizeof(msg), "Hopping to (%e,%e).", X, Y);
+        ppl_log(&fr->x->c->errcontext, msg);
     }
+    if (*first_subpath) {
+        fprintf(fr->x->epsbuffer, "newpath ");
+        *first_subpath = 0;
+    }
+    if (*first_point) {
+        fprintf(fr->x->epsbuffer, "%.2f %.2f moveto\n", X, Y);
+        *first_point = 0;
+    } else {
+        fprintf(fr->x->epsbuffer, "%.2f %.2f lineto\n", X, Y);
+    }
+    eps_core_BoundingBox(fr->x, X, Y, linewidth * EPS_DEFAULT_LINEWIDTH);
+}
 
 //! OutputPath - Write the postscript path of the clipped outline of a filled region
 //! \param [in] fr - The handle of the filled region
@@ -313,8 +322,10 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             CrossPointList[i].used = 1;
             if (CrossPointList[i].singleton) // Move along a line segment which streaks across canvas in one step
             {
-                PS_POINT(CrossPointList[i].x, CrossPointList[i].y); // Cut point where line enters canvas
-                PS_POINT(CrossPointList[i].x2, CrossPointList[i].y2); // Cut point where line leaves canvas
+                psPoint(fr, CrossPointList[i].x, CrossPointList[i].y, &first_subpath, &first_point,
+                        linewidth); // Cut point where line enters canvas
+                psPoint(fr, CrossPointList[i].x2, CrossPointList[i].y2, &first_subpath, &first_point,
+                        linewidth); // Cut point where line leaves canvas
                 if (((FilledRegionPoint *) CrossPointList[i].point->data)->FillSideFlip_prv % 2) FillSide = !FillSide;
                 for (inew = 0; inew < nac; inew++)
                     if (CrossPointList[inew].id == CrossPointList[i].twin) break;
@@ -331,7 +342,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 CrossPointList[i].used = 1;
             } else // Follow a path across the canvas, step by step
             {
-                PS_POINT(CrossPointList[i].x, CrossPointList[i].y); // Cut point where line enters canvas
+                psPoint(fr, CrossPointList[i].x, CrossPointList[i].y, &first_subpath, &first_point,
+                        linewidth); // Cut point where line enters canvas
                 li = CrossPointList[i].point;
                 sense = CrossPointList[i].sense;
                 if (sense == OUTGOING) {
@@ -340,7 +352,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 }
                 p = (FilledRegionPoint *) (li->data);
                 while (p->inside) {
-                    PS_POINT(p->x, p->y);
+                    psPoint(fr, p->x, p->y, &first_subpath, &first_point, linewidth);
                     if ((sense == OUTGOING) && (p->FillSideFlip_fwd % 2)) FillSide = !FillSide;
                     else if ((sense == INCOMING) && (p->FillSideFlip_prv % 2)) FillSide = !FillSide;
                     lil = li;
@@ -366,7 +378,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                     fail = 1;
                     break;
                 }
-                PS_POINT(CrossPointList[i].x, CrossPointList[i].y); // Cut point where line leaves canvas
+                psPoint(fr, CrossPointList[i].x, CrossPointList[i].y, &first_subpath, &first_point,
+                        linewidth); // Cut point where line leaves canvas
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Departed canvas at crossing point %d.", i);
                     ppl_log(&fr->x->c->errcontext, msg);
@@ -420,13 +433,16 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                     ppl_log(&fr->x->c->errcontext, msg);
                 }
                 if (!fr->ThreeDim) {
-                    PS_POINT(fr->origin_x + fr->width * xap, fr->origin_y + fr->height * yap);
+                    psPoint(fr, fr->origin_x + fr->width * xap, fr->origin_y + fr->height * yap, &first_subpath,
+                            &first_point, linewidth);
                 } else {
-                    PS_POINT(fr->origin_x + fr->width / 2 + (xap - 0.5) * fr->width * cos(fr->sg->XYview.real) +
-                                     (yap - 0.5) * fr->height * sin(fr->sg->XYview.real),
-                             fr->origin_y + fr->height / 2 -
-                                     (xap - 0.5) * fr->width * cos(fr->sg->YZview.real) * sin(fr->sg->XYview.real) +
-                                     (yap - 0.5) * fr->height * cos(fr->sg->YZview.real) * cos(fr->sg->XYview.real));
+                    psPoint(fr,
+                            fr->origin_x + fr->width / 2 + (xap - 0.5) * fr->width * cos(fr->sg->XYview.real) +
+                                    (yap - 0.5) * fr->height * sin(fr->sg->XYview.real),
+                            fr->origin_y + fr->height / 2 -
+                                    (xap - 0.5) * fr->width * cos(fr->sg->YZview.real) * sin(fr->sg->XYview.real) +
+                                    (yap - 0.5) * fr->height * cos(fr->sg->YZview.real) * cos(fr->sg->XYview.real),
+                            &first_subpath, &first_point, linewidth);
                 }
             }
             i = j;
@@ -452,7 +468,6 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
 
 void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int linetype, const double linewidth,
                          const unsigned char StrokeOutline) {
-    char msg[PPL_MSG_LENGTH];
     unsigned char f1, f2, first_point = 1, first_subpath = 1;
     int i, j, k, kn, l, NCrossings, i1, i2;
     double lastx, lasty, lastxap, lastyap;
@@ -463,7 +478,7 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
     double ct_y_m1, ct_y_c1, ct_x_m1, ct_x_c1, ct_y_m2, ct_y_c2, ct_x_m2, ct_x_c2, ct_xi, ct_yi;
     listItem *ct_li;
     FilledRegionPoint *ct_pA, *ct_pB;
-    const EPSComm *x = fr->x; // Makes IF_NOT_INVISIBLE macro work
+    const EPSComm *x = fr->x; // Makes if (eps_core_isVisible(x)) macro work
 
     l = fr->points->length;
     li = fr->points->first;
@@ -475,10 +490,10 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
     if (fr->Naxiscrossings < 1) {
         if (DEBUG) { ppl_log(&fr->x->c->errcontext, "New filled region never leaves clip region."); }
         if (DEBUG) { ppl_log(&fr->x->c->errcontext, "1. Fill it."); }
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             for (i = 0; i < l; i++) {
                 p = (FilledRegionPoint *) (li->data);
-                PS_POINT(p->x, p->y);
+                psPoint(fr, p->x, p->y, &first_subpath, &first_point, linewidth);
                 li = li->next;
             }
             fprintf(fr->x->epsbuffer, "closepath eofill\n");
@@ -489,10 +504,10 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
         li = fr->points->first;
         first_point = first_subpath = 1;
         if (DEBUG) { ppl_log(&fr->x->c->errcontext, "2. Stroke its outline."); }
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             for (i = 0; i < l; i++) {
                 p = (FilledRegionPoint *) (li->data);
-                PS_POINT(p->x, p->y);
+                psPoint(fr, p->x, p->y, &first_subpath, &first_point, linewidth);
                 li = li->next;
             }
             fprintf(fr->x->epsbuffer, "closepath stroke\n");
@@ -607,12 +622,12 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
     // Output path
     if (DEBUG) { ppl_log(&fr->x->c->errcontext, "New filled region which crosses edge of clip region."); }
     if (DEBUG) { ppl_log(&fr->x->c->errcontext, "1. Fill it."); }
-    IF_NOT_INVISIBLE OutputPath(fr, CrossPointList, j, "eofill", linewidth);
+    if (eps_core_isVisible(x)) OutputPath(fr, CrossPointList, j, "eofill", linewidth);
     eps_core_SwitchFrom_FillColor(fr->x, 1);
     if (!StrokeOutline) return;
     eps_core_SetLinewidth(fr->x, linewidth, linetype, 0.0);
     li = fr->points->first;
     if (DEBUG) { ppl_log(&fr->x->c->errcontext, "2. Stroke its outline."); }
-    IF_NOT_INVISIBLE OutputPath(fr, CrossPointList, j, "stroke", linewidth);
+    if (eps_core_isVisible(x)) OutputPath(fr, CrossPointList, j, "stroke", linewidth);
     return;
 }

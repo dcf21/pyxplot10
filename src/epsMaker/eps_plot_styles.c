@@ -1073,7 +1073,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             if (blk->split[j]) { LineDraw_PenUp(x, ld); }
-                            IF_NOT_INVISIBLE {
+                            if (eps_core_isVisible(x)) {
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -1081,8 +1081,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 }
                                 LineDraw_Point(x, ld, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0, 0, 0, 0, 0, 0, 0,
                                                pd->ww_final.linetype, pd->ww_final.linewidth, last_colstr);
-                            }
-                            else {
+                            } else {
                                 LineDraw_PenUp(x, ld);
                             }
                         }
@@ -1116,7 +1115,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                             if (style == SW_STYLE_DOTS) final_pointsize *= 0.05; // Dots are 1/20th size of points
                             else if (style == SW_STYLE_STARS) final_pointsize *= 12.0; // Stars are BIG
                             eps_core_SetColor(x, &pd->ww_final, 0);
-                            IF_NOT_INVISIBLE {
+                            if (eps_core_isVisible(x)) {
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -1199,7 +1198,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             LineDraw_PenUp(x, ld);
-                            IF_NOT_INVISIBLE {
+                            if (eps_core_isVisible(x)) {
                                 for (i = 0; i < 3; i++) { min[i] = max[i] = UUR(i); }
                                 if (style == SW_STYLE_XERRORBARS) {
                                     NDirections = 1;
@@ -1408,7 +1407,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                                  &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                                 eps_core_SetColor(x, &pd->ww_final, 0);
                                 LineDraw_PenUp(x, ld);
-                                IF_NOT_INVISIBLE {
+                                if (eps_core_isVisible(x)) {
                                     double boxfrom = sg->BoxFrom.real;
                                     if ((a[yn]->LogFinal == SW_BOOL_TRUE) && (boxfrom < DBL_MIN)) boxfrom = DBL_MIN;
                                     if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
@@ -1473,7 +1472,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             LineDraw_PenUp(x, ld);
-                            IF_NOT_INVISIBLE {
+                            if (eps_core_isVisible(x)) {
                                 eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, &theta[0], &theta[1],
                                                      &theta[2], ThreeDim, UUR(xn), UUR(yn), ThreeDim ? UUR(zn) : 0.0,
                                                      a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, origin_x, origin_y,
@@ -1565,7 +1564,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     last_colstr = NULL;
 
 #define MAKE_STEP(X0, Y0, WIDTH) \
-    IF_NOT_INVISIBLE { \
+    if (eps_core_isVisible(x)) { \
         double pA[3] = {(X0) - (WIDTH), (Y0), 0}, pB[3] = {(X0) + (WIDTH), (Y0), 0}; \
         if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) { \
             last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1); \
@@ -1608,20 +1607,21 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
         eps_core_SwitchTo_FillColor(x, 0); \
 \
         /* Fill box */ \
-        IF_NOT_INVISIBLE if (!ThreeDim) { \
-            FilledRegionHandle *fr; \
-            fr = FilledRegion_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x, \
-                                   scale_y, scale_z); \
-            FilledRegion_Point(x, fr, pA[xn], pA[yn]); \
-            FilledRegion_Point(x, fr, pB[xn], pB[yn]); \
-            FilledRegion_Point(x, fr, pC[xn], pC[yn]); \
-            FilledRegion_Point(x, fr, pD[xn], pD[yn]); \
-            FilledRegion_Finish(x, fr, pd->ww_final.linetype, pd->ww_final.linewidth, 0); \
-        } \
+        if (eps_core_isVisible(x)) \
+            if (!ThreeDim) { \
+                FilledRegionHandle *fr; \
+                fr = FilledRegion_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, \
+                                       scale_x, scale_y, scale_z); \
+                FilledRegion_Point(x, fr, pA[xn], pA[yn]); \
+                FilledRegion_Point(x, fr, pB[xn], pB[yn]); \
+                FilledRegion_Point(x, fr, pC[xn], pC[yn]); \
+                FilledRegion_Point(x, fr, pD[xn], pD[yn]); \
+                FilledRegion_Finish(x, fr, pd->ww_final.linetype, pd->ww_final.linewidth, 0); \
+            } \
         eps_core_SwitchFrom_FillColor(x, 0); \
 \
         /* Stroke outline of box */ \
-        IF_NOT_INVISIBLE { \
+        if (eps_core_isVisible(x)) { \
             if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) { \
                 last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1); \
                 if (last_colstr == NULL) break; \
@@ -1759,7 +1759,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             LineDraw_PenUp(x, ld);
-                            IF_NOT_INVISIBLE {
+                            if (eps_core_isVisible(x)) {
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -1962,7 +1962,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     } else {
                                         eps_core_SetColor(x, &pd->ww_final, 0);
                                     }
-                                    IF_NOT_INVISIBLE {
+                                    if (eps_core_isVisible(x)) {
                                         if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                             last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                             if (last_colstr == NULL) break;
@@ -2036,7 +2036,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         (style == SW_STYLE_CONTOURMAP)) {
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.linewidth, pd->ww_final.linetype, 0);
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", xpos - scale * 0.60 / 2, ypos,
                     xpos + scale * 0.60 / 2, ypos);
             eps_core_BoundingBox(x, xpos - scale * 0.60 / 2, ypos, pd->ww_final.linewidth);
@@ -2054,7 +2054,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         if (style == SW_STYLE_STARS) final_pointsize = 1;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, 1, 0);
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             int pt = (pd->ww_final.pointtype - 1) % N_POINTTYPES;
             if (style == SW_STYLE_DOTS) pt = 16; // Dots are always pt 17 (circle)
             if (style == SW_STYLE_STARS) pt = 24; // Stars are always pt 25 (star)
@@ -2072,7 +2072,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, pd->ww_final.linetype, 0);
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", xpos - ps, ypos - ps * sgn,
                     xpos + ps, ypos - ps * sgn);
             eps_core_BoundingBox(x, xpos - ps, ypos - ps * sgn, pd->ww_final.linewidth);
@@ -2092,8 +2092,9 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         else ArrowStyle = SW_ARROWTYPE_HEAD;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, pd->ww_final.linetype, 0);
-        IF_NOT_INVISIBLE eps_primitive_arrow(x, ArrowStyle, xpos - scale * 0.60 / 2, ypos, NULL,
-                                             xpos + scale * 0.60 / 2, ypos, NULL, &pd->ww_final);
+        if (eps_core_isVisible(x))
+            eps_primitive_arrow(x, ArrowStyle, xpos - scale * 0.60 / 2, ypos, NULL, xpos + scale * 0.60 / 2, ypos, NULL,
+                                &pd->ww_final);
     }
 
     else if ((style == SW_STYLE_FILLEDREGION) || (style == SW_STYLE_YERRORSHADED) || (style == SW_STYLE_COLORMAP)) {
@@ -2101,7 +2102,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetFillColor(x, &pd->ww_final);
         eps_core_SwitchTo_FillColor(x, 1);
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer,
                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath fill\n",
                     xpos - s, ypos - s, xpos + s, ypos - s, xpos + s, ypos + s, xpos - s, ypos + s);
@@ -2112,7 +2113,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         }
         eps_core_SwitchFrom_FillColor(x, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, pd->ww_final.linetype, 0);
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer,
                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath stroke\n",
                     xpos - s, ypos - s, xpos + s, ypos - s, xpos + s, ypos + s, xpos - s, ypos + s);
@@ -2133,7 +2134,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS;
 
         eps_core_SetColor(x, &pd->ww_final, 1);
-        IF_NOT_INVISIBLE {
+        if (eps_core_isVisible(x)) {
             eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.linewidth, pd->ww_final.linetype, 0);
             fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", xpos - s, ypos, xpos + s, ypos);
             fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", xpos - s, ypos - b, xpos - s,

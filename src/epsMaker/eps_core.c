@@ -63,6 +63,15 @@ void eps_core_WritePSColor(EPSComm *x) {
     return;
 }
 
+//! eps_core_isVisible - Test whether the current colour is visible, i.e. not set to "transparent". Nothing need be
+//! drawn in an invisible colour.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \return True if the current colour is visible
+
+int eps_core_isVisible(const EPSComm *x) {
+    return x->CurrentColor[0] != '\0';
+}
+
 //! eps_core_SetColor - Set the color with which subsequent items are drawn, from a set of plot style modifiers
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 //! \param [in] ww - The plot style modifiers specifying the color

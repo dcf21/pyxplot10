@@ -130,7 +130,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
     else lt = 1;
 
     // Draw line of axis
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         if (a->ArrowType == SW_AXISDISP_NOARR) eps_primitive_arrow(x, SW_ARROWTYPE_NOHEAD, x1, y1, z1, x2, y2, z2, ww);
         else if (a->ArrowType == SW_AXISDISP_ARROW)
             eps_primitive_arrow(x, SW_ARROWTYPE_HEAD, x1, y1, z1, x2, y2, z2, ww);
@@ -271,7 +271,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                                 tic_lab_xoff;
                         ylab = tic_y1 / M_TO_PS + (Lr ? -1.0 : 1.0) * cos(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP;
 
-                        IF_NOT_INVISIBLE {
+                        if (eps_core_isVisible(x)) {
                             char *text = NULL;
                             canvas_EPSRenderTextItem(x, &text, pageno, xlab, ylab, HALIGN_THIS, VALIGN_THIS,
                                                      x->CurrentColor, x->current->settings.FontSize, theta, &width,
@@ -314,7 +314,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
             ylab = (y1 + y2) / 2 / M_TO_PS +
                     (Lr ? -1.0 : 1.0) * (2 * EPS_AXES_TEXTGAP + TickMaxHeight / M_TO_PS) * cos(theta_axis + M_PI / 2);
 
-            IF_NOT_INVISIBLE {
+            if (eps_core_isVisible(x)) {
                 char *text = NULL;
                 double theta_text = theta + M_PI / 2 - theta_axis;
                 theta_text = fmod(theta_text, 2 * M_PI);
@@ -343,6 +343,44 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
         // Allow a gap before next axis
         *OutputWidth += EPS_AXES_SEPARATION * M_TO_PS;
     }
+}
+
+//! cubeEdgeDistance - Measure how far an edge of the cube which bounds a 3D plot lies from the origin of the plot,
+//! in the plane of the page
+//! \param [in] xpos1 - The x positions of one end of each edge
+//! \param [in] ypos1 - The y positions of one end of each edge
+//! \param [in] xpos2 - The x positions of the other end of each edge
+//! \param [in] ypos2 - The y positions of the other end of each edge
+//! \param [in] A - The number of the edge to measure
+//! \param [in] origin_x - The x position of the origin of the plot
+//! \param [in] origin_y - The y position of the origin of the plot
+//! \return Twice the distance of the midpoint of the edge from the origin
+
+static double cubeEdgeDistance(const double *xpos1, const double *ypos1, const double *xpos2, const double *ypos2,
+                               const int A, const double origin_x, const double origin_y) {
+    return hypot(xpos1[A] + xpos2[A] - 2 * origin_x, ypos1[A] + ypos2[A] - 2 * origin_y);
+}
+
+//! swapDoubles - Swap two elements of an array of doubles
+//! \param [in,out] array - The array
+//! \param [in] A - The index of the first element
+//! \param [in] B - The index of the second element
+
+static void swapDoubles(double *array, const int A, const int B) {
+    const double tmp = array[A];
+    array[A] = array[B];
+    array[B] = tmp;
+}
+
+//! swapChars - Swap two elements of an array of unsigned chars
+//! \param [in,out] array - The array
+//! \param [in] A - The index of the first element
+//! \param [in] B - The index of the second element
+
+static void swapChars(unsigned char *array, const int A, const int B) {
+    const unsigned char tmp = array[A];
+    array[A] = array[B];
+    array[B] = tmp;
 }
 
 //! eps_plot_axespaint - Draw all of the axes of a graph
@@ -382,7 +420,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
     ww.linetype = 1;
     ww.USElinetype = 1;
     eps_core_SetColor(x, &ww, 1);
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1, 0.0);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1, 0.0);
 
     // Reset plot bounding box; we're about to make this sensible below by factoring in plot vertices
     if ((pass == 0) || (!x->current->ThreeDim)) {
@@ -475,33 +513,23 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
 
         // Swap edges of cube around to put edges at (x,y)-extremes first
         if (x->current->ThreeDim) {
-#define TSM(A) hypot(xpos1[A] + xpos2[A] - 2 * origin_x, ypos1[A] + ypos2[A] - 2 * origin_y)
-#define TRY_SWAP(A, B) \
-    if (TSM(A) < 0.9999999 * TSM(B)) { \
-        double tmp[6] = {xpos1[A], ypos1[A], zpos1[A], xpos2[A], ypos2[A], zpos2[A]}; \
-        unsigned char tsa = side_a[A], tsb = side_b[A]; \
-        xpos1[A] = xpos1[B]; \
-        ypos1[A] = ypos1[B]; \
-        zpos1[A] = zpos1[B]; \
-        xpos2[A] = xpos2[B]; \
-        ypos2[A] = ypos2[B]; \
-        zpos2[A] = zpos2[B]; \
-        xpos1[B] = tmp[0]; \
-        ypos1[B] = tmp[1]; \
-        zpos1[B] = tmp[2]; \
-        xpos2[B] = tmp[3]; \
-        ypos2[B] = tmp[4]; \
-        zpos2[B] = tmp[5]; \
-        side_a[A] = side_a[B]; \
-        side_b[A] = side_b[B]; \
-        side_a[B] = tsa; \
-        side_b[B] = tsb; \
-    }
-            TRY_SWAP(2, 3);
-            TRY_SWAP(1, 2);
-            TRY_SWAP(0, 1);
-            TRY_SWAP(2, 3);
-            TRY_SWAP(1, 2);
+            // Bubble sort the four edges into order of decreasing distance from the origin
+            static const int swaps[5][2] = {{2, 3}, {1, 2}, {0, 1}, {2, 3}, {1, 2}};
+            int sw;
+            for (sw = 0; sw < 5; sw++) {
+                const int A = swaps[sw][0], B = swaps[sw][1];
+                if (cubeEdgeDistance(xpos1, ypos1, xpos2, ypos2, A, origin_x, origin_y) <
+                    0.9999999 * cubeEdgeDistance(xpos1, ypos1, xpos2, ypos2, B, origin_x, origin_y)) {
+                    swapDoubles(xpos1, A, B);
+                    swapDoubles(ypos1, A, B);
+                    swapDoubles(zpos1, A, B);
+                    swapDoubles(xpos2, A, B);
+                    swapDoubles(ypos2, A, B);
+                    swapDoubles(zpos2, A, B);
+                    swapChars(side_a, A, B);
+                    swapChars(side_b, A, B);
+                }
+            }
         }
 
         // Fetch relevant list of axes

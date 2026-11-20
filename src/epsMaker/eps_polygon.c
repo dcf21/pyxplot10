@@ -58,7 +58,7 @@ void eps_polygon_RenderEPS(EPSComm *x) {
     eps_core_SwitchTo_FillColor(x, 1);
 
     // Fill polygon
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n", x->current->polygonPoints[0] * M_TO_PS,
                 x->current->polygonPoints[1] * M_TO_PS);
         for (i = 0; i < x->current->NpolygonPoints; i++)
@@ -79,10 +79,10 @@ void eps_polygon_RenderEPS(EPSComm *x) {
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, lw, lt, 0.0);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Stroke outline of polygon
-    IF_NOT_INVISIBLE {
+    if (eps_core_isVisible(x)) {
         fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n", x->current->polygonPoints[0] * M_TO_PS,
                 x->current->polygonPoints[1] * M_TO_PS);
         for (i = 0; i < x->current->NpolygonPoints; i++)

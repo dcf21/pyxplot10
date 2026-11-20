@@ -753,7 +753,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
     ww.linetype = 1;
     ww.USElinetype = 1;
     eps_core_SetColor(x, &ww, 1);
-    IF_NOT_INVISIBLE eps_core_SetLinewidth(x, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1, 0.0);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1, 0.0);
     else return 0;
 
     // Find extrema of box filled by graph canvas
