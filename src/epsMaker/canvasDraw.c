@@ -83,32 +83,48 @@ static int filecopy(EPSComm *x, const char *in, const char *out) {
     return status;
 }
 
-// Run ghostscript to convert postscript output into bitmap graphics
-#define BITMAP_TERMINAL_CLEANUP(X, Y, CanInvert) \
-    if (system(msg) != 0) /* Run ghostscript */ \
-    { \
-        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, \
-                  "Error encountered whilst using " X " to generate " Y " output"); \
-    } else { \
-        char *src = GSOutputTemp; \
-        if ((CanInvert) && (c->set->term_current.TermInvert == SW_ONOFF_ON)) { \
-            ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -negate %s", CONVERT_COMMAND, GSOutputTemp, GSOutputTemp2); \
-            if (system(msg) != 0) /* Run convert to negate image */ \
-            { \
-                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, \
-                          "Error encountered whilst using ImageMagick to generate negated " Y " output"); \
-            } \
-            src = GSOutputTemp2; \
-            remove(GSOutputTemp); \
-        } \
-        if (filecopy(&comm, src, comm.FinalFilename) != 0) /* Move ghostscript output to desire target file */ \
-        { \
-            ppl_snprintfTrunc(msg, sizeof(msg), "Could not write output to file '%s'", comm.FinalFilename); \
-            ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg); \
-        } \
-        remove(src); /* Delete temporary files */ \
-    } \
-    remove(comm.EPSFilename);
+//! convertToFinalFormat - Run ghostscript (or ImageMagick) to convert the postscript output of a canvas into the
+//! final output format, such as PDF or PNG, and write it to the target file. The temporary postscript file is deleted.
+//! \param [in] c - The Pyxplot context
+//! \param [in] comm - The state of the EPS/PS rendering process
+//! \param [in] command - The shell command which runs the conversion, writing its output to <tempOut>
+//! \param [in] tempOut - The temporary file into which <command> writes its output
+//! \param [in] tempNegated - A temporary file into which a colour-negated copy of the output may be written
+//! \param [in] tool - The name of the program run by <command>, used in error messages
+//! \param [in] format - The name of the output format, used in error messages
+//! \param [in] canInvert - True if the output format is a bitmap whose colours can be inverted by "set terminal
+//! invert"
+
+static void convertToFinalFormat(ppl_context *c, EPSComm *comm, const char *command, const char *tempOut,
+                                 const char *tempNegated, const char *tool, const char *format, const int canInvert) {
+    char msg[LSTR_LENGTH];
+
+    if (system(command) != 0) {
+        // Run ghostscript
+        ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst using %s to generate %s output", tool, format);
+        ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
+    } else {
+        const char *src = tempOut;
+        if (canInvert && (c->set->term_current.TermInvert == SW_ONOFF_ON)) {
+            // Run convert to negate image
+            ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -negate %s", CONVERT_COMMAND, tempOut, tempNegated);
+            if (system(msg) != 0) {
+                ppl_snprintfTrunc(msg, sizeof(msg),
+                                  "Error encountered whilst using ImageMagick to generate negated %s output", format);
+                ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
+            }
+            src = tempNegated;
+            remove(tempOut);
+        }
+        if (filecopy(comm, src, comm->FinalFilename) != 0) {
+            // Move ghostscript output to desired target file
+            ppl_snprintfTrunc(msg, sizeof(msg), "Could not write output to file '%s'", comm->FinalFilename);
+            ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
+        }
+        remove(src); // Delete temporary files
+    }
+    remove(comm->EPSFilename);
+}
 
 // Standard postscript prolog text for EPS and PS files
 static char *EPS_PROLOG_TEXT = "\
@@ -420,7 +436,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     {
         ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=pdfwrite -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
                           GHOSTSCRIPT_STANDARD_FLAGS, GSOutputTemp, comm.EPSFilename);
-        BITMAP_TERMINAL_CLEANUP("ghostscript", "pdf", 0);
+        convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ghostscript", "pdf", 0);
     } else if (termtype == SW_TERMTYPE_PNG) // PNG terminal
     {
         ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=%s -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
@@ -431,7 +447,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                                   ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
                                   : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
                           GSOutputTemp, comm.EPSFilename);
-        BITMAP_TERMINAL_CLEANUP("ghostscript", "png", 1)
+        convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ghostscript", "png", 1);
     } else if (termtype == SW_TERMTYPE_JPG) // JPEG terminal
     {
         ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=jpeg -dJPEGQ=100 -r%d %s -sOutputFile=%s %s",
@@ -440,7 +456,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                                   ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
                                   : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
                           GSOutputTemp, comm.EPSFilename);
-        BITMAP_TERMINAL_CLEANUP("ghostscript", "jpeg", 1)
+        convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ghostscript", "jpeg", 1);
     } else if (termtype == SW_TERMTYPE_GIF) // GIF terminal
     {
         ppl_snprintfTrunc(
@@ -448,7 +464,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                 (c->set->term_current.TermTransparent == SW_ONOFF_ON) ? "-alpha activate" : "-alpha deactivate",
                 (c->set->term_current.TermAntiAlias == SW_ONOFF_ON) ? "-antialias" : "+antialias", comm.EPSFilename,
                 GSOutputTemp);
-        BITMAP_TERMINAL_CLEANUP("ImageMagick", "gif", 1);
+        convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ImageMagick", "gif", 1);
     } else if (termtype == SW_TERMTYPE_BMP) // BMP terminal
     {
         ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=bmp16m -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
@@ -457,7 +473,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                                   ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
                                   : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
                           GSOutputTemp, comm.EPSFilename);
-        BITMAP_TERMINAL_CLEANUP("ghostscript", "bmp", 1)
+        convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ghostscript", "bmp", 1);
     } else if (termtype == SW_TERMTYPE_TIF) // TIF terminal
     {
         ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=tiff24nc -r%d %s -sOutputFile=%s %s", GHOSTSCRIPT_COMMAND,
@@ -466,12 +482,12 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                                   ? "-dGraphicsAlphaBits=4 -dTextAlphaBits=4"
                                   : "-dGraphicsAlphaBits=0 -dTextAlphaBits=0",
                           GSOutputTemp, comm.EPSFilename);
-        BITMAP_TERMINAL_CLEANUP("ghostscript", "tif", 1)
+        convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ghostscript", "tif", 1);
     } else if (termtype == SW_TERMTYPE_SVG) // SVG terminal
     {
         ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -sDEVICE=svg -sOutputFile=%s %s > /dev/null 2> /dev/null",
                           GHOSTSCRIPT_COMMAND, GHOSTSCRIPT_STANDARD_FLAGS, GSOutputTemp, comm.EPSFilename);
-        BITMAP_TERMINAL_CLEANUP("ghostscript", "svg", 0)
+        convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ghostscript", "svg", 0);
     }
 
     // Return to user's current working directory
@@ -482,11 +498,17 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     return;
 }
 
-// Run LaTeX to turn set of strings for typesetting into eps code
-#define FPRINTF_LINECOUNT(X) \
-    fprintf(output, "%s", X); \
-    for (i = 0; X[i] != '\0'; i++) \
-        if (X[i] == '\n') linecount++;
+//! fprintfLineCount - Write a string to a file, counting the number of lines written
+//! \param [in] output - The file to write to
+//! \param [in] text - The string to write
+//! \param [in,out] linecount - The line counter, which is advanced by the number of newlines in <text>
+
+static void fprintfLineCount(FILE *output, const char *text, int *linecount) {
+    int i;
+    fprintf(output, "%s", text);
+    for (i = 0; text[i] != '\0'; i++)
+        if (text[i] == '\n') (*linecount)++;
+}
 
 //! canvas_CallLaTeX - Write all of the text items on the canvas into a LaTeX document, typeset it with LaTeX, and read
 //! the resulting DVI file. LaTeX errors are traced back to the text item which caused them.
@@ -545,24 +567,24 @@ void canvas_CallLaTeX(EPSComm *x) {
         str_buffer = NULL;
         return;
     }
-    FPRINTF_LINECOUNT(TextHeader1);
-    FPRINTF_LINECOUNT(x->c->set->term_current.LatexPreamble);
-    FPRINTF_LINECOUNT(TextHeader2);
+    fprintfLineCount(output, TextHeader1, &linecount);
+    fprintfLineCount(output, x->c->set->term_current.LatexPreamble, &linecount);
+    fprintfLineCount(output, TextHeader2, &linecount);
 
     // Sequentially print out text strings
     ListIter = ppl_listIterateInit(x->TextItems);
     while (ListIter != NULL) {
         TempTextItem = (CanvasTextItem *) ListIter->data;
         TempTextItem->LaTeXstartline = linecount;
-        FPRINTF_LINECOUNT(ItemHeader);
-        FPRINTF_LINECOUNT(TempTextItem->text);
-        FPRINTF_LINECOUNT(ItemFooter);
+        fprintfLineCount(output, ItemHeader, &linecount);
+        fprintfLineCount(output, TempTextItem->text, &linecount);
+        fprintfLineCount(output, ItemFooter, &linecount);
         TempTextItem->LaTeXendline = linecount;
         ppl_listIterate(&ListIter);
     }
 
     // Finish writing LaTeX document
-    FPRINTF_LINECOUNT(TextFooter);
+    fprintfLineCount(output, TextFooter, &linecount);
     fclose(output);
 
     // Fork LaTeX process
