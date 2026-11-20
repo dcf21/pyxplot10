@@ -55,6 +55,109 @@ static int sameValue(const pplObj *a, const pplObj *b) {
 }
 
 
+//! pplarrow_getSystem - Read which coordinate system a coordinate of an arrow or label is specified in
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The parser output for the command
+//! \param [in] ptab - The table of the positions of the command's parameters in <in>
+//! \param [in] index - The index of the parameter giving the coordinate system, e.g. PARSE_INDEX_x0_system
+//! \return The coordinate system, one of the SW_SYSTEM_* constants
+
+int pplarrow_getSystem(ppl_context *context, const parserOutput *in, const int *ptab, const int index) {
+    const pplObj *o = &in->stk[ptab[index]];
+    if (o->objType != PPLOBJ_STR) return SW_SYSTEM_FIRST;
+    return ppl_fetchSettingByName(&context->errcontext, (char *) o->auxil, SW_SYSTEM_INT, SW_SYSTEM_STR);
+}
+
+//! pplarrow_getAxis - Read the number of the axis against which a coordinate of an arrow or label is specified
+//! \param [in] in - The parser output for the command
+//! \param [in] ptab - The table of the positions of the command's parameters in <in>
+//! \param [in] index - The index of the parameter giving the axis number, e.g. PARSE_INDEX_x0_axis
+//! \return The axis number, or zero if none was given
+
+int pplarrow_getAxis(const parserOutput *in, const int *ptab, const int index) {
+    const pplObj *o = &in->stk[ptab[index]];
+    if (o->objType != PPLOBJ_NUM) return 0;
+    return (int) round(o->real);
+}
+
+//! pplarrow_checkAxis - Check that the axis number given for a coordinate of an arrow or label is in range
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The parser output for the command
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] ptab - The table of the positions of the command's parameters in <in>
+//! \param [in] index - The index of the parameter giving the axis number, e.g. PARSE_INDEX_x0_axis
+//! \return Zero if the axis number is valid (or not given), or nonzero if an error was reported
+
+int pplarrow_checkAxis(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab,
+                       const int index) {
+    const pplObj *o = &in->stk[ptab[index]];
+    if (o->objType == PPLOBJ_NUM) {
+        const int i = (int) round(o->real);
+        if ((i < 0) || (i >= MAX_AXES)) {
+            ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                              "Axis number %d is out of range; axis numbers must be in the range 0 - %d", i,
+                              MAX_AXES - 1);
+            ppl_tbAddLine(context, pl, ERR_RANGE, in->stkCharPos[ptab[index]], "");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+//! pplarrow_checkDimensions - Check that a coordinate of an arrow or label is finite, and that, if it is specified in
+//! the graph or page coordinate systems, it is either dimensionless or has dimensions of length. Any problems are
+//! added to the traceback.
+//! \param [in] context - The Pyxplot context
+//! \param [in] in - The parser output for the command
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] ptab - The table of the positions of the command's parameters in <in>
+//! \param [in] index - The index of the parameter giving the coordinate, e.g. PARSE_INDEX_x0
+//! \param [in] system - The coordinate system of the coordinate, one of the SW_SYSTEM_* constants
+
+void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab,
+                              const int index, const int system) {
+    const pplObj *o = &in->stk[ptab[index]];
+    int i;
+    if (o->objType != PPLOBJ_NUM) return;
+    if (((system == SW_SYSTEM_GRAPH) || (system == SW_SYSTEM_PAGE)) && (!o->dimensionless))
+        for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+            if (o->exponent[i] != (i == UNIT_LENGTH)) {
+                ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                                  "Coordinates specified in the graph and page systems must have dimensions of "
+                                  "length. Received coordinate with dimensions of <%s>.",
+                                  ppl_printUnit(context, o, NULL, NULL, 0, 1, 0));
+                ppl_tbAddLine(context, pl, ERR_UNIT, in->stkCharPos[ptab[index]], "");
+            }
+    if (!gsl_finite(o->real)) {
+        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                          "Coordinates specified are not finite.");
+        ppl_tbAddLine(context, pl, ERR_NUMERICAL, in->stkCharPos[ptab[index]], "");
+    }
+}
+
+//! pplarrow_copyCoordinate - Copy a coordinate of an arrow or label out of the parser output. Dimensionless
+//! coordinates in the graph and page systems are taken to be in centimetres, and are converted to metres.
+//! \param [in,out] in - The parser output for the command; the coordinate is converted in place
+//! \param [in] ptab - The table of the positions of the command's parameters in <in>
+//! \param [in] index - The index of the parameter giving the coordinate, e.g. PARSE_INDEX_x0
+//! \param [in] system - The coordinate system of the coordinate, one of the SW_SYSTEM_* constants
+//! \param [out] out - The coordinate, which is zero if none was given
+
+void pplarrow_copyCoordinate(parserOutput *in, const int *ptab, const int index, const int system, pplObj *out) {
+    pplObj tempobj;
+    pplObj *o = &in->stk[ptab[index]];
+    if (o->objType != PPLOBJ_NUM) {
+        o = &tempobj;
+        pplObjNum(&tempobj, 0, 0, 0);
+    }
+    if (((system == SW_SYSTEM_GRAPH) || (system == SW_SYSTEM_PAGE)) && (o->dimensionless)) {
+        o->dimensionless = 0;
+        o->exponent[UNIT_LENGTH] = 1;
+        o->real /= 100;
+    }
+    *out = *o;
+}
+
 //! pplarrow_add - Implement the "set arrow" command, adding a new arrow to a list of arrows, or replacing an
 //! existing arrow with the same ID number
 //! \param [in] context - The Pyxplot context
@@ -69,26 +172,26 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     char *tempstr;
     pplarrow_object *out;
 
-    pplarrow_add_get_system(PARSE_INDEX_x0_system, system_x0);
-    pplarrow_add_get_system(PARSE_INDEX_y0_system, system_y0);
-    pplarrow_add_get_system(PARSE_INDEX_z0_system, system_z0);
-    pplarrow_add_get_system(PARSE_INDEX_x1_system, system_x1);
-    pplarrow_add_get_system(PARSE_INDEX_y1_system, system_y1);
-    pplarrow_add_get_system(PARSE_INDEX_z1_system, system_z1);
+    system_x0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x0_system);
+    system_y0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y0_system);
+    system_z0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z0_system);
+    system_x1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x1_system);
+    system_y1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y1_system);
+    system_z1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z1_system);
 
-    pplarrow_add_check_dimensions(PARSE_INDEX_x0, system_x0);
-    pplarrow_add_check_dimensions(PARSE_INDEX_y0, system_y0);
-    pplarrow_add_check_dimensions(PARSE_INDEX_z0, system_z0);
-    pplarrow_add_check_dimensions(PARSE_INDEX_x1, system_x1);
-    pplarrow_add_check_dimensions(PARSE_INDEX_y1, system_y1);
-    pplarrow_add_check_dimensions(PARSE_INDEX_z1, system_z1);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x0, system_x0);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_y0, system_y0);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_z0, system_z0);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x1, system_x1);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_y1, system_y1);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_z1, system_z1);
 
-    pplarrow_add_check_axis(PARSE_INDEX_x0_axis);
-    pplarrow_add_check_axis(PARSE_INDEX_y0_axis);
-    pplarrow_add_check_axis(PARSE_INDEX_z0_axis);
-    pplarrow_add_check_axis(PARSE_INDEX_x1_axis);
-    pplarrow_add_check_axis(PARSE_INDEX_y1_axis);
-    pplarrow_add_check_axis(PARSE_INDEX_z1_axis);
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_x0_axis)) return;
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_y0_axis)) return;
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z0_axis)) return;
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_x1_axis)) return;
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_y1_axis)) return;
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z1_axis)) return;
 
     i = (int) round(in->stk[ptab[PARSE_INDEX_arrow_id]].real);
     while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
@@ -122,19 +225,19 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     out->system_y1 = system_y1;
     out->system_z1 = system_z1;
 
-    pplarrow_add_get_axis(PARSE_INDEX_x0_axis, out->axis_x0);
-    pplarrow_add_get_axis(PARSE_INDEX_y0_axis, out->axis_y0);
-    pplarrow_add_get_axis(PARSE_INDEX_z0_axis, out->axis_z0);
-    pplarrow_add_get_axis(PARSE_INDEX_x1_axis, out->axis_x1);
-    pplarrow_add_get_axis(PARSE_INDEX_y1_axis, out->axis_y1);
-    pplarrow_add_get_axis(PARSE_INDEX_z1_axis, out->axis_z1);
+    out->axis_x0 = pplarrow_getAxis(in, ptab, PARSE_INDEX_x0_axis);
+    out->axis_y0 = pplarrow_getAxis(in, ptab, PARSE_INDEX_y0_axis);
+    out->axis_z0 = pplarrow_getAxis(in, ptab, PARSE_INDEX_z0_axis);
+    out->axis_x1 = pplarrow_getAxis(in, ptab, PARSE_INDEX_x1_axis);
+    out->axis_y1 = pplarrow_getAxis(in, ptab, PARSE_INDEX_y1_axis);
+    out->axis_z1 = pplarrow_getAxis(in, ptab, PARSE_INDEX_z1_axis);
 
-    pplarrow_add_copy_coordinate(PARSE_INDEX_x0, system_x0, out->x0);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_y0, system_y0, out->y0);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_z0, system_z0, out->z0);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_x1, system_x1, out->x1);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_y1, system_y1, out->y1);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_z1, system_z1, out->z1);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_x0, system_x0, &out->x0);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_y0, system_y0, &out->y0);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_z0, system_z0, &out->z0);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_x1, system_x1, &out->x1);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_y1, system_y1, &out->y1);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_z1, system_z1, &out->z1);
     return;
 }
 

@@ -72,17 +72,17 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     double gap, ang;
     ppllabel_object *out;
 
-    pplarrow_add_get_system(PARSE_INDEX_x_system, system_x);
-    pplarrow_add_get_system(PARSE_INDEX_y_system, system_y);
-    pplarrow_add_get_system(PARSE_INDEX_z_system, system_z);
+    system_x = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x_system);
+    system_y = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y_system);
+    system_z = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z_system);
 
-    pplarrow_add_check_dimensions(PARSE_INDEX_x, system_x);
-    pplarrow_add_check_dimensions(PARSE_INDEX_y, system_y);
-    pplarrow_add_check_dimensions(PARSE_INDEX_z, system_z);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x, system_x);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_y, system_y);
+    pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_z, system_z);
 
-    pplarrow_add_check_axis(PARSE_INDEX_x_axis);
-    pplarrow_add_check_axis(PARSE_INDEX_y_axis);
-    pplarrow_add_check_axis(PARSE_INDEX_z_axis);
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_x_axis)) return;
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_y_axis)) return;
+    if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z_axis)) return;
 
     tempstr = (char *) in->stk[ptab[PARSE_INDEX_label_text]].auxil; // Read label text
     label = (char *) malloc(strlen(tempstr) + 1);
@@ -153,12 +153,12 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     out->system_x = system_x;
     out->system_y = system_y;
     out->system_z = system_z;
-    pplarrow_add_get_axis(PARSE_INDEX_x_axis, out->axis_x);
-    pplarrow_add_get_axis(PARSE_INDEX_y_axis, out->axis_y);
-    pplarrow_add_get_axis(PARSE_INDEX_z_axis, out->axis_z);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_x, system_x, out->x);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_y, system_y, out->y);
-    pplarrow_add_copy_coordinate(PARSE_INDEX_z, system_z, out->z);
+    out->axis_x = pplarrow_getAxis(in, ptab, PARSE_INDEX_x_axis);
+    out->axis_y = pplarrow_getAxis(in, ptab, PARSE_INDEX_y_axis);
+    out->axis_z = pplarrow_getAxis(in, ptab, PARSE_INDEX_z_axis);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_x, system_x, &out->x);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_y, system_y, &out->y);
+    pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_z, system_z, &out->z);
     return;
 }
 

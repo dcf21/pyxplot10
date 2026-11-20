@@ -37,69 +37,11 @@ void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_ob
 void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist);
 void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, size_t outLen);
 
-#define pplarrow_add_get_system(X, Y) \
-    { \
-        pplObj *o = &in->stk[ptab[X]]; /* e.g. x0_system */ \
-        if (o->objType != PPLOBJ_STR) Y = SW_SYSTEM_FIRST; \
-        else Y = ppl_fetchSettingByName(&context->errcontext, (char *) o->auxil, SW_SYSTEM_INT, SW_SYSTEM_STR); \
-    }
-
-#define pplarrow_add_get_axis(X, Y) \
-    { \
-        pplObj *o = &in->stk[ptab[X]]; /* e.g. x0_axis */ \
-        if (o->objType != PPLOBJ_NUM) Y = 0; \
-        else Y = (int) round(o->real); \
-    }
-
-#define pplarrow_add_check_axis(X) \
-    { \
-        pplObj *o = &in->stk[ptab[X]]; /* e.g. x0_axis */ \
-        if (o->objType == PPLOBJ_NUM) { \
-            int i = (int) round(o->real); \
-            if ((i < 0) || (i >= MAX_AXES)) { \
-                sprintf(context->errStat.errBuff, \
-                        "Axis number %d is out of range; axis numbers must be in the range 0 - %d", i, MAX_AXES - 1); \
-                ppl_tbAddLine(context, pl, ERR_RANGE, in->stkCharPos[ptab[X]], ""); \
-                return; \
-            } \
-        } \
-    }
-
-#define pplarrow_add_check_dimensions(X, Y) \
-    { \
-        pplObj *o = &in->stk[ptab[X]]; /* e.g. x0 */ \
-        if (o->objType == PPLOBJ_NUM) { \
-            int i; \
-            if ((Y == SW_SYSTEM_GRAPH) || (Y == SW_SYSTEM_PAGE)) \
-                if (!o->dimensionless) \
-                    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) \
-                        if (o->exponent[i] != (i == UNIT_LENGTH)) { \
-                            sprintf(context->errStat.errBuff, \
-                                    "Coordinates specified in the graph and page systems must have dimensions of length. Received coordinate with dimensions of <%s>.", \
-                                    ppl_printUnit(context, o, NULL, NULL, 0, 1, 0)); \
-                            ppl_tbAddLine(context, pl, ERR_UNIT, in->stkCharPos[ptab[X]], ""); \
-                        } \
-            if (!gsl_finite(o->real)) { \
-                sprintf(context->errStat.errBuff, "Coordinates specified are not finite."); \
-                ppl_tbAddLine(context, pl, ERR_NUMERICAL, in->stkCharPos[ptab[X]], ""); \
-            } \
-        } \
-    }
-
-#define pplarrow_add_copy_coordinate(X, Y, Z) \
-    { \
-        pplObj *o = &in->stk[ptab[X]], tempobj; /* e.g. x0 */ \
-        if (o->objType != PPLOBJ_NUM) { \
-            o = &tempobj; \
-            pplObjNum(&tempobj, 0, 0, 0); \
-        } \
-        if ((Y == SW_SYSTEM_GRAPH) || (Y == SW_SYSTEM_PAGE)) \
-            if (o->dimensionless) { \
-                o->dimensionless = 0; \
-                o->exponent[UNIT_LENGTH] = 1; \
-                o->real /= 100; \
-            } \
-        Z = *o; \
-    }
+int pplarrow_getSystem(ppl_context *context, const parserOutput *in, const int *ptab, int index);
+int pplarrow_getAxis(const parserOutput *in, const int *ptab, int index);
+int pplarrow_checkAxis(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab, int index);
+void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab,
+                              int index, int system);
+void pplarrow_copyCoordinate(parserOutput *in, const int *ptab, int index, int system, pplObj *out);
 
 #endif
