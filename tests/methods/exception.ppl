@@ -1,0 +1,5 @@
+# test: mode=stdin
+# The raise() method of an exception type raises an error of that type
+exceptions.unit.raise("Custom unit problem")
+exceptions.generic.raise("Something went wrong")
+print "carried on"

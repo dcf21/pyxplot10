@@ -1,0 +1,12 @@
+# Tests of the dictionary-like methods of modules
+m = module()
+m.a = 1
+m.b = 2
+assert m.len() == 2
+assert m.keys().sort() == ["a", "b"]
+assert m.values().sort() == [1, 2]
+assert m.items().sort() == [["a", 1], ["b", 2]]
+assert m.hasKey("a")
+call m.delete("a")
+assert !m.hasKey("a")
+assert m.len() == 1

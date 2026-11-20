@@ -1,0 +1,23 @@
+# Tests of the methods which objects of every type have. The methods of each type are tested in tests/methods/<type>.ppl
+load "testlib.ppl"
+
+assert (1).type() == types.number
+assert "a".type() == types.string
+assert [1].type() == types.list
+assert (1).class() == types.number
+assert "a".class() == types.string
+assert (1).str() == "1"
+assert "abc".str() == "abc"
+assert [1, "a"].str() == "[1, \"a\"]"
+assert (2 * unit(m)).str() == "2 m"
+assert "abc".methods().len() > 6
+assert (1).methods() == ["class", "contents", "data", "methods", "str", "type"]
+assert (1).data() == []
+assert (1).contents() == (1).methods()
+
+# For modules, data() lists the variables they hold, and contents() lists those and the methods together
+m = module()
+m.x = 1
+m.y = "a"
+assert m.data().sort() == ["x", "y"]
+assert m.contents().len() == m.data().len() + m.methods().len()

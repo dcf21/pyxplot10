@@ -368,6 +368,42 @@ call listFunctions(defaults, "")
 """
 
 
+# A Pyxplot script which lists the methods of an object of each of Pyxplot's types, one per line in the form
+# "<type> <method>". Modules are listed using a new module, since built-in modules also list their contents.
+LIST_METHODS_SCRIPT: Final[str] = """
+m = module()
+samples = {"number": 1, "string": "a", "boolean": true, "date": time.fromUnix(0), "color": rgb(1, 0, 0), \\
+           "dictionary": {}, "list": [], "vector": vector(1), "matrix": matrix([1]), "fileHandle": os.tmpfile(), \\
+           "function": sin, "type": types.number, "exception": exceptions.range, "module": m, "instance": m(), \\
+           "null": types.null()}
+foreach t in samples.keys() {
+ foreach k in samples[t].methods() {
+  print t, " ", k
+ }
+}
+"""
+
+
+def run_listing_script(script: str) -> List[str]:
+    """
+    Run a Pyxplot script which lists something about Pyxplot, and return the lines it prints.
+
+    :param script:
+        The Pyxplot script
+    :return:
+        The lines printed by the script
+    """
+
+    with tempfile.TemporaryDirectory(prefix="pyxplot_test_") as home_dir:
+        env: Dict[str, str] = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": home_dir, "TZ": "UTC",
+                               "LANG": "C", "LC_ALL": "C"}
+        proc = subprocess.run([PYXPLOT, "-"], input=script.encode("utf-8"), capture_output=True,
+                              env=env, cwd=home_dir, timeout=DEFAULT_TIMEOUT)
+    if (proc.returncode != 0) or proc.stderr:
+        raise RuntimeError("Pyxplot failed to run a listing script: {}".format(proc.stderr.decode()))
+    return proc.stdout.decode("utf-8").splitlines()
+
+
 def list_builtin_functions() -> List[str]:
     """
     Ask Pyxplot for the full names of all of its built-in functions.
@@ -376,14 +412,40 @@ def list_builtin_functions() -> List[str]:
         List of the names, e.g. ["abs", ..., "os.path.exists", ...]
     """
 
-    with tempfile.TemporaryDirectory(prefix="pyxplot_test_") as home_dir:
-        env: Dict[str, str] = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": home_dir, "TZ": "UTC",
-                               "LANG": "C", "LC_ALL": "C"}
-        proc = subprocess.run([PYXPLOT, "-"], input=LIST_FUNCTIONS_SCRIPT.encode("utf-8"), capture_output=True,
-                              env=env, cwd=home_dir, timeout=DEFAULT_TIMEOUT)
-    if proc.returncode != 0:
-        raise RuntimeError("Could not list Pyxplot's built-in functions: {}".format(proc.stderr.decode()))
-    return proc.stdout.decode("utf-8").split()
+    return [line.strip() for line in run_listing_script(LIST_FUNCTIONS_SCRIPT) if line.strip()]
+
+
+def list_methods() -> Dict[str, List[str]]:
+    """
+    Ask Pyxplot for the names of the methods of each of its types.
+
+    :return:
+        Dictionary of the lists of the names of each type's methods, indexed by the name of the type
+    """
+
+    methods: Dict[str, List[str]] = {}
+    for line in run_listing_script(LIST_METHODS_SCRIPT):
+        words: List[str] = line.split()
+        if len(words) == 2:
+            methods.setdefault(words[0], []).append(words[1])
+    return methods
+
+
+def read_test_code(scripts: List[str]) -> str:
+    """
+    Read the code of a list of test scripts, ignoring comments.
+
+    :param scripts:
+        The filenames of the test scripts
+    :return:
+        Their code
+    """
+
+    code: List[str] = []
+    for script in scripts:
+        with open(script, encoding="utf-8") as f:
+            code.extend(line.split("#")[0] for line in f)
+    return "\n".join(code)
 
 
 def function_call_pattern(name: str) -> str:
@@ -416,18 +478,42 @@ class TestBuiltinCoverage(unittest.TestCase):
         if not os.access(PYXPLOT, os.X_OK):
             self.fail("Cannot find the Pyxplot binary <{}>. Run make first.".format(PYXPLOT))
 
-        # Gather the code of every test script, ignoring comments
-        code: List[str] = []
-        for script in glob.glob(os.path.join(TESTS_DIR, "*", "*.ppl")):
-            with open(script, encoding="utf-8") as f:
-                code.extend(line.split("#")[0] for line in f)
-        all_code: Final[str] = "\n".join(code)
+        all_code: Final[str] = read_test_code(glob.glob(os.path.join(TESTS_DIR, "*", "*.ppl")))
 
         functions: Final[List[str]] = list_builtin_functions()
         self.assertGreater(len(functions), 100, "Too few built-in functions were listed")
         untested: Final[List[str]] = [name for name in functions
                                       if not re.search(function_call_pattern(name), all_code)]
         self.assertEqual([], untested, "These built-in functions are not called by any test")
+
+    def test_every_method_is_tested(self) -> None:
+        """
+        methods/coverage: every method of each type <T> is called in tests/methods/<T>.ppl
+        """
+
+        if not os.access(PYXPLOT, os.X_OK):
+            self.fail("Cannot find the Pyxplot binary <{}>. Run make first.".format(PYXPLOT))
+
+        methods: Final[Dict[str, List[str]]] = list_methods()
+        self.assertGreater(len(methods), 10, "Too few types were listed")
+
+        # Methods which every object has are tested in tests/methods/object.ppl; each type's own methods in
+        # tests/methods/<type>.ppl. A method call cannot be attributed to a type just by reading a script, since the
+        # same method names are used by several types, so each type's methods are tested in a file of its own.
+        universal: Final[List[str]] = sorted(set.intersection(*(set(m) for m in methods.values())))
+        required: Dict[str, List[str]] = {"object": universal}
+        for type_name, names in methods.items():
+            own: List[str] = [name for name in names if name not in universal]
+            if own:
+                required[type_name] = own
+
+        untested: List[str] = []
+        for file_stem, names in sorted(required.items()):
+            filename: str = os.path.join(TESTS_DIR, "methods", file_stem + ".ppl")
+            code: str = read_test_code([filename]) if os.path.exists(filename) else ""
+            untested.extend("{}.{}".format(file_stem, name) for name in names
+                            if not re.search(r"\." + re.escape(name) + r"\s*\(", code))
+        self.assertEqual([], untested, "These methods are not called in tests/methods/<type>.ppl")
 
 
 # Create a TestCase class for each suite of tests, so that unittest can find them

@@ -1,0 +1,34 @@
+# Tests of the methods of dates. 1 January 2000 was a Saturday.
+load "testlib.ppl"
+
+d = time.fromCalendar(2000, 1, 1, 12, 34, 56.25)
+assert d.toYear() == 2000
+assert d.toMonthNum() == 1
+assert d.toMonthName() == "January"
+assert d.toDayOfMonth() == 1
+assert d.toDayWeekName() == "Saturday"
+assert d.toDayWeekNum() == 7
+assert d.toHour() == 12
+assert d.toMinute() == 34
+assert d.toSecond() == 56.25
+assert approx(d.toJD(), 2451545 + (34 * 60 + 56.25) / 86400)
+assert approx(d.toMJD(), d.toJD() - 2400000.5)
+assert approx(d.toUnix(), 946728000 + 34 * 60 + 56.25)
+assert d.str("%Y/%m/%d %H:%M") == "2000/01/1 12:34"
+assert d.str().len() > 0
+
+# The optional timezone argument gives local times
+assert d.toHour("America/New_York") == 7
+assert d.toDayWeekName("Asia/Tokyo") == "Saturday"
+assert d.toHour("Asia/Tokyo") == 21
+late = time.fromCalendar(2000, 1, 1, 23, 0, 0)
+assert late.toDayOfMonth("Asia/Tokyo") == 2
+assert late.toDayWeekNum("Asia/Tokyo") == 1
+assert late.toMonthName("Asia/Tokyo") == "January"
+assert late.toMonthNum("Asia/Tokyo") == 1
+assert late.toYear("Asia/Tokyo") == 2000
+assert time.fromCalendar(1900, 1, 1, 0, 0, 0).toDayWeekNum() == 2  # A Monday, counting Sunday as 1
+assert time.fromCalendar(1960, 1, 1, 0, 0, 0).toDayWeekNum() == 6  # A Friday
+assert late.toMinute("Asia/Kolkata") == 30  # UTC+5:30
+assert late.toSecond("Asia/Tokyo") == 0
+assert late.str("%H:%M", "Asia/Kolkata") == "04:30"

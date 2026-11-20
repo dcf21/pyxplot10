@@ -1,0 +1,16 @@
+# Tests of the dictionary-like methods of instances
+# An instance of a module inherits its parent's contents, but its own entries are kept separately
+animal = module()
+animal.legs = 4
+cat = animal()
+cat.name = "Tiddles"
+assert cat.legs == 4
+assert cat.hasKey("name")
+assert cat.len() == 1
+assert cat.keys() == ["name"]
+assert cat.values() == ["Tiddles"]
+assert cat.items() == [["name", "Tiddles"]]
+call cat.delete("name")
+assert !cat.hasKey("name")
+assert cat.len() == 0
+assert cat.legs == 4

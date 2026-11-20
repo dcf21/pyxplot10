@@ -174,7 +174,7 @@ Objects of type \texttt{function} have no methods other than those common to all
 \methdef{extend($x$)}{appends the members of a list or vector $x$ to the operand and returns the new list.}
 \methdef{filter($f$)}{takes a pointer to a function of one argument, $f(a)$. It calls the function for every element of the list, and returns a new list of those elements for which $f(a)$ tests true.}
 \methdef{index($x$)}{returns the index of the first element of a list that equals $x$, or $-1$ if no elements match.}
-\methdef{insert$n,x$)}{inserts the number $x$ into a list at position $n$, and returns the new list.}
+\methdef{insert($n,x$)}{inserts the number $x$ into a list at position $n$, and returns the new list.}
 \methdef{len()}{returns the number of elements in a list.}
 \methdef{map($f$)}{takes a pointer to a function of one argument, $f(a)$. It calls the function for every element of the list, and returns a list of the results.}
 \methdef{max()}{returns the highest-valued item in a list.}
@@ -192,8 +192,8 @@ Objects of type \texttt{function} have no methods other than those common to all
 
 \methdef{det()}{returns the determinant of a square matrix.}
 \methdef{diagonal()}{returns a boolean indicating whether a matrix is diagonal.}
-\methdef{eigenvalues()}{returns a vector containing the eigenvalues of a square symmetric matrix.}
-\methdef{eigenvectors()}{returns a list of the eigenvectors of a square symmetric matrix.}
+\methdef{eigenvalues()}{returns a vector containing the eigenvalues of a square symmetric matrix, in ascending order.}
+\methdef{eigenvectors()}{returns a list of the eigenvectors of a square symmetric matrix, in the same order as {\tt eigenvalues()} lists their eigenvalues.}
 \methdef{inv()}{returns the inverse of a square matrix.}
 \methdef{size()}{returns the dimensions of a matrix.}
 \methdef{symmetric()}{returns a boolean indicating whether a matrix is symmetric.}

@@ -1,0 +1,23 @@
+# Tests of the methods of colors
+load "testlib.ppl"
+
+red = rgb(1, 0, 0)
+assert red.componentsRGB() == vector(1, 0, 0)
+assert red.componentsHSB() == vector(0, 1, 1)
+assert red.componentsCMYK() == vector(0, 1, 1, 0)
+
+# Conversions between color spaces preserve the color (to within rounding errors)
+sameColor(a, b) = approxAbs((a.componentsRGB() - b.componentsRGB()).norm(), 0, 1e-12)
+c = rgb(0.2, 0.4, 0.6)
+assert sameColor(c.toHSB(), c)
+assert sameColor(c.toCMYK(), c)
+assert sameColor(c.toHSB().toRGB(), c)
+assert sameColor(c.toCMYK().toHSB().toRGB(), c)
+assert approx(c.toCMYK().componentsCMYK()[0], 0.4)  # Cyan = 1 - red - black
+h = c.toHSB().componentsHSB()
+assert approx(h[0], 7 / 12)  # Hue of (0.2,0.4,0.6) is 210 degrees
+assert approx(h[1], 2 / 3)  # Saturation (max-min)/max
+assert approx(h[2], 0.6)  # Brightness = max
+k = hsb(0.5, 0.5, 0.5).toCMYK().componentsCMYK()
+assert approx(k[3], 0.5)  # Black = 1 - brightness
+assert approx(hsb(0.5, 0.5, 0.5).toRGB().componentsRGB()[0], 0.25)

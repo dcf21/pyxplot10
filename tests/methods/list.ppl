@@ -1,0 +1,34 @@
+# Tests of the methods of lists
+load "testlib.ppl"
+
+l = [3, 1, 2]
+assert l.len() == 3
+assert l.max() == 3
+assert l.min() == 1
+assert l.count(1) == 1
+assert [1, 2, 1, 1].count(1) == 3
+assert l.index(2) == 2
+assert l.index(9) == -1
+assert l.vector() == vector(3, 1, 2)
+
+# Methods which modify the list also return it
+assert l.append(5) == [3, 1, 2, 5]
+assert l.extend([6, 7]) == [3, 1, 2, 5, 6, 7]
+assert l.extend(vector([8])) == [3, 1, 2, 5, 6, 7, 8]  # vector(8) would be eight zeros
+assert l.pop() == 8
+assert l.insert(1, 0) == [3, 0, 1, 2, 5, 6, 7]
+assert l.reverse() == [7, 6, 5, 2, 1, 0, 3]
+assert l.sort() == [0, 1, 2, 3, 5, 6, 7]
+assert l == [0, 1, 2, 3, 5, 6, 7]
+
+# Methods which take functions
+double(x) = 2 * x
+isOdd(x) = x % 2 == 1
+add(a, b) = a + b
+descending(a, b) = (a < b) ? 1 : ((a > b) ? -1 : 0)
+assert [1, 2, 3].map(double) == [2, 4, 6]
+assert [1, 2, 3, 4, 5].filter(isOdd) == [1, 3, 5]
+assert [1, 2, 3, 4].reduce(add) == 10
+assert [2, 3, 1].sortOn(descending) == [3, 2, 1]
+assert [[1, "b"], [2, "a"]].sortOnElement(1) == [[2, "a"], [1, "b"]]
+assert [[3, 1], [1, 2]].sortOnElement(-2) == [[1, 2], [3, 1]]

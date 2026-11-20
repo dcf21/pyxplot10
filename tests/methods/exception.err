@@ -1,0 +1,20 @@
+
+Syntax error:
+
+In piped input, line 3, position 0 below:
+
+Unrecognised command.
+ |
+\|/
+ exceptions.unit.raise("Custom unit problem")
+
+
+Error:
+
+In piped input, line 4, position 24 below:
+
+ exceptions.generic.raise("Something went wrong")
+                        /|\
+                         |
+Something went wrong
+

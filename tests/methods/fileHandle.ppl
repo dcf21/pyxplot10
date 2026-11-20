@@ -1,0 +1,37 @@
+# Tests of the methods of file handles
+load "testlib.ppl"
+
+f = open("data.txt", "w")
+assert f.isOpen()
+call f.write(e"alpha\nbeta\ngamma\n")
+call f.flush()
+assert os.path.filesize("data.txt") == 17 * unit(B)
+call f.dump([1, "two", {"three": 3}])
+call f.write(e"\n")
+call f.close()
+assert !f.isOpen()
+
+f = open("data.txt")
+assert f.readline() == "alpha"
+p = f.getPos()
+assert f.readline() == "beta"
+call f.setPos(p)
+assert f.readline() == "beta"  # Returning to a saved position, which getPos() gives in bytes
+call f.setPos(0)
+assert f.readline() == "alpha"  # Positions may also be given as plain numbers of bytes
+call f.setPos(p)
+assert f.readline() == "beta"
+assert f.readline() == "gamma"
+dumped = f.readline()
+assert eval(dumped) == [1, "two", {"three": 3}]  # dump() writes a typeable representation
+assert !f.eof() or (f.readline() == "")
+call f.close()
+
+f = open("data.txt")
+assert f.read().len() > 17
+call f.close()
+f = open("data.txt")
+lines = f.readlines()
+assert lines[0:3] == ["alpha", "beta", "gamma"]
+call f.close()
+assert f.eof() or !f.isOpen()

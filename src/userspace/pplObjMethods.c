@@ -30,6 +30,7 @@
 #include "gsl/gsl_blas.h"
 #include "userspace/stack.h"
 #include "gsl/gsl_eigen.h"
+#include "gsl/gsl_sort_vector.h"
 #include "gsl/gsl_linalg.h"
 #include "gsl/gsl_math.h"
 #include "gsl/gsl_matrix.h"
@@ -936,7 +937,12 @@ static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nAr
     pplObj *t = in[-1].self_this;
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
-    pplObjNum(&OUTPUT, 0, floor(fmod((t->real + offset) / 3600 / 24 + 4, 7)) + 1, 0);
+    {
+        // Days since Thursday 1 January 1970, plus four, modulo seven, counts from Sunday. The modulo must not be negative
+        // for dates before 1970.
+        const double days = floor((t->real + offset) / 86400) + 4;
+        pplObjNum(&OUTPUT, 0, days - 7 * floor(days / 7) + 1, 0);
+    }
 }
 
 //! pplmethod_dateToHour - Implement the toHour(<timezone>) method of dates, which returns the integer hour component
@@ -1007,7 +1013,7 @@ static void pplmethod_dateToMinute(ppl_context *c, pplObj *in, const int nArgs, 
         *errType = ERR_RANGE;
         return;
     }
-    pplObjNum(&OUTPUT, 0, day, 0);
+    pplObjNum(&OUTPUT, 0, minute, 0);
 }
 
 //! pplmethod_dateToMJD - Implement the toMJD() method of dates, which converts a date object to a modified Julian date
@@ -1270,7 +1276,7 @@ static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArg
     gsl_vector_set(v, 0, c);
     gsl_vector_set(v, 1, m);
     gsl_vector_set(v, 2, y);
-    gsl_vector_set(v, 2, k);
+    gsl_vector_set(v, 3, k);
 }
 
 //! pplmethod_colCompHSB - Implement the componentsHSB() method of colors, which returns a vector HSB representation of
@@ -3472,6 +3478,7 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
     tmp = NULL;
     gsl_eigen_symm_free(w);
     w = NULL;
+    gsl_sort_vector(vo); // List the eigenvalues in ascending order, the same order as eigenvectors() lists eigenvectors
     ppl_unitsDimCpy(&OUTPUT, st);
 }
 
@@ -3550,6 +3557,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     tmp1 = NULL;
     gsl_eigen_symmv_free(w);
     w = NULL;
+    gsl_eigen_symmv_sort(vtmp, tmp2, GSL_EIGEN_SORT_VAL_ASC); // In the same order as eigenvalues() lists eigenvalues
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3565,7 +3573,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
             return;
         }
         vo = ((pplVector *) v.auxil)->v;
-        for (j = 0; j < n; j++) gsl_vector_set(vo, j, gsl_matrix_get(tmp2, i, j));
+        for (j = 0; j < n; j++) gsl_vector_set(vo, j, gsl_matrix_get(tmp2, j, i)); // GSL puts eigenvectors in columns
         ppl_listAppendCpy(lo, (void *) &v, sizeof(pplObj));
     }
     gsl_matrix_free(tmp2);
@@ -4400,7 +4408,7 @@ void pplObjMethodsInit(ppl_context *c) {
     ppl_addSystemMethod(pplObjMethods[PPLOBJ_FILE], "readlines", 0, 0, 1, 1, 1, 1, (void *) pplmethod_fileReadlines,
                         "readlines()", "\\mathrm{readlines}@<@>",
                         "readlines() returns the lines of a file as a list of strings");
-    ppl_addSystemMethod(pplObjMethods[PPLOBJ_FILE], "setPos", 1, 1, 1, 1, 1, 1, (void *) pplmethod_fileSetpos,
+    ppl_addSystemMethod(pplObjMethods[PPLOBJ_FILE], "setPos", 1, 1, 1, 1, 1, 0, (void *) pplmethod_fileSetpos,
                         "setPos(x)", "\\mathrm{setPos}@<@0@>",
                         "setPos(x) sets a file handle's current position in a file");
     ppl_addSystemMethod(pplObjMethods[PPLOBJ_FILE], "write", 1, 1, 0, 0, 0, 0, (void *) pplmethod_fileWrite, "write(x)",

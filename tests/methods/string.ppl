@@ -1,0 +1,34 @@
+# Tests of the methods of strings
+load "testlib.ppl"
+
+s = "Hello World"
+assert s.len() == 11
+assert "Café".len() == 4  # Characters, not bytes
+assert s.upper() == "HELLO WORLD"
+assert s.lower() == "hello world"
+assert "Zürich".upper().len() == 6
+assert s.find("World") == 6
+assert s.find("xyz") == -1
+assert "abcabc".findAll("bc") == [1, 4]
+assert "abc".findAll("x") == []
+assert s.beginsWith("Hell")
+assert !s.beginsWith("ell")
+assert s.endsWith("rld")
+assert !s.endsWith("Wor")
+assert "  pad  ".strip() == "pad"
+assert "  pad  ".lstrip() == "pad  "
+assert "  pad  ".rstrip() == "  pad"
+assert e" a  b\tc ".split() == ["a", "b", "c"]  # Split on any whitespace, including tabs
+assert "a,b;c".splitOn(",", ";") == ["a", "b", "c"]
+assert "a--b".splitOn("--") == ["a", "b"]
+assert "abc1".isalnum()
+assert !"ab c".isalnum()
+assert "abc".isalpha()
+assert !"abc1".isalpha()
+assert "0123".isdigit()
+assert !"12.5".isdigit()
+
+# append() modifies the string in a variable, and returns the new string
+t = "foo"
+assert t.append("bar") == "foobar"
+assert t == "foobar"

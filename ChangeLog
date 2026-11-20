@@ -33,6 +33,16 @@
        range() and the hypergeometric functions.
      - The help text of sinc() described the normalised sinc function.
      - sgn() did not accept quantities with physical units.
+     - The toMinute() method of dates returned the day of the month, and
+       toDayWeekNum() returned negative numbers for dates before 1970.
+     - The componentsCMYK() method of colors returned the black component in
+       place of the yellow one.
+     - The eigenvectors() method of matrices returned the rows of the matrix
+       of eigenvectors rather than its columns, so did not return the
+       eigenvectors. eigenvalues() and eigenvectors() now both list their
+       results in order of ascending eigenvalue.
+     - The setPos() method of files rejected the positions returned by
+       getPos(), which have units of bytes.
      - The index blocks written by the tabulate command were labelled from 1,
        though the index modifier counts them from 0.
    - Pyxplot now exits with status 1 if any error occurs while running a
@@ -42,7 +52,8 @@
      multi-byte UTF-8 characters count as one character: "Café".len() is 4.
      The isalpha() and isalnum() methods recognise letters in any alphabet.
    - An automated test suite has been added: run it with "make test". It
-     calls every built-in function, and fails if a new function is untested.
+     calls every built-in function and method, and fails if a new one is
+     untested.
    - When compiled with OpenMP, the plot, tabulate and fit commands evaluate
      functions on all of the computer's cores at once, when this gives the
      same results as evaluating them one at a time: e.g. not when they use
