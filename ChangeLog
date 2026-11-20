@@ -10,6 +10,17 @@
      - The help text for several functions gave incorrect names.
      - Several memory errors, including a use-after-free in the histogram
        command.
+     - Crashes in the conjugate() function, in pie charts of unlabelled data
+       supplied inline, and when an arrow or label was positioned with units
+       incompatible with its axis.
+     - Macro substitution (@variable) removed quotation marks from commands.
+     - texify() inserted an empty \mathrm{} after function calls.
+   - Pyxplot now exits with status 1 if any error occurs while running a
+     script or piped input, so that failures can be detected by the shell.
+   - The lengths, indices and slices of strings, and the positions returned by
+     find() and findAll(), count characters rather than bytes, so that
+     multi-byte UTF-8 characters count as one character: "Café".len() is 4.
+   - An automated test suite has been added: run it with "make test".
 
 2012 Sep 19: Pyxplot 0.9.2
    - Version 0.9.2 corrects a large number of minor bugs.

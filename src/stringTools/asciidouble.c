@@ -826,6 +826,58 @@ void ppl_strAppendChar(char *out, const size_t outLen, int *pos, const char c) {
     out[*pos] = '\0';
 }
 
+// Pyxplot's strings are stored as UTF-8, in which each character is encoded as one to four bytes. The first byte of
+// each character is any byte except a continuation byte, which has the bit pattern 10xxxxxx. The following functions
+// let strings be measured and indexed in characters rather than bytes.
+
+//! utf8IsContinuation - Test whether a byte of a UTF-8 string continues a multi-byte character, rather than starting
+//! a new character
+//! \param [in] byte - The byte
+//! \return True if <byte> is a continuation byte
+
+static int utf8IsContinuation(const char byte) {
+    return (((unsigned char) byte) & 0xC0) == 0x80;
+}
+
+//! ppl_utf8Length - Count the number of characters in a UTF-8 string
+//! \param [in] in - The string
+//! \return The number of characters in <in>
+
+int ppl_utf8Length(const char *in) {
+    int i, n = 0;
+    for (i = 0; in[i] != '\0'; i++)
+        if (!utf8IsContinuation(in[i])) n++;
+    return n;
+}
+
+//! ppl_utf8ByteOffset - Find the position, in bytes, of a character in a UTF-8 string
+//! \param [in] in - The string
+//! \param [in] charIndex - The number of the character, counting from zero
+//! \return The byte offset of the start of the character, or the length of <in> in bytes if <charIndex> is beyond
+//! the end of the string
+
+int ppl_utf8ByteOffset(const char *in, const int charIndex) {
+    int i, n = -1;
+    for (i = 0; in[i] != '\0'; i++)
+        if (!utf8IsContinuation(in[i])) {
+            n++;
+            if (n == charIndex) return i;
+        }
+    return i;
+}
+
+//! ppl_utf8CharIndex - Find the number of the character in a UTF-8 string which begins at a given byte offset
+//! \param [in] in - The string
+//! \param [in] byteOffset - The byte offset
+//! \return The number of characters which start before <byteOffset>
+
+int ppl_utf8CharIndex(const char *in, const int byteOffset) {
+    int i, n = 0;
+    for (i = 0; (i < byteOffset) && (in[i] != '\0'); i++)
+        if (!utf8IsContinuation(in[i])) n++;
+    return n;
+}
+
 //! ppl_strWildcardTest - Test whether a string matches a wildcard pattern, in which ? matches any single character
 //! and * matches any sequence of characters
 //! \param [in] test The string to test

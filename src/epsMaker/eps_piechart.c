@@ -266,7 +266,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
             ppl_contextGetVarPointer(c, "label", &var_l, &DummyTemp_l);
             ppl_contextGetVarPointer(c, "percentage", &var_p, &DummyTemp_p);
             ppl_contextGetVarPointer(c, "wedgesize", &var_w, &DummyTemp_w);
-            pplObjStr(var_l, 0, 0, blk->text[j]);
+            pplObjStr(var_l, 0, 0, (blk->text[j] != NULL) ? blk->text[j] : ""); // Rows may have no label
             *var_w = x->current->plotdata[0]->firstEntries[0];
             var_w->amMalloced = var_w->auxilMalloced = 0;
             var_w->real = blk->data_real[0 + Ncolumns * j];

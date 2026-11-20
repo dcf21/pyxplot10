@@ -763,7 +763,7 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
     pmax = il - cl;
     for (p = 0; p <= pmax; p++)
         if (strncmp(instr + p, cmpstr, cl) == 0) {
-            pplObjNum(&OUTPUT, 0, p, 0);
+            pplObjNum(&OUTPUT, 0, ppl_utf8CharIndex(instr, p), 0); // Position in characters, not bytes
             return;
         }
     pplObjNum(&OUTPUT, 0, -1, 0);
@@ -807,7 +807,7 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     pmax = il - cl;
     for (p = 0; p <= pmax; p++)
         if (strncmp(instr + p, cmpstr, cl) == 0) {
-            pplObjNum(&v, 1, p, 0);
+            pplObjNum(&v, 1, ppl_utf8CharIndex(instr, p), 0); // Position in characters, not bytes
             ppl_listAppendCpy(l, &v, sizeof(v));
         }
 }
@@ -825,7 +825,7 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
 static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
-    pplObjNum(&OUTPUT, 0, strlen(instr), 0);
+    pplObjNum(&OUTPUT, 0, ppl_utf8Length(instr), 0); // Length in characters, not bytes
 }
 
 // Date methods

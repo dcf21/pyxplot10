@@ -83,6 +83,7 @@ void ppl_interactiveSigInt(const int signo) {
 
 void ppl_interactiveSession(ppl_context *context) {
     int linenumber = 1;
+    const int errorCountOld = context->errcontext.errorCount;
     void (*sigint_old)(int) = NULL;
     parserLine *pl = NULL;
     parserStatus *ps = NULL;
@@ -184,6 +185,10 @@ void ppl_interactiveSession(ppl_context *context) {
     }
     context->shellExiting = 0;
     signal(SIGINT, sigint_old); // Restore old SIGINT handler
+
+    // Errors made while typing commands at a terminal do not count towards Pyxplot's exit status; only errors in
+    // script files and piped input do
+    if (isatty(STDIN_FILENO) == 1) context->errcontext.errorCount = errorCountOld;
     if (isatty(STDIN_FILENO) == 1) {
         if (context->errcontext.session_default.splash == SW_ONOFF_ON)
             ppl_report(&context->errcontext, "\nGoodbye. Have a nice day.");

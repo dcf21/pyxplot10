@@ -62,6 +62,7 @@ ppl_context *ppl_contextInit() {
     out->errcontext.error_input_linenumber = -1;
     out->errcontext.error_input_filename[0] = '\0';
     strcpy(out->errcontext.error_source, "main     ");
+    out->errcontext.errorCount = 0;
     ppl_memAlloc_MemoryInit(&out->errcontext, &ppl_error, &ppl_log);
     pplset_makedefault(out);
     ppl_dollarOp_deconfig(out);
@@ -107,6 +108,7 @@ ppl_context *ppl_contextInit() {
     out->errcontext.error_input_linenumber = -1;
     out->errcontext.error_input_filename[0] = '\0';
     strcpy(out->errcontext.error_source, "main     ");
+    out->errcontext.errorCount = 0;
 
     pplObjInit(out);
     ppl_makeDefaultUnits(out);

@@ -72,6 +72,10 @@ void ppl_strAppendStripped(char *out, size_t outLen, int *pos, const char *in);
 
 int ppl_strWildcardTest(const char *test, const char *wildcard);
 
+int ppl_utf8Length(const char *in);
+int ppl_utf8ByteOffset(const char *in, int charIndex);
+int ppl_utf8CharIndex(const char *in, int byteOffset);
+
 int ppl_snprintfTrunc(char *out, size_t size, const char *format, ...) __attribute__((format(printf, 3, 4)));
 
 #endif

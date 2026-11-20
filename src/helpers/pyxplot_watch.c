@@ -99,6 +99,7 @@ int main(const int argc, char **argv) {
         return 1;
     }
     context->error_input_linenumber = -1;
+    context->errorCount = 0;
     context->error_input_filename[0] = '\0';
     strcpy(context->error_source, "main     ");
 

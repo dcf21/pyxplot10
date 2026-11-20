@@ -123,9 +123,9 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
     switch (t) {
         case PPLOBJ_STR: {
             const char *in = (char *) called.auxil;
-            const int inl = strlen(in);
+            const int inl = ppl_utf8Length(in); // Strings are indexed by character, not byte
             char *outstr;
-            int p = args[0].real;
+            int p = args[0].real, start, len;
             if (p < 0) p += inl;
             if ((p < 0) || (p >= inl)) {
                 *status = 1;
@@ -139,14 +139,17 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Cannot assign to a character in a string.");
                 goto fail;
             }
-            if ((outstr = (char *) malloc(2)) == NULL) {
+            // A character may be several bytes long
+            start = ppl_utf8ByteOffset(in, p);
+            len = ppl_utf8ByteOffset(in, p + 1) - start;
+            if ((outstr = (char *) malloc(len + 1)) == NULL) {
                 *status = 1;
                 *errType = ERR_MEMORY;
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
-            outstr[0] = in[p];
-            outstr[1] = '\0';
+            memcpy(outstr, in + start, len);
+            outstr[len] = '\0';
             pplObjStr(out, 0, 1, outstr);
             break;
         }
@@ -286,8 +289,8 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
     switch (t) {
         case PPLOBJ_STR: {
             const char *in = (char *) called.auxil;
-            const int inl = strlen(in);
-            int outlen;
+            const int inl = ppl_utf8Length(in); // Strings are sliced by character, not byte
+            int outlen, byteMin;
             char *outstr;
             if (!minset) min = 0;
             else if (min < 0) min += inl;
@@ -299,7 +302,9 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "String index out of range.");
                 goto fail;
             }
-            outlen = max - min;
+            // Convert the range of characters into a range of bytes
+            byteMin = ppl_utf8ByteOffset(in, min);
+            outlen = ppl_utf8ByteOffset(in, max) - byteMin;
             if (outlen < 0) outlen = 0;
             if ((outstr = (char *) malloc(outlen + 1)) == NULL) {
                 *status = 1;
@@ -307,7 +312,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
                 goto fail;
             }
-            strncpy(outstr, in + min, outlen);
+            memcpy(outstr, in + byteMin, outlen);
             outstr[outlen] = '\0';
             pplObjStr(out, 0, 1, outstr);
             break;

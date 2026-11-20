@@ -66,6 +66,7 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
     int i = 0, j;
 
     if (msg == NULL) msg = "";
+    context->errorCount++; // Any error makes Pyxplot exit with non-zero status
     ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);

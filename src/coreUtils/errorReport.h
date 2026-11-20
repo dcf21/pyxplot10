@@ -58,6 +58,7 @@ typedef struct pplerr_context_s {
     long error_input_sourceId;
     char error_input_filename[FNAME_LENGTH];
     char error_source[16]; // Identifier of the process producing log messages
+    int errorCount; // The number of errors reported, which sets the exit status of Pyxplot
     pplset_session session_default;
 } pplerr_context;
 

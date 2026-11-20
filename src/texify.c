@@ -611,6 +611,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
 
                 // Carry on work after function
                 i = bi + cbp + 1;
+                goto variableDone; // The function call has been rendered; it is not also a variable name
             }
 
             // If variable name is not a recognised function name, print name as a variable name
@@ -626,6 +627,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 k += strlen(out + k);
             }
             while ((i < tlen) && (tokenBuff[i].state == o)) i++; // Skip to the end of the token
+        variableDone:;
         } else if (o == 'I') // unary operator
         {
             if (markupMatch(in + i, "-")) {

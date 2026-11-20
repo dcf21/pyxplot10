@@ -73,11 +73,11 @@ sigjmp_buf *ppl_sigjmpFromSigInt = NULL;
 //! scripts named on the command line, or an interactive session if none are given.
 //! \param [in] argc - The number of command-line arguments
 //! \param [in] argv - The command-line arguments
-//! \return The exit status of the process
+//! \return The exit status of the process: 1 if any errors were reported in script files or piped input, else 0
 
 int main(const int argc, char **argv) {
     char msg[PPL_MSG_LENGTH];
-    int i, fail = 0;
+    int i, fail = 0, exitStatus;
     int tempdirnumber = 1;
     char tempdirpath[FNAME_LENGTH];
     char *EnvDisplay;
@@ -293,8 +293,9 @@ int main(const int argc, char **argv) {
     ppl_memAlloc_FreeAll(0);
     ppl_memAlloc_MemoryStop();
     if (DEBUG) ppl_log(&context->errcontext, "Terminating normally.");
+    exitStatus = (context->errcontext.errorCount > 0) ? 1 : 0; // Exit with status 1 if any errors were reported
     ppl_contextFree(context);
-    return 0;
+    return exitStatus;
 }
 
 //! ppl_sigIntHandle - SIGINT handler used while Pyxplot is starting up, which jumps back to main(). A second SIGINT

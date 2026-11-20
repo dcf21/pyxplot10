@@ -1215,8 +1215,12 @@ void pplfunc_cmyk(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 void pplfunc_conjugate(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "conjugate(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    memcpy(&OUTPUT, in, sizeof(pplObj));
-    OUTPUT.imag *= -1;
+    // Copy only the value and physical units of the argument; copying the whole object would also copy its
+    // memory-management fields, and it would then be freed twice
+    OUTPUT.real = in[0].real;
+    OUTPUT.imag = -in[0].imag;
+    OUTPUT.flagComplex = in[0].flagComplex;
+    ppl_unitsDimCpy(&OUTPUT, in);
     if (ppl_funcCheckOutput(&call)) return;
 }
 
