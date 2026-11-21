@@ -679,6 +679,31 @@ void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput
     return;
 }
 
+//! ppl_lookupAssignable - Look up a variable which a command is to assign a value to, which may have a hierarchical
+//! name such as a.b, or a subscripted name such as a[2], creating it if necessary
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command
+//! \param [in] pos1 - The position in the parser output of the list of the parts of the variable's name
+//! \param [in] pos2 - The offset of each part of the name within that list
+//! \return The variable, or NULL if an error was reported, including when the variable is a global declaration at
+//! the top level
+
+pplObj *ppl_lookupAssignable(ppl_context *c, const parserLine *pl, const parserOutput *in, const int pos1,
+                             const int pos2) {
+    pplObj *obj = NULL;
+    ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, in->stk, in->stkCharPos, &obj, pos1,
+                             pos2);
+    if ((c->errStat.status) || (obj == NULL)) return NULL;
+    // A global declaration at the top level cannot be overwritten
+    if (obj->objType == PPLOBJ_GLOB) {
+        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Variable declared global in global namespace.");
+        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
+        return NULL;
+    }
+    return obj;
+}
+
 //! ppl_directive_varset - Implement assignments to variables, including hierarchical names such as a.b and
 //! subscripted names such as a[2], and the =~ string substitution operator
 //! \param [in] c - The Pyxplot context
@@ -695,27 +720,13 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
     pplObj *obj = NULL;
 
     // Look up the variable to set
-    ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &obj,
-                             PARSE_var_set_varnames, PARSE_var_set_varname_varnames);
-    if ((c->errStat.status) || (obj == NULL)) return;
-    // A global declaration at the top level cannot be overwritten
-    if (obj->objType == PPLOBJ_GLOB) {
-        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                          "Variable declared global in global namespace.");
-        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
-        return;
-    }
+    obj = ppl_lookupAssignable(c, pl, in, PARSE_var_set_varnames, PARSE_var_set_varname_varnames);
+    if (obj == NULL) return;
 
     if (rgx->objType != PPLOBJ_STR) // variable assignment. not regular expression
     {
-        const int om = obj->amMalloced;
-        const int rc = obj->refCount;
-        obj->amMalloced = 0;
-        obj->refCount = 1;
-        ppl_garbageObject(obj);
-        pplObjCpy(obj, val, 0, om, 1);
+        ppl_objReplace(obj, val);
         obj->immutable = 0;
-        obj->refCount = rc;
     } else // regular expression
     {
         int i, fstdin, fstdout, trialNumber;

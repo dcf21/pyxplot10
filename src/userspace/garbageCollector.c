@@ -335,3 +335,18 @@ void ppl_stackReinit(ppl_context *c) {
         }
     }
 }
+
+//! ppl_objReplace - Replace the value of a variable with a copy of another object, freeing its old value but keeping
+//! its reference count and memory-management flags
+//! \param [in,out] obj - The variable
+//! \param [in] val - The new value
+
+void ppl_objReplace(pplObj *obj, const pplObj *val) {
+    const int om = obj->amMalloced;
+    const int rc = obj->refCount;
+    obj->amMalloced = 0;
+    obj->refCount = 1;
+    ppl_garbageObject(obj);
+    pplObjCpy(obj, (pplObj *) val, 0, om, 1);
+    obj->refCount = rc;
+}

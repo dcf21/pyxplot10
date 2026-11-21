@@ -37,6 +37,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_vector.h>
 
+#include "commands/core.h"
 #include "commands/flowctrl.h"
 #include "userspace/stack.h"
 
@@ -948,16 +949,8 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     }
 
     // Look up function or variable we are superseding
-    ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &tmpObj,
-                             PARSE_subroutine_subroutine_names, PARSE_subroutine_subroutine_name_subroutine_names);
-    if ((c->errStat.status) || (tmpObj == NULL)) goto fail;
-    // A global declaration at the top level cannot be overwritten
-    if (tmpObj->objType == PPLOBJ_GLOB) {
-        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                          "Variable declared global in global namespace.");
-        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, 0);
-        goto fail;
-    }
+    tmpObj = ppl_lookupAssignable(c, pl, in, PARSE_subroutine_subroutine_names, PARSE_subroutine_subroutine_name_subroutine_names);
+    if (tmpObj == NULL) goto fail;
 
     // Replace the variable's old value with the subroutine, keeping its reference count and storage
     om = tmpObj->amMalloced;

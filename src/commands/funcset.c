@@ -30,6 +30,7 @@
 #include <math.h>
 #include <unistd.h>
 
+#include "commands/core.h"
 #include "stringTools/asciidouble.h"
 #include "stringTools/strConstants.h"
 
@@ -200,16 +201,8 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     }
 
     // Look up function or variable we are superseding
-    ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &tmpObj,
-                             PARSE_func_set_function_names, PARSE_func_set_function_name_function_names);
-    if ((c->errStat.status) || (tmpObj == NULL)) goto fail;
-    // A global declaration at the top level cannot be redefined
-    if (tmpObj->objType == PPLOBJ_GLOB) {
-        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                          "Variable declared global in global namespace.");
-        ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
-        goto fail;
-    }
+    tmpObj = ppl_lookupAssignable(c, pl, in, PARSE_func_set_function_names, PARSE_func_set_function_name_function_names);
+    if (tmpObj == NULL) goto fail;
 
     // If not a function, we delete it and supersede it
     if ((tmpObj->objType != PPLOBJ_FUNC) || (((pplFunc *) tmpObj->auxil)->functionType != PPL_FUNC_USERDEF) ||

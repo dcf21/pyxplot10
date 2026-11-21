@@ -29,5 +29,6 @@
 void ppl_garbageNamespace(dict *n);
 void ppl_garbageList(list *l);
 void ppl_garbageObject(pplObj *o);
+void ppl_objReplace(pplObj *obj, const pplObj *val);
 
 #endif

@@ -1300,15 +1300,7 @@ static void vectorUnitError(ppl_context *c, const pplObj *vec, const pplObj *num
 //! \param [in] out - The result of the method
 
 static void updateInPlace(const pplObj *st, const pplObj *out) {
-    if (st->self_lval == NULL) return;
-    pplObj *o = st->self_lval;
-    const int om = o->amMalloced;
-    const int rc = o->refCount;
-    o->amMalloced = 0;
-    o->refCount = 1;
-    ppl_garbageObject(o);
-    o->refCount = rc;
-    pplObjCpy(o, (pplObj *) out, 0, om, 1);
+    if (st->self_lval != NULL) ppl_objReplace(st->self_lval, out);
 }
 
 // Vector methods

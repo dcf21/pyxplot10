@@ -40,6 +40,7 @@
 #include <fftw.h>
 #endif
 
+#include "commands/core.h"
 #include "commands/fft.h"
 #include "userspace/stack.h"
 #include "coreUtils/errorReport.h"
@@ -867,32 +868,17 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Supersede any previous function descriptor
     {
-        int om, rc;
         pplObj val;
         pplObj *obj = NULL;
 
         // Look up the variable which is to hold the new function
-        ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &obj,
-                                 PARSE_ifft_varnames, PARSE_ifft_varname_varnames);
-        if ((c->errStat.status) || (obj == NULL)) return;
-        // A global declaration at the top level cannot be overwritten
-        if (obj->objType == PPLOBJ_GLOB) {
-            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                              "Variable declared global in global namespace.");
-            ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
-            return;
-        }
+        obj = ppl_lookupAssignable(c, pl, in, PARSE_ifft_varnames, PARSE_ifft_varname_varnames);
+        if (obj == NULL) return;
 
         // Replace the variable's old value with the function, keeping its reference count and storage
-        om = obj->amMalloced;
-        rc = obj->refCount;
-        obj->amMalloced = 0;
-        obj->refCount = 1;
-        ppl_garbageObject(obj);
         val.refCount = 1;
         pplObjFunc(&val, 0, 1, funcPtr);
-        pplObjCpy(obj, &val, 0, om, 1);
-        obj->refCount = rc;
+        ppl_objReplace(obj, &val);
     }
 
     // Free copies of data vectors defined within our local context

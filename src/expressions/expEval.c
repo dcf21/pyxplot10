@@ -402,13 +402,7 @@ static int assignToVariable(ppl_context *context, pplObj *o, pplObj *tmp, const 
     // Assign either to a variable, or to an element of a vector or matrix (which self_dval points to)
     if (o->self_dval == NULL) {
         // Assign to a variable, preserving its memory-management flags
-        const int om = o->self_lval->amMalloced;
-        const int rc = o->self_lval->refCount;
-        o->self_lval->amMalloced = 0;
-        o->self_lval->refCount = 1;
-        ppl_garbageObject(o->self_lval);
-        pplObjCpy(o->self_lval, tmp, 0, om, 1);
-        o->self_lval->refCount = rc;
+        ppl_objReplace(o->self_lval, tmp);
     } else {
         // Assign to a vector or matrix element
         if ((rhsType != PPLOBJ_NUM) || (tmp->flagComplex)) {

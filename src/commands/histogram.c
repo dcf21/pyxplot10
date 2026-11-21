@@ -34,6 +34,7 @@
 
 #include <gsl/gsl_math.h>
 
+#include "commands/core.h"
 #include "commands/histogram.h"
 #include "coreUtils/errorReport.h"
 #include "stringTools/asciidouble.h"
@@ -606,32 +607,17 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
     // Supersede any previous function descriptor
     {
-        int om, rc;
         pplObj val;
         pplObj *obj = NULL;
 
         // Look up the variable which is to hold the new function
-        ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &obj,
-                                 PARSE_histogram_varnames, PARSE_histogram_varname_varnames);
-        if ((c->errStat.status) || (obj == NULL)) return;
-        // A global declaration at the top level cannot be overwritten
-        if (obj->objType == PPLOBJ_GLOB) {
-            ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                              "Variable declared global in global namespace.");
-            ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
-            return;
-        }
+        obj = ppl_lookupAssignable(c, pl, in, PARSE_histogram_varnames, PARSE_histogram_varname_varnames);
+        if (obj == NULL) return;
 
         // Replace the variable's old value with the function, keeping its reference count and storage
-        om = obj->amMalloced;
-        rc = obj->refCount;
-        obj->amMalloced = 0;
-        obj->refCount = 1;
-        ppl_garbageObject(obj);
         val.refCount = 1;
         pplObjFunc(&val, 0, 1, funcPtr);
-        pplObjCpy(obj, &val, 0, om, 1);
-        obj->refCount = rc;
+        ppl_objReplace(obj, &val);
     }
 
     // Free copies of data vectors defined within our local context

@@ -26,6 +26,7 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
+pplObj *ppl_lookupAssignable(ppl_context *c, const parserLine *pl, const parserOutput *in, int pos1, int pos2);
 void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutput *in);
 void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *in);
 void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
