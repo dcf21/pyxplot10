@@ -270,10 +270,9 @@ made by the European Space Agency's {\it Hipparcos} spacecraft, which
 accurately measured the distances of over a million stars between 1989 and
 1993.
 \nlnp
-The Hipparcos catalogue can be downloaded for free from
-\url{ftp://cdsarc.u-strasbg.fr/pub/cats/I/239/hip_main.dat.gz}; a description
-of the catalogue can be found at
-\url{http://cdsarc.u-strasbg.fr/viz-bin/Cat?I/239}. In summary, though the data
+The Hipparcos catalogue, {\tt hip\_main.dat}, can be downloaded for free from
+the Strasbourg astronomical Data Center, which also describes it, at
+\url{https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239}. In summary, though the data
 is arranged in a non-standard format which Pyxplot cannot read without a
 special input filter, the following Python script generates a text file with
 four columns containing the magnitudes $m$, $B-V$ colors and parallaxes $p$ of
@@ -289,7 +288,7 @@ milli-arcseconds:
 \noindent{\tt \phantom{xx}BVcol = float(line[245:251])}\newline
 \noindent{\tt \phantom{xx}parr  = float(line[79:86])}\newline
 \noindent{\tt \phantom{xx}parre = float(line[119:125])}\newline
-\noindent{\tt \phantom{xx}print "\%s,\%s,\%s,\%s"\%(Vmag, BVcol, parr, parre)}\newline
+\noindent{\tt \phantom{xx}print("\%s,\%s,\%s,\%s"\%(Vmag, BVcol, parr, parre))}\newline
 \noindent{\tt \phantom{x}except ValueError: pass}
 \nlscf
 The resultant four columns of data can then be plotted in the {\tt dots} style
@@ -440,8 +439,8 @@ chart with the boxes starting from their default position of $y=0$.
 produce]
 {A second gallery of the various bar chart styles which Pyxplot can
 produce. See the text for more details.  The script and data file used to
-produce this image are available on the Pyxplot website at
-\protect\url{http://www.pyxplot.org.uk/examples/Manual/03barchart1/}.}
+produce this image, {\tt ex\_\-barchart1.ppl} and {\tt ex\_\-barchart1.dat}, can
+be found in the Pyxplot installation tarball in the directory {\tt doc/\-examples/}.}
 \label{fig:ex_barchart1}
 \end{figure}
 
@@ -1581,7 +1580,7 @@ Princeton, 1998).
 \newpage
 \example{ex:australia}{A map of Australia}{
 In this example, we use Pyxplot to plot a map of Australia, using a coastal
-outline obtained from \protect\url{http://www.maproom.psu.edu/dcw/}. We use the
+outline taken from the Digital Chart of the World. We use the
 {\tt set label} command to label the states and major cities. The files {\tt
 ex\_\-map\_\-1.dat.gz} and {\tt ex\_\-map\_\-2.dat} can be found in the Pyxplot
 installation tarball in the directory {\tt doc/\-examples/}.
