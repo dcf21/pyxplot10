@@ -382,9 +382,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     // Show the bar setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "bar", 1) >= 0)) {
-        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                          ppl_numericDisplay(sg->bar, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, sg->bar, 0));
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "bar", buf,
                             (c->set->graph_default.bar == sg->bar),
                             "Sets the size of the strokes which mark the lower and upper limits of errorbars");
@@ -722,9 +720,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "fontsize", 1) >= 0) ||
         (ppl_strAutocomplete(word, "fountsize", 1) >= 0)) {
-        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                          ppl_numericDisplay(sg->FontSize, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, sg->FontSize, 0));
         ppl_directive_show3(
                 c, out + i, outLen - i, itemSet, 1, interactive, "fontSize", buf,
                 (c->set->graph_default.FontSize == sg->FontSize),
@@ -856,9 +852,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "linewidth", 1) >= 0) ||
         (ppl_strAutocomplete(word, "lw", 2) >= 0)) {
-        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                          ppl_numericDisplay(sg->LineWidth, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, sg->LineWidth, 0));
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "lineWidth", buf,
                             (c->set->graph_default.LineWidth == sg->LineWidth),
                             "Sets the widths of lines drawn on graphs");
@@ -897,9 +891,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                          ppl_numericDisplay(c->set->term_current.SignificantFigures, c->numdispBuff[0],
-                                             c->set->term_current.SignificantFigures,
-                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                          ppl_numericDisplayDefault(c, c->set->term_current.SignificantFigures, 0));
         ppl_directive_show3(
                 c, out + i, outLen - i, itemSet, 0, interactive, "numerics sigfig", buf,
                 (c->set->term_default.SignificantFigures == c->set->term_current.SignificantFigures),
@@ -1014,10 +1006,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "pointlinewidth", 1) >= 0) ||
         (ppl_strAutocomplete(word, "plw", 3) >= 0)) {
-        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                          ppl_numericDisplay(sg->PointLineWidth, c->numdispBuff[0],
-                                             c->set->term_current.SignificantFigures,
-                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, sg->PointLineWidth, 0));
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "pointLineWidth", buf,
                             (c->set->graph_default.PointLineWidth == sg->PointLineWidth),
                             "The width of the strokes used to mark points on graphs");
@@ -1026,9 +1015,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "pointsize", 1) >= 0) ||
         (ppl_strAutocomplete(word, "ps", 2) >= 0)) {
-        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                          ppl_numericDisplay(sg->PointSize, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, sg->PointSize, 0));
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "pointSize", buf,
                             (c->set->graph_default.PointSize == sg->PointSize), "The size of points marked on graphs");
         i += strlen(out + i);
@@ -1087,10 +1074,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     // Show the size setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "size", 1) >= 0)) {
         if (sg->AutoAspect == SW_ONOFF_ON) ppl_snprintfTrunc(buf, LSTR_LENGTH, "auto");
-        else
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                              ppl_numericDisplay(sg->aspect, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                                 (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        else ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, sg->aspect, 0));
         ppl_directive_show3(
                 c, out + i, outLen - i, itemSet, 1, interactive, "size ratio", buf,
                 ((c->set->graph_default.aspect == sg->aspect) && (c->set->graph_default.AutoAspect == sg->AutoAspect)),
@@ -1098,11 +1082,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
         if (sg->AutoZAspect == SW_ONOFF_ON) ppl_snprintfTrunc(buf, LSTR_LENGTH, "auto");
-        else
-            ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                              ppl_numericDisplay(sg->zaspect, c->numdispBuff[0],
-                                                 c->set->term_current.SignificantFigures,
-                                                 (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        else ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, sg->zaspect, 0));
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "size zratio", buf,
                             ((c->set->graph_default.zaspect == sg->zaspect) &&
                              (c->set->graph_default.AutoZAspect == sg->AutoZAspect)),
@@ -1163,10 +1143,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "terminal", 1) >= 0) ||
         (ppl_strAutocomplete(word, "dpi", 1) >= 0)) {
-        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
-                          ppl_numericDisplay(c->set->term_current.dpi, c->numdispBuff[0],
-                                             c->set->term_current.SignificantFigures,
-                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", ppl_numericDisplayDefault(c, c->set->term_current.dpi, 0));
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "terminal dpi", buf,
                             (c->set->term_default.dpi == c->set->term_current.dpi),
                             "Sets the pixel resolution used when producing bitmap graphic output");
@@ -1372,9 +1349,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     pbuf += strlen(buf + pbuf);
                     if (pu->exponent[ppu] != 1)
                         ppl_snprintfTrunc(buf + pbuf, LSTR_LENGTH - pbuf, "**%s",
-                                          ppl_numericDisplay(pu->exponent[ppu], c->numdispBuff[0],
-                                                             c->set->term_current.SignificantFigures,
-                                                             (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                                          ppl_numericDisplayDefault(c, pu->exponent[ppu], 0));
                     pbuf += strlen(buf + pbuf);
                 }
                 ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "unit preferred", buf,

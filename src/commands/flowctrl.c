@@ -458,15 +458,8 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         wordexp_t w;
         glob_t g;
         char *raw = (char *) iter->auxil, fName[FNAME_LENGTH];
-        {
-            int j, k;
-            // Escape spaces in the filename pattern before passing it to wordexp
-            for (j = k = 0; ((raw[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-                if (raw[j] == ' ') fName[k++] = '\\';
-                fName[k++] = raw[j++];
-            }
-            fName[k++] = '\0';
-        }
+        // Escape spaces in the filename pattern before passing it to wordexp
+        ppl_strEscapeSpaces(raw, fName, FNAME_LENGTH);
         if (wordexp(fName, &w, 0) != 0) goto cleanup; // No matches
         // Run the loop once for each file matching each word of the expanded pattern
         for (i = 0; i < w.we_wordc && !foreachStop(c); i++) {

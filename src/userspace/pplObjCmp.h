@@ -26,6 +26,9 @@
 #include "userspace/pplObj.h"
 
 void pplcol_RGBtoHSB(double ri, double gi, double bi, double *ho, double *so, double *bo);
+void pplcol_toHSB(const pplObj *col, double *h, double *s, double *b);
+void pplcol_toCMYK(const pplObj *col, double *c, double *m, double *y, double *k);
+void pplcol_toRGB(const pplObj *col, double *r, double *g, double *b);
 void pplcol_CMYKtoRGB(double ci, double mi, double yi, double ki, double *ro, double *go, double *bo);
 void pplcol_HSBtoRGB(double hi, double si, double bi, double *ro, double *go, double *bo);
 void pplcol_CMYKtoHSB(double ci, double mi, double yi, double ki, double *ho, double *so, double *bo);

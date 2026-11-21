@@ -48,6 +48,9 @@
 #include "texify.h"
 
 
+// The maximum depth of nesting of brackets whose shapes are tracked
+#define MAX_BRACKETS 4096
+
 //! texSetMode - Switch the LaTeX being written into plain text, math mode, or roman text within math mode
 //! (\textrm{...}), writing whatever LaTeX is needed to close or open each mode
 //! \param [out] out - The buffer into which LaTeX is being written
@@ -82,6 +85,48 @@ static void texSetMode(char *out, const int outlen, int *k, int *mathMode, int *
         snprintf(out + *k, outlen - *k, "$");
         *k += strlen(out + *k);
     }
+}
+
+//! texOpenBracket - Write an opening bracket, as \left( for now, noting its position so that its shape can be changed
+//! when the closing bracket is found
+//! \param [out] out - The buffer into which LaTeX is being written
+//! \param [in] outlen - The size of the buffer <out>
+//! \param [in,out] k - The position in <out> at which to write
+//! \param [in,out] bracketOpenPos - The positions in <out> of the open brackets at each level of nesting
+//! \param [in,out] bracketLevel - The current level of nesting of brackets
+//! \param [in,out] highestBracketLevel - The highest level of nesting of brackets reached
+
+static void texOpenBracket(char *out, const int outlen, int *k, int *bracketOpenPos, int *bracketLevel,
+                           int *highestBracketLevel) {
+    snprintf(out + *k, outlen - *k, "\\left( ");
+    *k += strlen(out + *k);
+    if ((*bracketLevel >= 0) && (*bracketLevel < MAX_BRACKETS)) bracketOpenPos[*bracketLevel] = *k;
+    (*bracketLevel)++;
+    if (*bracketLevel > *highestBracketLevel) *highestBracketLevel = *bracketLevel;
+}
+
+//! texCloseBracket - Write a closing bracket. Nested brackets cycle through round, square and curly shapes, from the
+//! inside out, and the shape of the matching opening bracket is changed to match.
+//! \param [out] out - The buffer into which LaTeX is being written
+//! \param [in] outlen - The size of the buffer <out>
+//! \param [in,out] k - The position in <out> at which to write
+//! \param [in] bracketOpenPos - The positions in <out> of the open brackets at each level of nesting
+//! \param [in,out] bracketLevel - The current level of nesting of brackets
+//! \param [in] highestBracketLevel - The highest level of nesting of brackets reached
+
+static void texCloseBracket(char *out, const int outlen, int *k, const int *bracketOpenPos, int *bracketLevel,
+                            const int highestBracketLevel) {
+    snprintf(out + *k, outlen - *k, "\\right) ");
+    *k += strlen(out + *k);
+    (*bracketLevel)--;
+    if ((*bracketLevel < 0) || (*bracketLevel >= MAX_BRACKETS)) return;
+    const int j = (highestBracketLevel - *bracketLevel) % 3;
+    const int o = bracketOpenPos[*bracketLevel];
+    const char *const shape = (j == 1) ? "( ) " : ((j == 2) ? "[ ] " : "\\{\\}");
+    out[o - 2] = shape[0];
+    out[o - 1] = shape[1];
+    out[*k - 2] = shape[2];
+    out[*k - 1] = shape[3];
 }
 
 static char *LatexVarNamesFr[] = {
@@ -281,7 +326,6 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     int *mathMode = (mm_in == NULL) ? &mm : mm_in;
     int *textRm = (tr_in == NULL) ? &tr : tr_in;
 
-#define MAX_BRACKETS 4096
     int bracketLevel = 0, highestBracketLevel = 0, bracketOpenPos[MAX_BRACKETS];
 
     // First tokenise expression
@@ -502,36 +546,9 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             // Opening brackets are written as \left( for now, and their positions noted, so that their shape can be
             // changed when the closing bracket is found
             if (in[i] == '(') {
-                snprintf(out + k, outlen - k, "\\left( ");
-                k += strlen(out + k);
-                if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) bracketOpenPos[bracketLevel] = k;
-                bracketLevel++;
-                if (bracketLevel > highestBracketLevel) highestBracketLevel = bracketLevel;
+                texOpenBracket(out, outlen, &k, bracketOpenPos, &bracketLevel, &highestBracketLevel);
             } else if (in[i] == ')') {
-                snprintf(out + k, outlen - k, "\\right) ");
-                k += strlen(out + k);
-                bracketLevel--;
-                // Nested brackets cycle through round, square and curly shapes, from the inside out
-                if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) {
-                    const int j = (highestBracketLevel - bracketLevel) % 3;
-                    // Round brackets
-                    if (j == 1) {
-                        out[k - 2] = ')';
-                        out[k - 1] = ' ';
-                        out[bracketOpenPos[bracketLevel] - 2] = '(';
-                        out[bracketOpenPos[bracketLevel] - 1] = ' ';
-                    } else if (j == 2) {
-                        out[k - 2] = ']';
-                        out[k - 1] = ' ';
-                        out[bracketOpenPos[bracketLevel] - 2] = '[';
-                        out[bracketOpenPos[bracketLevel] - 1] = ' ';
-                    } else {
-                        out[k - 2] = '\\';
-                        out[k - 1] = '}';
-                        out[bracketOpenPos[bracketLevel] - 2] = '\\';
-                        out[bracketOpenPos[bracketLevel] - 1] = '{';
-                    }
-                }
+                texCloseBracket(out, outlen, &k, bracketOpenPos, &bracketLevel, highestBracketLevel);
             }
             i++;
         } else if ((o == 'F') || (o == 'H')) // -- or ++ operators
@@ -604,36 +621,9 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                     else if (latex[j + 1] == '?') snprintf(out + k, outlen - k, "%s", dummyVarGreek);
                     // An opening bracket
                     else if (latex[j + 1] == '<') {
-                        snprintf(out + k, outlen - k, "\\left( ");
-                        k += strlen(out + k);
-                        if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) bracketOpenPos[bracketLevel] = k;
-                        bracketLevel++;
-                        if (bracketLevel > highestBracketLevel) highestBracketLevel = bracketLevel;
+                        texOpenBracket(out, outlen, &k, bracketOpenPos, &bracketLevel, &highestBracketLevel);
                     } else if (latex[j + 1] == '>') {
-                        snprintf(out + k, outlen - k, "\\right) ");
-                        k += strlen(out + k);
-                        bracketLevel--;
-                        // Nested brackets cycle through round, square and curly shapes, from the inside out
-                        if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) {
-                            const int j = (highestBracketLevel - bracketLevel) % 3;
-                            // Round brackets
-                            if (j == 1) {
-                                out[k - 2] = ')';
-                                out[k - 1] = ' ';
-                                out[bracketOpenPos[bracketLevel] - 2] = '(';
-                                out[bracketOpenPos[bracketLevel] - 1] = ' ';
-                            } else if (j == 2) {
-                                out[k - 2] = ']';
-                                out[k - 1] = ' ';
-                                out[bracketOpenPos[bracketLevel] - 2] = '[';
-                                out[bracketOpenPos[bracketLevel] - 1] = ' ';
-                            } else {
-                                out[k - 2] = '\\';
-                                out[k - 1] = '}';
-                                out[bracketOpenPos[bracketLevel] - 2] = '\\';
-                                out[bracketOpenPos[bracketLevel] - 1] = '{';
-                            }
-                        }
+                        texCloseBracket(out, outlen, &k, bracketOpenPos, &bracketLevel, highestBracketLevel);
                     } else if ((latex[j + 1] >= '1') && (latex[j + 1] <= '6')) {
                         int l = (latex[j + 1] - '1'), end;
                         ppl_texify_generic(c, in + bi + cp[l] + 1, cp[l + 1] - cp[l] - 1, &end, out + k, outlen - k,

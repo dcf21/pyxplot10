@@ -386,57 +386,45 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
     ppl_strAppendf(out, outLen, &i, " at %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Coordinates given against a numbered axis include the axis number
     if (in->system_x == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_x);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->x), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, " %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Coordinates given against a numbered axis include the axis number
     if (in->system_y == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_y);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->y), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, " %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Coordinates given against a numbered axis include the axis number
     if (in->system_z == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_z);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s", ppl_unitsNumericDisplay(context, &(in->z), 0, 0, 0));
-    i += strlen(out + i);
     // Rotation, stored in radians, is shown in degrees
     if (in->rotation != 0.0) {
         ppl_strAppendf(out, outLen, &i, " rotate %s",
                        ppl_numericDisplay(in->rotation * 180 / M_PI, context->numdispBuff[0],
                                           context->set->term_current.SignificantFigures,
                                           (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(out + i);
     }
     // Horizontal alignment, if set
     if (in->HAlign > 0) {
         ppl_strAppendf(out, outLen, &i, " halign %s",
                        *(char **) ppl_fetchSettingName(&context->errcontext, in->HAlign, SW_HALIGN_INT,
                                                        (void *) SW_HALIGN_STR, sizeof(char *)));
-        i += strlen(out + i);
     }
     // Vertical alignment, if set
     if (in->VAlign > 0) {
         ppl_strAppendf(out, outLen, &i, " valign %s",
                        *(char **) ppl_fetchSettingName(&context->errcontext, in->VAlign, SW_VALIGN_INT,
                                                        (void *) SW_VALIGN_STR, sizeof(char *)));
-        i += strlen(out + i);
     }
     // The gap, stored in metres, is shown in centimetres
     if (in->gap != 0.0) {
@@ -444,7 +432,6 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
                        ppl_numericDisplay(in->gap * 100, context->numdispBuff[0],
                                           context->set->term_current.SignificantFigures,
                                           (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(out + i);
     }
     {
         char words[LSTR_LENGTH];
@@ -458,7 +445,6 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
                        ppl_numericDisplay(in->fontsize, context->numdispBuff[0],
                                           context->set->term_current.SignificantFigures,
                                           (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(out + i);
     }
     return;
 }

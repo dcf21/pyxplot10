@@ -187,14 +187,12 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                 // Parametric plots
                 if (pd->parametric) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, "parametric");
-                    k += strlen(cptr + k);
                 }
                 // The range of the parameter
                 if (pd->TRangeSet) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " [%s:%s]",
                                    ppl_unitsNumericDisplay(x->c, &pd->Tmin, 0, SW_DISPLAY_L, 0),
                                    ppl_unitsNumericDisplay(x->c, &pd->Tmax, 1, SW_DISPLAY_L, 0));
-                    k += strlen(cptr + k);
                 }
                 // The functions plotted, or the name of the data file
                 if ((pd->function) || (pd->vectors != NULL)) {
@@ -219,71 +217,36 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                     // The continuity of the data
                     if (pd->continuity == DATAFILE_DISCONTINUOUS) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, " discontinuous");
-                        k += strlen(cptr + k);
                     } else {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, " continuous");
-                        k += strlen(cptr + k);
                     }
                 }
                 if (pd->axis1set || pd->axis2set || pd->axis3set) // Print axes to use
                 {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, "%s", " axes ");
-                    k += strlen(cptr + k);
                     // The first axis
                     if (pd->axis1set) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis1xyz], pd->axis1);
-                        k += strlen(cptr + k);
                     }
                     // The second axis
                     if (pd->axis2set) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis2xyz], pd->axis2);
-                        k += strlen(cptr + k);
                     }
                     // The third axis
                     if (pd->axis3set) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis3xyz], pd->axis3);
-                        k += strlen(cptr + k);
                     }
                 }
-                // The every modifier
-                if (pd->EverySet > 0) {
-                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, " every $%ld$", pd->EveryList[0]);
-                    k += strlen(cptr + k);
-                } // Print out 'every' clause of plot command
-                // Its second field
-                if (pd->EverySet > 1) {
-                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[1]);
-                    k += strlen(cptr + k);
-                }
-                // Its third field
-                if (pd->EverySet > 2) {
-                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[2]);
-                    k += strlen(cptr + k);
-                }
-                // Its fourth field
-                if (pd->EverySet > 3) {
-                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[3]);
-                    k += strlen(cptr + k);
-                }
-                // Its fifth field
-                if (pd->EverySet > 4) {
-                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[4]);
-                    k += strlen(cptr + k);
-                }
-                // Its sixth field
-                if (pd->EverySet > 5) {
-                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[5]);
-                    k += strlen(cptr + k);
-                }
+                // The every modifier, with up to six fields
+                for (int e = 0; e < pd->EverySet; e++)
+                    ppl_strAppendf(cptr, LSTR_LENGTH, &k, e ? ":$%ld$" : " every $%ld$", pd->EveryList[e]);
                 // The index modifier
                 if (pd->IndexSet) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " index $%d$", pd->index);
-                    k += strlen(cptr + k);
                 } // Print index to use
                 // The label modifier
                 if (pd->label != NULL) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " label ");
-                    k += strlen(cptr + k);
                     inlen = strlen(pd->label->ascii);
                     ppl_texify_generic(x->c, pd->label->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL, NULL);
                     k += strlen(cptr + k);
@@ -291,7 +254,6 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                 // The select modifier
                 if (pd->SelectCriterion != NULL) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, "%s", " select ");
-                    k += strlen(cptr + k);
                     inlen = strlen(pd->SelectCriterion->ascii);
                     ppl_texify_generic(x->c, pd->SelectCriterion->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL,
                                        NULL);

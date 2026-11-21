@@ -342,15 +342,8 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             wordexp_t wordExp;
             glob_t globData;
             char escaped[FNAME_LENGTH];
-            {
-                int j, k;
-                // Escape spaces in the filename before passing it to wordexp
-                for (j = k = 0; ((filenameOut[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-                    if (filenameOut[j] == ' ') escaped[k++] = '\\';
-                    escaped[k++] = filenameOut[j++];
-                }
-                escaped[k++] = '\0';
-            }
+            // Escape spaces in the filename before passing it to wordexp
+            ppl_strEscapeSpaces(filenameOut, escaped, FNAME_LENGTH);
             // Expand ~ and environment variables in the filename
             if ((wordexp(escaped, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open file '%s'.", escaped);

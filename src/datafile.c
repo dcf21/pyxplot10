@@ -301,15 +301,8 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
         wordexp_t wordExp;
         glob_t globData;
         char fName[FNAME_LENGTH];
-        {
-            int j, k;
-            // Escape spaces in the filename before passing it to wordexp
-            for (j = k = 0; ((filename[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-                if (filename[j] == ' ') fName[k++] = '\\';
-                fName[k++] = filename[j++];
-            }
-            fName[k++] = '\0';
-        }
+        // Escape spaces in the filename before passing it to wordexp
+        ppl_strEscapeSpaces(filename, fName, FNAME_LENGTH);
         if (wildcardMatchNumber < 0) wildcardMatchNumber = 0;
         C = wildcardMatchNumber;
         // Expand ~ and environment variables in the filename

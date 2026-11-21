@@ -486,7 +486,6 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "%s ",
                        *(char **) ppl_fetchSettingName(&context->errcontext, defn->linespoints, SW_STYLE_INT,
                                                        (void *) SW_STYLE_STR, sizeof(char *)));
-        i += strlen(out + i);
     }
     // The color, as an expression, components, or a named color
     if (defn->EXPcolor != NULL) {
@@ -541,48 +540,37 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
     // The line type
     if (defn->EXPlinetype != NULL) {
         ppl_strAppendf(out, outLen, &i, "linetype %s ", defn->EXPlinetype->ascii);
-        i += strlen(out + i);
     } else if (defn->USElinetype) {
         ppl_strAppendf(out, outLen, &i, "linetype %d ", defn->linetype);
-        i += strlen(out + i);
     }
     // The line width
     if (defn->EXPlinewidth != NULL) {
         ppl_strAppendf(out, outLen, &i, "linewidth %s ", defn->EXPlinewidth->ascii);
-        i += strlen(out + i);
     } else if (defn->USElinewidth) {
         ppl_strAppendf(out, outLen, &i, "linewidth %s ", ppl_numericDisplayDefault(context, defn->linewidth, 0));
-        i += strlen(out + i);
     }
     // The point line width
     if (defn->EXPpointlinewidth != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ", defn->EXPpointlinewidth->ascii);
-        i += strlen(out + i);
     } else if (defn->USEpointlinewidth) {
         ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ",
                        ppl_numericDisplayDefault(context, defn->pointlinewidth, 0));
-        i += strlen(out + i);
     }
     // The point size
     if (defn->EXPpointsize != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointsize %s ", defn->EXPpointsize->ascii);
-        i += strlen(out + i);
     } else if (defn->USEpointsize) {
         ppl_strAppendf(out, outLen, &i, "pointsize %s ", ppl_numericDisplayDefault(context, defn->pointsize, 0));
-        i += strlen(out + i);
     }
     // The point type
     if (defn->EXPpointtype != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointtype %s ", defn->EXPpointtype->ascii);
-        i += strlen(out + i);
     } else if (defn->USEpointtype) {
         ppl_strAppendf(out, outLen, &i, "pointtype %d ", defn->pointtype);
-        i += strlen(out + i);
     }
     // The number of the style
     if (defn->USEstyle) {
         ppl_strAppendf(out, outLen, &i, "style %d ", defn->style);
-        i += strlen(out + i);
     }
     out[i] = '\0';
     return;

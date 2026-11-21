@@ -43,6 +43,33 @@
 #include "epsMaker/eps_eps.h"
 #include "epsMaker/eps_settings.h"
 
+//! eps_eps_expandFilename - Expand ~, environment variables and wildcards in the filename of an EPS or bitmap image
+//! on the canvas, reporting an error if no file matches it
+//! \param [in] x - The state of the EPS/PS rendering process; x->current is the canvas item being drawn
+//! \param [out] filename - Buffer of FNAME_LENGTH bytes, into which the first matching filename is written
+//! \return Zero on success, or one if an error was reported
+
+int eps_eps_expandFilename(EPSComm *x, char *filename) {
+    char msg[PPL_MSG_LENGTH], fName[FNAME_LENGTH];
+    wordexp_t wordExp;
+    glob_t globData;
+    // Escape spaces in the filename before passing it to wordexp
+    ppl_strEscapeSpaces(x->current->text, fName, FNAME_LENGTH);
+    // Expand ~ and environment variables, and then wildcards, in the filename
+    const int expanded = (wordexp(fName, &wordExp, 0) == 0) && (wordExp.we_wordc > 0);
+    const int matched = expanded && (glob(wordExp.we_wordv[0], 0, NULL, &globData) == 0) && (globData.gl_pathc > 0);
+    if (expanded) wordfree(&wordExp);
+    if (!matched) {
+        ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
+        ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
+        return 1;
+    }
+    snprintf(filename, FNAME_LENGTH, "%s", globData.gl_pathv[0]);
+    filename[FNAME_LENGTH - 1] = '\0';
+    globfree(&globData);
+    return 0;
+}
+
 //! eps_eps_RenderEPS - Render an eps canvas item, which embeds an encapsulated postscript file, to postscript
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
@@ -60,37 +87,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "%% Canvas item %d [eps image]\n", x->current->id);
 
     // Expand filename if it contains wildcards
-    {
-        wordexp_t wordExp;
-        glob_t globData;
-        char fName[FNAME_LENGTH];
-        {
-            int j, k;
-            // Escape spaces in the filename before passing it to wordexp
-            for (j = k = 0; ((x->current->text[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-                if (x->current->text[j] == ' ') fName[k++] = '\\';
-                fName[k++] = x->current->text[j++];
-            }
-            fName[k++] = '\0';
-        }
-        // Expand ~ and environment variables in the filename
-        if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
-            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
-            return;
-        }
-        // Expand wildcards in the filename
-        if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
-            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
-            wordfree(&wordExp);
-            return;
-        }
-        wordfree(&wordExp);
-        snprintf(filename, FNAME_LENGTH, "%s", globData.gl_pathv[0]);
-        filename[FNAME_LENGTH - 1] = '\0';
-        globfree(&globData);
-    }
+    if (eps_eps_expandFilename(x, filename)) return;
 
     // Work out bounding box of EPS image
     GotBBox = 0;

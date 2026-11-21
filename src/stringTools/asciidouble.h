@@ -65,6 +65,7 @@ void ppl_strBracketMatch(const char *in, char open, char close, int *CommaPositi
 
 int ppl_strCmpNoCase(const char *a, const char *b);
 
+void ppl_strEscapeSpaces(const char *in, char *out, size_t outLen);
 char *ppl_strEscapify(const char *in, char *out, size_t outLen);
 int ppl_strAppendf(char *out, size_t outLen, int *pos, const char *format, ...) __attribute__((format(printf, 4, 5)));
 void ppl_strAppendChar(char *out, size_t outLen, int *pos, char c);

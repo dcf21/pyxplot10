@@ -69,6 +69,58 @@ void pplcol_RGBtoHSB(const double ri, const double gi, const double bi, double *
     if (*bo > 1) *bo = 1;
 }
 
+//! pplcol_toRGB - Convert a color object, in any color space, into RGB components
+//! \param [in] col - The color object
+//! \param [out] r - The red component
+//! \param [out] g - The green component
+//! \param [out] b - The blue component
+
+void pplcol_toRGB(const pplObj *col, double *r, double *g, double *b) {
+    if (round(col->exponent[0]) == SW_COLSPACE_RGB) {
+        *r = col->exponent[8];
+        *g = col->exponent[9];
+        *b = col->exponent[10];
+    } else if (round(col->exponent[0]) == SW_COLSPACE_CMYK)
+        pplcol_CMYKtoRGB(col->exponent[8], col->exponent[9], col->exponent[10], col->exponent[11], r, g, b);
+    else pplcol_HSBtoRGB(col->exponent[8], col->exponent[9], col->exponent[10], r, g, b);
+}
+
+//! pplcol_toHSB - Convert a color object, in any color space, into HSB components
+//! \param [in] col - The color object
+//! \param [out] h - The hue
+//! \param [out] s - The saturation
+//! \param [out] b - The brightness
+
+void pplcol_toHSB(const pplObj *col, double *h, double *s, double *b) {
+    if (round(col->exponent[0]) == SW_COLSPACE_RGB)
+        pplcol_RGBtoHSB(col->exponent[8], col->exponent[9], col->exponent[10], h, s, b);
+    else if (round(col->exponent[0]) == SW_COLSPACE_CMYK)
+        pplcol_CMYKtoHSB(col->exponent[8], col->exponent[9], col->exponent[10], col->exponent[11], h, s, b);
+    else {
+        *h = col->exponent[8];
+        *s = col->exponent[9];
+        *b = col->exponent[10];
+    }
+}
+
+//! pplcol_toCMYK - Convert a color object, in any color space, into CMYK components
+//! \param [in] col - The color object
+//! \param [out] c - The cyan component
+//! \param [out] m - The magenta component
+//! \param [out] y - The yellow component
+//! \param [out] k - The black component
+
+void pplcol_toCMYK(const pplObj *col, double *c, double *m, double *y, double *k) {
+    if (round(col->exponent[0]) == SW_COLSPACE_RGB)
+        pplcol_RGBtoCMYK(col->exponent[8], col->exponent[9], col->exponent[10], c, m, y, k);
+    else if (round(col->exponent[0]) == SW_COLSPACE_CMYK) {
+        *c = col->exponent[8];
+        *m = col->exponent[9];
+        *y = col->exponent[10];
+        *k = col->exponent[11];
+    } else pplcol_HSBtoCMYK(col->exponent[8], col->exponent[9], col->exponent[10], c, m, y, k);
+}
+
 //! pplcol_CMYKtoRGB - Convert a color from CMYK to RGB components
 //! \param [in] ci - Cyan component, 0-1
 //! \param [in] mi - Magenta component, 0-1
@@ -328,26 +380,10 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     else if (t1o == 5) // 5 - colors
     {
         double h1, s1, b1, h2, s2, b2;
-        if (round(a->exponent[0]) == SW_COLSPACE_RGB)
-            pplcol_RGBtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], &h1, &s1, &b1);
-        else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &h1, &s1, &b1);
         // Colors are compared by hue, then brightness, then saturation, so convert both to HSB
-        else {
-            h1 = a->exponent[8];
-            s1 = a->exponent[9];
-            b1 = a->exponent[10];
-        }
-        if (round(b->exponent[0]) == SW_COLSPACE_RGB)
-            pplcol_RGBtoHSB(b->exponent[8], b->exponent[9], b->exponent[10], &h2, &s2, &b2);
-        else if (round(b->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoHSB(b->exponent[8], b->exponent[9], b->exponent[10], b->exponent[11], &h2, &s2, &b2);
+        pplcol_toHSB(a, &h1, &s1, &b1);
         // The second color, likewise
-        else {
-            h2 = b->exponent[8];
-            s2 = b->exponent[9];
-            b2 = b->exponent[10];
-        }
+        pplcol_toHSB(b, &h2, &s2, &b2);
         if ((!gsl_finite(h1)) || (!gsl_finite(s1)) || (!gsl_finite(b1)) || (!gsl_finite(h2)) || (!gsl_finite(s2)) ||
             (!gsl_finite(b2)))
             return -2;

@@ -1372,7 +1372,6 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
         char *output = msg;
         int i = 0;
         ppl_strAppendf(output, sizeof(msg), &i, "plotted item");
-        i += strlen(output + i);
         // Data from a file or from vectors, or from functions
         if (!pd->function) {
             // The name of the data file, or the vectors

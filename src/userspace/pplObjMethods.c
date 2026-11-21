@@ -1156,13 +1156,7 @@ static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, in
     gsl_vector *v;
     // A color's color space is stored in exponent[0], and its components in exponent[8] to exponent[11]; convert them
     // to RGB
-    if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
-        r = a->exponent[8];
-        g = a->exponent[9];
-        b = a->exponent[10];
-    } else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-        pplcol_CMYKtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &r, &g, &b);
-    else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r, &g, &b);
+    pplcol_toRGB(a, &r, &g, &b);
     pplObjVector(&OUTPUT, 0, 1, 3);
     v = ((pplVector *) OUTPUT.auxil)->v;
     gsl_vector_set(v, 0, r);
@@ -1186,15 +1180,8 @@ static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArg
     pplObj *a = in[-1].self_this;
     double c, m, y, k;
     gsl_vector *v;
-    if (round(a->exponent[0]) == SW_COLSPACE_RGB)
-        pplcol_RGBtoCMYK(a->exponent[8], a->exponent[9], a->exponent[10], &c, &m, &y, &k);
     // Convert the components to CMYK, if they are not already
-    else if (round(a->exponent[0]) == SW_COLSPACE_CMYK) {
-        c = a->exponent[8];
-        m = a->exponent[9];
-        y = a->exponent[10];
-        k = a->exponent[11];
-    } else pplcol_HSBtoCMYK(a->exponent[8], a->exponent[9], a->exponent[10], &c, &m, &y, &k);
+    pplcol_toCMYK(a, &c, &m, &y, &k);
     pplObjVector(&OUTPUT, 0, 1, 4);
     v = ((pplVector *) OUTPUT.auxil)->v;
     gsl_vector_set(v, 0, c);
@@ -1219,16 +1206,8 @@ static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj *a = in[-1].self_this;
     double h, s, b;
     gsl_vector *v;
-    if (round(a->exponent[0]) == SW_COLSPACE_RGB)
-        pplcol_RGBtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], &h, &s, &b);
-    else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-        pplcol_CMYKtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &h, &s, &b);
     // Convert the components to HSB, if they are not already
-    else {
-        h = a->exponent[8];
-        s = a->exponent[9];
-        b = a->exponent[10];
-    }
+    pplcol_toHSB(a, &h, &s, &b);
     pplObjVector(&OUTPUT, 0, 1, 3);
     v = ((pplVector *) OUTPUT.auxil)->v;
     gsl_vector_set(v, 0, h);
@@ -1250,13 +1229,7 @@ static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObj *a = in[-1].self_this;
     double r, g, b;
     // Convert the components to RGB, if they are not already
-    if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
-        r = a->exponent[8];
-        g = a->exponent[9];
-        b = a->exponent[10];
-    } else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-        pplcol_CMYKtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &r, &g, &b);
-    else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r, &g, &b);
+    pplcol_toRGB(a, &r, &g, &b);
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, r, g, b, 0);
 }
 
@@ -1274,15 +1247,8 @@ static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs,
                                 char *errText) {
     pplObj *a = in[-1].self_this;
     double c, m, y, k;
-    if (round(a->exponent[0]) == SW_COLSPACE_RGB)
-        pplcol_RGBtoCMYK(a->exponent[8], a->exponent[9], a->exponent[10], &c, &m, &y, &k);
     // Convert the components to CMYK, if they are not already
-    else if (round(a->exponent[0]) == SW_COLSPACE_CMYK) {
-        c = a->exponent[8];
-        m = a->exponent[9];
-        y = a->exponent[10];
-        k = a->exponent[11];
-    } else pplcol_HSBtoCMYK(a->exponent[8], a->exponent[9], a->exponent[10], &c, &m, &y, &k);
+    pplcol_toCMYK(a, &c, &m, &y, &k);
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_CMYK, c, m, y, k);
 }
 
@@ -1299,16 +1265,8 @@ static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs,
 static void pplmethod_colToHSB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *a = in[-1].self_this;
     double h, s, b;
-    if (round(a->exponent[0]) == SW_COLSPACE_RGB)
-        pplcol_RGBtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], &h, &s, &b);
-    else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-        pplcol_CMYKtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &h, &s, &b);
     // Convert the components to HSB, if they are not already
-    else {
-        h = a->exponent[8];
-        s = a->exponent[9];
-        b = a->exponent[10];
-    }
+    pplcol_toHSB(a, &h, &s, &b);
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_HSB, h, s, b, 0);
 }
 

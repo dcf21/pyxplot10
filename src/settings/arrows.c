@@ -448,69 +448,51 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, const 
     // Coordinates given against a numbered axis include the axis number
     if (in->system_x0 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_x0);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->x0), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, " %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y0, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Coordinates given against a numbered axis include the axis number
     if (in->system_y0 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_y0);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->y0), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, " %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z0, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Coordinates given against a numbered axis include the axis number
     if (in->system_z0 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_z0);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s ", ppl_unitsNumericDisplay(context, &(in->z0), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, "to %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x1, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Describe the end of the arrow in the same way. Coordinates given against a numbered axis include the axis number.
     if (in->system_x1 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_x1);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->x1), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, " %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y1, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Coordinates given against a numbered axis include the axis number
     if (in->system_y1 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_y1);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s,", ppl_unitsNumericDisplay(context, &(in->y1), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, " %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z1, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
-    i += strlen(out + i);
     // Coordinates given against a numbered axis include the axis number. Then describe the arrow's head and style.
     if (in->system_z1 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_z1);
-        i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s", ppl_unitsNumericDisplay(context, &(in->z1), 0, 0, 0));
-    i += strlen(out + i);
     ppl_strAppendf(out, outLen, &i, " with %s ",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->pplarrow_style, SW_ARROWTYPE_INT,
                                                    (void *) SW_ARROWTYPE_STR, sizeof(char *)));
-    i += strlen(out + i);
     ppl_withWordsPrint(context, &in->style, out + i, outLen - i);
     return;
 }

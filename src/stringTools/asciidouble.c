@@ -779,6 +779,21 @@ int ppl_strCmpNoCase(const char *a, const char *b) {
     }
 }
 
+//! ppl_strEscapeSpaces - Copy a filename, putting a backslash before each space, so that wordexp() does not split it
+//! into several words
+//! \param [in] in - The filename
+//! \param [out] out - The buffer into which to write the escaped filename, which is truncated if it does not fit
+//! \param [in] outLen - The size of the buffer <out>
+
+void ppl_strEscapeSpaces(const char *in, char *out, const size_t outLen) {
+    size_t k = 0;
+    for (int j = 0; (in[j] != '\0') && (k + 1 + (in[j] == ' ') < outLen); j++) {
+        if (in[j] == ' ') out[k++] = '\\';
+        out[k++] = in[j];
+    }
+    out[k] = '\0';
+}
+
 //! ppl_strEscapify - Copy a string into a new character buffer, enclosed in quotes and with escape characters inserted
 //! before quote characters, backslashes, and control characters. If the buffer is too small, the escaped string is
 //! truncated (but still closed with a quote, if there is room).

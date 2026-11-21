@@ -322,15 +322,8 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     }
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
-    {
-        int j, k;
-        // Escape spaces in the pattern, so that wordexp() does not split it into several words
-        for (j = k = 0; ((raw[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-            if (raw[j] == ' ') escaped[k++] = '\\';
-            escaped[k++] = raw[j++];
-        }
-        escaped[k++] = '\0';
-    }
+    // Escape spaces in the pattern, so that wordexp() does not split it into several words
+    ppl_strEscapeSpaces(raw, escaped, FNAME_LENGTH);
     if (wordexp(escaped, &w, 0) != 0) return; // No matches; return empty list
     // Expand the wildcards in each word, and add each match to the list
     for (i = 0; i < w.we_wordc; i++) {

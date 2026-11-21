@@ -397,16 +397,10 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         ppl_snprintfTrunc(
                 output, outLen, "%s item %d from %s,%s to %s,%s with %s",
                 (ptr->ArrowType == SW_ARROWTYPE_NOHEAD) ? "line" : "arrow", ptr->id,
-                ppl_numericDisplay(ptr->xpos * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                ppl_numericDisplay((ptr->xpos + ptr->xpos2) * 100, c->numdispBuff[2],
-                                   c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                ppl_numericDisplay((ptr->ypos + ptr->ypos2) * 100, c->numdispBuff[3],
-                                   c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
+                ppl_numericDisplayDefault(c, ptr->xpos * 100, 0),
+                ppl_numericDisplayDefault(c, ptr->ypos * 100, 1),
+                ppl_numericDisplayDefault(c, (ptr->xpos + ptr->xpos2) * 100, 2),
+                ppl_numericDisplayDefault(c, (ptr->ypos + ptr->ypos2) * 100, 3),
                 *(char **) ppl_fetchSettingName(&c->errcontext, ptr->ArrowType, SW_ARROWTYPE_INT,
                                                 (void *) SW_ARROWTYPE_STR, sizeof(char *)));
         i = strlen(output);
@@ -420,42 +414,26 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         ppl_snprintfTrunc(output, outLen, "box item %d ", ptr->id);
         i = strlen(output);
         ppl_strAppendf(output, outLen, &i, ptr->xpos2set ? "at %s,%s width %s height %s" : "from %s,%s to %s,%s",
-                       ppl_numericDisplay(ptr->xpos * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay((ptr->xpos * (!ptr->xpos2set) + ptr->xpos2) * 100, c->numdispBuff[2],
-                                          c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay((ptr->ypos * (!ptr->xpos2set) + ptr->ypos2) * 100, c->numdispBuff[3],
-                                          c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(output + i);
-        ppl_strAppendf(output, outLen, &i, " rotate %s",
-                       ppl_numericDisplay(ptr->rotation * 180 / M_PI, c->numdispBuff[2],
-                                          c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(output + i);
+                       ppl_numericDisplayDefault(c, ptr->xpos * 100, 0),
+                       ppl_numericDisplayDefault(c, ptr->ypos * 100, 1),
+                       ppl_numericDisplayDefault(c, (ptr->xpos * (!ptr->xpos2set) + ptr->xpos2) * 100, 2),
+                       ppl_numericDisplayDefault(c, (ptr->ypos * (!ptr->xpos2set) + ptr->ypos2) * 100, 3));
+        ppl_strAppendf(output, outLen, &i, " rotate %s", ppl_numericDisplayDefault(c, ptr->rotation * 180 / M_PI, 2));
         ppl_withWordsAppend(c, &ptr->with_data, output, outLen, &i);
     } else if (ptr->type == CANVAS_CIRC) // Produce textual representations of circle commands
     {
         ppl_snprintfTrunc(
                 output, outLen, "%s item %d at %s,%s radius %s", ptr->xfset ? "arc" : "circle", ptr->id,
-                ppl_numericDisplay(ptr->xpos * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                ppl_numericDisplay(ptr->xpos2 * 100, c->numdispBuff[2], c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                ppl_numericDisplayDefault(c, ptr->xpos * 100, 0),
+                ppl_numericDisplayDefault(c, ptr->ypos * 100, 1),
+                ppl_numericDisplayDefault(c, ptr->xpos2 * 100, 2));
         i = strlen(output);
         // The position of the focus, if given
         if (ptr->xfset) {
             ppl_strAppendf(
                     output, outLen, &i, " from %s to %s",
-                    ppl_numericDisplay(ptr->xf * 180 / M_PI, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                       (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                    ppl_numericDisplay(ptr->yf * 180 / M_PI, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                       (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                    ppl_numericDisplayDefault(c, ptr->xf * 180 / M_PI, 0),
+                    ppl_numericDisplayDefault(c, ptr->yf * 180 / M_PI, 1));
             i += strlen(output + i);
         }
         ppl_withWordsAppend(c, &ptr->with_data, output, outLen, &i);
@@ -465,63 +443,42 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         i = strlen(output);
         if (ptr->x1set)
             ppl_strAppendf(output, outLen, &i, " from %s,%s to %s,%s",
-                           ppl_numericDisplay(ptr->x1 * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                           ppl_numericDisplay(ptr->y1 * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                           ppl_numericDisplay(ptr->x2 * 100, c->numdispBuff[2], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                           ppl_numericDisplay(ptr->y2 * 100, c->numdispBuff[3], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->x1 * 100, 0),
+                           ppl_numericDisplayDefault(c, ptr->y1 * 100, 1),
+                           ppl_numericDisplayDefault(c, ptr->x2 * 100, 2),
+                           ppl_numericDisplayDefault(c, ptr->y2 * 100, 3));
         i += strlen(output + i);
         if (ptr->xcset)
             ppl_strAppendf(output, outLen, &i, " centre %s,%s",
-                           ppl_numericDisplay(ptr->xc * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                           ppl_numericDisplay(ptr->yc * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->xc * 100, 0),
+                           ppl_numericDisplayDefault(c, ptr->yc * 100, 1));
         i += strlen(output + i);
         if (ptr->xfset)
             ppl_strAppendf(output, outLen, &i, " focus %s,%s",
-                           ppl_numericDisplay(ptr->xf * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                           ppl_numericDisplay(ptr->yf * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->xf * 100, 0),
+                           ppl_numericDisplayDefault(c, ptr->yf * 100, 1));
         i += strlen(output + i);
         if (ptr->aset)
             ppl_strAppendf(output, outLen, &i, " SemiMajorAxis %s",
-                           ppl_numericDisplay(ptr->a * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->a * 100, 0));
         i += strlen(output + i);
         if (ptr->bset)
             ppl_strAppendf(output, outLen, &i, " SemiMinorAxis %s",
-                           ppl_numericDisplay(ptr->b * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->b * 100, 0));
         i += strlen(output + i);
         if (ptr->eccset)
             ppl_strAppendf(output, outLen, &i, " eccentricity %s",
-                           ppl_numericDisplay(ptr->ecc, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->ecc, 0));
         i += strlen(output + i);
         if (ptr->slrset)
             ppl_strAppendf(output, outLen, &i, " SemiLatusRectum %s",
-                           ppl_numericDisplay(ptr->slr * 100, c->numdispBuff[0],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->slr * 100, 0));
         i += strlen(output + i);
         if (ptr->arcset)
             ppl_strAppendf(output, outLen, &i, " arc from %s to %s",
-                           ppl_numericDisplay(ptr->arcfrom * 180 / M_PI, c->numdispBuff[0],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                           ppl_numericDisplay(ptr->arcto * 180 / M_PI, c->numdispBuff[1],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        ppl_strAppendf(output, outLen, &i, " rotate %s",
-                       ppl_numericDisplay(ptr->rotation * 180 / M_PI, c->numdispBuff[0],
-                                          c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(output + i);
+                           ppl_numericDisplayDefault(c, ptr->arcfrom * 180 / M_PI, 0),
+                           ppl_numericDisplayDefault(c, ptr->arcto * 180 / M_PI, 1));
+        ppl_strAppendf(output, outLen, &i, " rotate %s", ppl_numericDisplayDefault(c, ptr->rotation * 180 / M_PI, 0));
         ppl_withWordsAppend(c, &ptr->with_data, output, outLen, &i);
     } else if (ptr->type == CANVAS_EPS) // Produce textual representations of eps commands
     {
@@ -530,37 +487,24 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         ppl_strEscapify(ptr->text, output + i, outLen - i);
         i += strlen(output + i);
         ppl_strAppendf(output, outLen, &i, " at %s,%s",
-                       ppl_numericDisplay(ptr->xpos * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(output + i);
+                       ppl_numericDisplayDefault(c, ptr->xpos * 100, 0),
+                       ppl_numericDisplayDefault(c, ptr->ypos * 100, 1));
         if (ptr->xpos2set)
             ppl_strAppendf(output, outLen, &i, " width %s",
-                           ppl_numericDisplay(ptr->xpos2 * 100, c->numdispBuff[0],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->xpos2 * 100, 0));
         i += strlen(output + i);
         if (ptr->ypos2set)
             ppl_strAppendf(output, outLen, &i, " height %s",
-                           ppl_numericDisplay(ptr->ypos2 * 100, c->numdispBuff[0],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->ypos2 * 100, 0));
         i += strlen(output + i);
-        ppl_strAppendf(output, outLen, &i, " rotate %s",
-                       ppl_numericDisplay(ptr->rotation * 180 / M_PI, c->numdispBuff[2],
-                                          c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(output + i);
+        ppl_strAppendf(output, outLen, &i, " rotate %s", ppl_numericDisplayDefault(c, ptr->rotation * 180 / M_PI, 2));
         // The clip option
         if (ptr->clip) {
             ppl_strAppendf(output, outLen, &i, " clip");
-            i += strlen(output + i);
         }
         // The calcbbox option
         if (ptr->calcbbox) {
             ppl_strAppendf(output, outLen, &i, " calcbbox");
-            i += strlen(output + i);
         }
     } else if (ptr->type == CANVAS_IMAGE) // Produce textual representations of image commands
     {
@@ -569,43 +513,30 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         ppl_strEscapify(ptr->text, output + i, outLen - i);
         i += strlen(output + i);
         ppl_strAppendf(output, outLen, &i, " at %s,%s",
-                       ppl_numericDisplay(ptr->xpos * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(output + i);
+                       ppl_numericDisplayDefault(c, ptr->xpos * 100, 0),
+                       ppl_numericDisplayDefault(c, ptr->ypos * 100, 1));
         // The smooth option
         if (ptr->smooth) {
             ppl_strAppendf(output, outLen, &i, " smooth");
-            i += strlen(output + i);
         }
         // The notransparent option
         if (ptr->NoTransparency) {
             ppl_strAppendf(output, outLen, &i, " NoTransparency");
-            i += strlen(output + i);
         }
         // A custom transparent color
         if (ptr->CustomTransparency) {
             ppl_strAppendf(output, outLen, &i, " transparent rgb%d:%d:%d", ptr->TransColR, ptr->TransColG,
                            ptr->TransColB);
-            i += strlen(output + i);
         }
         if (ptr->xpos2set)
             ppl_strAppendf(output, outLen, &i, " width %s",
-                           ppl_numericDisplay(ptr->xpos2 * 100, c->numdispBuff[0],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->xpos2 * 100, 0));
         i += strlen(output + i);
         if (ptr->ypos2set)
             ppl_strAppendf(output, outLen, &i, " height %s",
-                           ppl_numericDisplay(ptr->ypos2 * 100, c->numdispBuff[0],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                           ppl_numericDisplayDefault(c, ptr->ypos2 * 100, 0));
         i += strlen(output + i);
-        ppl_strAppendf(output, outLen, &i, " rotate %s",
-                       ppl_numericDisplay(ptr->rotation * 180 / M_PI, c->numdispBuff[2],
-                                          c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+        ppl_strAppendf(output, outLen, &i, " rotate %s", ppl_numericDisplayDefault(c, ptr->rotation * 180 / M_PI, 2));
     } else if (ptr->type == CANVAS_PIE) // Produce textual representations of piechart commands
     {
         canvas_plotdesc *pd;
@@ -629,57 +560,25 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                 {
                     ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                     ppl_strAppendStripped(output, outLen, &i, pd->functions[j]->ascii);
-                    i += strlen(output + i);
                 }
-            // The every modifier
-            if (pd->EverySet > 0) {
-                ppl_strAppendf(output, outLen, &i, " every %ld", pd->EveryList[0]);
-                i += strlen(output + i);
-            } // Print out 'every' clause of plot command
-            // Its second field
-            if (pd->EverySet > 1) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[1]);
-                i += strlen(output + i);
-            }
-            // Its third field
-            if (pd->EverySet > 2) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[2]);
-                i += strlen(output + i);
-            }
-            // Its fourth field
-            if (pd->EverySet > 3) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[3]);
-                i += strlen(output + i);
-            }
-            // Its fifth field
-            if (pd->EverySet > 4) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[4]);
-                i += strlen(output + i);
-            }
-            // Its sixth field
-            if (pd->EverySet > 5) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[5]);
-                i += strlen(output + i);
-            }
+            // The every modifier, with up to six fields
+            for (int e = 0; e < pd->EverySet; e++)
+                ppl_strAppendf(output, outLen, &i, e ? ":%ld" : " every %ld", pd->EveryList[e]);
             // The format of the labels
             if (ptr->text == NULL) {
                 ppl_strAppendf(output, outLen, &i, " format auto");
-                i += strlen(output + i);
             } else {
                 ppl_strAppendf(output, outLen, &i, " format %s", ptr->text);
-                i += strlen(output + i);
             }
             // The index modifier
             if (pd->IndexSet) {
                 ppl_strAppendf(output, outLen, &i, " index %d", pd->index);
-                i += strlen(output + i);
             } // Print index to use
             // The label modifier, and the position of the labels
             if ((pd->label != NULL) || (ptr->ArrowType != SW_PIEKEYPOS_AUTO)) {
                 ppl_strAppendf(output, outLen, &i, " label %s",
                                *(char **) ppl_fetchSettingName(&c->errcontext, ptr->ArrowType, SW_PIEKEYPOS_INT,
                                                                (void *) SW_PIEKEYPOS_STR, sizeof(char *)));
-                i += strlen(output + i);
                 if (pd->label != NULL)
                     ppl_strAppendf(output, outLen, &i, " %s", pd->label->ascii); // Print label string
                 i += strlen(output + i);
@@ -687,7 +586,6 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             // The select modifier
             if (pd->SelectCriterion != NULL) {
                 ppl_strAppendf(output, outLen, &i, " select %s", pd->SelectCriterion->ascii);
-                i += strlen(output + i);
             } // Print select criterion
             ppl_withWordsAppend(c, &pd->ww, output, outLen, &i);
             i += strlen(output + i);
@@ -697,7 +595,6 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             for (j = 0; j < pd->NUsing; j++) {
                 ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                 ppl_strAppendf(output, outLen, &i, "%s", pd->UsingList[j]->ascii);
-                i += strlen(output + i);
             }
         }
     } else if (ptr->type == CANVAS_PLOT) // Produce textual representations of plot commands
@@ -727,12 +624,10 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                 v = pr->unit;
                 v.real = pr->min;
                 ppl_strAppendf(output, outLen, &i, "%s", ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
-                i += strlen(output + i);
             }
             // A colon, if either limit is given
             if (pr->MinSet || pr->MaxSet || pr->AutoMinSet || pr->AutoMaxSet) {
                 ppl_strAppendf(output, outLen, &i, "%s", ":");
-                i += strlen(output + i);
             }
             if (pr->AutoMaxSet) ppl_strAppendChar(output, outLen, &i, '*');
             // The maximum, or * if automatic
@@ -740,10 +635,8 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                 v = pr->unit;
                 v.real = pr->max;
                 ppl_strAppendf(output, outLen, &i, "%s", ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
-                i += strlen(output + i);
             }
             ppl_strAppendf(output, outLen, &i, "%s", "]");
-            i += strlen(output + i);
             pr = pr->next;
         }
         pd = ptr->plotitems; // Print out plotted items one by one
@@ -758,19 +651,16 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             // Parametric plots
             if (pd->parametric) {
                 ppl_strAppendf(output, outLen, &i, " parametric");
-                i += strlen(output + i);
             }
             // The range of t
             if (pd->TRangeSet) {
                 ppl_strAppendf(output, outLen, &i, " [%s:%s]", ppl_unitsNumericDisplay(c, &pd->Tmin, 0, 0, 0),
                                ppl_unitsNumericDisplay(c, &pd->Tmax, 1, 0, 0));
-                i += strlen(output + i);
             }
             // The range of v
             if (pd->VRangeSet) {
                 ppl_strAppendf(output, outLen, &i, " [%s:%s]", ppl_unitsNumericDisplay(c, &pd->Vmin, 0, 0, 0),
                                ppl_unitsNumericDisplay(c, &pd->Vmax, 1, 0, 0));
-                i += strlen(output + i);
             }
             // Data from a file or vectors, or from functions
             if ((!pd->function) || (pd->vectors != NULL)) {
@@ -785,93 +675,54 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                 {
                     ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                     ppl_strAppendStripped(output, outLen, &i, pd->functions[j]->ascii);
-                    i += strlen(output + i);
                 }
             if (pd->axis1set || pd->axis2set || pd->axis3set) // Print axes to use
             {
                 ppl_strAppendf(output, outLen, &i, "%s", " axes ");
-                i += strlen(output + i);
                 // The first axis
                 if (pd->axis1set) {
                     ppl_strAppendf(output, outLen, &i, "%c%d", "xyzc"[pd->axis1xyz], pd->axis1);
-                    i += strlen(output + i);
                 }
                 // The second axis
                 if (pd->axis2set) {
                     ppl_strAppendf(output, outLen, &i, "%c%d", "xyzc"[pd->axis2xyz], pd->axis2);
-                    i += strlen(output + i);
                 }
                 // The third axis
                 if (pd->axis3set) {
                     ppl_strAppendf(output, outLen, &i, "%c%d", "xyzc"[pd->axis3xyz], pd->axis3);
-                    i += strlen(output + i);
                 }
             }
-            // The every modifier
-            if (pd->EverySet > 0) {
-                ppl_strAppendf(output, outLen, &i, " every %ld", pd->EveryList[0]);
-                i += strlen(output + i);
-            } // Print out 'every' clause of plot command
-            // Its second field
-            if (pd->EverySet > 1) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[1]);
-                i += strlen(output + i);
-            }
-            // Its third field
-            if (pd->EverySet > 2) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[2]);
-                i += strlen(output + i);
-            }
-            // Its fourth field
-            if (pd->EverySet > 3) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[3]);
-                i += strlen(output + i);
-            }
-            // Its fifth field
-            if (pd->EverySet > 4) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[4]);
-                i += strlen(output + i);
-            }
-            // Its sixth field
-            if (pd->EverySet > 5) {
-                ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[5]);
-                i += strlen(output + i);
-            }
+            // The every modifier, with up to six fields
+            for (int e = 0; e < pd->EverySet; e++)
+                ppl_strAppendf(output, outLen, &i, e ? ":%ld" : " every %ld", pd->EveryList[e]);
             // The index modifier
             if (pd->IndexSet) {
                 ppl_strAppendf(output, outLen, &i, " index %d", pd->index);
-                i += strlen(output + i);
             } // Print index to use
             // The label modifier
             if (pd->label != NULL) {
                 ppl_strAppendf(output, outLen, &i, " label %s", pd->label->ascii);
-                i += strlen(output + i);
             } // Print label string
             // The select modifier
             if (pd->SelectCriterion != NULL) {
                 ppl_strAppendf(output, outLen, &i, " select %s", pd->SelectCriterion->ascii);
-                i += strlen(output + i);
             } // Print select criterion
             if (pd->ContinuitySet) // Print continuous / discontinuous flag
             {
                 // The continuity of the data
                 if (pd->continuity == DATAFILE_DISCONTINUOUS) {
                     ppl_strAppendf(output, outLen, &i, " discontinuous");
-                    i += strlen(output + i);
                 } else {
                     ppl_strAppendf(output, outLen, &i, " continuous");
-                    i += strlen(output + i);
                 }
             }
             // The title, or notitle
             if (pd->NoTitleSet) {
                 ppl_strAppendf(output, outLen, &i, "%s", " notitle");
-                i += strlen(output + i);
             } // notitle is set
             // A title given by the user
             else if (pd->TitleSet) {
                 ppl_strAppendf(output, outLen, &i, "%s", " title ");
-                i += strlen(output + i);
                 ppl_strEscapify(pd->title, output + i, outLen - i);
                 i += strlen(output + i);
             }
@@ -882,7 +733,6 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             for (j = 0; j < pd->NUsing; j++) {
                 ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                 ppl_strAppendf(output, outLen, &i, "%s", pd->UsingList[j]->ascii);
-                i += strlen(output + i);
             }
             pd = pd->next;
         }
@@ -890,15 +740,12 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
     {
         ppl_snprintfTrunc(
                 output, outLen, "point item %d at %s,%s", ptr->id,
-                ppl_numericDisplay(ptr->xpos * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                   (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
+                ppl_numericDisplayDefault(c, ptr->xpos * 100, 0),
+                ppl_numericDisplayDefault(c, ptr->ypos * 100, 1));
         i = strlen(output);
         // A point's label
         if (ptr->text != NULL) {
             ppl_strAppendf(output, outLen, &i, " label ");
-            i += strlen(output + i);
             ppl_strEscapify(ptr->text, output + i, outLen - i);
             i += strlen(output + i);
         }
@@ -912,16 +759,10 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         for (p = 0; p < ptr->NpolygonPoints; p++) {
             if (p > 0) ppl_strAppendChar(output, outLen, &i, ',');
             ppl_strAppendf(output, outLen, &i, "[%s,%s]",
-                           ppl_numericDisplay(ptr->polygonPoints[2 * p] * 100, c->numdispBuff[0],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                           ppl_numericDisplay(ptr->polygonPoints[2 * p + 1] * 100, c->numdispBuff[1],
-                                              c->set->term_current.SignificantFigures,
-                                              (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-            i += strlen(output + i);
+                           ppl_numericDisplayDefault(c, ptr->polygonPoints[2 * p] * 100, 0),
+                           ppl_numericDisplayDefault(c, ptr->polygonPoints[2 * p + 1] * 100, 1));
         }
         ppl_strAppendf(output, outLen, &i, "]");
-        i += strlen(output + i);
         ppl_withWordsAppend(c, &ptr->with_data, output, outLen, &i);
     } else if (ptr->type == CANVAS_TEXT) // Produce textual representations of text commands
     {
@@ -930,16 +771,10 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         ppl_strEscapify(ptr->text, output + i, outLen - i);
         i += strlen(output + i);
         ppl_strAppendf(output, outLen, &i, " at %s,%s rotate %s gap %s",
-                       ppl_numericDisplay(ptr->xpos * 100, c->numdispBuff[0], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay(ptr->rotation * 180 / M_PI, c->numdispBuff[2],
-                                          c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)),
-                       ppl_numericDisplay(ptr->xpos2 * 100, c->numdispBuff[3], c->set->term_current.SignificantFigures,
-                                          (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
-        i += strlen(output + i);
+                       ppl_numericDisplayDefault(c, ptr->xpos * 100, 0),
+                       ppl_numericDisplayDefault(c, ptr->ypos * 100, 1),
+                       ppl_numericDisplayDefault(c, ptr->rotation * 180 / M_PI, 2),
+                       ppl_numericDisplayDefault(c, ptr->xpos2 * 100, 3));
         ppl_withWordsAppend(c, &ptr->with_data, output, outLen, &i);
     } else {
         ppl_snprintfTrunc(output, outLen, "[unknown object]");
@@ -2204,15 +2039,8 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
         strcpy(out->filename, in);
         return 0;
     }
-    {
-        int j, k;
-        // Escape spaces in the filename before passing it to wordexp
-        for (j = k = 0; ((in[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-            if (in[j] == ' ') escaped[k++] = '\\';
-            escaped[k++] = in[j++];
-        }
-        escaped[k++] = '\0';
-    }
+    // Escape spaces in the filename before passing it to wordexp
+    ppl_strEscapeSpaces(in, escaped, FNAME_LENGTH);
     // Expand ~ and environment variables in the filename
     if ((wordexp(escaped, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", escaped);

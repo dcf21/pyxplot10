@@ -88,21 +88,9 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         double r1, g1, b1, r2, g2, b2;
         // Adding colors mixes them additively: convert both to RGB, and add their components
-        if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
-            r1 = a->exponent[8];
-            g1 = a->exponent[9];
-            b1 = a->exponent[10];
-        } else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &r1, &g1, &b1);
-        else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r1, &g1, &b1);
+        pplcol_toRGB(a, &r1, &g1, &b1);
         // Convert the second color to RGB
-        if (round(b->exponent[0]) == SW_COLSPACE_RGB) {
-            r2 = b->exponent[8];
-            g2 = b->exponent[9];
-            b2 = b->exponent[10];
-        } else if (round(b->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoRGB(b->exponent[8], b->exponent[9], b->exponent[10], b->exponent[11], &r2, &g2, &b2);
-        else pplcol_HSBtoRGB(b->exponent[8], b->exponent[9], b->exponent[10], &r2, &g2, &b2);
+        pplcol_toRGB(b, &r2, &g2, &b2);
         r1 += r2;
         g1 += g2;
         b1 += b2;
@@ -130,24 +118,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         // Vectors can only be added if they have the same units
         if (!ppl_unitsDimEqual(a, b)) {
             // Describe the conflicting units in the error message
-            if (a->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
-                        ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            } else if (b->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            ppl_unitsConflictError(context, a, b, "add", status, errType, errText);
             return;
         }
         // ...and the same length
@@ -281,24 +252,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         // Matrices can only be added if they have the same units
         if (!ppl_unitsDimEqual(a, b)) {
             // Describe the conflicting units in the error message
-            if (a->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
-                        ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            } else if (b->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            ppl_unitsConflictError(context, a, b, "add", status, errType, errText);
             return;
         }
         // ...and the same size
@@ -391,21 +345,9 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         double r1, g1, b1, r2, g2, b2;
         // Subtracting colors: convert both to RGB, and subtract their components
-        if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
-            r1 = a->exponent[8];
-            g1 = a->exponent[9];
-            b1 = a->exponent[10];
-        } else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &r1, &g1, &b1);
-        else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r1, &g1, &b1);
+        pplcol_toRGB(a, &r1, &g1, &b1);
         // Convert the second color to RGB
-        if (round(b->exponent[0]) == SW_COLSPACE_RGB) {
-            r2 = b->exponent[8];
-            g2 = b->exponent[9];
-            b2 = b->exponent[10];
-        } else if (round(b->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoRGB(b->exponent[8], b->exponent[9], b->exponent[10], b->exponent[11], &r2, &g2, &b2);
-        else pplcol_HSBtoRGB(b->exponent[8], b->exponent[9], b->exponent[10], &r2, &g2, &b2);
+        pplcol_toRGB(b, &r2, &g2, &b2);
         r1 -= r2;
         g1 -= g2;
         b1 -= b2;
@@ -419,24 +361,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         // Vectors can only be subtracted if they have the same units
         if (ppl_unitsDimEqual(a, b) == 0) {
             // Describe the conflicting units in the error message
-            if (a->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
-                        ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            } else if (b->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            ppl_unitsConflictError(context, a, b, "subtract", status, errType, errText);
             return;
         }
         // ...and the same length
@@ -466,24 +391,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         // Matrices can only be subtracted if they have the same units
         if (ppl_unitsDimEqual(a, b) == 0) {
             // Describe the conflicting units in the error message
-            if (a->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
-                        ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            } else if (b->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
-                        ppl_printUnit(context, a, NULL, NULL, 0, 1, 0), ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            ppl_unitsConflictError(context, a, b, "subtract", status, errType, errText);
             return;
         }
         // ...and the same size
@@ -570,13 +478,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             return;
         }
         // Convert the color to RGB, and scale its components
-        if (round(c->exponent[0]) == SW_COLSPACE_RGB) {
-            r1 = c->exponent[8];
-            g1 = c->exponent[9];
-            b1 = c->exponent[10];
-        } else if (round(c->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoRGB(c->exponent[8], c->exponent[9], c->exponent[10], c->exponent[11], &r1, &g1, &b1);
-        else pplcol_HSBtoRGB(c->exponent[8], c->exponent[9], c->exponent[10], &r1, &g1, &b1);
+        pplcol_toRGB(c, &r1, &g1, &b1);
         r1 *= m;
         g1 *= m;
         b1 *= m;
@@ -783,13 +685,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             return;
         }
         // Convert the color to RGB, and divide its components
-        if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
-            r1 = a->exponent[8];
-            g1 = a->exponent[9];
-            b1 = a->exponent[10];
-        } else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
-            pplcol_CMYKtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &r1, &g1, &b1);
-        else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r1, &g1, &b1);
+        pplcol_toRGB(a, &r1, &g1, &b1);
         r1 /= m;
         g1 /= m;
         b1 /= m;

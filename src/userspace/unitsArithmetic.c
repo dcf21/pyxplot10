@@ -514,6 +514,32 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     return;
 }
 
+//! ppl_unitsConflictError - Report an attempt to combine two quantities whose physical dimensions conflict
+//! \param [in] c - The Pyxplot context
+//! \param [in] a - The left operand
+//! \param [in] b - The right operand
+//! \param [in] operation - A description of the operation, e.g. "add"
+//! \param [out] status - Set to one, to indicate that an error occurred
+//! \param [out] errType - Set to the type of error
+//! \param [out] errText - Buffer of LSTR_LENGTH bytes into which the error message is written
+
+void ppl_unitsConflictError(ppl_context *c, const pplObj *a, const pplObj *b, const char *operation, int *status,
+                            int *errType, char *errText) {
+    // Describe whichever operands have units
+    if (a->dimensionless)
+        ppl_funcError(status, errType, errText, ERR_UNIT,
+                      "Attempt to %s quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
+                      operation, ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
+    else if (b->dimensionless)
+        ppl_funcError(status, errType, errText, ERR_UNIT,
+                      "Attempt to %s quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
+                      operation, ppl_printUnit(c, a, NULL, NULL, 0, 1, 0));
+    else
+        ppl_funcError(status, errType, errText, ERR_UNIT,
+                      "Attempt to %s quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
+                      operation, ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
+}
+
 //! ppl_uaAdd - Add two quantities, which must have the same physical dimensions
 //! \param [in] c - The Pyxplot context
 //! \param [in] a - The first quantity
@@ -537,24 +563,7 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         // The units differ: describe them in the error message
         if (ppl_unitsDimEqual(a, b) == 0) {
             // Describe whichever operands have units
-            if (a->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
-                        ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
-            } else if (b->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
-                        ppl_printUnit(c, a, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to add quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
-                        ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            ppl_unitsConflictError(c, a, b, "add", status, errType, errText);
             return;
         }
     }
@@ -619,24 +628,7 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         // The units differ: describe them in the error message
         if (ppl_unitsDimEqual(a, b) == 0) {
             // Describe whichever operands have units
-            if (a->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
-                        ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
-            } else if (b->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
-                        ppl_printUnit(c, a, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to subtract quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
-                        ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            ppl_unitsConflictError(c, a, b, "subtract", status, errType, errText);
             return;
         }
     }
@@ -703,24 +695,7 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         // The units differ: describe them in the error message
         if (ppl_unitsDimEqual(a, b) == 0) {
             // Describe whichever operands have units
-            if (a->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to apply mod operator to quantities with conflicting dimensions: left operand is dimensionless, while right operand has units of <%s>.",
-                        ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
-            } else if (b->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to apply mod operator to quantities with conflicting dimensions: left operand has units of <%s>, while right operand is dimensionless.",
-                        ppl_printUnit(c, a, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to apply mod operator to quantities with conflicting dimensions: left operand has units of <%s>, while right operand has units of <%s>.",
-                        ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            ppl_unitsConflictError(c, a, b, "apply mod operator to", status, errType, errText);
             return;
         }
     }

@@ -1089,6 +1089,82 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
     return;
 }
 
+//! airyTaylor - Evaluate an Airy function, or its derivative, at an intermediate distance from the origin, using a
+//! Taylor series about the nearest of a table of points
+//! \param [in] in - The argument z
+//! \param [in] mod - The modulus of z
+//! \param [in] arg - The argument of z
+//! \param [in] lookup - The function which looks up the table of points for the Airy function being evaluated
+//! \param [in] k - Zero to evaluate the function, or one to evaluate its derivative
+//! \return The value of the function
+
+static gsl_complex airyTaylor(gsl_complex in, const double mod, const double arg,
+                              void (*lookup)(double, double, gsl_complex *, gsl_complex *, gsl_complex *),
+                              const double k) {
+    // The function is real on the real axis, so its value below the axis is the conjugate of its value above it; work
+    // in the upper half-plane
+    const int conjugate = (arg < 0.0);
+    gsl_complex a, b, z0, dp, dq;
+    if (conjugate) in = gsl_complex_conjugate(in);
+    lookup(mod, conjugate ? -arg : arg, &a, &b, &z0);
+    airy_series_taylor(&dp, &dq, gsl_complex_sub(in, z0), z0, k);
+    const gsl_complex d = gsl_complex_add(gsl_complex_mul(a, dp), gsl_complex_mul(b, dq));
+    return conjugate ? gsl_complex_conjugate(d) : d;
+}
+
+//! airyNumTerms - The number of terms of the asymptotic series to sum, for an input of a given modulus
+//! \param [in] mod - The modulus of the input
+//! \return The index of the last term to sum
+
+static int airyNumTerms(const double mod) {
+    if (mod > 16.0) return 12;
+    if (mod > 12.0) return 16;
+    if (mod > 10.0) return 20;
+    return 29;
+}
+
+//! airyOscillatingSums - Sum the even and odd terms of the asymptotic series for an Airy function, or its derivative,
+//! near the negative real axis, where it oscillates
+//! \param [in] zah - The argument z, negated and raised to the power 3/2
+//! \param [in] max - The index of the last term to sum
+//! \param [in] diff - Zero for the function, or one for its derivative
+//! \param [out] dp - The sum of the even terms
+//! \param [out] dq - The sum of the odd terms
+
+static void airyOscillatingSums(const gsl_complex zah, const int max, const int diff, gsl_complex *dp,
+                                gsl_complex *dq) {
+    const int a = diff ? -1 : 1, b = diff ? 7 : 5, e = diff ? 5 : 7, f = diff ? 13 : 11;
+    gsl_complex c = GSL_COMPLEX_ONE;
+    *dp = *dq = GSL_COMPLEX_ZERO;
+    for (int i = 0; i <= max; i += 2) {
+        *dp = gsl_complex_add(*dp, c);
+        c = gsl_complex_mul_real(c, ((double) (6 * i + a) * (6 * i + b)) / ((double) 48 * (i + 1)));
+        c = gsl_complex_div(c, zah);
+        *dq = gsl_complex_add(*dq, c);
+        c = gsl_complex_mul_real(c, ((double) (6 * i + e) * (6 * i + f)) / ((double) -48 * (i + 2)));
+        c = gsl_complex_div(c, zah);
+    }
+}
+
+//! airySum - Sum the terms of the asymptotic series for an Airy function, or its derivative, away from the negative
+//! real axis
+//! \param [in] zah - The argument z raised to the power 3/2
+//! \param [in] max - The index of the last term to sum
+//! \param [in] diff - Zero for the function, or one for its derivative
+//! \param [in] sign - The sign of the terms' ratios: -1 for Ai, whose terms alternate, or +1 for Bi
+//! \return The sum of the series
+
+static gsl_complex airySum(const gsl_complex zah, const int max, const int diff, const int sign) {
+    const int a = diff ? -1 : 1, b = diff ? 7 : 5;
+    gsl_complex c = GSL_COMPLEX_ONE, d = GSL_COMPLEX_ZERO;
+    for (int i = 0; i <= max; i++) {
+        d = gsl_complex_add(d, c);
+        c = gsl_complex_mul_real(c, ((double) (6 * i + a) * (6 * i + b)) / ((double) (sign * 48) * (i + 1)));
+        c = gsl_complex_div(c, zah);
+    }
+    return d;
+}
+
 //! airy_ai - Evaluate the Airy function Ai(z) for complex z
 //! \param [in] in - The argument z
 //! \param [out] out - The value of Ai(z)
@@ -1098,9 +1174,9 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
 void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
-    int conjugate, i, max;
+    int max;
     double mod, arg;
-    gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
+    gsl_complex c, d, dp, dq, zah;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
     // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
@@ -1111,29 +1187,9 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
         *out = d;
         return;
     } else if (mod < 8.8) {
-        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
-        // work in the upper half-plane
-        if (arg < 0.0) {
-            conjugate = 1;
-            in = gsl_complex_conjugate(in);
-            arg = -arg;
-        } else {
-            conjugate = 0;
-        }
-        airy_lookup_ai(mod, arg, &a, &b, &z0);
-        zd = gsl_complex_sub(in, z0);
-        airy_series_taylor(&dp, &dq, zd, z0, 0.0);
-        dp = gsl_complex_mul(a, dp);
-        dq = gsl_complex_mul(b, dq);
-        d = gsl_complex_add(dp, dq);
         *status = 0;
-        if (conjugate == 1) {
-            *out = gsl_complex_conjugate(d);
-            return;
-        } else {
-            *out = d;
-            return;
-        }
+        *out = airyTaylor(in, mod, arg, airy_lookup_ai, 0.0);
+        return;
     } else {
         // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
@@ -1144,22 +1200,9 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
         // Large inputs near the negative real axis, where the function oscillates
         if (arg < -2.094395102393195492 || arg > 2.094395102393195492) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            dp = GSL_COMPLEX_ZERO;
-            dq = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
-            for (i = 0; i <= max; i += 2) {
-                dp = gsl_complex_add(dp, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) 48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-                dq = gsl_complex_add(dq, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 7) * (6 * i + 11)) / ((double) -48 * (i + 2)));
-                c = gsl_complex_div(c, zah);
-            }
+            airyOscillatingSums(zah, max, 0, &dp, &dq);
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
@@ -1174,18 +1217,9 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             d = gsl_complex_div_real(d, 1.772453850905516027);
         } else {
             zah = gsl_complex_pow_real(in, 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            d = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the terms of the asymptotic series
-            for (i = 0; i <= max; i++) {
-                d = gsl_complex_add(d, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) -48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-            }
+            d = airySum(zah, max, 0, -1);
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, -0.25));
             d = gsl_complex_div_real(d, 3.544907701811032054);
             c = gsl_complex_div_real(zah, -1.5);
@@ -1212,9 +1246,9 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
 void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
-    int conjugate, i, max;
+    int max;
     double mod, arg;
-    gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
+    gsl_complex a, b, c, d, dp, dq, zah;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
     // Small inputs: use the Maclaurin series
@@ -1225,29 +1259,9 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
         *out = d;
         return;
     } else if (mod < 8.8) {
-        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
-        // work in the upper half-plane
-        if (arg < 0.0) {
-            conjugate = 1;
-            in = gsl_complex_conjugate(in);
-            arg = -arg;
-        } else {
-            conjugate = 0;
-        }
-        airy_lookup_bi(mod, arg, &a, &b, &z0);
-        zd = gsl_complex_sub(in, z0);
-        airy_series_taylor(&dp, &dq, zd, z0, 0.0);
-        dp = gsl_complex_mul(a, dp);
-        dq = gsl_complex_mul(b, dq);
-        d = gsl_complex_add(dp, dq);
         *status = 0;
-        if (conjugate == 1) {
-            *out = gsl_complex_conjugate(d);
-            return;
-        } else {
-            *out = d;
-            return;
-        }
+        *out = airyTaylor(in, mod, arg, airy_lookup_bi, 0.0);
+        return;
     } else {
         // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
@@ -1258,22 +1272,9 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
         // Large inputs near the negative real axis, where the function oscillates
         if (arg < -1.63 || arg > 1.63) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            dp = GSL_COMPLEX_ZERO;
-            dq = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
-            for (i = 0; i <= max; i += 2) {
-                dp = gsl_complex_add(dp, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) 48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-                dq = gsl_complex_add(dq, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 7) * (6 * i + 11)) / ((double) -48 * (i + 2)));
-                c = gsl_complex_div(c, zah);
-            }
+            airyOscillatingSums(zah, max, 0, &dp, &dq);
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
@@ -1288,18 +1289,9 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             d = gsl_complex_div_real(d, 1.772453850905516027);
         } else if (arg > -0.51 && arg < 0.51) {
             zah = gsl_complex_pow_real(in, 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            d = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the terms of the asymptotic series
-            for (i = 0; i <= max; i++) {
-                d = gsl_complex_add(d, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) 48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-            }
+            d = airySum(zah, max, 0, 1);
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, -0.25));
             d = gsl_complex_div_real(d, 1.772453850905516027);
             c = gsl_complex_div_real(zah, 1.5);
@@ -1338,9 +1330,9 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
 void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
-    int conjugate, i, max;
+    int max;
     double mod, arg;
-    gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
+    gsl_complex c, d, dp, dq, zah;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
     // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
@@ -1351,29 +1343,9 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
         *out = d;
         return;
     } else if (mod < 8.8) {
-        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
-        // work in the upper half-plane
-        if (arg < 0.0) {
-            conjugate = 1;
-            in = gsl_complex_conjugate(in);
-            arg = -arg;
-        } else {
-            conjugate = 0;
-        }
-        airy_lookup_ai(mod, arg, &a, &b, &z0);
-        zd = gsl_complex_sub(in, z0);
-        airy_series_taylor(&dp, &dq, zd, z0, 1.0);
-        dp = gsl_complex_mul(a, dp);
-        dq = gsl_complex_mul(b, dq);
-        d = gsl_complex_add(dp, dq);
         *status = 0;
-        if (conjugate == 1) {
-            *out = gsl_complex_conjugate(d);
-            return;
-        } else {
-            *out = d;
-            return;
-        }
+        *out = airyTaylor(in, mod, arg, airy_lookup_ai, 1.0);
+        return;
     } else {
         // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
@@ -1384,22 +1356,9 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
         // Large inputs near the negative real axis, where the function oscillates
         if (arg < -2.094395102393195492 || arg > 2.094395102393195492) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            dp = GSL_COMPLEX_ZERO;
-            dq = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
-            for (i = 0; i <= max; i += 2) {
-                dp = gsl_complex_add(dp, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) 48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-                dq = gsl_complex_add(dq, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 5) * (6 * i + 13)) / ((double) -48 * (i + 2)));
-                c = gsl_complex_div(c, zah);
-            }
+            airyOscillatingSums(zah, max, 1, &dp, &dq);
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
@@ -1414,18 +1373,9 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             d = gsl_complex_div_real(d, -1.772453850905516027);
         } else {
             zah = gsl_complex_pow_real(in, 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            d = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the terms of the asymptotic series
-            for (i = 0; i <= max; i++) {
-                d = gsl_complex_add(d, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) -48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-            }
+            d = airySum(zah, max, 1, -1);
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, 0.25));
             d = gsl_complex_div_real(d, -3.544907701811032054);
             c = gsl_complex_div_real(zah, -1.5);
@@ -1452,9 +1402,9 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
 void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
-    int conjugate, i, max;
+    int max;
     double mod, arg;
-    gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
+    gsl_complex a, b, c, d, dp, dq, zah;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
     // Small inputs: use the Maclaurin series
@@ -1465,29 +1415,9 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
         *out = d;
         return;
     } else if (mod < 8.8) {
-        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
-        // work in the upper half-plane
-        if (arg < 0.0) {
-            conjugate = 1;
-            in = gsl_complex_conjugate(in);
-            arg = -arg;
-        } else {
-            conjugate = 0;
-        }
-        airy_lookup_bi(mod, arg, &a, &b, &z0);
-        zd = gsl_complex_sub(in, z0);
-        airy_series_taylor(&dp, &dq, zd, z0, 1.0);
-        dp = gsl_complex_mul(a, dp);
-        dq = gsl_complex_mul(b, dq);
-        d = gsl_complex_add(dp, dq);
         *status = 0;
-        if (conjugate == 1) {
-            *out = gsl_complex_conjugate(d);
-            return;
-        } else {
-            *out = d;
-            return;
-        }
+        *out = airyTaylor(in, mod, arg, airy_lookup_bi, 1.0);
+        return;
     } else {
         // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
@@ -1498,22 +1428,9 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
         // Large inputs near the negative real axis, where the function oscillates
         if (arg < -1.63 || arg > 1.63) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            dp = GSL_COMPLEX_ZERO;
-            dq = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
-            for (i = 0; i <= max; i += 2) {
-                dp = gsl_complex_add(dp, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) 48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-                dq = gsl_complex_add(dq, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i + 5) * (6 * i + 13)) / ((double) -48 * (i + 2)));
-                c = gsl_complex_div(c, zah);
-            }
+            airyOscillatingSums(zah, max, 1, &dp, &dq);
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
             // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
@@ -1528,18 +1445,9 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             d = gsl_complex_div_real(d, -1.772453850905516027);
         } else if (arg > -0.51 && arg < 0.51) {
             zah = gsl_complex_pow_real(in, 1.5);
-            max = 29;
-            if (mod > 10.0) max = 20;
-            if (mod > 12.0) max = 16;
-            if (mod > 16.0) max = 12;
-            c = GSL_COMPLEX_ONE;
-            d = GSL_COMPLEX_ZERO;
+            max = airyNumTerms(mod);
             // Sum the terms of the asymptotic series
-            for (i = 0; i <= max; i++) {
-                d = gsl_complex_add(d, c);
-                c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) 48 * (i + 1)));
-                c = gsl_complex_div(c, zah);
-            }
+            d = airySum(zah, max, 1, 1);
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, 0.25));
             d = gsl_complex_div_real(d, 1.772453850905516027);
             c = gsl_complex_div_real(zah, 1.5);

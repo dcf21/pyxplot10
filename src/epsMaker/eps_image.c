@@ -49,6 +49,7 @@
 
 #include "epsMaker/eps_comm.h"
 #include "epsMaker/eps_core.h"
+#include "epsMaker/eps_eps.h"
 #include "epsMaker/eps_image.h"
 #include "epsMaker/eps_settings.h"
 
@@ -79,37 +80,7 @@ void eps_image_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "%% Canvas item %d [bitmap image]\n", x->current->id);
 
     // Expand filename if it contains wildcards
-    {
-        wordexp_t wordExp;
-        glob_t globData;
-        char fName[FNAME_LENGTH];
-        {
-            int j, k;
-            // Escape spaces in the filename before passing it to wordexp
-            for (j = k = 0; ((x->current->text[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-                if (x->current->text[j] == ' ') fName[k++] = '\\';
-                fName[k++] = x->current->text[j++];
-            }
-            fName[k++] = '\0';
-        }
-        // Expand ~ and environment variables in the filename
-        if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
-            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
-            return;
-        }
-        // Expand wildcards in the filename
-        if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
-            ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
-            ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
-            wordfree(&wordExp);
-            return;
-        }
-        wordfree(&wordExp);
-        snprintf(filename, FNAME_LENGTH, "%s", globData.gl_pathv[0]);
-        filename[FNAME_LENGTH - 1] = '\0';
-        globfree(&globData);
-    }
+    if (eps_eps_expandFilename(x, filename)) return;
 
     // Open input data file
     infile = fopen(filename, "r");

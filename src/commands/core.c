@@ -231,15 +231,8 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
         raw = (char *) stk[pos + PARSE_cd_directory_path].auxil;
-        {
-            int j, k;
-            // Escape spaces in the name before passing it to wordexp
-            for (j = k = 0; ((raw[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-                if (raw[j] == ' ') dirName[k++] = '\\';
-                dirName[k++] = raw[j++];
-            }
-            dirName[k++] = '\0';
-        }
+        // Escape spaces in the name before passing it to wordexp
+        ppl_strEscapeSpaces(raw, dirName, FNAME_LENGTH);
 
         // Expand ~ and environment variables in the name
         if ((wordexp(dirName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
@@ -428,15 +421,8 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
     char fn[FNAME_LENGTH];
     wordexp_t wordExp;
     glob_t globData;
-    {
-        int j, k;
-        // Escape spaces in the filename before passing it to wordexp
-        for (j = k = 0; ((raw[j] != '\0') && (k < FNAME_LENGTH - 1));) {
-            if (raw[j] == ' ') fn[k++] = '\\';
-            fn[k++] = raw[j++];
-        }
-        fn[k++] = '\0';
-    }
+    // Escape spaces in the filename before passing it to wordexp
+    ppl_strEscapeSpaces(raw, fn, FNAME_LENGTH);
 
 
     // Expand ~ and environment variables in the filename

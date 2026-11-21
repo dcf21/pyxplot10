@@ -225,7 +225,6 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
         if (typeable == SW_DISPLAY_L) ppl_strAppendChar(output, LSTR_LENGTH, &i, '$');
         ppl_strAppendf(output, LSTR_LENGTH, &i, "%s",
                        ppl_numericDisplay(GSL_NAN, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
-        i += strlen(output + i);
     } else {
         OoM = hypot(numberOutReal, numberOutImag) * pow(10, -NSigFigs);
 
@@ -238,7 +237,6 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
         if (fabs(numberOutReal) >= OoM) {
             ppl_strAppendf(output, LSTR_LENGTH, &i, "%s",
                            ppl_numericDisplay(numberOutReal, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
-            i += strlen(output + i);
         }
         if ((fabs(numberOutReal) >= OoM) && (fabs(numberOutImag) > OoM) && (numberOutImag > 0))
             ppl_strAppendChar(output, LSTR_LENGTH, &i, '+');
@@ -261,10 +259,8 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
                 ppl_strAppendChar(output, LSTR_LENGTH, &i, 'i');
             } else if ((fabs(numberOutImag - 1.0) >= OoM) && (fabs(numberOutImag + 1.0) >= OoM)) {
                 ppl_strAppendf(output, LSTR_LENGTH, &i, "%s", "*sqrt(-1)");
-                i += strlen(output + i);
             } else {
                 ppl_strAppendf(output, LSTR_LENGTH, &i, "%s", "sqrt(-1)");
-                i += strlen(output + i);
             } // We've not printed 1 or -1, so nothing to multiply with
         }
         if ((fabs(numberOutReal) >= OoM) && (fabs(numberOutImag) > OoM))
@@ -611,7 +607,6 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
         // In typeable form, units are written as *unit(...)
         if ((typeable == SW_DISPLAY_T) && first) {
             ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", "*unit(");
-            OutputPos += strlen(output + OutputPos);
         }
         if (!first) // Print * or /
         {
@@ -630,7 +625,6 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
         // In LaTeX, unit names are set in roman type
         if (typeable == SW_DISPLAY_L) {
             ppl_strAppendf(output, LSTR_LENGTH, &OutputPos, "%s", "\\mathrm{");
-            OutputPos += strlen(output + OutputPos);
         }
         if (UnitPref[j] != 0) // Print SI prefix
         {
