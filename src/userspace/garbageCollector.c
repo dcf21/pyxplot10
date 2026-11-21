@@ -93,7 +93,7 @@ void ppl_garbageObject(pplObj *o) {
     // use of it is harmless, and free what it owns.
     if (o == NULL) return;
     if (__sync_sub_and_fetch(&o->refCount, 1) > 0) return;
-    int objType = o->objType;
+    const int objType = o->objType;
     o->objType = PPLOBJ_ZOM; // Object is now a zombie
     // Release the variable from which the object was read, kept so that methods such as list.append() can modify it in
     // place

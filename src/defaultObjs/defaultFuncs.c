@@ -1383,8 +1383,8 @@ void pplfunc_coth(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // Both arguments must be vectors of three elements
     char *FunctionDescription = "cross(a,b)";
-    int t1 = in[0].objType;
-    int t2 = in[1].objType;
+    const int t1 = in[0].objType;
+    const int t2 = in[1].objType;
     // The first argument must be a vector
     if (t1 != PPLOBJ_VEC) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1719,7 +1719,7 @@ void pplfunc_expint(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
-    int n = (int) in[0].real;
+    const int n = (int) in[0].real;
     char *FunctionDescription = "factors(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
@@ -2267,7 +2267,7 @@ void pplfunc_legendreQ(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_len(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    int t = in->objType;
+    const int t = in->objType;
     if ((t == PPLOBJ_DICT) || (t == PPLOBJ_MOD) || (t == PPLOBJ_USER)) OUTPUT.real = ((dict *) in->auxil)->length;
     else if (t == PPLOBJ_LIST) OUTPUT.real = ((list *) in->auxil)->length;
     else if ((t == PPLOBJ_STR) || (t == PPLOBJ_EXC))
@@ -2623,7 +2623,7 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ord(s)";
-    int t = in[0].objType;
+    const int t = in[0].objType;
     // The argument must be a string
     if (t != PPLOBJ_STR) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -2766,7 +2766,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
         else if (((i % 2) == 0) || ((i % 3) == 0) || ((i % 5) == 0) || ((i % 7) == 0)) prime = 0;
         // Test larger numbers for primality by trial division
         else {
-            int tm = sqrt(i);
+            const int tm = sqrt(i);
             // Trial division by numbers of the form 6k-1 and 6k+1
             for (int t = 11; ((t <= tm) && prime); t += 6) {
                 if ((i % t) == 0) prime = 0;
@@ -3042,7 +3042,7 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                     return;
                 }
             } else {
-                double tmpdbl = OUTPUT.imag;
+                const double tmpdbl = OUTPUT.imag;
                 OUTPUT.imag = OUTPUT.real;
                 OUTPUT.real = -tmpdbl;
                 OUTPUT.flagComplex = !ppl_dblEqual(OUTPUT.imag, 0);

@@ -257,7 +257,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
             if (tokenSameState(&t)) goto overflow;
         } // Sop up whitespace
-        int oldpos = t.scanpos;
+        const int oldpos = t.scanpos;
 
         // Try each state which may follow the current one
         for (int trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
@@ -362,8 +362,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         n += explen;
                         extraStrArg = (explen > 0);
                     }
-                    int k = t.scanpos;
-                    int l = t.outpos;
+                    const int k = t.scanpos;
+                    const int l = t.outpos;
                     j -= n;
                     // Unless the brackets are empty, tokenise their contents recursively
                     if ((in[k] != ')') || (trialstate == 'E')) {
@@ -722,8 +722,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (tokenSameState(&t)) goto overflow;
                         n++;
                     } // Sop up whitespace
-                    int k = t.scanpos;
-                    int l = t.outpos;
+                    const int k = t.scanpos;
+                    const int l = t.outpos;
                     j -= n;
                     // Unless the dictionary is empty, tokenise its contents recursively
                     if (in[k] != '}') {
@@ -1419,7 +1419,7 @@ static int compileOperator(pplExprCompiler *c, const char tokenState, const pplT
             compileError(c, tpos, ERR_INTERNAL, "Could not match : to a ? in the ternary operator.");
             return 1;
         }
-        int questionBranch = c->stack[c->stackLen - 1].branchInstruction;
+        const int questionBranch = c->stack[c->stackLen - 1].branchInstruction;
         c->stackLen--;
         if (emitInstruction(c, PPL_BC_GOTO, tpos) == NULL) return 1;
         branchInstruction = c->lastInstruction;

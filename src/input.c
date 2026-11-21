@@ -396,7 +396,7 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
             strncpy(context->inputLineAddBuffer, in, i);
             context->inputLineAddBuffer[i] = '\0';
         } else {
-            int j = strlen(context->inputLineAddBuffer);
+            const int j = strlen(context->inputLineAddBuffer);
             context->inputLineAddBuffer = (char *) realloc((void *) context->inputLineAddBuffer, j + i + 1);
             // Failure to allocate memory is reported as an error
             if (context->inputLineAddBuffer == NULL) {
@@ -412,7 +412,7 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
 
     // Add previous backslashed lines to the beginning of this one
     if (context->inputLineAddBuffer != NULL) {
-        int j = strlen(context->inputLineAddBuffer);
+        const int j = strlen(context->inputLineAddBuffer);
         context->inputLineAddBuffer = (char *) realloc((void *) context->inputLineAddBuffer, j + i + 2);
         // Failure to allocate memory is reported as an error
         if (context->inputLineAddBuffer == NULL) {

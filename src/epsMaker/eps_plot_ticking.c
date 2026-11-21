@@ -175,7 +175,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         }
 
         // Round each limit to a multiple of a power of ten, about a fifth of the range
-        double OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
+        const double OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
         min_prelim = floor(min_prelim / OoM) * OoM;
         max_prelim = ceil(max_prelim / OoM) * OoM;
 
@@ -220,7 +220,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 
         // Flip axis range if it is reversed
         if (axis->RangeReversed) {
-            double swap = axis->MinFinal;
+            const double swap = axis->MinFinal;
             axis->MinFinal = axis->MaxFinal;
             axis->MaxFinal = swap;
         }
@@ -252,7 +252,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         }
 
         // Tick labels are allocated in the caller's memory context
-        int OutContext = ppl_memAlloc_GetMemContext();
+        const int OutContext = ppl_memAlloc_GetMemContext();
 
         // Finalise the label to be placed on the axis, quoting a physical unit as necessary
         if ((axis->DataUnit.dimensionless) || (axis->format != NULL)) {
@@ -372,7 +372,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                 for (int xrn = j = 0; xrn <= axis->AxisValueTurnings; xrn++) {
                     // On an axis whose mapping is tabulated, the ticks run over the section's range of values
                     if (axis->AxisLinearInterpolation != NULL) {
-                        double first = axis->AxisLinearInterpolation[axis->AxisTurnings[0]];
+                        const double first = axis->AxisLinearInterpolation[axis->AxisTurnings[0]];
                         double RegionMin = axis->AxisLinearInterpolation[axis->AxisTurnings[xrn]];
                         double RegionMax = axis->AxisLinearInterpolation[axis->AxisTurnings[xrn + 1]];
                         // Make sure the section's range is the right way around
@@ -496,7 +496,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int OutContext) {
     // Variables for formatting the label
     char msg[PPL_MSG_LENGTH];
-    int SF = X->c->set->term_current.SignificantFigures;
+    const int SF = X->c->set->term_current.SignificantFigures;
 
     // Labels are compared with round numbers to within the precision displayed
     double ApproxMargin = pow(10, -SF + 1);
@@ -561,7 +561,7 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     ppl_contextGetVarPointer(X->c, VarName, &VarVal, &DummyTemp);
 
     // Set value of x (or y/z)
-    int rc = VarVal->refCount;
+    const int rc = VarVal->refCount;
     *VarVal = *xunit;
     VarVal->refCount = rc;
     VarVal->imag = 0.0;

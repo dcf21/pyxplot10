@@ -133,7 +133,7 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     gsl_complex ac, bc;
     unsigned char DimLess = 1;
 
-    double exponent = b->real; // We may overwrite this when we set o->real, so store a copy
+    const double exponent = b->real; // We may overwrite this when we set o->real, so store a copy
 
     // An exponent with units is an error, unless errors are switched off, in which case the result is NaN. The same
     // pattern follows every check below.
@@ -262,9 +262,9 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
     // Copy the operands, since o may be the same object as a or b
     double areal = a->real;
-    double aimag = a->imag;
+    const double aimag = a->imag;
     double breal = b->real;
-    double bimag = b->imag;
+    const double bimag = b->imag;
 
     // Two inputs have conflicting temperature units. This is only allowed in the special case of oC/oF and friends, when temperature conversion happens.
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
@@ -308,7 +308,7 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             o->imag = 0;
             o->flagComplex = 0;
         } else {
-            double tmp = (areal * breal - aimag * bimag);
+            const double tmp = (areal * breal - aimag * bimag);
             o->imag = (aimag * breal + areal * bimag);
             o->real = tmp;
             o->flagComplex = !ppl_dblEqual(o->imag, 0);
@@ -375,9 +375,9 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
     // Copy the operands, since o may be the same object as a or b
     double areal = a->real;
-    double aimag = a->imag;
+    const double aimag = a->imag;
     double breal = b->real;
-    double bimag = b->imag;
+    const double bimag = b->imag;
 
     // Two inputs have conflicting temperature units. This is only allowed in the special case of oC/oF and friends, when temperature conversion happens.
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
@@ -453,7 +453,7 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
                 return;
             }
         } else {
-            double tmp = (areal * breal + aimag * bimag) / mag;
+            const double tmp = (areal * breal + aimag * bimag) / mag;
             o->imag = (aimag * breal - areal * bimag) / mag;
             o->real = tmp;
             o->flagComplex = !ppl_dblEqual(o->imag, 0);

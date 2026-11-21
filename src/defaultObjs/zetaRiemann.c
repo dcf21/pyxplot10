@@ -87,7 +87,7 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
 
     // Use Peter Borwein's method.
     // This is Algorithm 3 from his 2000 Canadian Math. Soc. Proc. paper.
-    int n = (int) (2.1 + 1.2 * DECIMAL_PLACES + 0.76 * fabs(y) + 0.25 * log(1 + (y * y / (x * x))));
+    const int n = (int) (2.1 + 1.2 * DECIMAL_PLACES + 0.76 * fabs(y) + 0.25 * log(1 + (y * y / (x * x))));
     int m = n;
     gsl_complex am = gsl_complex_negative(a);
     e = GSL_COMPLEX_ZERO;

@@ -73,7 +73,7 @@ static void clipAgainstFace(lineClip *lc, const double a1, const double a2, cons
     double cCross = c1 + (c2 - c1) * fr;
     if (!((bCross >= 0.0) && (bCross <= 1.0) && (cCross >= 0.0) && (cCross <= 1.0))) return;
     // A segment entering the graph through this face records the crossing as its first; one leaving, as its second
-    int n = ((a1 * sgn) < (a2 * sgn)) ? 0 : 1;
+    const int n = ((a1 * sgn) < (a2 * sgn)) ? 0 : 1;
     *lc->cx[n] = lc->x1 + (lc->x2 - lc->x1) * fr;
     *lc->cy[n] = lc->y1 + (lc->y2 - lc->y1) * fr;
     *lc->cz[n] = lc->z1 + (lc->z2 - lc->z1) * fr;

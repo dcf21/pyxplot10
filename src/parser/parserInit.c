@@ -157,7 +157,7 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
-        int k = (int) ppl_getFloat(cmdText + j, NULL);
+        const int k = (int) ppl_getFloat(cmdText + j, NULL);
         while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->outStackPos = k;
         // Read the length of the stack used by each repeated item
@@ -165,7 +165,7 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
-        int l = (int) ppl_getFloat(cmdText + j, NULL);
+        const int l = (int) ppl_getFloat(cmdText + j, NULL);
         while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->listLen = l;
         while ((cmdText[j] != '\0') && (cmdText[j] != '\n') && ((unsigned char) cmdText[j] < ' '))
@@ -218,7 +218,7 @@ int ppl_parserInit(ppl_context *c) {
         // command produces. The first letter of the command decides which list it is stored in.
         while ((ppl_cmdList[inPos] != '\0') && ((unsigned char) ppl_cmdList[inPos] <= ' '))
             inPos++; // Ignore whitespace
-        int rootStackLen =
+        const int rootStackLen =
                 (int) ppl_getFloat(ppl_cmdList + inPos,
                                    &nc); // Each line of command list begins with the length of the root stack namespace
         inPos += nc;
@@ -393,7 +393,7 @@ int ppl_parserInit(ppl_context *c) {
                 }
 
                 // Read the minimum number of characters which an abbreviation of the match string must have
-                int k = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
+                const int k = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->acLevel = k;
                 // Read the position on the output stack where the match is stored
@@ -401,7 +401,7 @@ int ppl_parserInit(ppl_context *c) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
-                int l = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
+                const int l = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->outStackPos = l;
                 // Read the length of the output stack, for items which hold lists
@@ -410,7 +410,7 @@ int ppl_parserInit(ppl_context *c) {
                                       "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
-                int m = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
+                const int m = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->listLen = m;
                 while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] != '\n') &&

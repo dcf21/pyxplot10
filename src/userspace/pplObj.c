@@ -750,9 +750,9 @@ pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned ch
 
     // Nothing to copy
     if (in == NULL) return NULL;
-    int t = in->objType;
+    const int t = in->objType;
     // Like pplObjCpy(), the copy keeps the reference count of the destination, or starts with one if it is new
-    int rc = (out == NULL) ? 1 : out->refCount;
+    const int rc = (out == NULL) ? 1 : out->refCount;
 
     // If no destination is given, allocate one
     if (out == NULL) {

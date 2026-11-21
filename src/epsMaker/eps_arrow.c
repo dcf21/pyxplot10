@@ -52,10 +52,10 @@ void eps_arrow_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate positions of start and end of arrow
-    double x1 = x->current->xpos * M_TO_PS; // Start of arrow
-    double y1 = x->current->ypos * M_TO_PS;
-    double x2 = (x->current->xpos2 + x->current->xpos) * M_TO_PS; // End of arrow
-    double y2 = (x->current->ypos2 + x->current->ypos) * M_TO_PS;
+    const double x1 = x->current->xpos * M_TO_PS; // Start of arrow
+    const double y1 = x->current->ypos * M_TO_PS;
+    const double x2 = (x->current->xpos2 + x->current->xpos) * M_TO_PS; // End of arrow
+    const double y2 = (x->current->ypos2 + x->current->ypos) * M_TO_PS;
 
     // Expand any numbered styles which may appear in the with words we are passed
     ppl_withWordsMerge(x->c, &ww, &x->current->with_data, NULL, NULL, NULL, NULL, 1);
@@ -134,7 +134,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
     // Set linewidth and linetype
     if (with_data->USElinewidth) lw_scale = with_data->linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    const double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (with_data->USElinetype) lt = with_data->linetype;

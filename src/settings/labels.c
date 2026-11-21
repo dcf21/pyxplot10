@@ -75,9 +75,9 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     ppllabel_object *out;
 
     // Read the coordinate system of each coordinate
-    int system_x = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x_system);
-    int system_y = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y_system);
-    int system_z = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z_system);
+    const int system_x = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x_system);
+    const int system_y = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y_system);
+    const int system_z = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z_system);
 
     // Check the units of each coordinate
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x, system_x);
@@ -98,15 +98,15 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     }
     strcpy(label, tempstr);
 
-    double ang = in->stk[ptab[PARSE_INDEX_rotation]].real; // Check for rotation modifier
-    int gotAng = (in->stk[ptab[PARSE_INDEX_rotation]].objType == PPLOBJ_NUM);
-    double gap = in->stk[ptab[PARSE_INDEX_gap]].real; // Check for gap modifier
-    int gotGap = (in->stk[ptab[PARSE_INDEX_gap]].objType == PPLOBJ_NUM);
+    const double ang = in->stk[ptab[PARSE_INDEX_rotation]].real; // Check for rotation modifier
+    const int gotAng = (in->stk[ptab[PARSE_INDEX_rotation]].objType == PPLOBJ_NUM);
+    const double gap = in->stk[ptab[PARSE_INDEX_gap]].real; // Check for gap modifier
+    const int gotGap = (in->stk[ptab[PARSE_INDEX_gap]].objType == PPLOBJ_NUM);
 
     // See if fontsize is specified. Font sizes must be positive and finite; this is checked before any existing label
     // with this ID is changed.
-    int gotFontsize = (in->stk[ptab[PARSE_INDEX_fontsize]].objType == PPLOBJ_NUM);
-    double fontsize = in->stk[ptab[PARSE_INDEX_fontsize]].real;
+    const int gotFontsize = (in->stk[ptab[PARSE_INDEX_fontsize]].objType == PPLOBJ_NUM);
+    const double fontsize = in->stk[ptab[PARSE_INDEX_fontsize]].real;
     if (gotFontsize) {
         // Reject negative font sizes
         if (fontsize < 0) {
@@ -125,7 +125,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     }
 
     // Look up ID number of the label we are adding and find appropriate place for it in label list
-    int i = (int) round(in->stk[ptab[PARSE_INDEX_label_id]].real);
+    const int i = (int) round(in->stk[ptab[PARSE_INDEX_label_id]].real);
     while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
     // Reuse an existing label with this ID, or insert a new one
     if ((*inlist != NULL) && ((*inlist)->id == i)) {
@@ -207,7 +207,7 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(in->stk[pos].real);
             if (pos <= 0) break;
-            int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
+            const int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
             inlist = first;
             while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
             // Unlink and free the label, or warn that it does not exist
@@ -255,7 +255,7 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(in->stk[pos].real);
             if (pos <= 0) break;
-            int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
+            const int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
 
             // Look for the label in the list of defaults
             ppllabel_object *obj = context->set->ppllabel_list_default;

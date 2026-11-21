@@ -570,12 +570,12 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
     t = t->self_lval;
     char *instr = (char *) t->auxil;
     char *astr = (char *) in[0].auxil;
-    int alen = strlen(astr);
+    const int alen = strlen(astr);
     // Extend the string's buffer with realloc() if it was allocated with malloc(); otherwise copy both strings into a
     // new buffer from malloc(), leaving the old one to be freed with its memory context
     if (t->auxilMalloced) {
         const int ilen = t->auxilLen - 1;
-        int newlen = t->auxilLen + alen;
+        const int newlen = t->auxilLen + alen;
         instr = (char *) realloc(t->auxil, newlen);
         // Failure to allocate memory is reported as an error
         if (instr == NULL) {
@@ -586,7 +586,7 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
         strcpy(instr + ilen, astr);
     } else {
         const int ilen = strlen(instr);
-        int newlen = ilen + alen + 1;
+        const int newlen = ilen + alen + 1;
         char *ns = (char *) malloc(newlen);
         // Failure to allocate memory is reported as an error
         if (ns == NULL) {
@@ -647,8 +647,8 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
         return;
     }
     char *cmpstr = (char *) in[0].auxil;
-    int il = strlen(instr);
-    int cl = strlen(cmpstr);
+    const int il = strlen(instr);
+    const int cl = strlen(cmpstr);
     instr += il - cl;
     // A string cannot end with a longer string
     if (il < cl) {
@@ -678,9 +678,9 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
         return;
     }
     char *cmpstr = (char *) in[0].auxil;
-    int il = strlen(instr);
-    int cl = strlen(cmpstr);
-    int pmax = il - cl;
+    const int il = strlen(instr);
+    const int cl = strlen(cmpstr);
+    const int pmax = il - cl;
     for (int p = 0; p <= pmax; p++)
         // Return the position of the first match
         if (strncmp(instr + p, cmpstr, cl) == 0) {
@@ -719,9 +719,9 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     v.refCount = 1;
     list *l = (list *) OUTPUT.auxil;
     char *cmpstr = (char *) in[0].auxil;
-    int il = strlen(instr);
-    int cl = strlen(cmpstr);
-    int pmax = il - cl;
+    const int il = strlen(instr);
+    const int cl = strlen(cmpstr);
+    const int pmax = il - cl;
     for (int p = 0; p <= pmax; p++)
         // Add the position of each match to the list
         if (strncmp(instr + p, cmpstr, cl) == 0) {
@@ -1344,7 +1344,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     int i, l = 0;
     pplObj *st = in[-1].self_this;
     gsl_vector *va = ((pplVector *) st->auxil)->v;
-    int t = in[0].objType;
+    const int t = in[0].objType;
 
     // The vector may be extended by another vector, which must have the same units, or by a list of numbers
     if (t == PPLOBJ_VEC) {
@@ -1975,7 +1975,7 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj v;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
-    int t = in[0].objType;
+    const int t = in[0].objType;
 
     // Append the elements of a vector, as numbers with the vector's units, or the items of a list
     if (t == PPLOBJ_VEC) {
@@ -2579,7 +2579,7 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
     pplObj **bo = (pplObj **) b;
     if (pplmethod_listSortOnCustom_errFlag) return 0;
     if ((c == NULL) || (a == NULL) || (b == NULL)) return 0;
-    int stkLevelOld = c->stackPtr;
+    const int stkLevelOld = c->stackPtr;
 
     // Dummy expression object with dummy line number information
     dummy.srcLineN = 0;
@@ -2688,7 +2688,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     pplmethod_listSortOnCustom_errFlag = 0;
     pplmethod_listSortOnCustom_context = c;
     qsort(items, n, sizeof(pplObj *), pplmethod_listSortOnCustom_slave);
-    int fail = pplmethod_listSortOnCustom_errFlag;
+    const int fail = pplmethod_listSortOnCustom_errFlag;
     pplmethod_listSortOnCustom_fn = NULL;
     pplmethod_listSortOnCustom_errFlag = 0;
     pplmethod_listSortOnCustom_context = NULL;
@@ -2724,7 +2724,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     long n = l->length;
-    int eNum = (int) floor(in[0].real);
+    const int eNum = (int) floor(in[0].real);
     listIterator *li = ppl_listIterateInit(l);
     long i = 0;
     // Every item of the list must itself be a list
@@ -3107,7 +3107,7 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     double d = 0;
-    int n = m->size1;
+    const int n = m->size1;
     int s;
     gsl_matrix *tmp = NULL;
     gsl_permutation *p = NULL;
@@ -3453,7 +3453,7 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
                                   char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
-    int n = m->size1;
+    const int n = m->size1;
     gsl_matrix *vo = NULL;
     // Only square matrices can be transposed by this method
     if (m->size1 != m->size2) {
@@ -3623,7 +3623,7 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
     // The file is read in chunks of 8192 bytes into a buffer which grows as needed; pos is the number of bytes read so
     // far
     char *out = NULL;
-    int chunk = 8192;
+    const int chunk = 8192;
     long pos = 0;
     long size = chunk;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
@@ -3644,7 +3644,7 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
             return;
         }
         out = new;
-        int n = fread(out + pos, 1, chunk, f->file);
+        const int n = fread(out + pos, 1, chunk, f->file);
         pos += n;
         if (n < chunk) break;
         size += chunk;
@@ -3668,7 +3668,7 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
 static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
     char *out = NULL;
-    int chunk = 8192;
+    const int chunk = 8192;
     long pos = 0;
     long size = chunk;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
@@ -3685,7 +3685,7 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
     }
     // Read one byte at a time until the end of the line or the file
     while (!feof(f->file)) {
-        int n = fread(out + pos, 1, 1, f->file);
+        const int n = fread(out + pos, 1, 1, f->file);
         if ((n == 0) || (out[pos] == '\n')) break;
         pos++;
         // Grow the buffer when it is nearly full
@@ -3815,8 +3815,8 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
         pplObjNull(&OUTPUT, 0);
         return;
     }
-    long int l = strlen(s);
-    long int o = fwrite(s, 1, l, f->file);
+    const long int l = strlen(s);
+    const long int o = fwrite(s, 1, l, f->file);
     // Report failure to write the whole string
     if (o != l) {
         ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));

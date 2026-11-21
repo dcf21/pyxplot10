@@ -142,7 +142,7 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
     } else if (v >= DVI_CHARMIN && v <= DVI_CHARMAX) {
         return 0;
     } else if (v < DVI_SET1234 + 4) {
-        int Ndata = v - DVI_SET1234 + 1;
+        const int Ndata = v - DVI_SET1234 + 1;
         if ((err = ReadLongInt(ec, fp, op->ul, Ndata)) != 0) return err;
 
         // Set to DVI_SET1234 for convenience later (we don't need to know whether it's 1, 2, 3 or 4)
@@ -153,7 +153,7 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
         if ((err = ReadSignedInt(ec, fp, op->sl + 1, 4)) != 0) return err;
         return 0;
     } else if (v < DVI_PUT1234 + 4) {
-        int Ndata = v - DVI_PUT1234 + 1;
+        const int Ndata = v - DVI_PUT1234 + 1;
         if ((err = ReadLongInt(ec, fp, op->ul, Ndata)) != 0) return err;
         return 0;
     } else if (v == DVI_PUTRULE) {
@@ -171,7 +171,7 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
     } else if (v >= DVI_EOP && v <= DVI_POP) {
         return 0;
     } else if (v < DVI_RIGHT1234 + 4) {
-        int Ndata = v - DVI_RIGHT1234 + 1;
+        const int Ndata = v - DVI_RIGHT1234 + 1;
         if ((err = ReadSignedInt(ec, fp, op->sl, Ndata)) != 0) return err;
 
         // Set to DVI_RIGHT1234 for convenience later (we don't need to know whether it's 1, 2, 3 or 4)
@@ -180,40 +180,40 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
     } else if (v == DVI_W0) {
         return 0;
     } else if (v < DVI_W1234 + 4) {
-        int Ndata = v - DVI_W1234 + 1;
+        const int Ndata = v - DVI_W1234 + 1;
         if ((err = ReadSignedInt(ec, fp, op->sl, Ndata)) != 0) return err;
         return 0;
     } else if (v == DVI_X0) {
         return 0;
     } else if (v < DVI_X1234 + 4) {
-        int Ndata = v - DVI_X1234 + 1;
+        const int Ndata = v - DVI_X1234 + 1;
         if ((err = ReadSignedInt(ec, fp, op->sl, Ndata)) != 0) return err;
         return 0;
     } else if (v < DVI_DOWN1234 + 4) {
-        int Ndata = v - DVI_DOWN1234 + 1;
+        const int Ndata = v - DVI_DOWN1234 + 1;
         if ((err = ReadSignedInt(ec, fp, op->sl, Ndata)) != 0) return err;
         return 0;
     } else if (v == DVI_Y0) {
         return 0;
     } else if (v < DVI_Y1234 + 4) {
-        int Ndata = v - DVI_Y1234 + 1;
+        const int Ndata = v - DVI_Y1234 + 1;
         if ((err = ReadSignedInt(ec, fp, op->sl, Ndata)) != 0) return err;
         return 0;
     } else if (v == DVI_Z0) {
         return 0;
     } else if (v < DVI_Z1234 + 4) {
-        int Ndata = v - DVI_Z1234 + 1;
+        const int Ndata = v - DVI_Z1234 + 1;
         if ((err = ReadSignedInt(ec, fp, op->sl, Ndata)) != 0) return err;
         return 0;
     } else if (v >= DVI_FNTNUMMIN && v <= DVI_FNTNUMMAX) {
         return 0;
     } else if (v <= DVI_FNT1234) {
-        int Ndata = v - DVI_FNT1234 + 1;
+        const int Ndata = v - DVI_FNT1234 + 1;
         if ((err = ReadLongInt(ec, fp, op->ul, Ndata)) != 0) return err;
         return 0;
 
     } else if (v <= DVI_SPECIAL1234) {
-        int Ndata = v - DVI_SPECIAL1234 + 1;
+        const int Ndata = v - DVI_SPECIAL1234 + 1;
         if ((err = ReadLongInt(ec, fp, op->ul, Ndata)) != 0) return err;
         return 0;
     } else if (v <= DVI_FNTDEF1234) {
@@ -291,7 +291,7 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
 //! \return Zero on success, or a DVIE_* error code
 
 int ReadUChar(pplerr_context *ec, FILE *fp, int *uc) {
-    int i = getc(fp);
+    const int i = getc(fp);
     // Report an unexpected end of file
     if (i == EOF) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Unexpected EOF in dvi file");
@@ -378,7 +378,7 @@ int DisplayDVIOperator(pplerr_context *ec, DVIOperator *op) {
         snprintf(s2, 128, "DVI: Read font number %d", op->op - DVI_FNTNUMMIN);
         s = s2;
     } else if (op->op <= DVI_POSTPOST) {
-        int i = op->op - DVI_CHARMAX - 1 - (DVI_FNTNUMMAX - DVI_FNTNUMMIN + 1);
+        const int i = op->op - DVI_CHARMAX - 1 - (DVI_FNTNUMMAX - DVI_FNTNUMMIN + 1);
         snprintf(s2, 128, "DVI: Read %s", (char *) dviops[i]);
         s = s2;
         //s = (char *)dviops[i];

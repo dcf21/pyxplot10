@@ -69,7 +69,7 @@ void ppl_tbClear(ppl_context *c) {
 
 void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char *srcFname, const int cmdOrExpr,
                const int errType, const int errPos, const char *linetext, const char *context) {
-    int i = c->errStat.tracebackDepth;
+    const int i = c->errStat.tracebackDepth;
 
     // Add a new level to the traceback, unless this is a command which failed because of an error already recorded
     // within it

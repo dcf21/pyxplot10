@@ -713,8 +713,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
                     if (maxSet[k] && (obj->real > max[k])) inRange = 0;
                 }
                 if ((obj->objType == PPLOBJ_STR) && (obj->auxil == NULL)) { inRange = 0; } // NULL strings are bad
-                int om = varObj[k]->amMalloced;
-                int rc = varObj[k]->refCount;
+                const int om = varObj[k]->amMalloced;
+                const int rc = varObj[k]->refCount;
                 varObj[k]->amMalloced = 0;
                 ppl_garbageObject(varObj[k]);
                 pplObjCpy(varObj[k], obj, 0, 0, 1);
@@ -828,7 +828,7 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
             return;
         }
         ppl_castToBool(c, val);
-        int criterion = (val->real != 0);
+        const int criterion = (val->real != 0);
         ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
         // If this condition is true, run its block, and stop
         if (criterion) {
@@ -940,8 +940,8 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     if (tmpObj == NULL) goto fail;
 
     // Replace the variable's old value with the subroutine, keeping its reference count and storage
-    int om = tmpObj->amMalloced;
-    int rc = tmpObj->refCount;
+    const int om = tmpObj->amMalloced;
+    const int rc = tmpObj->refCount;
     tmpObj->amMalloced = 0;
     tmpObj->refCount = 1;
     ppl_garbageObject(tmpObj);

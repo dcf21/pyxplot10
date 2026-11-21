@@ -93,7 +93,7 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
                     WeightSum = 1.0;
                     break;
                 }
-                double weight = 1.0 / dist;
+                const double weight = 1.0 / dist;
                 *output += weight * inZ[i];
                 WeightSum += weight;
             }
@@ -144,8 +144,8 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     int j;
     double *d[USING_ITEMS_MAX + 4];
     long p;
-    int imax = (sg->SamplesXAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesX;
-    int jmax = (sg->SamplesYAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesY;
+    const int imax = (sg->SamplesXAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesX;
+    const int jmax = (sg->SamplesYAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesY;
     *XSizeOut = imax;
     *YSizeOut = jmax;
 
@@ -156,7 +156,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     }
 
     // Create a data table to hold imax x jmax grid points, with the same number of columns as the input
-    int k = in->Ncolumns_real;
+    const int k = in->Ncolumns_real;
     *output = ppldata_NewDataTable(k, 0, ppl_memAlloc_GetMemContext(), imax * jmax);
     if (*output == NULL) return; // Memory fail
 
@@ -169,7 +169,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     for (long pc = 0; pc < p2; pc++) (*output)->current->fileLine_real[pc] = 0;
 
     // Extract data into a temporary array
-    int tempContext = ppl_memAlloc_DescendIntoNewContext();
+    const int tempContext = ppl_memAlloc_DescendIntoNewContext();
 
     // Space for the data, plus a row of minima and a row of maxima for each column
     double *indata = (double *) malloc(k * (InSize + 2) * sizeof(double));

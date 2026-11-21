@@ -59,7 +59,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
     pplObj *args = context->stack + context->stackPtr - nArgs;
     pplObj called;
     int i;
-    int t = out->objType;
+    const int t = out->objType;
     // The stack must hold the object and its index
     if (context->stackPtr < nArgs + 1) {
         ppl_funcError(status, errType, errText, ERR_INTERNAL, "Attempt to slice object with few items on the stack.");
@@ -149,8 +149,8 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
                 goto fail;
             }
             // A character may be several bytes long
-            int start = ppl_utf8ByteOffset(in, p);
-            int len = ppl_utf8ByteOffset(in, p + 1) - start;
+            const int start = ppl_utf8ByteOffset(in, p);
+            const int len = ppl_utf8ByteOffset(in, p + 1) - start;
             // Copy the character, which may occupy several bytes of UTF-8, into a new string
             if ((outstr = (char *) malloc(len + 1)) == NULL) {
                 ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -277,7 +277,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];
     pplObj called;
     int i;
-    int t = out->objType;
+    const int t = out->objType;
     // The stack must hold the object and the two ends of the range
     if (context->stackPtr < nArgs + 1) {
         ppl_funcError(status, errType, errText, ERR_INTERNAL, "Attempt to slice object with few items on the stack.");
@@ -303,7 +303,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
                 goto fail;
             }
             // Convert the range of characters into a range of bytes
-            int byteMin = ppl_utf8ByteOffset(in, min);
+            const int byteMin = ppl_utf8ByteOffset(in, min);
             int outlen = ppl_utf8ByteOffset(in, max) - byteMin;
             if (outlen < 0) outlen = 0;
             // Copy the characters in the range into a new string

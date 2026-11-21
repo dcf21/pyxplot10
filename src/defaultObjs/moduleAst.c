@@ -208,8 +208,8 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
 
         // The current best estimate, and the interval which contains the minimum
         m = gsl_min_fminimizer_x_minimum(s);
-        double a = gsl_min_fminimizer_x_lower(s);
-        double b = gsl_min_fminimizer_x_upper(s);
+        const double a = gsl_min_fminimizer_x_lower(s);
+        const double b = gsl_min_fminimizer_x_upper(s);
 
         // Stop when the interval is narrower than 0.001 in log10(z)
         status = gsl_min_test_interval(a, b, 0.001, 0.0);

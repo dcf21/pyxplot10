@@ -318,7 +318,7 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
         in->length++;
 
         // Add the new key to the tree of hashes
-        int hash = ppl_dictHash(key, -1);
+        const int hash = ppl_dictHash(key, -1);
         ppl_dictHashAdd(in, key, hash, ptrnew);
     }
     return 0;
@@ -395,7 +395,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         in->length++;
 
         // Add the new key to the tree of hashes
-        int hash = ppl_dictHash(key, -1);
+        const int hash = ppl_dictHash(key, -1);
         ppl_dictHashAdd(in, key, hash, ptrnew);
     }
     return 0;
@@ -408,7 +408,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
 
 void *ppl_dictLookup(dict *in, const char *key) {
     if (key == NULL) return NULL;
-    int hash = ppl_dictHash(key, -1);
+    const int hash = ppl_dictHash(key, -1);
     return ppl_dictLookupHash(in, key, hash);
 }
 
@@ -473,8 +473,8 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
 
     // Check hash table
     for (k = 0; (isalnum(key[k]) || (key[k] == '_')); k++);
-    int keylen = k;
-    int hash = ppl_dictHash(key, keylen);
+    const int keylen = k;
+    const int hash = ppl_dictHash(key, keylen);
     dictItem *ptr = ppl_dictHashLookup(in, key, keylen, hash, &clash);
     // The hash tree found the name
     if (ptr != NULL) {
@@ -539,7 +539,7 @@ int ppl_dictContains(dict *in, const char *key) {
     if (in == NULL) return 0;
 
     // Check hash table
-    int hash = ppl_dictHash(key, -1);
+    const int hash = ppl_dictHash(key, -1);
     dictItem *ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
     if (!clash) return (ptr != NULL);
 
@@ -567,7 +567,7 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
     if (in == NULL) return 1;
 
     // Check hash table
-    int hash = ppl_dictHash(key, -1);
+    const int hash = ppl_dictHash(key, -1);
     dictItem *ptr = ppl_dictHashRemove(in, key, hash, &clash);
     if ((ptr == NULL) && (!clash)) return 1; // Key not present
     // The hash tree identified the item: unlink it from the list

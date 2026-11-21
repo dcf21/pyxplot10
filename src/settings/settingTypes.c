@@ -208,7 +208,7 @@ void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, 
     char msg[PPL_MSG_LENGTH];
     static int latch = 0;
     static char *dummyout = "";
-    int first = *id_list;
+    const int first = *id_list;
     // Step through the two tables in parallel until we find <id>
     while (1) {
         if (*id_list == id) return name_list;

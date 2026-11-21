@@ -75,7 +75,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
     while (stk[pos].objType == PPLOBJ_NUM) {
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
-        int last = (stk[pos].objType != PPLOBJ_NUM);
+        const int last = (stk[pos].objType != PPLOBJ_NUM);
         char *name = (char *) stk[pos + offset].auxil;
         // The first part of a name with several parts must be an existing variable which has members
         if (first && !last) {

@@ -277,7 +277,7 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
             && (PotTickList[id].DivOfThrow == DivOfThrow) && (PotTickList[id].OoM == OoM) &&
             (PotTickList[id].DivOfOoM == DivOfOoM) && (MAJORminor || (TicksAcceptedOut[i] == 0))) {
             // Check for ticks accepted immediately to the left of this tick to make sure this point isn't already ticked
-            int IntNum = PotTickList[id].IntervalNum;
+            const int IntNum = PotTickList[id].IntervalNum;
             int abort = 0;
             for (int j = i - 1; ((j >= 0) && (PotTickList[TickOrder[j].id].IntervalNum >= IntNum - 1) &&
                              (PotTickList[TickOrder[j].id].IntervalNum <= IntNum + 1));
@@ -408,7 +408,7 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
             arg = &args[tick->ArgNo];
             double axispos_min = ((double) tick->IntervalNum - 1.0) / (NIntervals - 1);
             double axispos_max = ((double) tick->IntervalNum) / (NIntervals - 1);
-            unsigned char SlopePositive = (arg->NumericValues[tick->IntervalNum] >= arg->NumericValues[tick->IntervalNum - 1]);
+            const unsigned char SlopePositive = (arg->NumericValues[tick->IntervalNum] >= arg->NumericValues[tick->IntervalNum - 1]);
 
             // Locate the tick precisely by bisection, finding where the argument passes its target value
             while (count_steps < 200) {
@@ -418,7 +418,7 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
                 pplObj *o = NULL;
 
                 // Evaluate the argument at the middle of the interval
-                double axispos_mid = (axispos_min + axispos_max) / 2;
+                const double axispos_mid = (axispos_min + axispos_max) / 2;
                 VarVal->real = pplaxis_InvGetPosition(axispos_mid, axis) * UnitMultiplier;
 
                 // Evaluate the argument
@@ -458,9 +458,9 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
                 if (axispos_max == axispos_min) break;
                 count_steps++;
             }
-            double axispos = (axispos_min + axispos_max) / 2;
+            const double axispos = (axispos_min + axispos_max) / 2;
             x = pplaxis_InvGetPosition(axispos, axis);
-            double x1 = pplaxis_InvGetPosition(axispos - 1e-14, axis);
+            const double x1 = pplaxis_InvGetPosition(axispos - 1e-14, axis);
             double x2 = pplaxis_InvGetPosition(axispos + 1e-14, axis);
             if (((x1 <= 0.0) && (x2 >= 0.0)) || ((x1 >= 0.0) && (x2 <= 0.0)))
                 x = 0.0; // When tick is very close to a zero, enforce that it is at zero
@@ -546,10 +546,10 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
     // Log which algorithm is in use
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto()");
-    int N_STEPS = (2 + axis->PhysicalLengthMajor) * STEP_DUPLICITY; // Number of intervals into which we divide axis
+    const int N_STEPS = (2 + axis->PhysicalLengthMajor) * STEP_DUPLICITY; // Number of intervals into which we divide axis
 
     // Make temporary rough workspace
-    int OutContext = ppl_memAlloc_GetMemContext();
+    const int OutContext = ppl_memAlloc_GetMemContext();
     ContextRough = ppl_memAlloc_DescendIntoNewContext();
     char *DummyStr = (char *) ppl_memAlloc(LSTR_LENGTH);
     if (DummyStr == NULL) goto FAIL;
@@ -573,7 +573,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
         ppl_snprintfTrunc(FormatTemp, sizeof(FormatTemp), "\"%%s\"%%(logn(%s,%d))", VarName, axis->tics.logBase);
     }
     for (i = 0; ((format[i] != '\0') && (format[i] != '\'') && (format[i] != '\"')); i++);
-    char quoteType = format[i];
+    const char quoteType = format[i];
     if (quoteType == '\0') goto FAIL;
     if ((i > 0) && (format[i - 1] == 'r')) { rawString = 1; }
     // Skip over the opening quote, which may be tripled
@@ -611,7 +611,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     ppl_strBracketMatch(format + i, '(', ')', CommaPositions, &NArgs, &j, MAX_ARGS);
     if (j < 0) goto FAIL;
     if (NArgs < 1) goto FAIL;
-    int start = i;
+    const int start = i;
 
     // Malloc structure to hold argument info
     ArgumentInfo *args = (ArgumentInfo *) ppl_memAlloc(NArgs * sizeof(ArgumentInfo));
@@ -724,7 +724,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                 } else {
                     x = o->real;
                 }
-                int err = !gsl_finite(x);
+                const int err = !gsl_finite(x);
                 args[i].NumericValues[j] = x;
                 if ((!err) && (j > 0) && (x != args[i].NumericValues[j - 1])) args[i].NValueChanges++;
                 // Track the smallest value
@@ -750,7 +750,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     }
 
     // Work out factors of log base of axis. In fact, work out factors of log base ** 2, so that ten divides by four.
-    int LogBase = (axis->LogFinal == SW_BOOL_TRUE) ? axis->tics.logBase : 10;
+    const int LogBase = (axis->LogFinal == SW_BOOL_TRUE) ? axis->tics.logBase : 10;
     eps_plot_ticking_factorise(pow(LogBase, FACTOR_MULTIPLY), FactorsLogBase, MAX_FACTORS,
                                axis->PhysicalLengthMinor * 1.2, &NFactorsLogBase);
 
@@ -784,7 +784,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
     // Malloc table of potential ticks
     int NPotTicks = 0;
-    int NPotTicksMax = NArgs * N_STEPS * MAX_TICKS_PER_INTERVAL;
+    const int NPotTicksMax = NArgs * N_STEPS * MAX_TICKS_PER_INTERVAL;
     PotentialTick *PotTickList = (PotentialTick *) ppl_memAlloc(NPotTicksMax * sizeof(PotentialTick));
     if (PotTickList == NULL) goto FAIL;
 
@@ -816,7 +816,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
                     // Ticks which mark factors of throw
                     for (int k = 0; k < args[i].NFactorsThrow; k++) {
-                        double nd = (args[i].NumericValues[j - 1] - args[i].MinValue) * pow(LogBase,
+                        const double nd = (args[i].NumericValues[j - 1] - args[i].MinValue) * pow(LogBase,
                                      FACTOR_MULTIPLY - 1) / args[i].FactorsThrow[k];
                         n = floor(nd + 0.5);
                         if ((j == 1) && (fabs(nd - n) < 1e-12)) // A tick should go on the left extreme of the axis

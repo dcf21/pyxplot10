@@ -200,7 +200,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
 
     // Work out sum of all pie segment sizes
     if (x->current->plotdata[0] == NULL) return;
-    int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
+    const int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
     dataBlock *blk = x->current->plotdata[0]->first;
     double acc = 0.0;
     // Add up the sizes of all the wedges
@@ -271,7 +271,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
     }
 
     // Labels of pie wedges
-    int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
+    const int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
     dataBlock *blk = x->current->plotdata[0]->first;
     // Loop over the blocks of the data table
     while (blk != NULL) {
@@ -382,9 +382,9 @@ void eps_pie_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate position of centre of piechart, and its radius
-    double xpos = x->current->settings.OriginX.real * M_TO_PS;
-    double ypos = x->current->settings.OriginY.real * M_TO_PS;
-    double rad = x->current->settings.width.real * M_TO_PS / 2;
+    const double xpos = x->current->settings.OriginX.real * M_TO_PS;
+    const double ypos = x->current->settings.OriginY.real * M_TO_PS;
+    const double rad = x->current->settings.width.real * M_TO_PS / 2;
     double vtitle = ypos + rad;
 
     // Expand any numbered styles which may appear in the with words we are passed
@@ -438,7 +438,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     // Set linewidth and linetype of outline
     if (ww.USElinewidth) lw_scale = ww.linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    const double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
@@ -513,15 +513,15 @@ void eps_pie_RenderEPS(EPSComm *x) {
                     continue;
                 } // Such doom will trigger errors later
                 //bb_left = dviPage->boundingBox[0];
-                double bb_bottom = dviPage->boundingBox[1];
+                const double bb_bottom = dviPage->boundingBox[1];
                 //bb_right= dviPage->boundingBox[2];
-                double bb_top = dviPage->boundingBox[3];
-                double ab_left = dviPage->textSizeBox[0];
-                double ab_bottom = dviPage->textSizeBox[1];
-                double ab_right = dviPage->textSizeBox[2];
-                double ab_top = dviPage->textSizeBox[3];
-                double height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
-                double height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
+                const double bb_top = dviPage->boundingBox[3];
+                const double ab_left = dviPage->textSizeBox[0];
+                const double ab_bottom = dviPage->textSizeBox[1];
+                const double ab_right = dviPage->textSizeBox[2];
+                const double ab_top = dviPage->textSizeBox[3];
+                const double height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
+                const double height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
                 TextWidth[ItemNo] = ((ab_right - ab_left) + MARGIN_HSIZE) * x->current->settings.FontSize;
                 TextHeight[ItemNo] = ((height2 < height1) ? height2 : height1) * x->current->settings.FontSize;
                 TotalHeight += TextHeight[ItemNo];
@@ -542,7 +542,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                 size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 2 * M_PI; // Angular size of wedge
                 // Wedges with no label are skipped
                 if (blk->text[j] != NULL) {
-                    double a = angle + size / 2; // Central angle of wedge
+                    const double a = angle + size / 2; // Central angle of wedge
 
                     // Test different radii where label can be placed
                     double best_label_rpos = 0.7;
@@ -635,10 +635,10 @@ void eps_pie_RenderEPS(EPSComm *x) {
                     } else // Labelling pie wedges in a key
                     {
                         const int pageno = x->LaTeXpageno++;
-                        double h = xpos + rad * 1.2; // Position of left of key
-                        double v = ypos + TotalHeight / 2 - key_vpos -
+                        const double h = xpos + rad * 1.2; // Position of left of key
+                        const double v = ypos + TotalHeight / 2 - key_vpos -
                                 TextHeight[ItemNo] / 2; // Vertical position of centre of key item
-                        double s = MARGIN_HSIZE_LEFT * 0.45 /
+                        const double s = MARGIN_HSIZE_LEFT * 0.45 /
                                 3; // Controls size of filled square which appears next to wedge label
                         const double st = MARGIN_HSIZE_LEFT * 0.67;
 

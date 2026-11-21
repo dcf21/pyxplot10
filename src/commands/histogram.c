@@ -111,8 +111,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     }
 
     // Allocate a new memory context for the data file we're about to read
-    int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
-    int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
+    const int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
+    const int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
 
     // Read input data
     {
@@ -183,8 +183,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     qsort((void *) xdata, i, sizeof(double), hcompare);
 
     // Work out whether we are constructing histogram in linear space or log space
-    int gotBinList = (stk[PARSE_histogram_bin_list].objType == PPLOBJ_NUM);
-    int logAxis = ((!gotBinList) && (c->set->XAxes[1].log == SW_BOOL_TRUE)); // Read from axis x1
+    const int gotBinList = (stk[PARSE_histogram_bin_list].objType == PPLOBJ_NUM);
+    const int logAxis = ((!gotBinList) && (c->set->XAxes[1].log == SW_BOOL_TRUE)); // Read from axis x1
 
     // Filter out any values of x which are out-of-range
     for (j = k = 0; j < i; j++) {
@@ -668,7 +668,7 @@ void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor 
     }
 
     // The result has the units of one over those of the data, and is zero outside the histogram
-    double dblin = in->real;
+    const double dblin = in->real;
 
     *out = desc->unit;
     out->imag = 0.0;

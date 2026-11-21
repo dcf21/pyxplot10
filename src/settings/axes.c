@@ -283,8 +283,8 @@ double pplaxis_GetPosition(const double xin, const pplset_axis *xa, const int xr
     if (xa == NULL) return xin;
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {
-        int imin = xa->AxisTurnings[xrn];
-        int imax = xa->AxisTurnings[xrn + 1];
+        const int imin = xa->AxisTurnings[xrn];
+        const int imax = xa->AxisTurnings[xrn + 1];
         // Non-linear axes, e.g. those linked to other axes through a function, are described by a table of the axis's
         // value at AXISLINEARINTERPOLATION_NPOINTS evenly-spaced positions along it. Find the pair of entries which
         // bracket xin, and interpolate between them. The table may contain several monotonic ranges, delimited by

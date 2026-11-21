@@ -42,7 +42,7 @@ struct passwd *UnixGetPwEntry(const pplerr_context *context) {
     struct passwd *ptr;
 
     // Search the password database for an entry with the current user's ID
-    int uid = getuid();
+    const int uid = getuid();
     setpwent(); // Memory leak which valgrind reveals here is probably okay; getpwent sets up a static variable with malloc
     while ((ptr = getpwent()) != NULL)
         if (ptr->pw_uid == uid) break;

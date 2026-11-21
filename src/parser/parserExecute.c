@@ -341,7 +341,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                             if (val->objType == PPLOBJ_VEC) {
                                 double m = 1, x = 0, y = 0, z = 0;
                                 gsl_vector *v = ((pplVector *) val->auxil)->v;
-                                int l = v->size;
+                                const int l = v->size;
                                 if ((l < 2) || (l > ((item->options[j] == 'P') ? 3 : 2))) break; // wrong size
                                 if (val->dimensionless) m = 0.01;
                                 // Otherwise the vector must have dimensions of length
@@ -358,7 +358,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                                 if (l > 0) x = gsl_vector_get(v, 0) * m;
                                 if (l > 1) y = gsl_vector_get(v, 1) * m;
                                 if (l > 2) z = gsl_vector_get(v, 2) * m;
-                                int rc = val->refCount;
+                                const int rc = val->refCount;
                                 ppl_garbageObject(val);
                                 val->refCount = rc;
                                 pplObjNum(val, 0, x, 0);
@@ -392,7 +392,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                                     x[i] = xo->real * m;
                                 }
                                 if (i < l) break; // one of the coordinates was not a real length
-                                int rc = val->refCount;
+                                const int rc = val->refCount;
                                 ppl_garbageObject(val);
                                 val->refCount = rc;
                                 pplObjNum(val, 0, x[0], 0);

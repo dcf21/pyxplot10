@@ -116,8 +116,8 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
     }
 
     // Take the result, and pop it from the stack
-    double r = output->real;
-    double i = output->imag;
+    const double r = output->real;
+    const double i = output->imag;
     ppl_garbageObject(&data->context->stack[--data->context->stackPtr]); // trash and pop output from stack
 
     // Integrand was complex, but complex arithmetic is turned off

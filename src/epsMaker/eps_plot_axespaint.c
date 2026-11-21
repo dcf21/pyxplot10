@@ -134,7 +134,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
     // Set linewidth and linetype
     if (ww->USElinewidth) lw_scale = ww->linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    const double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww->USElinetype) lt = ww->linetype;
@@ -199,15 +199,15 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                     for (int m = 0; ((m < 2) && (!state)); m++) {
                         const double theta_ab = m ? theta_a : theta_b;
                         if (!gsl_finite(theta_ab)) continue;
-                        double tic_x2 = tic_x1 +
+                        const double tic_x2 = tic_x1 +
                                 (a->tics.tickDir == SW_TICDIR_IN ? 0.0 : 1.0) * sin(theta_ab) * TLEN *
                                         M_TO_PS; // top of tick
-                        double tic_y2 =
+                        const double tic_y2 =
                                 tic_y1 + (a->tics.tickDir == SW_TICDIR_IN ? 0.0 : 1.0) * cos(theta_ab) * TLEN * M_TO_PS;
-                        double tic_x3 = tic_x1 +
+                        const double tic_x3 = tic_x1 +
                                 (a->tics.tickDir == SW_TICDIR_OUT ? 0.0 : -1.0) * sin(theta_ab) * TLEN *
                                         M_TO_PS; // bottom of tick
-                        double tic_y3 = tic_y1 +
+                        const double tic_y3 = tic_y1 +
                                 (a->tics.tickDir == SW_TICDIR_OUT ? 0.0 : -1.0) * cos(theta_ab) * TLEN * M_TO_PS;
 
                         // Check for special case of ticks at zero on axes crossed by atzero axes
@@ -291,8 +291,8 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                         const int pageno = x->LaTeXpageno++;
 
                         // Place the label beyond the tick, on the outward side of the axis
-                        double xlab = tic_x1 / M_TO_PS + (Lr ? -1.0 : 1.0) * sin(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP + tic_lab_xoff;
-                        double ylab = tic_y1 / M_TO_PS + (Lr ? -1.0 : 1.0) * cos(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP;
+                        const double xlab = tic_x1 / M_TO_PS + (Lr ? -1.0 : 1.0) * sin(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP + tic_lab_xoff;
+                        const double ylab = tic_y1 / M_TO_PS + (Lr ? -1.0 : 1.0) * cos(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP;
 
                         // Draw the label, unless it is invisible, and note the greatest extent of the labels away from
                         // the axis
@@ -338,9 +338,9 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
             eps_plot_LabelAlignment(theta_pinpoint, &HALIGN, &VALIGN);
 
             // Place the label beyond the tick labels, on the outward side of the axis
-            double xlab = (x1 + x2) / 2 / M_TO_PS +
+            const double xlab = (x1 + x2) / 2 / M_TO_PS +
                     (Lr ? -1.0 : 1.0) * (2 * EPS_AXES_TEXTGAP + TickMaxHeight / M_TO_PS) * sin(theta_axis + M_PI / 2);
-            double ylab = (y1 + y2) / 2 / M_TO_PS +
+            const double ylab = (y1 + y2) / 2 / M_TO_PS +
                     (Lr ? -1.0 : 1.0) * (2 * EPS_AXES_TEXTGAP + TickMaxHeight / M_TO_PS) * cos(theta_axis + M_PI / 2);
 
             // Draw the label, unless it is invisible, rotated so that it reads along the axis but never upside down
@@ -701,7 +701,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                                     eps_plot_axispaint(x, &ww, axes + i, j, GSL_NAN, Lr, xpos1[k], ypos1[k], NULL,
                                                        xpos2[k], ypos2[k], NULL, theta_a + (side_a[k] ? 0 : M_PI),
                                                        theta_b + (side_b[k] ? 0 : M_PI), &IncGap, label);
-                                    double ang = theta[j] + M_PI / 2 * ((Lr == 0) * 2 - 1);
+                                    const double ang = theta[j] + M_PI / 2 * ((Lr == 0) * 2 - 1);
                                     xpos1[k] += IncGap * sin(ang);
                                     ypos1[k] += IncGap * cos(ang);
                                     xpos2[k] += IncGap * sin(ang);
@@ -724,7 +724,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                     eps_plot_axispaint(x, &ww, axes + FirstAutoMirror[k], j, GSL_NAN, Lr, xpos1[k], ypos1[k], NULL,
                                        xpos2[k], ypos2[k], NULL, theta_a + (side_a[k] ? 0 : M_PI),
                                        theta_b + (side_b[k] ? 0 : M_PI), &IncGap, 0);
-                    double ang = theta[j] + M_PI / 2 * ((Lr == 0) * 2 - 1);
+                    const double ang = theta[j] + M_PI / 2 * ((Lr == 0) * 2 - 1);
                     xpos1[k] += IncGap * sin(ang);
                     ypos1[k] += IncGap * cos(ang);
                     xpos2[k] += IncGap * sin(ang);

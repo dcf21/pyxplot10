@@ -199,7 +199,7 @@ void eps_plot_DecideAxisRanges(EPSComm *x) {
 void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode) {
     // Variables for following the chain of links
     char msg[PPL_MSG_LENGTH];
-    int OriginalMode = mode;
+    const int OriginalMode = mode;
     pplset_axis *target2;
 
     // Propagate MinUsed and MaxUsed variables along links
@@ -387,7 +387,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
     for (int l = 0; l < AXISLINEARINTERPOLATION_NPOINTS;
          l++) // Loop over samples we are going to take from axis linkage function
     {
-        double p = ((double) l) / (AXISLINEARINTERPOLATION_NPOINTS - 1);
+        const double p = ((double) l) / (AXISLINEARINTERPOLATION_NPOINTS - 1);
         x = pplaxis_InvGetPosition(p, in);
         pplExpr *olu = (pplExpr *) out->linkusing;
 
@@ -464,7 +464,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
         ppl_stackClean(X->c, stkLevelOld); // Discard anything left on the stack
         // Check for turning points; flat steps are ignored
         if (l > 0) {
-            int newsgn = ppl_sgn(out->AxisLinearInterpolation[l] - out->AxisLinearInterpolation[l - 1]);
+            const int newsgn = ppl_sgn(out->AxisLinearInterpolation[l] - out->AxisLinearInterpolation[l - 1]);
             if (newsgn == 0) continue;
             if ((newsgn != oldsgn) && (oldsgn > -10)) out->AxisTurnings[xrn++] = l - 1;
             oldsgn = newsgn;
@@ -628,7 +628,7 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
         // If initial value we are giving the minimiser produces an algebraic error, it's not worth continuing
         commlink->GoneNaN = 0;
         commlink->WorstScore = WORSTSCORE_INIT;
-        double testval = eps_plot_LAUSlave(x, (void *) commlink);
+        const double testval = eps_plot_LAUSlave(x, (void *) commlink);
         // Give up if the expression cannot be evaluated at the starting point
         if (!gsl_finite(testval)) {
             commlink->fail = 1;

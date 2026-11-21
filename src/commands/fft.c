@@ -142,7 +142,7 @@ static void fftwindow_lanczos(pplObj *x, const int Ndim, int *Npos, int *Nstep) 
     double y = 1.0;
     // The window is the product of the window function in each dimension
     for (int i = 0; i < Ndim; i++) {
-        double z = 2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)) - M_PI;
+        const double z = 2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)) - M_PI;
         // sin(z)/z tends to one at the central sample, where z is zero
         if (z != 0.0) y *= sin(z) / z;
     }
@@ -341,7 +341,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     return;
                 }
                 step[nr] = stk[pos + o3].real;
-                double tempDbl = 1.0 +
+                const double tempDbl = 1.0 +
                         floor((max[nr] - min[nr]) / step[nr] + 0.5); // Add one because this is a fencepost problem
                 // There must be at least two samples in each dimension
                 if (tempDbl < 2.0) {
@@ -626,7 +626,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             scratchpad[j] = '\0';
             ppl_strAppendChar(scratchpad, LSTR_LENGTH, &j, ')');
 
-            int explen1 = explen2 = j; // The length of the expression, up to and including the closing bracket
+            const int explen1 = explen2 = j; // The length of the expression, up to and including the closing bracket
             ppl_error_setstreaminfo(&c->errcontext, 1, "fitting expression");
             ppl_expCompile(c, pl->srcLineN, pl->srcId, pl->srcFname, scratchpad, &explen2, 1, 1, 1, &e, &errPos,
                            &errType, c->errStat.errBuff);
@@ -783,11 +783,11 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             k = i;
             // Accumulate the phase factor for each dimension
             for (int l = Ndims - 1; l >= 0; l--) {
-                double pos = (k % Nsteps[l]);
+                const double pos = (k % Nsteps[l]);
                 k /= Nsteps[l];
-                double angle = (inverse ? -1 : 1) * 2 * M_PI * pos * Npos[l] / Nsteps[l];
-                double normR2 = normR * cos(angle) - normI * sin(angle);
-                double normI2 = normR * sin(angle) + normI * cos(angle);
+                const double angle = (inverse ? -1 : 1) * 2 * M_PI * pos * Npos[l] / Nsteps[l];
+                const double normR2 = normR * cos(angle) - normI * sin(angle);
+                const double normI2 = normR * sin(angle) + normI * cos(angle);
                 normR = normR2;
                 normI = normI2;
             }

@@ -184,7 +184,7 @@ pplFunc *pplObjFuncCpy(pplFunc *f) {
     if (f->functionType != PPL_FUNC_USERDEF) return NULL;
 
     // Find the length of the list of argument names, which are stored one after another, each null-terminated
-    int Nargs = f->maxArgs;
+    const int Nargs = f->maxArgs;
     for (j = 0, i = 0; i < Nargs; i++)
         while (f->argList[j++] != '\0');
 

@@ -108,7 +108,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // Whether there is a global color map, and its length
-    int gcm = ((flags & 0x80) >> 7);
+    const int gcm = ((flags & 0x80) >> 7);
     int ncols = 2 << (flags & 0x7);
 
     // Log the number of colors in debugging mode
@@ -289,7 +289,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // Whether the rows are interlaced
-    int interlaced = flags & 0x40;
+    const int interlaced = flags & 0x40;
 
     // Log interlacing in debugging mode
     if (interlaced && DEBUG) {
@@ -517,8 +517,8 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsi
     // Init table
     unsigned int off = 0;
     int ccs = cs;
-    unsigned int clr = (1 << (cs - 1));
-    unsigned int eoi = clr + 1;
+    const unsigned int clr = (1 << (cs - 1));
+    const unsigned int eoi = clr + 1;
     unsigned int tpos = clr + 2;
 
     // The first entries of the string table are the single pixel values

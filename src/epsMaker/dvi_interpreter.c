@@ -200,10 +200,10 @@ int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, cons
 
     // Update bounding box
     dviGetCharSize(ec, interp, (char) c, size);
-    double width = size[0] / interp->scale; // Convert back into dvi units
-    double height = size[1] / interp->scale;
-    double depth = size[2] / interp->scale;
-    double italic = size[3] / interp->scale;
+    const double width = size[0] / interp->scale; // Convert back into dvi units
+    const double height = size[1] / interp->scale;
+    const double depth = size[2] / interp->scale;
+    const double italic = size[3] / interp->scale;
     // Log the size in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "DVI: width of glyph %g height of glyph %g", width, height);
@@ -650,7 +650,7 @@ int dviInOpZ1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *o
 //! \return Zero on success, or a DVIE_* error code
 
 int dviInOpFnt(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
-    int fn = op->op - DVI_FNTNUMMIN;
+    const int fn = op->op - DVI_FNTNUMMIN;
     return dviChngFnt(ec, interp, fn);
 }
 
@@ -674,7 +674,7 @@ int dviInOpFnt1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator 
 
 int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     char msg[PPL_MSG_LENGTH];
-    int spesh = op->op - DVI_SPECIAL1234 + 1;
+    const int spesh = op->op - DVI_SPECIAL1234 + 1;
     interp->special = spesh;
     interp->specialLen = op->ul[0];
     interp->spString = (char *) ppl_memAlloc(SSTR_LENGTH);
@@ -936,7 +936,7 @@ int dviSpecialColourStackPush(pplerr_context *ec, dviInterpreterState *interp, c
     int err = 0;
 
     // Stick the string onto the stack
-    int len = strlen(psText) + 1;
+    const int len = strlen(psText) + 1;
     char *s = (char *) ppl_memAlloc(len);
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
@@ -1151,7 +1151,7 @@ int dviDeletePostscriptState(const pplerr_context *ec, postscriptState *state) {
 int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, const char *new) {
 
     // Grab the new string and copy it into place
-    int len = strlen(new) + 1;
+    const int len = strlen(new) + 1;
     char *s = (char *) ppl_memAlloc(len); // A temporary string pointer
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
@@ -1172,8 +1172,8 @@ int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, c
 int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
-    double x = interp->state->h * interp->scale;
-    double y = 765 - interp->state->v * interp->scale;
+    const double x = interp->state->h * interp->scale;
+    const double y = 765 - interp->state->v * interp->scale;
     snprintf(s, SSTR_LENGTH, "newpath\n%f %f moveto\n", x, y);
     if ((err = dviPostscriptAppend(ec, interp, s)) != 0) return err;
 
@@ -1197,8 +1197,8 @@ int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp) {
 int dviPostscriptLineto(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
-    double x = interp->state->h * interp->scale;
-    double y = 765 - interp->state->v * interp->scale;
+    const double x = interp->state->h * interp->scale;
+    const double y = 765 - interp->state->v * interp->scale;
     snprintf(s, SSTR_LENGTH, "%f %f lineto\n", x, y);
     if ((err = dviPostscriptAppend(ec, interp, s)) != 0) return err;
 
@@ -1295,7 +1295,7 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
     if ((err = dviUpdateBoundingBox(ec, interp, width + italic, height, depth)) != 0) return err;
 
     // Count the number of characters to write to the ps string
-    int chars = strlen(interp->currentString) + 9;
+    const int chars = strlen(interp->currentString) + 9;
     s = (char *) ppl_memAlloc(chars);
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
@@ -1352,14 +1352,14 @@ int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
 
     // Produce an appropriate postscript command
     dviFontDetails *font = (dviFontDetails *) listIter->data;
-    int len = strlen(font->psName) + 20;
+    const int len = strlen(font->psName) + 20;
     char *s = (char *) ppl_memAlloc(len);
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
     }
-    double size = font->useSize * interp->scale;
+    const double size = font->useSize * interp->scale;
     // Log the font size in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "DVI: Font useSize %d size %g changed to %d", font->useSize, size,
@@ -1388,9 +1388,9 @@ int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned cha
     // Find the character's entry in the font's metrics
     dviFontDetails *font = (dviFontDetails *) interp->curFnt; // Font information (for tfm and use size)
     dviTFM *tfm = font->tfm; // Details of this font
-    int chnum = s - tfm->bc; // Character number in this font
+    const int chnum = s - tfm->bc; // Character number in this font
     TFMcharInfo *chin = tfm->charInfo + chnum; // Character info for this character
-    double scale = font->useSize * interp->scale; // Font use size * unit scaling
+    const double scale = font->useSize * interp->scale; // Font use size * unit scaling
 
     // Look up its width, height, depth and italic correction, scaled to the font's size in postscript points
     wi = (int) chin->wi;

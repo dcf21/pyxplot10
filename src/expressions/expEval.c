@@ -1240,10 +1240,10 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
-                int t = context->stack[context->stackPtr - 1].objType;
+                const int t = context->stack[context->stackPtr - 1].objType;
                 // A number is a column number; a string is a column heading
                 if (t == PPLOBJ_NUM) {
-                    double num = context->stack[context->stackPtr - 1].real;
+                    const double num = context->stack[context->stackPtr - 1].real;
                     // The column number must be in range
                     if ((num < -4) || (num > MAX_DATACOLS) || (!gsl_finite(num))) {
                         ppl_snprintfTrunc(
@@ -1253,7 +1253,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         ppl_tbAddExpr(context, inExpr, ERR_RANGE, charpos, "");
                         goto cleanup_on_error;
                     }
-                    int n = (int) round(num);
+                    const int n = (int) round(num);
                     ppl_dollarOp_fetchColByNum(context, inExpr, charpos, n);
                     if (context->errStat.status) goto cast_fail;
                 } else if (t == PPLOBJ_STR) {
@@ -1278,7 +1278,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             case PPL_BC_BRANCH_IF_FALSE: {
                 *lastOpAssign = 0;
                 ppl_castToBool(context, stk - 1);
-                int branch = (stk - 1)->real == 0;
+                const int branch = (stk - 1)->real == 0;
                 // Jump if the value is false
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
@@ -1292,7 +1292,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             case PPL_BC_BRANCH_IF_TRUE: {
                 *lastOpAssign = 0;
                 ppl_castToBool(context, stk - 1);
-                int branch = (stk - 1)->real != 0;
+                const int branch = (stk - 1)->real != 0;
                 // Jump if the value is true
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)

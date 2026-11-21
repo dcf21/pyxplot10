@@ -277,9 +277,9 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         pplObj *objstart = &command[ptab[PARSE_INDEX_start]];
         pplObj *objincr = &command[ptab[PARSE_INDEX_increment]];
         pplObj *objend = &command[ptab[PARSE_INDEX_end]];
-        double start = objstart->real;
+        const double start = objstart->real;
         double incr = objincr->real;
-        double end = objend->real;
+        const double end = objend->real;
         // If only one value is given, it is the increment, starting from zero
         if (!gotIncr) {
             objincr = objstart;
@@ -500,7 +500,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         za = c->set->ZAxes;
     } else {
         canvas_itemlist *canvas_items = (canvas_itemlist *) c->canvas_items;
-        int editNo = (int) round(command[PARSE_arc_editno].real);
+        const int editNo = (int) round(command[PARSE_arc_editno].real);
 
         // The multiplot item number must be valid
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
@@ -534,8 +534,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // The command (set or unset), and the setting to change; each setting is handled in turn below
     char *directive = (char *) command[PARSE_arc_directive].auxil;
     char *setoption = (char *) command[PARSE_arc_set_option].auxil;
-    int strcmp_set = (strcmp(directive, "set") == 0);
-    int strcmp_unset = (strcmp(directive, "unset") == 0);
+    const int strcmp_set = (strcmp(directive, "set") == 0);
+    const int strcmp_unset = (strcmp(directive, "unset") == 0);
 
     if (strcmp_set && (strcmp(setoption, "arrow") == 0)) /* set arrow */
     {
@@ -555,8 +555,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 while (command[pos].objType == PPLOBJ_NUM) {
                     pos = (int) round(command[pos].real);
                     if (pos <= 0) break;
-                    int i = (int) round(command[pos + PARSE_set_autoscale_axis_0axes].real);
-                    int j = (int) round(command[pos + PARSE_set_autoscale_axis_0axes].exponent[0]);
+                    const int i = (int) round(command[pos + PARSE_set_autoscale_axis_0axes].real);
+                    const int j = (int) round(command[pos + PARSE_set_autoscale_axis_0axes].exponent[0]);
                     setAutoscaleAxis(c, xa, ya, za, j, i, set, SetAll);
                 }
             // With no axes named, autoscale all of them
@@ -573,8 +573,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             pplset_axis *a, *ad;
             pos = (int) round(command[pos].real);
             if (pos <= 0) break;
-            int anum = (int) round(command[pos + PARSE_set_axis_axis_axes].real);
-            int i = (int) round(command[pos + PARSE_set_axis_axis_axes].exponent[0]);
+            const int anum = (int) round(command[pos + PARSE_set_axis_axis_axes].real);
+            const int i = (int) round(command[pos + PARSE_set_axis_axis_axes].exponent[0]);
             // Point to the axis, and to its default settings
             if (i == 1) {
                 a = &ya[anum];
@@ -671,8 +671,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                int anum = (int) round(command[pos + PARSE_unset_axis_axis_axes].real);
-                int i = (int) round(command[pos + PARSE_unset_axis_axis_axes].exponent[0]);
+                const int anum = (int) round(command[pos + PARSE_unset_axis_axis_axes].real);
+                const int i = (int) round(command[pos + PARSE_unset_axis_axis_axes].exponent[0]);
                 // Point to the axis
                 if (i == 1) {
                     pplaxis_destroy(c, &(ya[anum]));
@@ -1000,7 +1000,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (command[PARSE_set_contours_nolabel].objType == PPLOBJ_STR) sg->ContoursLabel = SW_ONOFF_OFF;
         // Either a number of contours, or a list of contour levels
         if (command[PARSE_set_contours_contours].objType == PPLOBJ_NUM) {
-            double n = command[PARSE_set_contours_contours].real;
+            const double n = command[PARSE_set_contours_contours].real;
             // There must be at least two contours
             if (n < 2) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Contour plots must have at least two contours.");
@@ -1087,7 +1087,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "crange") == 0)) /* set crange */
     {
         char *cstr = (char *) command[PARSE_set_crange_c_number].auxil;
-        int C = (int) (cstr[0] - '1');
+        const int C = (int) (cstr[0] - '1');
         pplObj *min = &command[PARSE_set_crange_min];
         pplObj *max = &command[PARSE_set_crange_max];
         const int mina = (command[PARSE_set_crange_minauto].objType == PPLOBJ_STR);
@@ -1295,7 +1295,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                int anum = (int) round(command[pos + PARSE_set_grid_axis_0axes].real);
+                const int anum = (int) round(command[pos + PARSE_set_grid_axis_0axes].real);
                 i = (int) round(command[pos + PARSE_set_grid_axis_0axes].exponent[0]);
                 // Mark the axis in the requested direction
                 if (i == 1) {
@@ -1418,7 +1418,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         // A number of columns, or automatic
         if (command[PARSE_set_keycolumns_key_columns].objType == PPLOBJ_NUM) {
-            double tempdbl = command[PARSE_set_keycolumns_key_columns].real;
+            const double tempdbl = command[PARSE_set_keycolumns_key_columns].real;
             // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
@@ -1511,7 +1511,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 if (pos <= 0) break;
                 // A numbered axis, or one of the c, t, u and v axes
                 if (command[pos + ap].objType == PPLOBJ_NUM) {
-                    int i = (int) round(command[pos + ap].real);
+                    const int i = (int) round(command[pos + ap].real);
                     const int j = (int) round(command[pos + ap].exponent[0]);
                     int newstate;
                     pplset_axis *a, *ad;
@@ -1750,8 +1750,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                int anum = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].real);
-                int i = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].exponent[0]);
+                const int anum = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].real);
+                const int i = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].exponent[0]);
                 // Unmark the axis in the requested direction
                 if (i == 1) {
                     sg->GridAxisY[anum] = 0;
@@ -1777,7 +1777,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int m = (command[PARSE_set_notics_minor].objType == PPLOBJ_STR);
         // Remove the ticks from the axis named, or from all axes
         if (command[PARSE_set_notics_axis].objType == PPLOBJ_NUM) {
-            int i = (int) round(command[PARSE_set_notics_axis].real);
+            const int i = (int) round(command[PARSE_set_notics_axis].real);
             const int j = (int) round(command[PARSE_set_notics_axis].exponent[0]);
             // Axis settings cannot be changed for multiplot items which have no axes
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
@@ -1832,7 +1832,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         strcpy(sg->title, "");
     } else if (strcmp_set && (strcmp(setoption, "noxformat") == 0)) /* set noxformat */
     {
-        int i = (int) round(command[PARSE_set_noxformat_axis].real);
+        const int i = (int) round(command[PARSE_set_noxformat_axis].real);
         const int j = (int) round(command[PARSE_set_noxformat_axis].exponent[0]);
         // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
@@ -1861,7 +1861,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_set && (strcmp(setoption, "noxlabel") == 0)) /* set noxlabel */
     {
-        int i = (int) round(command[PARSE_set_noxlabel_axis].real);
+        const int i = (int) round(command[PARSE_set_noxlabel_axis].real);
         const int j = (int) round(command[PARSE_set_noxlabel_axis].exponent[0]);
         // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
@@ -1991,7 +1991,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return;
             }
-            int ll = ppl_listLen(l);
+            const int ll = ppl_listLen(l);
             // The list must not be empty
             if (ll < 1) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "The 'set palette' command was passed a palette of zero length.");
@@ -2178,7 +2178,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "seed") == 0)) /* set seed */
     {
         long li;
-        double d = command[PARSE_set_seed_seed].real;
+        const double d = command[PARSE_set_seed_seed].real;
         // The value must be finite
         if (!gsl_finite(d)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
@@ -2290,7 +2290,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_withWordsDestroy(c, &ww_tmp2);
     } else if (strcmp_set && (strcmp(setoption, "style_numbered") == 0)) /* set style */
     {
-        double nd = command[PARSE_set_style_numbered_style_set_number].real;
+        const double nd = command[PARSE_set_style_numbered_style_set_number].real;
         withWords ww_tmp, ww_tmp2;
         // Style numbers must be within range
         if ((nd < 0) || (nd >= MAX_PLOTSTYLES)) {
@@ -2298,7 +2298,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
-        int n = (int) floor(nd);
+        const int n = (int) floor(nd);
         withWords *outstyle = &(c->set->plot_styles[n]);
         ppl_withWordsFromDict(c, in, pl, PARSE_TABLE_set_style_numbered_, 0, &ww_tmp);
         ppl_withWordsMerge(c, &ww_tmp2, &ww_tmp, outstyle, NULL, NULL, NULL, 0);
@@ -2324,7 +2324,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                double nd = command[pos + id_style_ids].real;
+                const double nd = command[pos + id_style_ids].real;
                 // Style numbers must be within range
                 if ((nd < 0) || (nd >= MAX_PLOTSTYLES)) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "plot style numbers must be in the range 0-%d",
@@ -2332,7 +2332,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                     return;
                 }
-                int n = (int) floor(nd);
+                const int n = (int) floor(nd);
                 withWords *outstyle = &(c->set->plot_styles[n]);
                 withWords *instyle = &(c->set->plot_styles_default[n]);
                 ppl_withWordsDestroy(c, outstyle);
@@ -2361,7 +2361,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             c->set->term_current.color = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
         // The resolution of bitmap output
-        double tempdbl = command[PARSE_set_terminal_dpi].real;
+        const double tempdbl = command[PARSE_set_terminal_dpi].real;
         got = (command[PARSE_set_terminal_dpi].objType == PPLOBJ_NUM);
         // A resolution was given
         if (got) {
@@ -2432,13 +2432,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->TextVAlign = c->set->graph_default.TextVAlign;
     } else if (strcmp_set && (strcmp(setoption, "tics") == 0)) /* set tics */
     {
-        int m = (command[PARSE_set_tics_minor].objType == PPLOBJ_STR);
+        const int m = (command[PARSE_set_tics_minor].objType == PPLOBJ_STR);
         const int *ptab = PARSE_TABLE_set_tics_;
 
         // Set the ticks of the axis named, or of all axes
         if (command[PARSE_unset_tics_axis].objType == PPLOBJ_NUM) {
-            int i = (int) round(command[PARSE_unset_tics_axis].real);
-            int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
+            const int i = (int) round(command[PARSE_unset_tics_axis].real);
+            const int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
             char cmd[16];
             ppl_snprintfTrunc(cmd, sizeof(cmd), "%s%c%d", m ? "m" : "", 'x' + j, i);
             // Axis settings cannot be changed for multiplot items which have no axes
@@ -2537,7 +2537,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
         // Restore the default ticks of the axis named, or of all axes
         if (command[PARSE_unset_tics_axis].objType == PPLOBJ_NUM) {
-            int i = (int) round(command[PARSE_unset_tics_axis].real);
+            const int i = (int) round(command[PARSE_unset_tics_axis].real);
             const int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
             // Axis settings cannot be changed for multiplot items which have no axes
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
@@ -2672,9 +2672,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_UNITSCH_INT, SW_UNITSCH_STR);
 
         // Preferred units, to add or to remove
-        int got2 = (command[PARSE_set_unit_preferred_unit].objType == PPLOBJ_EXP);
+        const int got2 = (command[PARSE_set_unit_preferred_unit].objType == PPLOBJ_EXP);
         if (got2) tempstr2 = ((pplExpr *) command[PARSE_set_unit_preferred_unit].auxil)->ascii;
-        int got3 = (command[PARSE_set_unit_unpreferred_unit].objType == PPLOBJ_EXP);
+        const int got3 = (command[PARSE_set_unit_unpreferred_unit].objType == PPLOBJ_EXP);
         if (got3) tempstr3 = ((pplExpr *) command[PARSE_set_unit_unpreferred_unit].auxil)->ascii;
 
         // Add or remove preferred units
@@ -3131,7 +3131,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp(setoption, "xlabel") == 0) /* set xlabel */
     {
-        int i = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].real);
+        const int i = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].real);
         const int j = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].exponent[0]);
         // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {

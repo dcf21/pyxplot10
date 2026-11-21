@@ -54,7 +54,7 @@ unsigned int ppl_bmp_A85(const pplerr_context *ec, FILE *fout, const unsigned ch
 
     // Encode the data one line at a time
     while (len > 0) {
-        unsigned int line = (len > LINELEN) ? LINELEN : len;
+        const unsigned int line = (len > LINELEN) ? LINELEN : len;
         len = len - line;
         unsigned char *outp = out;
         for (i = 0; i < (line & 0xfffc); i += 4) // encode groups of four bytes

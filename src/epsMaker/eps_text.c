@@ -71,7 +71,7 @@ void eps_text_RenderEPS(EPSComm *x) {
     withWords def, merged;
 
     // This item's text is on the page of the typeset text which was recorded in eps_text_YieldUpText()
-    int pageno = x->LaTeXpageno = x->current->FirstTextID;
+    const int pageno = x->LaTeXpageno = x->current->FirstTextID;
     x->LaTeXpageno++;
 
     // Empty text items draw nothing
@@ -94,12 +94,12 @@ void eps_text_RenderEPS(EPSComm *x) {
     eps_core_SetColor(x, &merged, 1);
 
     // Render text item to eps
-    double xgap = -(x->current->settings.TextHAlign - SW_HALIGN_CENT) * x->current->xpos2;
-    double ygap = (x->current->settings.TextVAlign - SW_VALIGN_CENT) * x->current->xpos2;
+    const double xgap = -(x->current->settings.TextHAlign - SW_HALIGN_CENT) * x->current->xpos2;
+    const double ygap = (x->current->settings.TextVAlign - SW_VALIGN_CENT) * x->current->xpos2;
 
     // Rotate the gap with the text
-    double xgap2 = xgap * cos(x->current->rotation) - ygap * sin(x->current->rotation);
-    double ygap2 = xgap * sin(x->current->rotation) + ygap * cos(x->current->rotation);
+    const double xgap2 = xgap * cos(x->current->rotation) - ygap * sin(x->current->rotation);
+    const double ygap2 = xgap * sin(x->current->rotation) + ygap * cos(x->current->rotation);
 
     // Draw the typeset text
     canvas_EPSRenderTextItem(x, NULL, pageno, x->current->xpos + xgap2, x->current->ypos + ygap2,

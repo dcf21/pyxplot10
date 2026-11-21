@@ -101,7 +101,7 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
     char *txt = (stk[PARSE_assert_message].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_message].auxil : NULL;
     char *version = (stk[PARSE_assert_version].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_version].auxil : NULL;
     pplObj *val = &stk[PARSE_assert_expr];
-    int lt = (stk[PARSE_assert_lt].objType == PPLOBJ_STR);
+    const int lt = (stk[PARSE_assert_lt].objType == PPLOBJ_STR);
 
     // If an expression was given, it must be true
     if (val->objType != PPLOBJ_ZOM) {
@@ -352,8 +352,8 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
             return;
         }
         if (obj->objType == PPLOBJ_GLOB) return;
-        int om = obj->amMalloced;
-        int rc = obj->refCount;
+        const int om = obj->amMalloced;
+        const int rc = obj->refCount;
         obj->amMalloced = 0;
         obj->refCount = 1;
         ppl_garbageObject(obj);
@@ -376,7 +376,7 @@ void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOut
     HIST_ENTRY **history_data;
 
     // Fetch readline's history
-    int endpos = where_history();
+    const int endpos = where_history();
     history_data = history_list();
 
     // Show only the requested number of lines, if specified
@@ -533,8 +533,8 @@ void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutpu
         ppl_contextGetVarPointer(c, "ans", &optr, &dummyTemp);
         dummyTemp.amMalloced = 0;
         ppl_garbageObject(&dummyTemp);
-        int am = optr->amMalloced;
-        int rc = optr->refCount;
+        const int am = optr->amMalloced;
+        const int rc = optr->refCount;
         optr->amMalloced = 0;
         ppl_garbageObject(optr);
         pplObjCpy(optr, stk + pos + PARSE_print_expression_0print_list, 0, 0, 1);
@@ -557,7 +557,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     char msg[PPL_MSG_LENGTH];
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
-    int pos = PARSE_save_filename;
+    const int pos = PARSE_save_filename;
     int start = 0;
     long x;
     char *outfname = "";
@@ -582,7 +582,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     fprintf(outfile, "# User: %s\n\n", ppl_unixGetIRLName(&c->errcontext));
 
     // Fetch readline's history
-    int endpos = history_length;
+    const int endpos = history_length;
     history_data = history_list();
 
     // Save only the lines typed since the last save
@@ -807,7 +807,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
                 re = grown;
                 rel *= 2;
             }
-            ssize_t n = read(fstdout, re + i, rel - 1 - i);
+            const ssize_t n = read(fstdout, re + i, rel - 1 - i);
             if ((n < 0) && (errno == EINTR)) continue;
             // Report a failure to read from the pipe
             if (n < 0) {

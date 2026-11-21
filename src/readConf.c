@@ -109,7 +109,7 @@ static int readConfigCrangeLimit(const char *setvalue, pplObj *limit, int *limit
         *limitAuto = SW_BOOL_TRUE;
         return 0;
     }
-    double fl = ppl_getFloat(setvalue, &nChars);
+    const double fl = ppl_getFloat(setvalue, &nChars);
     if ((!gsl_finite(fl)) || (nChars != strlen(setvalue))) return -1;
     limit->real = fl;
     *limitAuto = SW_BOOL_FALSE;
@@ -1511,7 +1511,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                         continue;
                     } else {
                         ppl_strUpper(ColorName, ColorName);
-                        int ColorNumber = ppl_fetchSettingByName(&c->errcontext, ColorName, SW_COLOR_INT, SW_COLOR_STR);
+                        const int ColorNumber = ppl_fetchSettingByName(&c->errcontext, ColorName, SW_COLOR_INT, SW_COLOR_STR);
                         // Warn about a color which is not recognised
                         if (ColorNumber <= 0) {
                             ppl_snprintfTrunc(msg, sizeof(msg),

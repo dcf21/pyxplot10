@@ -199,7 +199,7 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
     if (recurse) {
         snprintf(buffer, FNAME_LENGTH, "%s%s", path, PATHLINK);
         buffer[FNAME_LENGTH - 1] = '\0';
-        int pos = strlen(buffer);
+        const int pos = strlen(buffer);
         if ((dp = opendir(buffer)) == NULL) return NULL;
         // Search each subdirectory
         while (((dirp = readdir(dp)) != NULL) && (!found)) {

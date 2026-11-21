@@ -304,8 +304,8 @@ int pplObjCmpQuiet(const void *a, const void *b) {
 
 int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int *errType, char *errText,
               const int iterDepth) {
-    int t1 = a->objType;
-    int t2 = b->objType;
+    const int t1 = a->objType;
+    const int t2 = b->objType;
     const int t1o = pplObjTypeOrder[t1];
     const int t2o = pplObjTypeOrder[t2];
     if (cancellationFlag) return 0;

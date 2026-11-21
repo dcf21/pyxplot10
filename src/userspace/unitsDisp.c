@@ -226,7 +226,7 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
         ppl_strAppendf(output, LSTR_LENGTH, &i, "%s",
                        ppl_numericDisplay(GSL_NAN, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
     } else {
-        double OoM = hypot(numberOutReal, numberOutImag) * pow(10, -NSigFigs);
+        const double OoM = hypot(numberOutReal, numberOutImag) * pow(10, -NSigFigs);
 
         // In LaTeX, the number is in math mode. A complex number with significant real and imaginary parts is
         // bracketed.
@@ -338,7 +338,7 @@ void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned 
         // dimensions then match
         for (int j = 0; j < UNITS_MAX_BASEUNITS; j++) {
             if ((c->unit_database[i].exponent[j] == 0) || (in->exponent[j] == 0)) continue;
-            double power = in->exponent[j] / c->unit_database[i].exponent[j];
+            const double power = in->exponent[j] / c->unit_database[i].exponent[j];
             int score = 0;
             for (int k = 0; k < UNITS_MAX_BASEUNITS; k++)
                 if (ppl_dblEqual(in->exponent[k], power * c->unit_database[i].exponent[k])) score++;
@@ -432,9 +432,9 @@ void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const do
             if (ppl_tempTypeMatch(UnitList[i]->tempType, c->unit_database[j].tempType) &&
                 (ppl_unitsDimEqual3(UnitList[i], c->unit_database + j))) {
                 OldMagnitude = hypot(in->real, in->imag);
-                double NewValueReal = in->real * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier,
+                const double NewValueReal = in->real * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier,
                                                      UnitPow[i]);
-                double NewValueImag = in->imag * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier,
+                const double NewValueImag = in->imag * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier,
                                                      UnitPow[i]);
                 NewMagnitude = hypot(NewValueReal, NewValueImag);
 

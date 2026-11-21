@@ -71,8 +71,8 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     for (xmlNode *cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
         // Copy each text node, substituting the version number and date for $VERSION and $DATE
         if (cur_node->type == XML_TEXT_NODE) {
-            int strlen_version = strlen("$VERSION");
-            int strlen_date = strlen("$DATE");
+            const int strlen_version = strlen("$VERSION");
+            const int strlen_date = strlen("$DATE");
             // Copy the text character by character
             for (int j = 0; cur_node->content[j] != '\0';) {
                 // Substitute the placeholders where they appear

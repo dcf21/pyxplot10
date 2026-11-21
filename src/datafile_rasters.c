@@ -75,7 +75,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
     pplFunc *funcPtr = NULL;
 
     // Make temporary rough workspace
-    int outputContext = ppl_memAlloc_GetMemContext();
+    const int outputContext = ppl_memAlloc_GetMemContext();
     contextRough = ppl_memAlloc_DescendIntoNewContext();
     list *bracketStack = ppl_listInit(0);
     list *bracketCommaPos = ppl_listInit(0);

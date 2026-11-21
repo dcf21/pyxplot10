@@ -287,7 +287,7 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
         }
     }
     if (squareroot) accumulator = sqrt(accumulator);
-    double output = accumulator * data->sign;
+    const double output = accumulator * data->sign;
     // If the score is not finite, return a score which is worse than any seen so far, which steers the minimiser away
     if ((!gsl_finite(output)) && (data->WorstScore > WORSTSCORE_INIT)) {
         data->WorstScore *= 1.1;
@@ -319,7 +319,7 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     gsl_multimin_function fn;
 
     // With complex arithmetic, each variable has two components to vary
-    int Nparams = commlink->Nfitvars * ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) ? 1 : 2);
+    const int Nparams = commlink->Nfitvars * ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) ? 1 : 2);
 
     // Describe the function to minimise to GSL
     fn.n = Nparams;

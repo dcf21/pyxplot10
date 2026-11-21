@@ -46,7 +46,7 @@ void ppl_createBackupIfRequired(const ppl_context *c, const char *filename) {
 
     // Try the names <filename~0>, <filename~1>, etc., until we find one which is not in use
     ppl_snprintfTrunc(newname, sizeof(newname), "%s", filename);
-    int i = strlen(filename);
+    const int i = strlen(filename);
     // Try each backup number in turn
     for (int j = 0; j < 65536; j++) {
         sprintf(newname + i, "~%d", j);

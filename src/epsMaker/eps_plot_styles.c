@@ -663,7 +663,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
     }
 
     // Cycle through data table, ensuring that axis ranges are sufficient to include all data
-    int Ncolumns = data->Ncolumns_real;
+    const int Ncolumns = data->Ncolumns_real;
     dataBlock *blk = data->first;
     int i = 0;
     // Loop over the blocks of the data table
@@ -1035,7 +1035,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
                 const unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE);
                 if (blk->split[j]) { finishFactoringBoxes(&r, style, sg, a1, a2, ptBset, ptCset, ptBx, ptCx, lasty); }
                 usageCheck(&r, a2, row[1]); // y-coordinates are easy
-                double ptAx = ptBx;
+                const double ptAx = ptBx;
                 ptAset = ptBset;
                 ptBx = ptCx;
                 ptBset = ptCset;
@@ -1396,8 +1396,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     }
 
     // The number of columns of numbers and of objects in each row
-    int Ncolumns = data->Ncolumns_real;
-    int Ncol_obj = data->Ncolumns_obj;
+    const int Ncolumns = data->Ncolumns_real;
+    const int Ncol_obj = data->Ncolumns_obj;
     if (eps_plot_WithWordsCheckUsingItemsDimLess(x->c, &pd->ww_final, data->firstEntries, Ncolumns, Ncol_obj, NULL))
         return 1;
 
@@ -1559,8 +1559,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     int NDirections = 0;
 
                     // The size of the bars at the ends of the error bars, and of the points
-                    double b = 0.0005 * sg->bar;
-                    double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS / M_TO_PS;
+                    const double b = 0.0005 * sg->bar;
+                    const double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS / M_TO_PS;
 
                     // Draw the error bars with line segments
                     ld = LineDraw_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x,
@@ -1854,9 +1854,9 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                 {
                     int an;
                     double theta[3];
-                    double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS / M_TO_PS;
-                    double sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
-                    double lw = pd->ww_final.pointlinewidth;
+                    const double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS / M_TO_PS;
+                    const double sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
+                    const double lw = pd->ww_final.pointlinewidth;
 
                     // Draw the limits with line segments
                     ld = LineDraw_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x,
@@ -1898,10 +1898,10 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 }
 
                                 // The offsets of the ends of the bar, and of the tip of the arrow
-                                double offset_barx = ps * sin(theta[an] + M_PI / 2);
-                                double offset_bary = ps * cos(theta[an] + M_PI / 2);
-                                double offset_arrx = sgn * 2 * ps * sin(theta[an]);
-                                double offset_arry = sgn * 2 * ps * cos(theta[an]);
+                                const double offset_barx = ps * sin(theta[an] + M_PI / 2);
+                                const double offset_bary = ps * cos(theta[an] + M_PI / 2);
+                                const double offset_arrx = sgn * 2 * ps * sin(theta[an]);
+                                const double offset_arry = sgn * 2 * ps * cos(theta[an]);
 
                                 // Draw the bar across the point
                                 LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, -offset_barx,
@@ -1914,8 +1914,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, offset_arrx,
                                                offset_arry, 0, 0, 0, 0, pd->ww_final.linetype, lw, last_colstr);
                                 LineDraw_PenUp(x, ld);
-                                double x2 = xpos + sgn * 2 * ps * M_TO_PS * sin(theta[an]);
-                                double y2 = ypos + sgn * 2 * ps * M_TO_PS * cos(theta[an]);
+                                const double x2 = xpos + sgn * 2 * ps * M_TO_PS * sin(theta[an]);
+                                const double y2 = ypos + sgn * 2 * ps * M_TO_PS * cos(theta[an]);
                                 if (sgn < 0.0) theta[an] += M_PI;
                                 eps_arrowHead(x2, y2, theta[an], EPS_ARROW_HEADSIZE / 2 * lw, epsbuff, sizeof(epsbuff),
                                               NULL);
@@ -1996,7 +1996,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     if (finishRowOfBoxes(&bd, style, &ptAset, &ptBset, &ptCset, ptBx, ptCx, ptCy))
                                         break;
                                 }
-                                double ptAx = ptBx;
+                                const double ptAx = ptBx;
                                 ptAset = ptBset;
                                 ptBx = ptCx;
                                 ptBy = ptCy;
@@ -2058,7 +2058,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                          (style == SW_STYLE_ARROWS_TWOHEAD)) // ARROWS_HEAD, ARROWS_NOHEAD, ARROWS_TWOHEAD
                 {
                     double xpos2, ypos2, depth2, xap2, yap2, zap2;
-                    double lw = pd->ww_final.linewidth;
+                    const double lw = pd->ww_final.linewidth;
 
                     // Draw the shafts of the arrows with line segments
                     ld = LineDraw_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x,
@@ -2217,7 +2217,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                 else if ((style == SW_STYLE_SURFACE) && (xrn == 0) && (yrn == 0) && (zrn == 0)) // SURFACE
                 {
-                    int XSize = pd->GridXSize;
+                    const int XSize = pd->GridXSize;
                     const int YSize = pd->GridYSize;
                     const graphProjection proj = {a[xn],    a[yn],    a[zn],    xrn,     yrn,     zrn,    sg,
                                                   ThreeDim, origin_x, origin_y, scale_x, scale_y, scale_z};
@@ -2369,9 +2369,9 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
 
     // Limits are shown by a bar and a small arrow
     else if ((style == SW_STYLE_LOWERLIMITS) || (style == SW_STYLE_UPPERLIMITS)) {
-        double eah_old = EPS_ARROW_HEADSIZE;
-        double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS;
-        double sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
+        const double eah_old = EPS_ARROW_HEADSIZE;
+        const double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS;
+        const double sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, pd->ww_final.linetype, 0);
         // Draw the bar and the arrow, unless they are invisible
@@ -2403,7 +2403,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
 
     // Filled styles are shown by a filled square
     else if ((style == SW_STYLE_FILLEDREGION) || (style == SW_STYLE_YERRORSHADED) || (style == SW_STYLE_COLORMAP)) {
-        double s = scale * 0.45 / 2;
+        const double s = scale * 0.45 / 2;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetFillColor(x, &pd->ww_final);
         eps_core_SwitchTo_FillColor(x, 1);
@@ -2437,9 +2437,9 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
              (style == SW_STYLE_XZERRORBARS) || (style == SW_STYLE_XERRORRANGE) || (style == SW_STYLE_YERRORRANGE) ||
              (style == SW_STYLE_ZERRORRANGE) || (style == SW_STYLE_XYERRORRANGE) || (style == SW_STYLE_XZERRORRANGE) ||
              (style == SW_STYLE_YZERRORRANGE)) {
-        double s = scale * 0.6 / 2;
-        double b = 0.0005 * x->current->settings.bar * M_TO_PS;
-        double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS;
+        const double s = scale * 0.6 / 2;
+        const double b = 0.0005 * x->current->settings.bar * M_TO_PS;
+        const double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS;
 
         // Draw the error bar, unless it is invisible
         eps_core_SetColor(x, &pd->ww_final, 1);

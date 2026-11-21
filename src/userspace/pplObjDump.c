@@ -78,7 +78,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
         fprintf(output, "types.null()");
         return;
     }
-    int t = o->objType;
+    const int t = o->objType;
     // Write each type of object in the syntax which recreates it
     switch (t) {
         case PPLOBJ_NUM:

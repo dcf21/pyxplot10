@@ -884,13 +884,13 @@ void canvas_EPSWrite(EPSComm *x) {
     }
 
     // Work out some sensible margins for page
-    double PAGEwidth = x->c->set->term_current.PaperWidth.real;
-    double PAGEheight = x->c->set->term_current.PaperHeight.real;
+    const double PAGEwidth = x->c->set->term_current.PaperWidth.real;
+    const double PAGEheight = x->c->set->term_current.PaperHeight.real;
     double margin_left = PAGEwidth / 14;
     double margin_top = PAGEheight / 14;
     margin_left *= M_TO_PS;
     margin_top *= M_TO_PS;
-    double margin_bottom = margin_top;
+    const double margin_bottom = margin_top;
 
     // Open output postscript file for writing
     if ((epsout = fopen(x->EPSFilename, "w")) == NULL) {
@@ -1132,10 +1132,10 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
         *(x->status) = 1;
         return;
     }
-    double bb_left = dviPage->boundingBox[0];
-    double bb_bottom = dviPage->boundingBox[1];
-    double bb_right = dviPage->boundingBox[2];
-    double bb_top = dviPage->boundingBox[3];
+    const double bb_left = dviPage->boundingBox[0];
+    const double bb_bottom = dviPage->boundingBox[1];
+    const double bb_right = dviPage->boundingBox[2];
+    const double bb_top = dviPage->boundingBox[3];
     ab_left = dviPage->textSizeBox[0];
     ab_bottom = dviPage->textSizeBox[1];
     ab_right = dviPage->textSizeBox[2];
@@ -1237,8 +1237,8 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
 //! \param [out] transform - Character buffer into which to write the postscript coordinate transformation
 
 void canvas_EPSLandscapify(EPSComm *x, char *transform) {
-    double width = x->bb_right - x->bb_left;
-    double height = x->bb_top - x->bb_bottom;
+    const double width = x->bb_right - x->bb_left;
+    const double height = x->bb_top - x->bb_bottom;
     sprintf(transform, "90 rotate\n%f %f translate\n", -x->bb_left, -x->bb_top);
     x->bb_left = 0.0;
     x->bb_bottom = 0.0;
@@ -1254,12 +1254,12 @@ void canvas_EPSLandscapify(EPSComm *x, char *transform) {
 
 void canvas_EPSEnlarge(EPSComm *x, char *transform) {
     // Read dimensions of page
-    double PAGEwidth = x->c->set->term_current.PaperWidth.real;
-    double PAGEheight = x->c->set->term_current.PaperHeight.real;
+    const double PAGEwidth = x->c->set->term_current.PaperWidth.real;
+    const double PAGEheight = x->c->set->term_current.PaperHeight.real;
 
     // Calculate dimensions of EPS image
-    double EPSwidth = x->bb_right - x->bb_left;
-    double EPSheight = x->bb_top - x->bb_bottom;
+    const double EPSwidth = x->bb_right - x->bb_left;
+    const double EPSheight = x->bb_top - x->bb_bottom;
     if ((EPSwidth <= 0.0) || (EPSheight <= 0.0)) return; // Don't attempt to enlarge pages of size zero
 
     // Work out some sensible margins for page
@@ -1267,18 +1267,18 @@ void canvas_EPSEnlarge(EPSComm *x, char *transform) {
     double margin_top = PAGEheight / 14;
     if (margin_left > 15e-3) margin_left = 15e-3; // mm
     if (margin_top > 15e-3) margin_top = 15e-3; // mm
-    double margin_right = margin_left;
-    double margin_bottom = margin_top;
+    const double margin_right = margin_left;
+    const double margin_bottom = margin_top;
 
     // Work out what scaling factors will make page fit
     double scaling_x = (PAGEwidth - margin_left - margin_right) / EPSwidth * M_TO_PS;
-    double scaling_y = (PAGEheight - margin_top - margin_bottom) / EPSheight * M_TO_PS;
+    const double scaling_y = (PAGEheight - margin_top - margin_bottom) / EPSheight * M_TO_PS;
     if ((!gsl_finite(scaling_x)) || (!gsl_finite(scaling_y))) return; // Don't attempt to enlarge pages of size zero
     if (scaling_y < scaling_x) scaling_x = scaling_y; // Lowest scaling factor is biggest enlargement we can do
 
     // Work out how to translate origin to (0,0)
-    double translate_x = margin_left * M_TO_PS - x->bb_left * scaling_x;
-    double translate_y = PAGEheight * M_TO_PS - margin_top * M_TO_PS - x->bb_top * scaling_x;
+    const double translate_x = margin_left * M_TO_PS - x->bb_left * scaling_x;
+    const double translate_y = PAGEheight * M_TO_PS - margin_top * M_TO_PS - x->bb_top * scaling_x;
 
     // Write out transformation
     sprintf(transform, "%f %f translate\n%f %f scale\n", translate_x, translate_y, scaling_x, scaling_x);

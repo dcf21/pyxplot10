@@ -118,13 +118,13 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
 
     // Check that we have some data
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
-    int Ncol = data->Ncolumns_real;
+    const int Ncol = data->Ncolumns_real;
     dataBlock *blk = data->first;
 
     // Work out normalisation of variable c1
     if (!eps_plot_colormap_findCRange(sg, 0, blk, Ncol, XSize, YSize, &CMin, &CMax, &CLog)) return; // No data present
-    unsigned char CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
-    unsigned char CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
+    const unsigned char CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
+    const unsigned char CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
 
     // If there's no spread of data, make a spread up
     if ((fabs(CMax) <= fabs(CMin)) || (fabs(CMin - CMax) <= fabs(1e-14 * CMax))) {
@@ -159,7 +159,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     }
 
     // Round each end of the range to a multiple of a power of ten, about a fifth of the range
-    double OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
+    const double OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
     min_prelim = floor(min_prelim / OoM) * OoM;
     max_prelim = ceil(max_prelim / OoM) * OoM;
 
@@ -431,7 +431,7 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
                           const int XSize, const int YSize, int xcell, int ycell, int face, double xpos, double ypos,
                           const double Lx, const double ThetaX, const double Ly, const double ThetaY) {
     long i, i_flatest = 0;
-    int xcelli = xcell, ycelli = ycell;
+    const int xcelli = xcell, ycelli = ycell;
     double xposi = xpos, yposi = ypos, grad_flatest = 1e100;
     const int facei = face;
     double xold = xpos, yold = ypos;
@@ -445,11 +445,11 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
          i++) {
         // Measure the gradient of each segment on the page, ignoring vertical ones
         if (xpos != xold) {
-            double x0 = Lx * xold / (XSize - 1) * sin(ThetaX) + Ly * yold / (YSize - 1) * sin(ThetaY);
-            double y0 = Lx * xold / (XSize - 1) * cos(ThetaX) + Ly * yold / (YSize - 1) * cos(ThetaY);
-            double x1 = Lx * xpos / (XSize - 1) * sin(ThetaX) + Ly * ypos / (YSize - 1) * sin(ThetaY);
-            double y1 = Lx * xpos / (XSize - 1) * cos(ThetaX) + Ly * ypos / (YSize - 1) * cos(ThetaY);
-            double grad = fabs((y1 - y0) / (x1 - x0));
+            const double x0 = Lx * xold / (XSize - 1) * sin(ThetaX) + Ly * yold / (YSize - 1) * sin(ThetaY);
+            const double y0 = Lx * xold / (XSize - 1) * cos(ThetaX) + Ly * yold / (YSize - 1) * cos(ThetaY);
+            const double x1 = Lx * xpos / (XSize - 1) * sin(ThetaX) + Ly * ypos / (YSize - 1) * sin(ThetaY);
+            const double y1 = Lx * xpos / (XSize - 1) * cos(ThetaX) + Ly * ypos / (YSize - 1) * cos(ThetaY);
+            const double grad = fabs((y1 - y0) / (x1 - x0));
             // Remember the flattest segment, where the label will go
             if (grad < grad_flatest) {
                 grad_flatest = grad;
@@ -567,19 +567,19 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
                                   &Ly, &ThetaX, &ThetaY);
 
     // Look up normalisation of variable c1
-    unsigned char CLog = (sg->Clog[0] == SW_BOOL_TRUE);
-    double CMin = pd->CMinFinal;
+    const unsigned char CLog = (sg->Clog[0] == SW_BOOL_TRUE);
+    const double CMin = pd->CMinFinal;
     double CMax = pd->CMaxFinal;
-    unsigned char CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
-    unsigned char CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
-    unsigned char CRenorm = (sg->Crenorm[0] == SW_BOOL_TRUE);
+    const unsigned char CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
+    const unsigned char CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
+    const unsigned char CRenorm = (sg->Crenorm[0] == SW_BOOL_TRUE);
 
     // If no data present, stop now
     if ((CMin == 0) && (CMax == 0)) return 0;
 
     // Output result to debugging output
     if (DEBUG) {
-        int SF = x->c->set->term_current.SignificantFigures;
+        const int SF = x->c->set->term_current.SignificantFigures;
         ppl_snprintfTrunc(msg, sizeof(msg), "Range for variable c1 is [%s:%s]",
                           ppl_numericDisplay(CMin, x->c->numdispBuff[0], SF, 0),
                           ppl_numericDisplay(CMax, x->c->numdispBuff[1], SF, 0));
@@ -998,7 +998,7 @@ GOT_CONTOURS:
                 if (n < 1) continue;
                 // Clip away the area around the contour's label, so that the contour is not drawn through it
                 if (sg->ContoursLabel == SW_ONOFF_ON) {
-                    int page = x->current->DatasetTextID[pdn] + clist[cn].i;
+                    const int page = x->current->DatasetTextID[pdn] + clist[cn].i;
                     const long i = clist[cn].segment_flatest;
                     const double xlab0 =
                             (clist[cn].posdata[2 * ((i) % n) + 0] + clist[cn].posdata[2 * ((i + 1) % n) + 0]) / 2;
@@ -1013,15 +1013,15 @@ GOT_CONTOURS:
                     postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, page + 1);
                     if (dviPage == NULL) { continue; }
                     //bb_left   = dviPage->boundingBox[0];
-                    double bb_bottom = dviPage->boundingBox[1];
+                    const double bb_bottom = dviPage->boundingBox[1];
                     //bb_right  = dviPage->boundingBox[2];
-                    double bb_top = dviPage->boundingBox[3];
-                    double ab_left = dviPage->textSizeBox[0];
+                    const double bb_top = dviPage->boundingBox[3];
+                    const double ab_left = dviPage->textSizeBox[0];
                     //ab_bottom = dviPage->textSizeBox[1];
-                    double ab_right = dviPage->textSizeBox[2];
+                    const double ab_right = dviPage->textSizeBox[2];
                     //ab_top    = dviPage->textSizeBox[3];
-                    double hlab = (fabs(bb_top - bb_bottom) + 2) * x->current->settings.FontSize;
-                    double wlab = (fabs(ab_right - ab_left) + 2) * x->current->settings.FontSize;
+                    const double hlab = (fabs(bb_top - bb_bottom) + 2) * x->current->settings.FontSize;
+                    const double wlab = (fabs(ab_right - ab_left) + 2) * x->current->settings.FontSize;
 
                     // Set a clipping path which excludes the label's box, using the even-odd rule
                     fprintf(x->epsbuffer,

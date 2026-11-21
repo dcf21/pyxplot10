@@ -360,8 +360,8 @@ static double SortByAzimuthXCentre, SortByAzimuthYCentre;
 static int SortByAzimuth(const void *x, const void *y) {
     const double *xd = (const double *) x;
     const double *yd = (const double *) y;
-    double ax = atan2(xd[0] - SortByAzimuthXCentre, xd[1] - SortByAzimuthYCentre);
-    double ay = atan2(yd[0] - SortByAzimuthXCentre, yd[1] - SortByAzimuthYCentre);
+    const double ax = atan2(xd[0] - SortByAzimuthXCentre, xd[1] - SortByAzimuthYCentre);
+    const double ay = atan2(yd[0] - SortByAzimuthXCentre, yd[1] - SortByAzimuthYCentre);
     if (ax > ay) return 1;
     if (ax < ay) return -1;
     return 0;
@@ -508,8 +508,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
     // Copy ranges given in the plot command, e.g. plot [0:1][0:2], to the axes they apply to, which run x1, y1, (z1),
     // x2, y2, ...
     while (pr != NULL) {
-        int Ndirs = x->current->ThreeDim ? 3 : 2;
-        int xyz = (k % Ndirs);
+        const int Ndirs = x->current->ThreeDim ? 3 : 2;
+        const int xyz = (k % Ndirs);
         int axis_n = 1 + k / Ndirs;
         if (axis_n > MAX_AXES) axis_n = 0;
         pplset_axis *axis = &axissets[xyz][axis_n];
@@ -807,7 +807,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
 
                 // Use a raster over the dataset's own range of v, if one was given
                 if ((special_raster2 == ordinate2_raster) && (pd->VRangeSet)) {
-                    int N = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                    const int N = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                             : x->current->settings.SamplesY;
                     special_raster2 = (double *) ppl_memAlloc(N * sizeof(double));
                     // Failure to allocate memory is reported as an error
@@ -924,8 +924,8 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             // The function is sampled along its first axis; remember whether its range was already decided, so this can
             // be undone afterwards
             pplset_axis *OrdinateAxis = &axissets[pd->axis1xyz][pd->axis1];
-            unsigned char prev_RangeFinalised = axissets[pd->axis1xyz][pd->axis1].RangeFinalised;
-            unsigned char prev_TickListFinalised = axissets[pd->axis1xyz][pd->axis1].TickListFinalised;
+            const unsigned char prev_RangeFinalised = axissets[pd->axis1xyz][pd->axis1].RangeFinalised;
+            const unsigned char prev_TickListFinalised = axissets[pd->axis1xyz][pd->axis1].TickListFinalised;
 
             // Space for the using items, including the extra items needed for style expressions
             pplExpr **UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
@@ -965,7 +965,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
 
 
             // Check whether we're sampling along one axis, or sampling a grid
-            unsigned char SampleGrid = (pd->ww_final.linespoints == SW_STYLE_SURFACE) ||
+            const unsigned char SampleGrid = (pd->ww_final.linespoints == SW_STYLE_SURFACE) ||
                     (pd->ww_final.linespoints == SW_STYLE_COLORMAP) ||
                     (pd->ww_final.linespoints == SW_STYLE_CONTOURMAP);
             pplset_axis *OrdinateAxis2 = SampleGrid ? (&axissets[pd->axis2xyz][pd->axis2]) : NULL;
@@ -1035,7 +1035,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                     if (SampleGrid ||
                         (*_OrdinateAxis)->OrdinateRaster == NULL) // Make ordinate raster if we don't already have one
                     {
-                        int Nsamp = (!SampleGrid) ? x->current->settings.samples
+                        const int Nsamp = (!SampleGrid) ? x->current->settings.samples
                                                   : ((!a) ? ((x->current->settings.SamplesXAuto == SW_BOOL_TRUE)
                                                                      ? x->current->settings.samples
                                                                      : x->current->settings.SamplesX)
@@ -1218,9 +1218,9 @@ void eps_plot_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "%% Canvas item %d [plot]\n", x->current->id);
 
     // Calculate positions of the four corners of graph
-    double origin_x = x->current->settings.OriginX.real * M_TO_PS;
-    double origin_y = x->current->settings.OriginY.real * M_TO_PS;
-    double width = x->current->settings.width.real * M_TO_PS;
+    const double origin_x = x->current->settings.OriginX.real * M_TO_PS;
+    const double origin_y = x->current->settings.OriginY.real * M_TO_PS;
+    const double width = x->current->settings.width.real * M_TO_PS;
     if (x->current->settings.AutoAspect == SW_ONOFF_ON) height = width * 2.0 / (1.0 + sqrt(5));
     else height = width * x->current->settings.aspect;
     if (x->current->settings.AutoZAspect == SW_ONOFF_ON) zdepth = width * 2.0 / (1.0 + sqrt(5));

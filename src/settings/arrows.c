@@ -182,12 +182,12 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     pplarrow_object *out;
 
     // Read the coordinate system of each coordinate of the two ends of the arrow
-    int system_x0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x0_system);
-    int system_y0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y0_system);
-    int system_z0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z0_system);
-    int system_x1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x1_system);
-    int system_y1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y1_system);
-    int system_z1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z1_system);
+    const int system_x0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x0_system);
+    const int system_y0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y0_system);
+    const int system_z0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z0_system);
+    const int system_x1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x1_system);
+    const int system_y1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y1_system);
+    const int system_z1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z1_system);
 
     // Check the units of each coordinate
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x0, system_x0);
@@ -206,7 +206,7 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z1_axis)) return;
 
     // Find the arrow with this ID in the list, which is sorted by ID, or the place where it belongs
-    int i = (int) round(in->stk[ptab[PARSE_INDEX_arrow_id]].real);
+    const int i = (int) round(in->stk[ptab[PARSE_INDEX_arrow_id]].real);
     while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
     // Reuse an existing arrow with this ID, or insert a new one
     if ((*inlist != NULL) && ((*inlist)->id == i)) {
@@ -285,7 +285,7 @@ void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutpu
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(in->stk[pos].real);
             if (pos <= 0) break;
-            int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_arrow_id]].real);
+            const int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_arrow_id]].real);
             inlist = first;
             while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
             // Unlink and free the arrow, or warn that it does not exist
@@ -331,7 +331,7 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(in->stk[pos].real);
             if (pos <= 0) break;
-            int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_arrow_id]].real);
+            const int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_arrow_id]].real);
 
             // Look for the arrow in the list of defaults
             pplarrow_object *obj = context->set->pplarrow_list_default;

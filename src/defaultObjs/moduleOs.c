@@ -576,7 +576,7 @@ void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *st
                 "The os.path.filesize() function requires a single string argument.");
         return;
     }
-    int st = stat((char *) in[0].auxil, &buffer);
+    const int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return its size, in bits
     if (st) {
         pplObjNull(&OUTPUT, 0);
@@ -605,7 +605,7 @@ void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 "The os.path.atime() function requires a single string argument.");
         return;
     }
-    int st = stat((char *) in[0].auxil, &buffer);
+    const int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return the time it was last accessed
     if (st) {
         pplObjNull(&OUTPUT, 0);
@@ -633,7 +633,7 @@ void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 "The os.path.ctime() function requires a single string argument.");
         return;
     }
-    int st = stat((char *) in[0].auxil, &buffer);
+    const int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return the time its status last changed
     if (st) {
         pplObjNull(&OUTPUT, 0);
@@ -661,7 +661,7 @@ void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 "The os.path.mtime() function requires a single string argument.");
         return;
     }
-    int st = stat((char *) in[0].auxil, &buffer);
+    const int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return the time it was last modified
     if (st) {
         pplObjNull(&OUTPUT, 0);

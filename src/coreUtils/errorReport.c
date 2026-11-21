@@ -104,7 +104,7 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
     // Count the error, and decide whether to use colour
     if (msg == NULL) msg = "";
     context->errorCount++; // Any error makes Pyxplot exit with non-zero status
-    unsigned char ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
+    const unsigned char ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
     // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);

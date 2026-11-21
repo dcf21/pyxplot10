@@ -370,9 +370,9 @@ static double fitResidual(fitComm *p) {
 
 static double GetHessian_diff2(const double x, void *p_void) {
     fitComm *p = (fitComm *) p_void;
-    double tmp = gsl_vector_get(p->paramValsHessian, p->diff2); // Replace old parameter with x
+    const double tmp = gsl_vector_get(p->paramValsHessian, p->diff2); // Replace old parameter with x
     gsl_vector_set(p->paramValsHessian, p->diff2, x);
-    double output = fitResidual(p); // Evaluate residual
+    const double output = fitResidual(p); // Evaluate residual
     gsl_vector_set(p->paramValsHessian, p->diff2, tmp); // Restore old parameter value
     return output;
 }
@@ -392,7 +392,7 @@ static double GetHessian_diff1(const double x, void *p_void) {
     fn.function = &GetHessian_diff2;
     fn.params = p_void;
 
-    double tmp = gsl_vector_get(p->paramValsHessian, p->diff1); // Replace old parameter with x
+    const double tmp = gsl_vector_get(p->paramValsHessian, p->diff1); // Replace old parameter with x
     gsl_vector_set(p->paramValsHessian, p->diff1, x);
     gsl_deriv_central(&fn, gsl_vector_get(p->paramValsHessian, p->diff2), p->diff2step, &output,
                       &output_error); // Differentiate residual a second time
@@ -468,8 +468,8 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
     fitComm *p = (fitComm *) p_void;
     p->sigmaData = gsl_vector_get(x, 0);
     p->paramVals = p->bestFitParamVals;
-    double term1 = fitResidual(p); // Likelihood for the best-fit set of parameters, without the Gaussian normalisation factor
-    double term2 = -(p->NDataPoints * log(1.0 / sqrt(2 * M_PI) / p->sigmaData)); // Gaussian normalisation factor
+    const double term1 = fitResidual(p); // Likelihood for the best-fit set of parameters, without the Gaussian normalisation factor
+    const double term2 = -(p->NDataPoints * log(1.0 / sqrt(2 * M_PI) / p->sigmaData)); // Gaussian normalisation factor
 
     // term3 is the Occam Factor, which equals the determinant of -H
     gsl_matrix *hessian = GetHessian(p);
@@ -478,7 +478,7 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
     gsl_permutation *perm = gsl_permutation_alloc(p->NParams);
     gsl_linalg_LU_decomp(hessian, perm, &sgn); // Hessian matrix is overwritten here, but we don't need it again
     // Calculate the determinant of the Hessian matrix
-    double term3 = gsl_linalg_LU_lndet(hessian) * 0.5; // -log(1/sqrt(det))
+    const double term3 = gsl_linalg_LU_lndet(hessian) * 0.5; // -log(1/sqrt(det))
     gsl_matrix_free(hessian);
     hessian = NULL;
     gsl_permutation_free(perm);
@@ -717,7 +717,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         return;
     }
     __sync_add_and_fetch(&funcDef->refCount, 1);
-    int Nargs = funcDef->minArgs;
+    const int Nargs = funcDef->minArgs;
 
     // Count length of using list
     {
@@ -770,8 +770,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     }
 
     // Allocate a new memory context for the data file we're about to read
-    int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
-    int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
+    const int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
+    const int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
 
     // Read data from file
     ppldata_fromCmd(c, &data, pl, in, 0, NULL, dataSpool, PARSE_TABLE_fit_, 0, NExpect, 0, min, minSet, max, maxSet,

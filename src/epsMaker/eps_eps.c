@@ -164,7 +164,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
     }
 
     // Work out position of bottom-left corner
-    double r = x->current->rotation;
+    const double r = x->current->rotation;
     if (x->current->settings.TextHAlign == SW_HALIGN_LEFT) xanchor = 0;
     else if (x->current->settings.TextHAlign == SW_HALIGN_CENT) xanchor = (xscale) / 2;
     else if (x->current->settings.TextHAlign == SW_HALIGN_RIGHT) xanchor = (xscale);
@@ -173,8 +173,8 @@ void eps_eps_RenderEPS(EPSComm *x) {
     else if (x->current->settings.TextVAlign == SW_VALIGN_BOT) yanchor = 0;
     xanchor *= (bb_right - bb_left);
     yanchor *= (bb_top - bb_bottom);
-    double xbotleft = x->current->xpos * M_TO_PS - (xanchor * cos(r) - yanchor * sin(r));
-    double ybotleft = x->current->ypos * M_TO_PS - (xanchor * sin(r) + yanchor * cos(r));
+    const double xbotleft = x->current->xpos * M_TO_PS - (xanchor * cos(r) - yanchor * sin(r));
+    const double ybotleft = x->current->ypos * M_TO_PS - (xanchor * sin(r) + yanchor * cos(r));
 
     // Begin encapsulation of EPS file
     fprintf(x->epsbuffer, "BeginEPSF\n");

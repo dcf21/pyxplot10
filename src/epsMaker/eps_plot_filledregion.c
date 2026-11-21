@@ -186,7 +186,7 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
 
     // Count how many segments of the outline cross a ray from the point in the chosen direction; an odd number means
     // the point is inside
-    int Npoints = fr->points->length;
+    const int Npoints = fr->points->length;
     listItem *li2 = fr->points->first;
     FilledRegionPoint *p2 = (FilledRegionPoint *) (li2->data);
 
@@ -217,7 +217,7 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
             }
         }
     }
-    unsigned char inside = (n % 2); // If were an even number of segments, we are outside. If there were an odd number, we are inside.
+    const unsigned char inside = (n % 2); // If were an even number of segments, we are outside. If there were an odd number, we are inside.
     return inside;
 }
 
@@ -309,7 +309,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
         }
 
         // Work out which face first axis crossing is on, and which direction we're moving going to next item in crossing point list
-        unsigned char face = CrossPointList[i].AxisFace;
+        const unsigned char face = CrossPointList[i].AxisFace;
         // The direction in which the edge of the graph runs, anticlockwise, from this crossing point
         if (face == FACE_TOP) {
             dir_x = -1;
@@ -324,7 +324,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             dir_x = 0;
             dir_y = 1;
         }
-        unsigned char inside_ahead = TestPointInside(fr, CrossPointList[i].x, CrossPointList[i].y, dir_x, dir_y);
+        const unsigned char inside_ahead = TestPointInside(fr, CrossPointList[i].x, CrossPointList[i].y, dir_x, dir_y);
 
         // Decide whether we are proceeding clockwise or anticlockwise around the region we're going to fill
         unsigned char FillSide = inside_ahead;
@@ -365,7 +365,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 psPoint(fr, CrossPointList[i].x, CrossPointList[i].y, &first_subpath, &first_point,
                         linewidth); // Cut point where line enters canvas
                 listItem *li = CrossPointList[i].point;
-                unsigned char sense = CrossPointList[i].sense;
+                const unsigned char sense = CrossPointList[i].sense;
                 // Follow the outline from the crossing, in the direction which leads inside the graph
                 if (sense == OUTGOING) {
                     li = li->prev;
@@ -567,10 +567,10 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
                                     &i1, &i2, &cx1, &cy1, &cz1, &cx2, &cy2, &cz2, &f1, &ap1, &f2, &ap2, &NCrossings);
 
         // Check for whether line crosses a previous line segment; if so, flip fill side
-        double ct_y_m1 = (cy2 - cy1) / (cx2 - cx1);
-        double ct_y_c1 = cy1 - ct_y_m1 * cx1;
-        double ct_x_m1 = (cx2 - cx1) / (cy2 - cy1);
-        double ct_x_c1 = cx1 - ct_x_m1 * cy1;
+        const double ct_y_m1 = (cy2 - cy1) / (cx2 - cx1);
+        const double ct_y_c1 = cy1 - ct_y_m1 * cx1;
+        const double ct_x_m1 = (cx2 - cx1) / (cy2 - cy1);
+        const double ct_x_c1 = cx1 - ct_x_m1 * cy1;
         listItem *ct_li = fr->points->first;
         FilledRegionPoint *ct_pB = (FilledRegionPoint *) (ct_li->data);
         ct_li = ct_li->next;
@@ -579,10 +579,10 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
             FilledRegionPoint *ct_pA = ct_pB;
             ct_pB = (FilledRegionPoint *) (ct_li->data);
             ct_li = ct_li->next;
-            double ct_y_m2 = (ct_pB->y - ct_pA->y) / (ct_pB->x - ct_pA->x);
-            double ct_y_c2 = ct_pA->y - ct_y_m2 * ct_pA->x;
-            double ct_x_m2 = (ct_pB->x - ct_pA->x) / (ct_pB->y - ct_pA->y);
-            double ct_x_c2 = ct_pA->x - ct_x_m2 * ct_pA->y;
+            const double ct_y_m2 = (ct_pB->y - ct_pA->y) / (ct_pB->x - ct_pA->x);
+            const double ct_y_c2 = ct_pA->y - ct_y_m2 * ct_pA->x;
+            const double ct_x_m2 = (ct_pB->x - ct_pA->x) / (ct_pB->y - ct_pA->y);
+            const double ct_x_c2 = ct_pA->x - ct_x_m2 * ct_pA->y;
             double ct_xi = (ct_y_c2 - ct_y_c1) / (ct_y_m1 - ct_y_m2);
             double ct_yi = (ct_x_c2 - ct_x_c1) / (ct_x_m1 - ct_x_m2);
             if ((gsl_finite(ct_xi)) && (((ct_xi >= cx1) && (ct_xi < cx2)) || ((ct_xi <= cx1) && (ct_xi > cx2))) &&

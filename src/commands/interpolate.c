@@ -173,8 +173,8 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     }
 
     // Allocate a new memory context for the data file we're about to read
-    int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
-    int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
+    const int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
+    const int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
 
     // Fetch string name of interpolation type
     if (mode == INTERP_AKIMA) splineTypeName = "Akima spline";
@@ -371,7 +371,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
         for (i = 0; i < 3; i++) // Use magic to determine file type
         {
-            int j = fgetc(infile);
+            const int j = fgetc(infile);
             // Report a file which is too short
             if (j == EOF) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -484,12 +484,12 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             // Permute the x and y values into sorted order in place, keeping the index arrays up to date as values are
             // swapped
             for (long int j = 0; j < i; j++) {
-                long int tmp3 = sortArray[j];
+                const long int tmp3 = sortArray[j];
                 if (tmp3 == j) continue;
-                double tmp = xdata[j];
+                const double tmp = xdata[j];
                 xdata[j] = xdata[tmp3];
                 xdata[tmp3] = tmp;
-                double tmp2 = ydata[j];
+                const double tmp2 = ydata[j];
                 ydata[j] = ydata[tmp3];
                 ydata[tmp3] = tmp2;
                 sortArray[sortArrayI[j]] = tmp3;
@@ -875,16 +875,16 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
     }
 
     // Interpolate the scattered data, or look up the pixel of the bitmap, scaling its value to the range 0 to 1
-    double dblin1 = in1->real;
-    double dblin2 = in2->real;
+    const double dblin1 = in1->real;
+    const double dblin2 = in2->real;
 
     // Scattered data, or a bitmap
     if (!bmp) {
         ppl_interp2d_eval(c, &dblout, &c->set->graph_current, (double *) desc->splineObj, desc->sizeX, 2, 3, dblin1,
                           dblin2);
     } else {
-        int x = floor(dblin1);
-        int y = floor(dblin2);
+        const int x = floor(dblin1);
+        const int y = floor(dblin2);
         if ((x < 0) || (x >= desc->sizeX) || (y < 0) || (y >= desc->sizeY)) dblout = GSL_NAN;
         else dblout = ((double) (((unsigned char *) desc->splineObj)[x + y * desc->sizeX])) / 255.0;
     }

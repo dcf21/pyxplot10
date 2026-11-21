@@ -255,13 +255,13 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
 
     // Check that we have some data
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
-    int Ncol = data->Ncolumns_real;
+    const int Ncol = data->Ncolumns_real;
     dataBlock *blk = data->first;
 
     // Calculate positions of the four corners of graph
-    double origin_x = x->current->settings.OriginX.real * M_TO_PS;
-    double origin_y = x->current->settings.OriginY.real * M_TO_PS;
-    double width = x->current->settings.width.real * M_TO_PS;
+    const double origin_x = x->current->settings.OriginX.real * M_TO_PS;
+    const double origin_y = x->current->settings.OriginY.real * M_TO_PS;
+    const double width = x->current->settings.width.real * M_TO_PS;
     if (x->current->settings.AutoAspect == SW_ONOFF_ON) height = width * 2.0 / (1.0 + sqrt(5));
     else height = width * x->current->settings.aspect;
     if (x->current->settings.AutoZAspect == SW_ONOFF_ON) zdepth = width * 2.0 / (1.0 + sqrt(5));
@@ -274,10 +274,10 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     graphExtent(x, sg, origin_x, origin_y, width, height, zdepth, &xmin, &xmax, &ymin, &ymax);
 
     // The color scale runs along the side of the graph it is on, and its ticks are spaced as for an axis of that length
-    unsigned char horizontal = ((sg->ColKeyPos == SW_COLKEYPOS_T) || (sg->ColKeyPos == SW_COLKEYPOS_B));
-    double PhysicalLength = fabs(horizontal ? (xmax - xmin) : (ymax - ymin)) / M_TO_PS;
-    double PhysicalLengthMinor = PhysicalLength / 0.004;
-    double PhysicalLengthMajor = PhysicalLength / (horizontal ? 0.025 : 0.015);
+    const unsigned char horizontal = ((sg->ColKeyPos == SW_COLKEYPOS_T) || (sg->ColKeyPos == SW_COLKEYPOS_B));
+    const double PhysicalLength = fabs(horizontal ? (xmax - xmin) : (ymax - ymin)) / M_TO_PS;
+    const double PhysicalLengthMinor = PhysicalLength / 0.004;
+    const double PhysicalLengthMajor = PhysicalLength / (horizontal ? 0.025 : 0.015);
 
     // Set up axis object
     pd->C1Axis = x->c->set->axis_default;
@@ -344,10 +344,10 @@ static void hsbToRgb(double comp[4]) {
     // Convert hue, saturation and brightness to red, green and blue
     double h2;
     clipComponents(comp);
-    double ch = comp[1] * comp[2]; // Chroma
-    int h2i = (int) (h2 = comp[0] * 6); // Sextant of the colour wheel
-    double xc = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
-    double m = comp[2] - ch;
+    const double ch = comp[1] * comp[2]; // Chroma
+    const int h2i = (int) (h2 = comp[0] * 6); // Sextant of the colour wheel
+    const double xc = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
+    const double m = comp[2] - ch;
     // Each sixth of the color wheel blends two primary colors
     switch (h2i) {
         case 0:
@@ -533,7 +533,7 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
         return;
     }
     if (DEBUG) { ppl_log(&x->c->errcontext, "Calling zlib to compress image data."); }
-    int status = compress2(imagez, &zlen, img->data, img->data_len, 9); // Call zlib to do deflation
+    const int status = compress2(imagez, &zlen, img->data, img->data_len, 9); // Call zlib to do deflation
 
     // If zlib fails, write the image uncompressed
     if (status != 0) {
@@ -637,8 +637,8 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                       const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                       const double origin_y, const double width, const double height, const double zdepth) {
     char msg[PPL_MSG_LENGTH];
-    int XSize = pd->GridXSize;
-    int YSize = pd->GridYSize;
+    const int XSize = pd->GridXSize;
+    const int YSize = pd->GridYSize;
     int j, c, NcolsData;
     long p;
     double xo, yo, Lx, Ly, ThetaX, ThetaY, CMin[4], CMax[4];
@@ -648,8 +648,8 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     bitmap_data img;
 
     if ((data == NULL) || (data->Nrows < 1)) return 0; // No data present
-    int Ncol_real = data->Ncolumns_real;
-    int Ncol_obj = data->Ncolumns_obj;
+    const int Ncol_real = data->Ncolumns_real;
+    const int Ncol_obj = data->Ncolumns_obj;
     if (eps_plot_WithWordsCheckUsingItemsDimLess(x->c, &pd->ww_final, data->firstEntries, Ncol_real, Ncol_obj,
                                                  &NcolsData))
         return 1;
@@ -736,14 +736,14 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 
         // Output result to debugging output
         if (DEBUG) {
-            int SF = x->c->set->term_current.SignificantFigures;
+            const int SF = x->c->set->term_current.SignificantFigures;
             ppl_snprintfTrunc(msg, sizeof(msg), "Range for variable c%d is [%s:%s]", c + 1,
                               ppl_numericDisplay(CMin[c], x->c->numdispBuff[0], SF, 0),
                               ppl_numericDisplay(CMax[c], x->c->numdispBuff[1], SF, 0));
             ppl_log(&x->c->errcontext, msg);
         }
     }
-    int cmax = c - 1;
+    const int cmax = c - 1;
 
     // Check that variables c1...c4 has appropriate units
     for (c = 0; c <= cmax; c++)
@@ -856,7 +856,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
         dataTable *data = x->current->plotdata[k];
         // Draw a color scale for each dataset which has one
         if (pd->CRangeDisplay) {
-            double XSize = 1024, YSize = 1; // Dimensions of bitmap image
+            const double XSize = 1024, YSize = 1; // Dimensions of bitmap image
             unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
             char v[3] = "c1";
             double x1, y1, x2, y2, x3, y3, x4, y4, theta, dummy;
@@ -953,9 +953,9 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             }
 
             // Set CMin, CMax
-            double CMin = pd->CMinFinal;
-            double CMax = pd->CMaxFinal;
-            unsigned char CLog = (sg->Clog[0] == SW_BOOL_TRUE);
+            const double CMin = pd->CMinFinal;
+            const double CMax = pd->CMaxFinal;
+            const unsigned char CLog = (sg->Clog[0] == SW_BOOL_TRUE);
 
             // Get pointer to variable c1 in the user's variable space
             ppl_contextGetVarPointer(x->c, v, &CVar, &CDummy);

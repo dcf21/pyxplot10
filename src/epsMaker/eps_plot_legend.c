@@ -331,7 +331,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     int Ncolumns, ColumnNItems[MAX_LEGEND_COLUMNS];
     unsigned char hfixed = 0, vfixed = 0;
     canvas_plotdesc *pd;
-    int kp = x->current->settings.KeyPos;
+    const int kp = x->current->settings.KeyPos;
     withWords ww;
 
     // There is nothing to do if the key is turned off
@@ -359,15 +359,15 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                 continue;
             } // Such doom will trigger errors later
             //bb_left   = dviPage->boundingBox[0];
-            double bb_bottom = dviPage->boundingBox[1];
+            const double bb_bottom = dviPage->boundingBox[1];
             //bb_right  = dviPage->boundingBox[2];
-            double bb_top = dviPage->boundingBox[3];
-            double ab_left = dviPage->textSizeBox[0];
-            double ab_bottom = dviPage->textSizeBox[1];
-            double ab_right = dviPage->textSizeBox[2];
-            double ab_top = dviPage->textSizeBox[3];
-            double height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
-            double height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
+            const double bb_top = dviPage->boundingBox[3];
+            const double ab_left = dviPage->textSizeBox[0];
+            const double ab_bottom = dviPage->textSizeBox[1];
+            const double ab_right = dviPage->textSizeBox[2];
+            const double ab_top = dviPage->textSizeBox[3];
+            const double height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
+            const double height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
             pd->TitleFinal_height = ((height2 < height1) ? height2 : height1) * fs;
             pd->TitleFinal_width = ((ab_right - ab_left) + MARGIN_HSIZE) * fs;
             CombinedHeight += pd->TitleFinal_height;

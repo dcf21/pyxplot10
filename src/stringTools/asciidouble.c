@@ -217,7 +217,7 @@ char *ppl_numericDisplay(const double in, char *output, const int SigFig, const 
     if ((fabs(in) < 1e10) && (fabs(in) > 1e-3)) {
         x = fabs(in);
         AccLevel = x * (1.0 + pow(10, -SigFig));
-        int dp_max = (int) (SigFig - log10(x));
+        const int dp_max = (int) (SigFig - log10(x));
         for (decimal_level = 0; decimal_level < dp_max; decimal_level++)
             if ((x - ((floor(x * pow(10, decimal_level)) / pow(10, decimal_level)) - x)) < AccLevel) break;
         snprintf(format, 16, "%%.%df", decimal_level);
@@ -876,7 +876,7 @@ int ppl_strAppendf(char *out, const size_t outLen, int *pos, const char *format,
     va_list args;
     if ((*pos < 0) || ((size_t) *pos + 1 >= outLen)) return 0;
     va_start(args, format);
-    int n = vsnprintf(out + *pos, outLen - *pos, format, args);
+    const int n = vsnprintf(out + *pos, outLen - *pos, format, args);
     va_end(args);
     // vsnprintf() always terminates the string, but this guarantees it even if the buffer was filled exactly
     out[outLen - 1] = '\0';
@@ -1103,7 +1103,7 @@ int ppl_snprintfTrunc(char *out, const size_t size, const char *format, ...) {
     va_list args;
     if (size == 0) return 0;
     va_start(args, format);
-    int n = vsnprintf(out, size, format, args);
+    const int n = vsnprintf(out, size, format, args);
     va_end(args);
     out[size - 1] = '\0';
     return n;

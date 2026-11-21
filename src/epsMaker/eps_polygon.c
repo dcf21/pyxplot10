@@ -77,7 +77,7 @@ void eps_polygon_RenderEPS(EPSComm *x) {
     // Set linewidth and linetype of outline
     if (ww.USElinewidth) lw_scale = ww.linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    const double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;

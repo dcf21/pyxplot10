@@ -170,7 +170,7 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
                 a = 1;
                 break;
             } else if (isdigit(in[ji + jg])) {
-                int l = ji + jg;
+                const int l = ji + jg;
                 while (isdigit(in[ji + jg])) jg++;
                 if (isalnum(in[ji + jg])) continue;
                 snprintf(out + k, outlen - 1 - k, "%s_{", LatexVarNamesTo[i]); // We have Greek letter underscore number
@@ -404,7 +404,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             for (p = i + 4; p < ei; p++)
                 if ((isalnum(in[p])) || (in[p] == '_')) break;
             if (p < ei) continue; // function has trailing matter
-            int upos = ei + 1; // position of unit name
+            const int upos = ei + 1; // position of unit name
             val.refCount = 1;
             val.amMalloced = 0;
             ppl_unitsStringEvaluate(c, in + upos, &val, &q, &errpos, msg);
@@ -432,7 +432,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 int ei = i;
                 while ((tokenBuff[ei].state == (unsigned char) 'I') && (ei < tlen)) { ei++; } // ffw over minus sign
                 if ((ei >= tlen) || (stkpos[ei] < 0)) continue; // right argument is not literal or unit() function
-                int sp = stkpos[ei];
+                const int sp = stkpos[ei];
                 c->stack[sp].real *= -1;
                 if (c->stack[sp].flagComplex) c->stack[sp].imag *= -1;
                 for (; i < ei; i++) { stkpos[i] = sp; }
@@ -450,8 +450,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                     ei++;
                 } // ffw over binary operator
                 if ((ei >= tlen) || (stkpos[ei] < 0)) continue; // right argument is not a literal
-                int sp1 = stkpos[i - 1];
-                int sp2 = stkpos[ei];
+                const int sp1 = stkpos[i - 1];
+                const int sp2 = stkpos[ei];
                 val.refCount = 1;
                 val.amMalloced = 0;
                 pplObjNum(&val, 0, 0, 0);
@@ -476,8 +476,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 if ((ei >= tlen) || (stkpos[ei] < 0)) continue; // right argument is not a literal
                 gotUnit = gotUnit || (tokenBuff[ei].state == (unsigned char) 'G');
                 if (!gotUnit) continue; // neither side is a unit()
-                int sp1 = stkpos[i - 1];
-                int sp2 = stkpos[ei];
+                const int sp1 = stkpos[i - 1];
+                const int sp2 = stkpos[ei];
                 val.refCount = 1;
                 val.amMalloced = 0;
                 pplObjNum(&val, 0, 0, 0);

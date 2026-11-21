@@ -118,7 +118,7 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         ThreeDimBuffer_Reset(x);
         return 0;
     }
-    int Nitems = ppl_listLen(ThreeDimBuffer_buffer);
+    const int Nitems = ppl_listLen(ThreeDimBuffer_buffer);
     ThreeDimBuffer_ACTIVE = 0;
     // Write out the buffered items, if there are any
     if (Nitems > 0) {

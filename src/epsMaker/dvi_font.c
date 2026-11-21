@@ -518,7 +518,7 @@ static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font) {
     // Otherwise, define a modified copy of the font, named e.g. SFRM1000-tcrm1000
     if ((entry.encFile[0] != '\0') && ((encoding = dviReadEncoding(ec, entry.encFile)) == NULL)) return DVIE_NOFONT;
     font->psName = (char *) ppl_memAlloc(strlen(font->basePsName) + strlen(font->name) + 2);
-    size_t setupLen = 2 * strlen(font->basePsName) + strlen(font->name) + (encoding ? strlen(encoding) : 0) + 512;
+    const size_t setupLen = 2 * strlen(font->basePsName) + strlen(font->name) + (encoding ? strlen(encoding) : 0) + 512;
     char *setup = (char *) ppl_memAlloc(setupLen);
     // Failure to allocate memory is reported as an error
     if ((font->psName == NULL) || (setup == NULL)) {
@@ -612,7 +612,7 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
             ppl_error(ec, ERR_INTERNAL, -1, -1, "Error in pfb file format");
             return 1;
         }
-        int i = getc(in); // Loop variables
+        const int i = getc(in); // Loop variables
         // Copy text records, converting carriage returns to newlines; write binary records in hexadecimal
         if (i == 1) {
             // Ascii text record
@@ -790,7 +790,7 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     }
 
     // Read the char info tables
-    int Nchars = tfm->ec - tfm->bc + 1;
+    const int Nchars = tfm->ec - tfm->bc + 1;
     tfm->charInfo = (TFMcharInfo *) ppl_memAlloc(Nchars * sizeof(TFMcharInfo));
     // Failure to allocate memory is reported as an error
     if (tfm->charInfo == NULL) {
@@ -915,7 +915,7 @@ double ReadFixWord(pplerr_context *ec, FILE *fp, int *err) {
     long signed int li;
     const double twoP20 = 1048576; // 2**20
     if ((*err = ReadSignedInt(ec, fp, &li, 4)) != 0) return 0.0;
-    double fw = (double) li / twoP20;
+    const double fw = (double) li / twoP20;
     return fw;
 }
 

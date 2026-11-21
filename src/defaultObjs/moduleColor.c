@@ -128,20 +128,20 @@ static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const doub
                        double *g, double *b) {
 
     // The chromaticity coordinates of the primaries of the color system, with z = 1 - x - y
-    double xr = cs->xRed;
-    double yr = cs->yRed;
-    double zr = 1 - (xr + yr);
-    double xg = cs->xGreen;
-    double yg = cs->yGreen;
-    double zg = 1 - (xg + yg);
-    double xb = cs->xBlue;
-    double yb = cs->yBlue;
-    double zb = 1 - (xb + yb);
+    const double xr = cs->xRed;
+    const double yr = cs->yRed;
+    const double zr = 1 - (xr + yr);
+    const double xg = cs->xGreen;
+    const double yg = cs->yGreen;
+    const double zg = 1 - (xg + yg);
+    const double xb = cs->xBlue;
+    const double yb = cs->yBlue;
+    const double zb = 1 - (xb + yb);
 
     // The chromaticity of the white point
-    double xw = cs->xWhite;
-    double yw = cs->yWhite;
-    double zw = 1 - (xw + yw);
+    const double xw = cs->xWhite;
+    const double yw = cs->yWhite;
+    const double zw = 1 - (xw + yw);
 
     // xyz -> rgb matrix, before scaling to white
     double rx = (yg * zb) - (yb * zg);
@@ -155,9 +155,9 @@ static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const doub
     double bz = (xr * yg) - (xg * yr);
 
     // White scaling factors. Dividing by yw scales the white luminance to unity, as conventional.
-    double rw = ((rx * xw) + (ry * yw) + (rz * zw)) / yw;
-    double gw = ((gx * xw) + (gy * yw) + (gz * zw)) / yw;
-    double bw = ((bx * xw) + (by * yw) + (bz * zw)) / yw;
+    const double rw = ((rx * xw) + (ry * yw) + (rz * zw)) / yw;
+    const double gw = ((gx * xw) + (gy * yw) + (gz * zw)) / yw;
+    const double bw = ((bx * xw) + (by * yw) + (bz * zw)) / yw;
 
     // xyz -> rgb matrix, correctly scaled to white
     rx = rx / rw;
@@ -273,8 +273,8 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
 
     // Wavelengths outside the table (in nm) give black
-    double norm = in[1].real;
-    double p0 = ((in[0].real * 1e9) - CIE_WLEN_MIN) / CIE_WLEN_STEPSIZE;
+    const double norm = in[1].real;
+    const double p0 = ((in[0].real * 1e9) - CIE_WLEN_MIN) / CIE_WLEN_STEPSIZE;
     // Outside the table
     if ((!gsl_finite(p0)) || (p0 < 0) || (p0 >= N_CIE_STEPS - 1)) {
         pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
@@ -283,16 +283,16 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     int i = (int) floor(p0);
     if (i < 0) i = 0;
     if (i > N_CIE_STEPS - 2) i = N_CIE_STEPS - 2;
-    int j = i + 1;
+    const int j = i + 1;
     double wi = (j - p0);
     if (wi < 0) wi = 0;
     if (wi > 1) wi = 1;
-    double wj = 1 - wi;
+    const double wj = 1 - wi;
 
     // Interpolate the color-matching functions at the wavelength, to get the XYZ coordinates
-    double x = cie_color_match[i][0] * wi + cie_color_match[j][0] * wj;
-    double y = cie_color_match[i][1] * wi + cie_color_match[j][1] * wj;
-    double z = cie_color_match[i][2] * wi + cie_color_match[j][2] * wj;
+    const double x = cie_color_match[i][0] * wi + cie_color_match[j][0] * wj;
+    const double y = cie_color_match[i][1] * wi + cie_color_match[j][1] * wj;
+    const double z = cie_color_match[i][2] * wi + cie_color_match[j][2] * wj;
 
     xyzToColor(x, y, z, norm, &OUTPUT);
 }
@@ -340,7 +340,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
 
     // The normalisation, which scales the brightness of the result
-    double norm = in[1].real;
+    const double norm = in[1].real;
 
     // Check there's enough space on the stack
     ppl_stackMustHave(c, 4);

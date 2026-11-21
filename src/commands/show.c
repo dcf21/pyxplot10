@@ -314,7 +314,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     int i = 0, p = 0, k, l, m;
     unsigned char unchanged;
     unit *ud = c->unit_database;
-    int outLen = 8 * LSTR_LENGTH;
+    const int outLen = 8 * LSTR_LENGTH;
 
     char *out = (char *) malloc(outLen); // Accumulate our whole output text here
     char *buf = (char *) malloc(LSTR_LENGTH); // Put the value of each setting in here
@@ -1377,8 +1377,8 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     // Show the view setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "view", 1) >= 0)) {
-        int SF = c->set->term_current.SignificantFigures;
-        int TY = (c->set->term_current.NumDisplay == SW_DISPLAY_L);
+        const int SF = c->set->term_current.SignificantFigures;
+        const int TY = (c->set->term_current.NumDisplay == SW_DISPLAY_L);
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s,%s",
                           ppl_numericDisplay(sg->XYview.real / M_PI * 180, c->numdispBuff[0], SF, TY),
                           ppl_numericDisplay(sg->YZview.real / M_PI * 180, c->numdispBuff[1], SF, TY));
@@ -2040,7 +2040,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         itemSet[0] = '\0';
     } else {
         canvas_itemlist *canvas_items = c->canvas_items;
-        int editNo = (int) round(stk[PARSE_show_editno].real);
+        const int editNo = (int) round(stk[PARSE_show_editno].real);
         // The multiplot item number must be valid
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);

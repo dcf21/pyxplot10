@@ -68,10 +68,10 @@ int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
 
     // Reversed ranges are written with the larger value first
     if (xa->RangeReversed) {
-        int swapI = xminset;
+        const int swapI = xminset;
         xminset = xmaxset;
         xmaxset = swapI;
-        double swapD = xmin;
+        const double swapD = xmin;
         xmin = xmax;
         xmax = swapD;
     }
@@ -103,19 +103,19 @@ void eps_plot_ThreeDimProject(const double xap, const double yap, const double z
                               const double zdepth, double *xpos, double *ypos, double *depth) {
 
     // Position relative to the centre of the cube
-    double x = width * (xap - 0.5);
-    double y = height * (yap - 0.5);
-    double z = zdepth * (zap - 0.5);
+    const double x = width * (xap - 0.5);
+    const double y = height * (yap - 0.5);
+    const double z = zdepth * (zap - 0.5);
 
     // Rotate about the vertical axis by the xy view angle
-    double x2 = x * cos(sg->XYview.real) + y * sin(sg->XYview.real);
-    double y2 = -x * sin(sg->XYview.real) + y * cos(sg->XYview.real);
-    double z2 = z;
+    const double x2 = x * cos(sg->XYview.real) + y * sin(sg->XYview.real);
+    const double y2 = -x * sin(sg->XYview.real) + y * cos(sg->XYview.real);
+    const double z2 = z;
 
     // Tilt about the horizontal axis by the yz view angle; the page's vertical is z3, and y3 is the depth
-    double x3 = x2;
-    double y3 = y2 * cos(sg->YZview.real) - z2 * sin(sg->YZview.real);
-    double z3 = y2 * sin(sg->YZview.real) + z2 * cos(sg->YZview.real);
+    const double x3 = x2;
+    const double y3 = y2 * cos(sg->YZview.real) - z2 * sin(sg->YZview.real);
+    const double z3 = y2 * sin(sg->YZview.real) + z2 * cos(sg->YZview.real);
 
     *xpos = origin_x + x3;
     *ypos = origin_y + z3;

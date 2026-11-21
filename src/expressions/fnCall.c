@@ -135,7 +135,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
     pplObj *args = context->stack + context->stackPtr - nArgs;
     pplObj called;
     int i;
-    int t = out->objType;
+    const int t = out->objType;
     // The stack must hold the function and its arguments
     if (context->stackPtr < nArgs + 1) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -558,8 +558,8 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
-                    int s1 = args[0].real;
-                    int s2 = args[1].real;
+                    const int s1 = args[0].real;
+                    const int s2 = args[1].real;
                     // Both sizes must be positive
                     if ((s1 < 1) || (s1 > INT_MAX)) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),

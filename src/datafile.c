@@ -140,7 +140,7 @@ dataTable *ppldata_NewDataTable(const int Ncolumns_real, const int Ncolumns_obj,
 //! \return The new raw data block, or NULL if memory allocation failed
 
 rawDataBlock *ppldata_NewRawDataBlock(const int memContext) {
-    int blockLength = 1 + DATAFILE_DATABLOCK_BYTES / (sizeof(char *) + sizeof(long int));
+    const int blockLength = 1 + DATAFILE_DATABLOCK_BYTES / (sizeof(char *) + sizeof(long int));
 
     // Allocate the block, and its arrays of lines and line numbers
     rawDataBlock *output = (rawDataBlock *) ppl_memAlloc_incontext(sizeof(rawDataBlock), memContext);
@@ -232,7 +232,7 @@ void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
     printf("Table size: %d x %ld\n", i->Ncolumns_real, i->Nrows);
     printf("Memory context: %d\n", i->memContext);
     dataBlock *blk = i->first;
-    int Ncolumns = i->Ncolumns_real;
+    const int Ncolumns = i->Ncolumns_real;
     // Print each block of the table
     while (blk != NULL) {
         // Print each row, with blank lines where the data are split
@@ -898,9 +898,9 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
     if (in == NULL) return NULL;
 
     // The numbers of columns, and of rows
-    int Nc = in->Ncolumns_obj;
-    int Nd = in->Ncolumns_real;
-    int Nr = in->Nrows;
+    const int Nc = in->Ncolumns_obj;
+    const int Nd = in->Ncolumns_real;
+    const int Nr = in->Nrows;
     ppldata_sorter *sorter = (ppldata_sorter *) malloc(Nr * sizeof(ppldata_sorter));
     if (sorter == NULL) return NULL;
 
@@ -1137,9 +1137,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
 
 
     // Keep a record of the memory context we're going to output into, and then make a scratchpad context
-    int contextOutput = persistent ? 0 : ppl_memAlloc_GetMemContext();
-    int contextRough = ppl_memAlloc_DescendIntoNewContext(); // Rough mallocs inside this subroutine happen in this context
-    int contextRaw = ppl_memAlloc_DescendIntoNewContext(); // Raw data goes into here when plotting with rows
+    const int contextOutput = persistent ? 0 : ppl_memAlloc_GetMemContext();
+    const int contextRough = ppl_memAlloc_DescendIntoNewContext(); // Rough mallocs inside this subroutine happen in this context
+    const int contextRaw = ppl_memAlloc_DescendIntoNewContext(); // Raw data goes into here when plotting with rows
 
     *out = ppldata_NewDataTable(Ncols - NusingObjs, NusingObjs, contextOutput, -1);
     if (*out == NULL) {
@@ -1918,7 +1918,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     }
 
     // Keep a record of the memory context we're going to output into
-    int contextOutput = ppl_memAlloc_GetMemContext();
+    const int contextOutput = ppl_memAlloc_GetMemContext();
     *out = ppldata_NewDataTable(Ncols - NusingObjs, NusingObjs, contextOutput,
                                 sampleGrid ? (rasterXlen * rasterYlen) : rasterXlen);
     // Failure to allocate memory is reported as an error
@@ -1933,7 +1933,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     // Loop over ordinate values
     {
         const int ilen = rasterXlen, i2len = sampleGrid ? rasterYlen : 1;
-        int offset = 1 + (!parametric) + ((!parametric) && sampleGrid);
+        const int offset = 1 + (!parametric) + ((!parametric) && sampleGrid);
         long p = 0;
 
         // If possible, the functions are evaluated in blocks of samples on several threads at once. The values are
@@ -1969,8 +1969,8 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                         ru = &unitY;
                     }
                     ppl_contextGetVarPointer(c, parametric ? v2 : v, &ordinateVar[a], &dummyTemp[a]);
-                    int am = ordinateVar[a]->amMalloced;
-                    int rc = ordinateVar[a]->refCount;
+                    const int am = ordinateVar[a]->amMalloced;
+                    const int rc = ordinateVar[a]->refCount;
                     ordinateVar[a]->amMalloced = 0;
                     ppl_garbageObject(ordinateVar[a]);
                     *(ordinateVar[a]) = **ru;
@@ -2146,7 +2146,7 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
     }
 
     // Keep a record of the memory context we're going to output into
-    int contextOutput = ppl_memAlloc_GetMemContext();
+    const int contextOutput = ppl_memAlloc_GetMemContext();
     *out = ppldata_NewDataTable(Ncols - NusingObjs, NusingObjs, contextOutput, vlen);
     if (*out == NULL) {
         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s",
@@ -2794,7 +2794,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
-                    int l2 = ((pplVector *) first->auxil)->v->size;
+                    const int l2 = ((pplVector *) first->auxil)->v->size;
                     // All the vectors must have the same length
                     if (l != l2) {
                         *status = 1;

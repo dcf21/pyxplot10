@@ -119,8 +119,8 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
             ppl_contextGetVarPointer(c, "ans", &optr, &dummyTemp);
             dummyTemp.amMalloced = 0;
             ppl_garbageObject(&dummyTemp);
-            int am = optr->amMalloced;
-            int rc = optr->refCount;
+            const int am = optr->amMalloced;
+            const int rc = optr->refCount;
             optr->amMalloced = 0;
             ppl_garbageObject(optr);
             pplObjCpy(optr, val, 0, 0, 1);
@@ -142,7 +142,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     }
 
     // Descend into a new memory context
-    int contextNew = ppl_memAlloc_DescendIntoNewContext();
+    const int contextNew = ppl_memAlloc_DescendIntoNewContext();
 
     // Directive is a string
     if (strcmp(d, "var_set") == 0) ppl_directive_varset(c, pl, in, interactive, iterDepth);
@@ -209,10 +209,10 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     else if (strcmp(d, "piechart") == 0) ppl_directive_piechart(c, pl, in, interactive, iterDepth);
     // ! runs a shell command, and warns if it fails
     else if (strcmp(d, "pling") == 0) {
-        int status = system((char *) stk[PARSE_pling_cmd].auxil);
+        const int status = system((char *) stk[PARSE_pling_cmd].auxil);
         // The command exited: warn about a non-zero exit status
         if (WIFEXITED(status)) {
-            int ec = WEXITSTATUS(status);
+            const int ec = WEXITSTATUS(status);
             if (ec) {
                 if (DEBUG) ppl_log(&c->errcontext, "Pling command received non-zero return value.");
             }

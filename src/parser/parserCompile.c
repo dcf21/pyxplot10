@@ -201,7 +201,7 @@ static int parse_repeat(ppl_context *c, parserStatus *s, const int writeOut, con
             }
             if (status == 2) goto repCleanup;
         }
-        int lineposOld2 = *linepos;
+        const int lineposOld2 = *linepos;
         // Test, without writing any output, whether the line contains another repetition
         while (nodeIter != NULL) {
             status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, nodeIter, tabCompNo,
@@ -434,7 +434,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         s->eLPos += strlen(s->expectingList + s->eLPos);
                     }
                     snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
-                    int l = strlen(s->expectingList + s->eLPos);
+                    const int l = strlen(s->expectingList + s->eLPos);
                     for (int j = k = 0; ((j < s->eLPos) && !k); j++)
                         k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
                              0); // Don't repeat ourselves
@@ -494,7 +494,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                 s->eLPos += strlen(s->expectingList + s->eLPos);
                             }
                             snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
-                            int l = strlen(s->expectingList + s->eLPos);
+                            const int l = strlen(s->expectingList + s->eLPos);
                             for (int j = k = 0; ((j < s->eLPos) && !k); j++)
                                 k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
                                      0); // Don't repeat ourselves
@@ -760,7 +760,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                             }
                             // Read the axis number, if any; it defaults to 1
                             if (ppl_validFloat(line + *linepos + 1, NULL)) {
-                                double ad = ppl_getFloat(line + *linepos + 1, &explen);
+                                const double ad = ppl_getFloat(line + *linepos + 1, &explen);
                                 // Axis numbers must be positive
                                 if ((ad <= 0) || (ad >= INT_MAX)) {
                                     status = 0;
@@ -792,7 +792,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                  i++)
                                 nambuff[i] = line[*linepos + i];
                             nambuff[i] = '\0';
-                            int id = ppl_fetchSettingByName(&c->errcontext, nambuff, SW_COLOR_INT, SW_COLOR_STR);
+                            const int id = ppl_fetchSettingByName(&c->errcontext, nambuff, SW_COLOR_INT, SW_COLOR_STR);
                             // %c: a color, which may be the name of a color, or an expression which evaluates to a
                             // color
                             if (id > 0) {
@@ -1467,7 +1467,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 
     // Deal with macros and ` ` substitutions
     if (!expandMacros) {
-        int fail = 0;
+        const int fail = 0;
         containsMacros = lineContainsMacros(line);
         if (containsMacros && (s != NULL) &&
             !fail) // If we're not expanding macros at this stage, flag this parserLine as containing macros, and exit
@@ -1533,7 +1533,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 
                         // First, substitute for ` ` expressions
                         if ((quoteChar == '\0') && (line[i] == '`')) {
-                            int is = ++i;
+                            const int is = ++i;
                             char *key = NULL;
                             FILE *substPipe;
                             for (; ((line[i] != '\0') && (line[i] != '`')); i++); // Find end of ` ` expression
@@ -1584,12 +1584,12 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                                     obLen += LSTR_LENGTH;
                                 }
                             }
-                            int status = pclose(substPipe);
+                            const int status = pclose(substPipe);
                             if (fail) goto shellSubstErr;
 
                             // A shell command which fails is an error
                             if (WIFEXITED(status)) {
-                                int ec = WEXITSTATUS(status);
+                                const int ec = WEXITSTATUS(status);
                                 // A non-zero exit status is an error
                                 if (ec) {
                                     ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -1841,7 +1841,7 @@ char *ppl_parseAutocomplete(const char *dummy, const int status) {
         {
             line = rl_line_buffer;
         } else {
-            int i = strlen(rl_line_buffer) + strlen(rootContext->inputLineAddBuffer);
+            const int i = strlen(rl_line_buffer) + strlen(rootContext->inputLineAddBuffer);
             if ((linebuff = (char *) malloc(i + 1)) == NULL) return NULL;
             strcpy(linebuff, rootContext->inputLineAddBuffer);
             strcpy(linebuff + strlen(linebuff), rl_line_buffer);

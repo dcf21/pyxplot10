@@ -179,7 +179,7 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
 
                             // 2D flat axes
                             else {
-                                double lrpos = left + (right - left) * TLP[l]; // left--right position of tick
+                                const double lrpos = left + (right - left) * TLP[l]; // left--right position of tick
                                 // Horizontal lines for y ticks; vertical lines for x ticks
                                 if (j == 1) {
                                     fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n",

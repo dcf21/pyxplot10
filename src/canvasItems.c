@@ -218,14 +218,14 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
     }
 
     // With no item number given, the item is added after the last one; otherwise it replaces the item with that number
-    int gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
+    const int gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
     // Number the item after the last item on the canvas
     if (!gotEditNo) {
         insertpointA = &(canvas_items->last);
         next = NULL;
         prev = (*insertpointA == NULL) ? NULL : canvas_items->last;
         insertpointB = (*insertpointA == NULL) ? &(canvas_items->first) : &(canvas_items->last->next);
-        int prevId = (*insertpointA == NULL) ? 0 : canvas_items->last->id;
+        const int prevId = (*insertpointA == NULL) ? 0 : canvas_items->last->id;
         editNo = prevId + 1;
         // There is a fixed limit on the number of items
         if (editNo >= MULTIPLOT_MAXINDEX) {
@@ -770,7 +770,7 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
     // List each item, marking those which have been deleted
     while (ptr != NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "%5d  %s", ptr->id, (ptr->deleted) ? "[deleted] " : "");
-        int i = strlen(msg);
+        const int i = strlen(msg);
         ppl_canvas_item_textify(c, ptr, msg + i, sizeof(msg) - i);
         ppl_report(&c->errcontext, msg);
         ptr = ptr->next;
@@ -855,7 +855,7 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
     // Walk the linked list of item numbers on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);
-        int id = (int) round(stk[pos + PARSE_delete_number_deleteno].real);
+        const int id = (int) round(stk[pos + PARSE_delete_number_deleteno].real);
         canvas_delete(c, id);
     }
 
@@ -891,7 +891,7 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     // Walk the linked list of item numbers on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);
-        int id = (int) round(stk[pos + PARSE_undelete_number_undeleteno].real);
+        const int id = (int) round(stk[pos + PARSE_undelete_number_undeleteno].real);
         canvas_item *ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != id)) ptr = ptr->next;
         // Report an item which does not exist
@@ -932,11 +932,11 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     }
 
     // Read the item number and its new position and rotation
-    int moveno = (int) round(stk[PARSE_move_moveno].real);
-    double x = stk[PARSE_move_p].real;
-    double y = stk[PARSE_move_p + 1].real;
-    double rotation = stk[PARSE_move_rotation].real;
-    int gotRotation = (stk[PARSE_move_rotation].objType == PPLOBJ_NUM);
+    const int moveno = (int) round(stk[PARSE_move_moveno].real);
+    const double x = stk[PARSE_move_p].real;
+    const double y = stk[PARSE_move_p + 1].real;
+    const double rotation = stk[PARSE_move_rotation].real;
+    const int gotRotation = (stk[PARSE_move_rotation].objType == PPLOBJ_NUM);
 
     // Find the item
     canvas_item *ptr = canvas_items->first;
@@ -1019,8 +1019,8 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     }
 
     // Read the ID numbers of the items to be swapped
-    int item1 = (int) round(stk[PARSE_swap_item1].real);
-    int item2 = (int) round(stk[PARSE_swap_item2].real);
+    const int item1 = (int) round(stk[PARSE_swap_item1].real);
+    const int item2 = (int) round(stk[PARSE_swap_item2].real);
 
     // Seek the first item to be swapped
     canvas_item **ptr1 = &canvas_items->first;
@@ -1073,10 +1073,10 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
     int id;
 
     // Look up the start and end point of the arrow, and ensure that they are either dimensionless or in units of length
-    double x1 = stk[PARSE_arrow_p1].real;
-    double y1 = stk[PARSE_arrow_p1 + 1].real;
-    double x2 = stk[PARSE_arrow_p2].real;
-    double y2 = stk[PARSE_arrow_p2 + 1].real;
+    const double x1 = stk[PARSE_arrow_p1].real;
+    const double y1 = stk[PARSE_arrow_p1 + 1].real;
+    const double x2 = stk[PARSE_arrow_p2].real;
+    const double y2 = stk[PARSE_arrow_p2 + 1].real;
 
     // Add this arrow to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_ARROW, &ptr, &id, 0)) { return 1; }
@@ -1090,7 +1090,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
 
     // Work out whether this arrow is in the 'head', 'nohead' or 'twoway' style
     char *tempstr = (char *) stk[PARSE_arrow_arrow_style].auxil;
-    int gotTempstr = (stk[PARSE_arrow_arrow_style].objType == PPLOBJ_STR);
+    const int gotTempstr = (stk[PARSE_arrow_arrow_style].objType == PPLOBJ_STR);
     char *tempstr2 = (char *) stk[PARSE_arrow_directive].auxil;
     if (gotTempstr)
         ptr->ArrowType = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ARROWTYPE_INT, SW_ARROWTYPE_STR);
@@ -1115,19 +1115,19 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
     int id;
 
     // Look up the positions of the two corners of the box
-    double x1 = stk[PARSE_box_p1].real;
-    double y1 = stk[PARSE_box_p1 + 1].real;
-    double x2 = stk[PARSE_box_p2].real;
-    int gotx2 = (stk[PARSE_box_p2].objType == PPLOBJ_NUM);
-    double y2 = stk[PARSE_box_p2 + 1].real;
-    double x3 = stk[PARSE_box_p3].real;
-    double y3 = stk[PARSE_box_p3 + 1].real;
-    double ang = stk[PARSE_box_rotation].real;
-    int gotAng = (stk[PARSE_box_rotation].objType == PPLOBJ_NUM);
-    double width = stk[PARSE_box_width].real;
-    int gotWidth = (stk[PARSE_box_width].objType == PPLOBJ_NUM);
-    double height = stk[PARSE_box_height].real;
-    int gotHeight = (stk[PARSE_box_height].objType == PPLOBJ_NUM);
+    const double x1 = stk[PARSE_box_p1].real;
+    const double y1 = stk[PARSE_box_p1 + 1].real;
+    const double x2 = stk[PARSE_box_p2].real;
+    const int gotx2 = (stk[PARSE_box_p2].objType == PPLOBJ_NUM);
+    const double y2 = stk[PARSE_box_p2 + 1].real;
+    const double x3 = stk[PARSE_box_p3].real;
+    const double y3 = stk[PARSE_box_p3 + 1].real;
+    const double ang = stk[PARSE_box_rotation].real;
+    const int gotAng = (stk[PARSE_box_rotation].objType == PPLOBJ_NUM);
+    const double width = stk[PARSE_box_width].real;
+    const int gotWidth = (stk[PARSE_box_width].objType == PPLOBJ_NUM);
+    const double height = stk[PARSE_box_height].real;
+    const int gotHeight = (stk[PARSE_box_height].objType == PPLOBJ_NUM);
 
     if ((!gotx2) && ((!gotWidth) || (!gotHeight))) // If box is specified in width/height format, both must be specified
     {
@@ -1184,13 +1184,13 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
 
     // Look up the position of the centre of the circle and its radius
     char *tempstr = (char *) stk[PARSE_circle_directive].auxil;
-    int amArc = (strcmp(tempstr, "arc") == 0);
-    double x = stk[PARSE_circle_p].real;
-    double y = stk[PARSE_circle_p + 1].real;
-    double r = stk[PARSE_circle_r].real;
-    double a1 = stk[PARSE_arc_angle1].real;
-    int gota1 = amArc && (stk[PARSE_arc_angle1].objType == PPLOBJ_NUM);
-    double a2 = stk[PARSE_arc_angle2].real;
+    const int amArc = (strcmp(tempstr, "arc") == 0);
+    const double x = stk[PARSE_circle_p].real;
+    const double y = stk[PARSE_circle_p + 1].real;
+    const double r = stk[PARSE_circle_r].real;
+    const double a1 = stk[PARSE_arc_angle1].real;
+    const int gota1 = amArc && (stk[PARSE_arc_angle1].objType == PPLOBJ_NUM);
+    const double a2 = stk[PARSE_arc_angle2].real;
 
     // Add this circle to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_CIRC, &ptr, &id, 0)) { return 1; }
@@ -1231,37 +1231,37 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
 
     // Look up the input parameters which define the ellipse
     double ang = stk[PARSE_ellipse_rotation].real;
-    int gotAng = (stk[PARSE_ellipse_rotation].objType == PPLOBJ_NUM);
-    double x1 = stk[PARSE_ellipse_p1].real;
-    int gotX1 = (stk[PARSE_ellipse_p1].objType == PPLOBJ_NUM);
-    double y1 = stk[PARSE_ellipse_p1 + 1].real;
-    double x2 = stk[PARSE_ellipse_p2].real;
-    double y2 = stk[PARSE_ellipse_p2 + 1].real;
+    const int gotAng = (stk[PARSE_ellipse_rotation].objType == PPLOBJ_NUM);
+    const double x1 = stk[PARSE_ellipse_p1].real;
+    const int gotX1 = (stk[PARSE_ellipse_p1].objType == PPLOBJ_NUM);
+    const double y1 = stk[PARSE_ellipse_p1 + 1].real;
+    const double x2 = stk[PARSE_ellipse_p2].real;
+    const double y2 = stk[PARSE_ellipse_p2 + 1].real;
     double xc = stk[PARSE_ellipse_center].real;
-    int gotXc = (stk[PARSE_ellipse_center].objType == PPLOBJ_NUM);
+    const int gotXc = (stk[PARSE_ellipse_center].objType == PPLOBJ_NUM);
     double yc = stk[PARSE_ellipse_center + 1].real;
-    double xf = stk[PARSE_ellipse_focus].real;
-    int gotXf = (stk[PARSE_ellipse_focus].objType == PPLOBJ_NUM);
-    double yf = stk[PARSE_ellipse_focus + 1].real;
-    double a2 = stk[PARSE_ellipse_majoraxis].real;
-    int gotA2 = (stk[PARSE_ellipse_majoraxis].objType == PPLOBJ_NUM);
-    double b2 = stk[PARSE_ellipse_minoraxis].real;
-    int gotB2 = (stk[PARSE_ellipse_minoraxis].objType == PPLOBJ_NUM);
+    const double xf = stk[PARSE_ellipse_focus].real;
+    const int gotXf = (stk[PARSE_ellipse_focus].objType == PPLOBJ_NUM);
+    const double yf = stk[PARSE_ellipse_focus + 1].real;
+    const double a2 = stk[PARSE_ellipse_majoraxis].real;
+    const int gotA2 = (stk[PARSE_ellipse_majoraxis].objType == PPLOBJ_NUM);
+    const double b2 = stk[PARSE_ellipse_minoraxis].real;
+    const int gotB2 = (stk[PARSE_ellipse_minoraxis].objType == PPLOBJ_NUM);
     double a = stk[PARSE_ellipse_semimajoraxis].real;
     int gotA = (stk[PARSE_ellipse_semimajoraxis].objType == PPLOBJ_NUM);
     double b = stk[PARSE_ellipse_semiminoraxis].real;
     int gotB = (stk[PARSE_ellipse_semiminoraxis].objType == PPLOBJ_NUM);
     double slr = stk[PARSE_ellipse_slr].real;
     int gotSlr = (stk[PARSE_ellipse_slr].objType == PPLOBJ_NUM);
-    double lr = stk[PARSE_ellipse_lr].real;
-    int gotLr = (stk[PARSE_ellipse_lr].objType == PPLOBJ_NUM);
+    const double lr = stk[PARSE_ellipse_lr].real;
+    const int gotLr = (stk[PARSE_ellipse_lr].objType == PPLOBJ_NUM);
     double ecc = stk[PARSE_ellipse_eccentricity].real;
     int gotEcc = (stk[PARSE_ellipse_eccentricity].objType == PPLOBJ_NUM);
 
     // Read the angles of an arc, if given
-    double arcfrom = stk[PARSE_ellipse_arcfrom].real;
-    int gotarc = (stk[PARSE_ellipse_arcfrom].objType == PPLOBJ_NUM);
-    double arcto = stk[PARSE_ellipse_arcto].real;
+    const double arcfrom = stk[PARSE_ellipse_arcfrom].real;
+    const int gotarc = (stk[PARSE_ellipse_arcfrom].objType == PPLOBJ_NUM);
+    const double arcto = stk[PARSE_ellipse_arcto].real;
 
     // Count number of input parameters that have been supplied, to make sure we have a suitable set
     if (gotAng) {
@@ -1358,7 +1358,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             b = (ppl_dblEqual(ecc, 0.0)) ? a : a * sqrt(1.0 - pow(ecc, 2));
         } else if (gotSlr) // or semi-latus rectum...
         {
-            double ratio = hypot(xc - xf, yc - yf) / slr;
+            const double ratio = hypot(xc - xf, yc - yf) / slr;
             ecc = (sqrt(1 + 4 * pow(ratio, 2)) - 1.0) / (2 * ratio);
             // The eccentricity must be between zero and one
             if ((ecc < 0.0) || (ecc >= 1.0)) {
@@ -1592,8 +1592,8 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
     int id;
 
     // Look up the position of the point, and ensure that it is either dimensionless or in units of length
-    double x = stk[PARSE_point_p].real;
-    double y = stk[PARSE_point_p + 1].real;
+    const double x = stk[PARSE_point_p].real;
+    const double y = stk[PARSE_point_p + 1].real;
 
     // Add this point to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_POINT, &ptr, &id, 0)) { return 1; }
@@ -1646,7 +1646,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
         return 1;
     }
     list *ptListObj = (list *) stk[PARSE_polygon_pointlist].auxil;
-    int Npts = ppl_listLen(ptListObj);
+    const int Npts = ppl_listLen(ptListObj);
     double *ptList = (double *) malloc(2 * Npts * sizeof(double));
     // Failure to allocate memory is reported as an error
     if (ptList == NULL) {
@@ -1666,7 +1666,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
         // A point given as a vector
         if (item->objType == PPLOBJ_VEC) {
             pplVector *v = (pplVector *) item->auxil;
-            int l = v->v->size;
+            const int l = v->v->size;
             double m = 1;
             if (item->dimensionless) m = 0.01;
             // Dimensionless positions are in centimetres; otherwise they must be lengths
@@ -1786,14 +1786,14 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     int id;
 
     // Look up the position of the text item
-    double x = stk[PARSE_text_p].real;
-    int gotX = (stk[PARSE_text_p].objType == PPLOBJ_NUM);
-    double y = stk[PARSE_text_p + 1].real;
-    int gotY = (stk[PARSE_text_p + 1].objType == PPLOBJ_NUM);
-    double gap = stk[PARSE_text_gap].real;
-    int gotGap = (stk[PARSE_text_gap].objType == PPLOBJ_NUM);
-    double ang = stk[PARSE_text_rotation].real;
-    int gotAng = (stk[PARSE_text_rotation].objType == PPLOBJ_NUM);
+    const double x = stk[PARSE_text_p].real;
+    const int gotX = (stk[PARSE_text_p].objType == PPLOBJ_NUM);
+    const double y = stk[PARSE_text_p + 1].real;
+    const int gotY = (stk[PARSE_text_p + 1].objType == PPLOBJ_NUM);
+    const double gap = stk[PARSE_text_gap].real;
+    const int gotGap = (stk[PARSE_text_gap].objType == PPLOBJ_NUM);
+    const double ang = stk[PARSE_text_rotation].real;
+    const int gotAng = (stk[PARSE_text_rotation].objType == PPLOBJ_NUM);
 
     // Read the string which we are to render
     char *tempstr = (char *) stk[PARSE_text_string].auxil;
@@ -2075,7 +2075,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         new = NULL;
                         return 1;
                     }
-                    int l2 = ((pplVector *) first->auxil)->v->size;
+                    const int l2 = ((pplVector *) first->auxil)->v->size;
                     // All the vectors must have the same length
                     if (l != l2) {
                         ppl_snprintfTrunc(
@@ -2518,7 +2518,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
     }
 
     // Fetch options in common with the plot command
-    int status = ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_piechart_, 0, 0, iterDepth, dataSpool, 1);
+    const int status = ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_piechart_, 0, 0, iterDepth, dataSpool, 1);
     // Give up if the data description could not be read
     if (status) {
         canvas_delete(c, id);

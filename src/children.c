@@ -194,8 +194,8 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
     if (!FD_ISSET(PipeCSP2MAIN[0], &readable)) return; // select tells us that pipe from CSP is not readable
 
     // Read what is waiting, and report it line by line
-    int pos = strlen(PipeOutputBuffer);
-    ssize_t nread = read(PipeCSP2MAIN[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
+    const int pos = strlen(PipeOutputBuffer);
+    const ssize_t nread = read(PipeCSP2MAIN[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
     // read() does not terminate the string, so terminate it after the new bytes
     if (nread > 0) PipeOutputBuffer[pos + nread] = '\0';
     if (nread > 0)
@@ -342,8 +342,8 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
     if (!FD_ISSET(PipeMAIN2CSP[0], &readable)) return; // select tells us that pipe from main process is not readable
 
     // Read what is waiting, and process it command by command
-    int pos = strlen(PipeOutputBuffer);
-    ssize_t nread = read(PipeMAIN2CSP[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
+    const int pos = strlen(PipeOutputBuffer);
+    const ssize_t nread = read(PipeMAIN2CSP[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
     // read() does not terminate the string, so terminate it after the new bytes
     if (nread > 0) PipeOutputBuffer[pos + nread] = '\0';
     if (nread > 0)

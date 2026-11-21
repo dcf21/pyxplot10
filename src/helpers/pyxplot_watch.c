@@ -53,7 +53,7 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     char LineBuffer[LSTR_LENGTH];
 
     // Progress messages are only shown in an interactive terminal, unless the user asked for quiet output
-    int interactive = ((isatty(STDIN_FILENO) == 1) && (context->session_default.splash == SW_ONOFF_ON));
+    const int interactive = ((isatty(STDIN_FILENO) == 1) && (context->session_default.splash == SW_ONOFF_ON));
 
     // Announce that the script is being run
     if (interactive) {
@@ -65,7 +65,7 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     // Run Pyxplot on the script, passing on the user's choice of coloured output
     ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "%s -q %s %s", PPLBINARY,
                       (context->session_default.color == SW_ONOFF_ON) ? "-c" : "-m", fname);
-    int status = system(LineBuffer);
+    const int status = system(LineBuffer);
 
     // In a non-interactive session, report scripts which failed; in an interactive session, Pyxplot's own error
     // messages suffice

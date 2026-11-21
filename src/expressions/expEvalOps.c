@@ -137,7 +137,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         const int l1 = strlen((char *) a->auxil);
         const int l2 = strlen((char *) b->auxil);
-        int l = l1 + l2 + 1;
+        const int l = l1 + l2 + 1;
         char *tmp = (char *) malloc(l);
         // Failure to allocate memory is reported as an error
         if (tmp == NULL) {

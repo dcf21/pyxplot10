@@ -68,11 +68,11 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
                       const int fillColor, int *outcol, int *outcolspace, pplExpr **EXPoutcol, double *outcol1,
                       double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
                       unsigned char *USEcol1234) {
-    int pos = ptab[fillColor ? PARSE_INDEX_fillcolor : PARSE_INDEX_color];
+    const int pos = ptab[fillColor ? PARSE_INDEX_fillcolor : PARSE_INDEX_color];
     pplObj *col = &in->stk[stkbase + pos];
     char msg[PPL_MSG_LENGTH];
     if (pos < 0) return 0;
-    int s = ppl_colorFromObj(c, col, outcol, outcolspace, EXPoutcol, outcol1, outcol2, outcol3, outcol4, USEcol,
+    const int s = ppl_colorFromObj(c, col, outcol, outcolspace, EXPoutcol, outcol1, outcol2, outcol3, outcol4, USEcol,
                              USEcol1234, msg);
     if (s) ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, msg);
     return s;
@@ -113,11 +113,11 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
             int k1 = (int) floor(col->real);
             if (k1 > INT_MAX - 8) k1 = INT_MAX - 8;
             if (k1 < INT_MIN + 8) k1 = INT_MIN + 8;
-            int k2 = k1 + 1; // Mix color indexes k1 and k2
+            const int k2 = k1 + 1; // Mix color indexes k1 and k2
             double w2 = col->real - k1; // weights for two colors
             if (w2 <= 0) w2 = 0;
             if (w2 >= 1) w2 = 1;
-            double w1 = 1 - w2;
+            const double w1 = 1 - w2;
             int palette_index1 = (k1 - 1) % j;
             while (palette_index1 < 0) palette_index1 += j;
             int palette_index2 = (k2 - 1) % j;

@@ -1168,7 +1168,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     int max;
     gsl_complex c, d, dp, dq, zah;
     double mod = gsl_complex_abs(in);
-    double arg = gsl_complex_arg(in);
+    const double arg = gsl_complex_arg(in);
     // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
     if (mod < 3.2 && (mod < 2.0 || arg > 1.05 || arg < -1.05)) {
         d = gsl_complex_mul_real(airy_series_y1(in), 0.355028053887817239);
@@ -1238,7 +1238,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int max;
     gsl_complex a, b, c, d, dp, dq, zah;
-    double mod = gsl_complex_abs(in);
+    const double mod = gsl_complex_abs(in);
     double arg = gsl_complex_arg(in);
     // Small inputs: use the Maclaurin series
     if (mod < 3.2) {
@@ -1322,7 +1322,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
     int max;
     gsl_complex c, d, dp, dq, zah;
     double mod = gsl_complex_abs(in);
-    double arg = gsl_complex_arg(in);
+    const double arg = gsl_complex_arg(in);
     // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
     if (mod < 3.2 && (mod < 2.0 || arg > 1.05 || arg < -1.05)) {
         d = gsl_complex_mul_real(airy_series_y1_diff(in), 0.355028053887817239);
@@ -1392,7 +1392,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int max;
     gsl_complex a, b, c, d, dp, dq, zah;
-    double mod = gsl_complex_abs(in);
+    const double mod = gsl_complex_abs(in);
     double arg = gsl_complex_arg(in);
     // Small inputs: use the Maclaurin series
     if (mod < 3.2) {

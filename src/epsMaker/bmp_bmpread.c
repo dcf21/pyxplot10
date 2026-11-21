@@ -285,7 +285,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             for (int i = 0; i < height; i++) {
                 // Each pixel in the row
                 for (int j = 0; j < width; j++) {
-                    unsigned char c = *p;
+                    const unsigned char c = *p;
                     *p = *(p + 2);
                     *(p + 2) = c;
                     p += 3;
@@ -332,8 +332,8 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
 
     // Assume 5 bits per component unless the bit masks say otherwise
     int is15 = 1;
-    unsigned int width = image->width;
-    unsigned int height = image->height;
+    const unsigned int width = image->width;
+    const unsigned int height = image->height;
 
     if (header[16] == 3) // Read "palette" and check correct
     { // Palette can be 7c00 03e0 001f (15 bit)

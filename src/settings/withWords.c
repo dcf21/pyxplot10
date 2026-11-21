@@ -189,7 +189,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     // The plot style, e.g. lines or points
     if (got) {
         char *tempstr = (char *) stk[pos].auxil;
-        int i = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_STYLE_INT, SW_STYLE_STR);
+        const int i = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_STYLE_INT, SW_STYLE_STR);
         out->linespoints = i;
         out->USElinespoints = 1;
     }

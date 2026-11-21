@@ -383,10 +383,10 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                             else hal = x->current->settings.TextHAlign;
                             if (li->VAlign != 0) val = li->VAlign;
                             else val = x->current->settings.TextVAlign;
-                            double xgap = -(hal - SW_HALIGN_CENT) * li->gap;
-                            double ygap = (val - SW_VALIGN_CENT) * li->gap;
-                            double xgap2 = xgap * cos(li->rotation) - ygap * sin(li->rotation);
-                            double ygap2 = xgap * sin(li->rotation) + ygap * cos(li->rotation);
+                            const double xgap = -(hal - SW_HALIGN_CENT) * li->gap;
+                            const double ygap = (val - SW_VALIGN_CENT) * li->gap;
+                            const double xgap2 = xgap * cos(li->rotation) - ygap * sin(li->rotation);
+                            const double ygap2 = xgap * sin(li->rotation) + ygap * cos(li->rotation);
                             ppl_withWordsMerge(x->c, &ww, &li->style, &ww_default, NULL, NULL, NULL, 1);
                             eps_core_SetColor(x, &ww, 0);
                             if (eps_core_isVisible(x))

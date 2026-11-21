@@ -191,14 +191,14 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto2()");
 
     // Make temporary rough workspace
-    int OutContext = ppl_memAlloc_GetMemContext();
+    const int OutContext = ppl_memAlloc_GetMemContext();
     ContextRough = ppl_memAlloc_DescendIntoNewContext();
 
     // This ticking scheme does not work on axes with non-linear mappings
     if (axis->AxisLinearInterpolation != NULL) goto FAIL;
 
     // Work out factors of log base of axis. In fact, work out factors of log base ** 2, so that ten divides by four.
-    int LogBase = IsLog ? axis->tics.logBase : 10;
+    const int LogBase = IsLog ? axis->tics.logBase : 10;
     eps_plot_ticking_factorise(pow(10.0, FACTOR_MULTIPLY), FactorsTen, MAX_FACTORS, axis->PhysicalLengthMinor,
                                &NFactorsTen);
 
@@ -207,7 +207,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     double axis_max = axis->MaxFinal * UnitMultiplier;
     // Make sure the range is the right way around, and not of zero width
     if (axis_min > axis_max) {
-        double temp = axis_min;
+        const double temp = axis_min;
         axis_min = axis_max;
         axis_max = temp;
     } else if (axis_min == axis_max) {
@@ -221,8 +221,8 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
         outer_min = floor(axis_min / OoM) * OoM;
         outer_max = ceil(axis_max / OoM) * OoM;
     } else {
-        double axis_min_l = log(axis_min) / log(LogBase);
-        double axis_max_l = log(axis_max) / log(LogBase);
+        const double axis_min_l = log(axis_min) / log(LogBase);
+        const double axis_max_l = log(axis_max) / log(LogBase);
         OoM = pow(10.0, ceil(log10(axis_max_l - axis_min_l)));
         outer_min = floor(axis_min_l / OoM) * OoM;
         outer_max = ceil(axis_max_l / OoM) * OoM;
@@ -302,7 +302,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                     // Log the scheme in debugging mode
                     if (DEBUG) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Trying minor tick scheme: ");
-                        int tmp = strlen(msg);
+                        const int tmp = strlen(msg);
                         TickScheme2_sprintf(msg + tmp, sizeof(msg) - tmp, UnitMultiplier, TL_trial, TL_trial_len);
                         ppl_log(&x->c->errcontext, msg);
                     }

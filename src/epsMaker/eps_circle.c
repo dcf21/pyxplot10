@@ -50,9 +50,9 @@ void eps_circ_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate position of centre of circle and its radius in TeX points
-    double xpos = x->current->xpos * M_TO_PS;
-    double ypos = x->current->ypos * M_TO_PS;
-    double r = x->current->xpos2 * M_TO_PS;
+    const double xpos = x->current->xpos * M_TO_PS;
+    const double ypos = x->current->ypos * M_TO_PS;
+    const double r = x->current->xpos2 * M_TO_PS;
 
     // If this is an arc, set start and end points
     if (x->current->xfset) {
@@ -89,7 +89,7 @@ void eps_circ_RenderEPS(EPSComm *x) {
     // Set linewidth and linetype of outline
     if (ww.USElinewidth) lw_scale = ww.linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    const double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;

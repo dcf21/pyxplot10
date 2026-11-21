@@ -338,7 +338,7 @@ void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearN
         long A = X + 3760;
         long a = ppl_floorMod(12 * X + 12, 19); // Work out the date of the passover in the Hebrew year A
         long b = ppl_floorMod(X, 4);
-        double Q = -1.904412361576 + 1.554241796621 * a + 0.25 * b - 0.003177794022 * X + S;
+        const double Q = -1.904412361576 + 1.554241796621 * a + 0.25 * b - 0.003177794022 * X + S;
         long Qint = (long) floor(Q);
         long j = ppl_floorMod(Qint + 3 * X + 5 * b + 2 - S, 7);
         double r = Q - Qint;
@@ -351,7 +351,7 @@ void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearN
         else D = Qint + 22; // D is day when 15 Nisan falls after 1st March in the Gregorian year X
 
         b = ppl_floorDiv(X, 400) - ppl_floorDiv(X, 100) + ppl_floorDiv(X, 4); // Gregorian calendar
-        double JD = 365.0 * X - 679004.0 + 2400000.5 + b + floor(30.6001 * (MONTH + 1)) + D;
+        const double JD = 365.0 * X - 679004.0 + 2400000.5 + b + floor(30.6001 * (MONTH + 1)) + D;
 
         // Tishri 1, the new year of the following Hebrew year, falls 163 days after 15 Nisan
         YearNumbers[i] = A + 1;
@@ -420,7 +420,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
     }
     JD += day - 1;
     JD = 86400.0 * (JD - 2440587.5);
-    double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
+    const double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
     return JD + DayFraction;
 }
 
@@ -455,7 +455,7 @@ void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *mo
 
     // Find the Hebrew new years either side of the date, and count through the months of the year in which it falls
     ppl_getHebrewNewYears(ct, JulYr, YearNumbers, JDs, YearTypes);
-    int i = (JD < JDs[1]) ? 0 : 1;
+    const int i = (JD < JDs[1]) ? 0 : 1;
     JD -= JDs[i];
     for (j = 0; j < 13; j++)
         if (JD >= hebrewMonthLengths[YearTypes[i]][j]) JD -= hebrewMonthLengths[YearTypes[i]][j];
@@ -525,7 +525,7 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
 
     // Julian day number of midnight at the start of the requested day, computed in double precision
     const double JDmidnight = floor(365.25 * (X - 1)) + 1721423 + J - 0.5;
-    double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
+    const double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
     return 86400.0 * (JDmidnight - 2440587.5) + DayFraction;
 }
 
@@ -564,7 +564,7 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
     long A = JulYr - 623;
     long B = A / 4;
     long C = A % 4;
-    double C1 = 365.2501 * C;
+    const double C1 = 365.2501 * C;
     long C2 = C1;
 
     // Round to the nearest day
@@ -682,7 +682,7 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
 
     // Decide whether the date falls in the Julian or Gregorian part of the calendar, comparing dates as YYYYMMDD
     ppl_switchOverCalDate(ct, &LastJulian, &FirstGregorian);
-    double ReqDate = 10000.0 * year + 100 * month + day;
+    const double ReqDate = 10000.0 * year + 100 * month + day;
 
     // Count the year from March, so that leap days fall at its end
     if (month <= 2) {
@@ -711,7 +711,7 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
     // The Modified Julian Date of the day (as in Meeus's algorithm), converted to a Julian Date and then to a unix time
     double JD = 365.0 * year - 679004.0 + 2400000.5 + b + floor(30.6001 * (month + 1)) + day;
     JD = 86400.0 * (JD - 2440587.5);
-    double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
+    const double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
     return JD + DayFraction;
 }
 
@@ -742,7 +742,7 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
 
     // Work out hours, minutes and seconds. Julian days begin at noon, so days begin at midnight on JD+0.5. The time
     // of day is worked out from the unix time, which is more precise than the Julian date (which is a large number).
-    double DayFraction = UT - 86400.0 * floor(UT / 86400.0); // Seconds since midnight
+    const double DayFraction = UT - 86400.0 * floor(UT / 86400.0); // Seconds since midnight
     if (hour != NULL) *hour = (int) floor(DayFraction / 3600);
     if (min != NULL) *min = (int) floor(fmod(DayFraction / 60, 60));
     if (sec != NULL) *sec = fmod(DayFraction, 60);

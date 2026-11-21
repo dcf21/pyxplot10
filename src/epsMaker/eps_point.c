@@ -79,7 +79,7 @@ void eps_point_RenderEPS(EPSComm *x) {
     withWords ww, ww_default;
 
     // This item's label is on the page of the typeset text which was recorded in eps_point_YieldUpText()
-    int pageno = x->LaTeXpageno = x->current->FirstTextID;
+    const int pageno = x->LaTeXpageno = x->current->FirstTextID;
     x->LaTeXpageno++;
 
     // Print label at top of postscript description of box
@@ -87,8 +87,8 @@ void eps_point_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Look up position of point
-    double xpos = x->current->xpos * M_TO_PS;
-    double ypos = x->current->ypos * M_TO_PS;
+    const double xpos = x->current->xpos * M_TO_PS;
+    const double ypos = x->current->ypos * M_TO_PS;
 
     // Expand any numbered styles which may appear in the with words we are passed
     eps_withwords_default(x, &ww_default, &x->current->settings, 0, 0, 0, 0, 0);
@@ -101,8 +101,8 @@ void eps_point_RenderEPS(EPSComm *x) {
         // Set linewidth and linetype of point
         if (ww.USElinewidth) lw_scale = ww.pointlinewidth;
         else lw_scale = x->current->settings.LineWidth;
-        double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
-        int lt = 1;
+        const double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+        const int lt = 1;
         eps_core_SetLinewidth(x, lw, lt, 0.0);
         fprintf(x->epsbuffer, "/ps { %f } def\n", ww.pointsize * EPS_DEFAULT_PS);
 

@@ -66,7 +66,7 @@ void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMult
 
     // Log which algorithm is in use, and note the memory context in which tick labels are to be allocated
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto3()");
-    int OutContext = ppl_memAlloc_GetMemContext();
+    const int OutContext = ppl_memAlloc_GetMemContext();
 
     // This method only applies to axes linked, without a using expression, to an axis of the same length which has
     // ticks

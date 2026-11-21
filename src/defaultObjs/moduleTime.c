@@ -137,7 +137,7 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
     if (nArgs > 6) ppl_calendarTimezoneSet(c, 1, (char *) in[6].auxil);
     else ppl_calendarTimezoneSet(c, 0, NULL);
     // The seconds may have a fractional part, which is added after converting the whole seconds
-    double t = ppl_toUnixTime(c, (int) in[0].real, (int) in[1].real, (int) in[2].real, (int) in[3].real,
+    const double t = ppl_toUnixTime(c, (int) in[0].real, (int) in[1].real, (int) in[2].real, (int) in[3].real,
                               (int) in[4].real, (int) floor(in[5].real), status,
                               errText) + (in[5].real - floor(in[5].real));
     ppl_calendarTimezoneOffset(c, t, NULL, &offset);
@@ -233,7 +233,7 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     } else // Format not specified
     {
         int i = 0;
-        int s = (int) fabs(in[1].real - in[0].real);
+        const int s = (int) fabs(in[1].real - in[0].real);
         out[0] = '\0';
         int n = s / 3600 / 24;
         if (n > 1) sprintf(out + i, "%d days", n);

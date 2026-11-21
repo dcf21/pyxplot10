@@ -42,11 +42,11 @@ list *ppl_strSplit(char *in) {
     while (in[pos] != '\0') {
         // Scan along to find the next word
         while (((unsigned char) in[pos] <= ' ') && (in[pos] > '\0')) pos++;
-        int start = pos;
+        const int start = pos;
 
         // Scan along to find the end of this word
         while (((unsigned char) in[pos] > ' ') && (in[pos] > '\0')) pos++;
-        int end = pos;
+        const int end = pos;
 
         // Copy each non-empty word into the list
         if (end > start) {
