@@ -1840,6 +1840,64 @@ static void parallelSamplerFree(parallelSampler *s) {
 //! \param [out] errtext - Character buffer into which to write an error message, if an error occurred
 //! \param [in|out] errCount - The number of errors reported so far; once this exceeds a limit, further errors are
 //! suppressed
+//! ppldata_readRange - Read one of the [min:max] ranges supplied to a command which reads data, checking that the
+//! minimum and maximum, where both are given, have the same type and units
+//! \param [in] c - The Pyxplot context
+//! \param [in] pl - The compiled command line, used to report errors
+//! \param [in] in - The parser output for the command
+//! \param [in] pos - The position on the parser stack of the range
+//! \param [in] o1 - The offset from <pos> of the range's minimum
+//! \param [in] o2 - The offset from <pos> of the range's maximum
+//! \param [in] nr - The number of the range, counting from zero, which is the element of each array to set
+//! \param [in] varName - The name of the variable which the range applies to, used in error messages, or NULL
+//! \param [out] unit - Set to the limits of the range, whose units and type become those of the range
+//! \param [out] min - Set to the minimum of the range
+//! \param [out] minSet - Set to one if a minimum was given, or zero otherwise
+//! \param [out] max - Set to the maximum of the range
+//! \param [out] maxSet - Set to one if a maximum was given, or zero otherwise
+//! \return Zero on success, or one if an error was reported
+
+int ppldata_readRange(ppl_context *c, parserLine *pl, const parserOutput *in, const int pos, const int o1, const int o2,
+                      const int nr, const char *varName, pplObj *unit, double *min, int *minSet, double *max,
+                      int *maxSet) {
+    const pplObj *stk = in->stk;
+    const pplObj *lo = &stk[pos + o1], *hi = &stk[pos + o2];
+    char name[FNAME_LENGTH] = "";
+    if (varName != NULL) ppl_snprintfTrunc(name, sizeof(name), " (%s)", varName);
+    minSet[nr] = maxSet[nr] = 0;
+    // The minimum and maximum may be numbers, dates or booleans
+    if ((lo->objType == PPLOBJ_NUM) || (lo->objType == PPLOBJ_DATE) || (lo->objType == PPLOBJ_BOOL)) {
+        unit[nr] = *lo;
+        min[nr] = unit[nr].real;
+        minSet[nr] = 1;
+    }
+    if ((hi->objType == PPLOBJ_NUM) || (hi->objType == PPLOBJ_DATE) || (hi->objType == PPLOBJ_BOOL)) {
+        // The maximum must have the same type as the minimum
+        if ((minSet[nr]) && (unit[nr].objType != hi->objType)) {
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                    "Minimum and maximum limits specified for variable %d%s have conflicting types of <%s> and <%s>.",
+                    nr + 1, name, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[hi->objType]);
+            ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + o1], "");
+            return 1;
+        }
+        // The maximum must have the same units as the minimum
+        if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], hi))) {
+            ppl_snprintfTrunc(
+                    c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                    "Minimum and maximum limits specified for variable %d%s have conflicting physical units of <%s> and <%s>.",
+                    nr + 1, name, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
+                    ppl_printUnit(c, hi, NULL, NULL, 1, 0, 0));
+            ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + o1], "");
+            return 1;
+        }
+        unit[nr] = *hi;
+        max[nr] = unit[nr].real;
+        maxSet[nr] = 1;
+    }
+    return 0;
+}
+
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const int fnlist_len, const double *rasterX,

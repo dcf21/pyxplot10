@@ -41,6 +41,7 @@
 #include "userspace/pplObjUnits.h"
 #include "userspace/unitsDisp.h"
 #include "userspace/unitsArithmetic.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 // -------------------------------------------------------------------
 // Functions for comparing the units of quantities
@@ -305,11 +306,7 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         ((!a->flagComplex) && (!b->flagComplex))) // Real multiplication
     {
         // Complex numbers give NaN when complex arithmetic is switched off
-        if (a->flagComplex || b->flagComplex) {
-            o->real = GSL_NAN;
-        } else {
-            o->real = areal * breal;
-        }
+        o->real = (a->flagComplex || b->flagComplex) ? GSL_NAN : areal * breal;
         o->imag = 0.0;
         o->flagComplex = 0;
     } else // Complex multiplication
@@ -441,11 +438,7 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             }
         } else {
             // Real division
-            if (a->flagComplex || b->flagComplex) {
-                o->real = GSL_NAN;
-            } else {
-                o->real = areal / breal;
-            }
+            o->real = (a->flagComplex || b->flagComplex) ? GSL_NAN : areal / breal;
             o->imag = 0.0;
             o->flagComplex = 0;
         }
@@ -567,10 +560,7 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     }
     // Temperatures on different scales, e.g. oC and oF, cannot be added directly
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
-        *errType = ERR_UNIT;
-        *status = 1;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_UNIT,
                 "Attempt to add quantities with different temperature units: left operand has units of <%s>, while right operand has units of <%s>. These must be explicitly cast onto the same temperature scale before addition is allowed. Type 'help units temperatures' for more details.",
                 ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
     }
@@ -652,10 +642,7 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     }
     // Temperatures on different scales, e.g. oC and oF, cannot be subtracted directly
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
-        *errType = ERR_UNIT;
-        *status = 1;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_UNIT,
                 "Attempt to subtract quantities with different temperature units: left operand has units of <%s>, while right operand has units of <%s>. These must be explicitly cast onto the same temperature scale before subtraction is allowed. Type 'help units temperatures' for more details.",
                 ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
     }
@@ -739,10 +726,7 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     }
     // Temperatures on different scales, e.g. oC and oF, are not compatible
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
-        *errType = ERR_UNIT;
-        *status = 1;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_UNIT,
                 "Attempt to apply mod operator to quantities with different temperature units: left operand has units of <%s>, while right operand has units of <%s>. These must be explicitly cast onto the same temperature scale before the use of the mod operator is allowed. Type 'help units temperatures' for more details.",
                 ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
     }

@@ -56,6 +56,7 @@
 #include "stringTools/asciidouble.h"
 #include "userspace/context.h"
 #include "userspace/pplObj_fns.h"
+#include "readConf.h"
 
 //! _ReadConfig_FetchKey - Read a line of a configuration file, in the format <key=value>, and extract the key
 //! \param [in] line - The line of the configuration file
@@ -1681,35 +1682,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             }
         } else if (state == 9) // [script] section
         {
-            c->set->term_current = c->set->term_default; // Copy settings for directive_set()
-            c->set->graph_current = c->set->graph_default;
-            // Copy each palette color
-            for (i = 0; i < PALETTE_LENGTH; i++) {
-                c->set->palette_current[i] = c->set->palette_default[i];
-                c->set->paletteS_current[i] = c->set->paletteS_default[i];
-                c->set->palette1_current[i] = c->set->palette1_default[i];
-                c->set->palette2_current[i] = c->set->palette2_default[i];
-                c->set->palette3_current[i] = c->set->palette3_default[i];
-                c->set->palette4_current[i] = c->set->palette4_default[i];
-            }
-            // Copy each axis
-            for (i = 0; i < MAX_AXES; i++) {
-                pplaxis_destroy(c, &(c->set->XAxes[i]));
-                pplaxis_copy(c, &(c->set->XAxes[i]), &(c->set->XAxesDefault[i]));
-                pplaxis_destroy(c, &(c->set->YAxes[i]));
-                pplaxis_copy(c, &(c->set->YAxes[i]), &(c->set->YAxesDefault[i]));
-                pplaxis_destroy(c, &(c->set->ZAxes[i]));
-                pplaxis_copy(c, &(c->set->ZAxes[i]), &(c->set->ZAxesDefault[i]));
-            }
-            // Copy each numbered plot style
-            for (i = 0; i < MAX_PLOTSTYLES; i++) {
-                ppl_withWordsDestroy(c, &(c->set->plot_styles[i]));
-                ppl_withWordsCpy(c, &(c->set->plot_styles[i]), &(c->set->plot_styles_default[i]));
-            }
-            pplarrow_list_destroy(c, &c->set->pplarrow_list);
-            pplarrow_list_copy(c, &c->set->pplarrow_list, &c->set->pplarrow_list_default);
-            ppllabel_list_destroy(c, &c->set->ppllabel_list);
-            ppllabel_list_copy(c, &c->set->ppllabel_list, &c->set->ppllabel_list_default);
+            ppl_restoreDefaultSettings(c); // Copy settings for directive_set()
 
             {
                 int stat = 0;
@@ -1967,12 +1940,48 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
     return;
 }
 
+//! ppl_restoreDefaultSettings - Copy the default settings, as modified by configuration files, into the current
+//! settings, including the palettes, axes, numbered plot styles, arrows and labels
+//! \param [in] c - The Pyxplot context
+
+void ppl_restoreDefaultSettings(ppl_context *c) {
+    c->set->term_current = c->set->term_default;
+    c->set->graph_current = c->set->graph_default;
+    // Copy each palette color
+    for (int i = 0; i < PALETTE_LENGTH; i++) {
+        c->set->palette_current[i] = c->set->palette_default[i];
+        c->set->paletteS_current[i] = c->set->paletteS_default[i];
+        c->set->palette1_current[i] = c->set->palette1_default[i];
+        c->set->palette2_current[i] = c->set->palette2_default[i];
+        c->set->palette3_current[i] = c->set->palette3_default[i];
+        c->set->palette4_current[i] = c->set->palette4_default[i];
+    }
+    // Copy each axis
+    for (int i = 0; i < MAX_AXES; i++) {
+        pplaxis_destroy(c, &(c->set->XAxes[i]));
+        pplaxis_copy(c, &(c->set->XAxes[i]), &(c->set->XAxesDefault[i]));
+        pplaxis_destroy(c, &(c->set->YAxes[i]));
+        pplaxis_copy(c, &(c->set->YAxes[i]), &(c->set->YAxesDefault[i]));
+        pplaxis_destroy(c, &(c->set->ZAxes[i]));
+        pplaxis_copy(c, &(c->set->ZAxes[i]), &(c->set->ZAxesDefault[i]));
+    }
+    // Copy each numbered plot style
+    for (int i = 0; i < MAX_PLOTSTYLES; i++) {
+        ppl_withWordsDestroy(c, &(c->set->plot_styles[i]));
+        ppl_withWordsCpy(c, &(c->set->plot_styles[i]), &(c->set->plot_styles_default[i]));
+    }
+    // Copy the arrows and labels
+    pplarrow_list_destroy(c, &c->set->pplarrow_list);
+    pplarrow_list_copy(c, &c->set->pplarrow_list, &c->set->pplarrow_list_default);
+    ppllabel_list_destroy(c, &c->set->ppllabel_list);
+    ppllabel_list_copy(c, &c->set->ppllabel_list, &c->set->ppllabel_list_default);
+}
+
 //! ppl_readconfig - Read the user's configuration files, ~/.pyxplotrc and ./.pyxplotrc, if they exist
 //! \param [in] c - The Pyxplot context
 
 void ppl_readconfig(ppl_context *c) {
     // Variables for reading the configuration files
-    int i;
     char ConfigFname[FNAME_LENGTH];
 
     // Read the configuration file in the user's home directory, then any in the current directory
@@ -1983,36 +1992,7 @@ void ppl_readconfig(ppl_context *c) {
     ppl_readConfigFile(c, ConfigFname);
 
     // Copy Default Settings to Current Settings
-    c->set->term_current = c->set->term_default;
-    c->set->graph_current = c->set->graph_default;
-
-    // Copy each palette color
-    for (i = 0; i < PALETTE_LENGTH; i++) {
-        c->set->palette_current[i] = c->set->palette_default[i];
-        c->set->paletteS_current[i] = c->set->paletteS_default[i];
-        c->set->palette1_current[i] = c->set->palette1_default[i];
-        c->set->palette2_current[i] = c->set->palette2_default[i];
-        c->set->palette3_current[i] = c->set->palette3_default[i];
-        c->set->palette4_current[i] = c->set->palette4_default[i];
-    }
-    // Copy each axis
-    for (i = 0; i < MAX_AXES; i++) {
-        pplaxis_destroy(c, &(c->set->XAxes[i]));
-        pplaxis_copy(c, &(c->set->XAxes[i]), &(c->set->XAxesDefault[i]));
-        pplaxis_destroy(c, &(c->set->YAxes[i]));
-        pplaxis_copy(c, &(c->set->YAxes[i]), &(c->set->YAxesDefault[i]));
-        pplaxis_destroy(c, &(c->set->ZAxes[i]));
-        pplaxis_copy(c, &(c->set->ZAxes[i]), &(c->set->ZAxesDefault[i]));
-    }
-    // Copy each numbered plot style
-    for (i = 0; i < MAX_PLOTSTYLES; i++) {
-        ppl_withWordsDestroy(c, &(c->set->plot_styles[i]));
-        ppl_withWordsCpy(c, &(c->set->plot_styles[i]), &(c->set->plot_styles_default[i]));
-    }
-    pplarrow_list_destroy(c, &c->set->pplarrow_list);
-    pplarrow_list_copy(c, &c->set->pplarrow_list, &c->set->pplarrow_list_default);
-    ppllabel_list_destroy(c, &c->set->ppllabel_list);
-    ppllabel_list_copy(c, &c->set->ppllabel_list, &c->set->ppllabel_list_default);
+    ppl_restoreDefaultSettings(c);
 
     // Copy List of Preferred Units
     ppl_listFree(c->unit_PreferredUnits_default);

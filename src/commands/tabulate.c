@@ -290,8 +290,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
         int i, pos = PARSE_tabulate_0range_list, nr = 0;
         const int o1 = PARSE_tabulate_min_0range_list;
         const int o2 = PARSE_tabulate_max_0range_list;
-        for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = 0;
-        for (i = 0; i < USING_ITEMS_MAX; i++) maxSet[i] = 0;
+        for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
         // Walk the linked list of ranges on the parser stack; each may have a minimum and a maximum
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
@@ -303,37 +302,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
                 ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 return;
             }
-            if ((stk[pos + o1].objType == PPLOBJ_NUM) || (stk[pos + o1].objType == PPLOBJ_DATE) ||
-                (stk[pos + o1].objType == PPLOBJ_BOOL)) {
-                unit[nr] = stk[pos + o1];
-                min[nr] = unit[nr].real;
-                minSet[nr] = 1;
-            }
-            if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
-                (stk[pos + o2].objType == PPLOBJ_BOOL)) {
-                // The maximum must have the same type as the minimum
-                if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
-                    ppl_snprintfTrunc(
-                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                            "Minimum and maximum limits specified for variable %d have conflicting types of <%s> and <%s>.",
-                            nr + 1, pplObjTypeNames[unit[nr].objType], pplObjTypeNames[stk[pos + o2].objType]);
-                    ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_tabulate_min_0range_list], "");
-                    return;
-                }
-                // The maximum must have the same units as the minimum
-                if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
-                    ppl_snprintfTrunc(
-                            c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                            "Minimum and maximum limits specified for variable %d have conflicting physical units of <%s> and <%s>.",
-                            nr + 1, ppl_printUnit(c, &unit[nr], NULL, NULL, 0, 0, 0),
-                            ppl_printUnit(c, &stk[pos + o2], NULL, NULL, 1, 0, 0));
-                    ppl_tbAddLine(c, pl, ERR_UNIT, in->stkCharPos[pos + PARSE_tabulate_min_0range_list], "");
-                    return;
-                }
-                unit[nr] = stk[pos + o2];
-                max[nr] = unit[nr].real;
-                maxSet[nr] = 1;
-            }
+            if (ppldata_readRange(c, pl, in, pos, o1, o2, nr, NULL, unit, min, minSet, max, maxSet)) return;
             nr++;
         }
     }

@@ -303,6 +303,23 @@ int ppl_funcCheckUnit(pplFuncCall *f, const pplObj *x, const char *description, 
     return 0;
 }
 
+//! ppl_funcError - Report an error in a built-in function or method
+//! \param [out] status - Set to one, to indicate that an error occurred
+//! \param [out] errType - Set to the type of error
+//! \param [out] errText - Buffer of LSTR_LENGTH bytes into which the error message is written
+//! \param [in] type - The type of error, one of the ERR_* constants
+//! \param [in] format - The printf-style format of the error message, which is followed by its arguments
+
+void ppl_funcError(int *status, int *errType, char *errText, const int type, const char *format, ...) {
+    va_list args;
+    *status = 1;
+    *errType = type;
+    va_start(args, format);
+    vsnprintf(errText, LSTR_LENGTH, format, args);
+    va_end(args);
+    errText[LSTR_LENGTH - 1] = '\0';
+}
+
 //! ppl_funcStrdup - Copy a string into newly malloced memory, reporting an error if memory runs out
 //! \param [in] f - The call to the built-in function
 //! \param [in] str - The string to copy
@@ -312,9 +329,7 @@ char *ppl_funcStrdup(pplFuncCall *f, const char *str) {
     char *out = (char *) malloc(strlen(str) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *f->status = 1;
-        *f->errType = ERR_MEMORY;
-        ppl_snprintfTrunc(f->errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(f->status, f->errType, f->errText, ERR_MEMORY, "Out of memory.");
         return NULL;
     }
     strcpy(out, str);
@@ -1076,10 +1091,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
     // The first argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s function requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -1087,10 +1099,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s function requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -1098,10 +1107,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
     // The second argument must be a list of arguments
     if (in[1].objType != PPLOBJ_LIST) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s function requires a list object as its second argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
@@ -1113,9 +1119,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     ppl_stackMustHave(c, argList->length);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
@@ -1139,10 +1143,9 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
     // Propagate error if function failed
     if (c->errStat.status) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
-                          FunctionDescription, c->errStat.errMsgExpr);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "Error inside function supplied to the %s function: %s",
+                FunctionDescription, c->errStat.errMsgExpr);
         return;
     }
 
@@ -1391,47 +1394,37 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     gsl_vector *va, *vb, *vo;
     // The first argument must be a vector
     if (t1 != PPLOBJ_VEC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "First argument to %s must be a vector. Supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[t1]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "First argument to %s must be a vector. Supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[t1]);
         return;
     }
     // The second argument must be a vector
     if (t2 != PPLOBJ_VEC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "Second argument to %s must be a vector. Supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[t2]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "Second argument to %s must be a vector. Supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[t2]);
         return;
     }
     va = ((pplVector *) in[0].auxil)->v;
     vb = ((pplVector *) in[1].auxil)->v;
     // The first vector must have three elements
     if (va->size != 3) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "%s can only act on three-component vectors. Supplied vector has %ld components.",
-                          FunctionDescription, (long) va->size);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "%s can only act on three-component vectors. Supplied vector has %ld components.",
+                FunctionDescription, (long) va->size);
         return;
     }
     // The second vector must have three elements
     if (vb->size != 3) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "%s can only act on three-component vectors. Supplied vector has %ld components.",
-                          FunctionDescription, (long) vb->size);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "%s can only act on three-component vectors. Supplied vector has %ld components.",
+                FunctionDescription, (long) vb->size);
         return;
     }
     // The output is a new vector of three elements
     if (pplObjVector(&OUTPUT, 0, 1, 3) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1624,9 +1617,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     pplObj *output;
     // The argument must be a string
     if (in[0].objType != PPLOBJ_STR) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The eval() function requires a string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The eval() function requires a string argument.");
         return;
     }
     exp = (char *) in[0].auxil;
@@ -1655,9 +1646,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     e = NULL;
     // The expression could not be evaluated
     if (c->errStat.status) {
-        *status = 1;
-        *errType = ERR_GENERIC;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Error in evaluated expression");
+        ppl_funcError(status, errType, errText, ERR_GENERIC, "%s", "Error in evaluated expression");
         return;
     }
     pplObjCpy(&OUTPUT, output, 0, 0, 1);
@@ -1747,9 +1736,7 @@ void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
     // The output is a list of the factors
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -2009,10 +1996,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     for (i = 1; i < nArgs; i++) // Check matching dimensions
         // All the arguments must have the same units
         if (!ppl_unitsDimEqual(&in[0], &in[i])) {
-            *status = 1;
-            *errType = ERR_UNIT;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_UNIT,
                     "The %s function can only act upon inputs with matching dimensions. Input 1 has dimensions of <%s>, but input %d has dimensions of <%s>.",
                     FunctionDescription, ppl_printUnit(c, &in[0], NULL, NULL, 0, 1, 0), i + 1,
                     ppl_printUnit(c, &in[i], NULL, NULL, 1, 1, 0));
@@ -2021,9 +2005,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     buffer = (double *) malloc(nArgs * sizeof(double));
     // Failure to allocate memory is reported as an error
     if (buffer == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     for (i = 0; i < nArgs; i++) buffer[i] = hypot(in[i].real, in[i].imag);
@@ -2053,10 +2035,7 @@ void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
         // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            *status = 1;
-            *errType = ERR_NUMERICAL;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
                     "The function %s can only be used when complex arithmetic is enabled; type 'set numerics complex' first.",
                     FunctionDescription);
             return;
@@ -2088,11 +2067,7 @@ void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status,
     {
         double t1, t2, t3;
         // GSL computes sn, cn and dn together; this function returns cn
-        if (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) {
-            OUTPUT.real = GSL_NAN;
-        } else {
-            OUTPUT.real = t2;
-        }
+        OUTPUT.real = (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) ? GSL_NAN : t2;
     }
     if (ppl_funcCheckOutput(&call)) return;
 }
@@ -2113,11 +2088,7 @@ void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status,
     {
         double t1, t2, t3;
         // GSL computes sn, cn and dn together; this function returns dn
-        if (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) {
-            OUTPUT.real = GSL_NAN;
-        } else {
-            OUTPUT.real = t3;
-        }
+        OUTPUT.real = (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) ? GSL_NAN : t3;
     }
     if (ppl_funcCheckOutput(&call)) return;
 }
@@ -2138,11 +2109,7 @@ void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status,
     {
         double t1, t2, t3;
         // GSL computes sn, cn and dn together; this function returns sn
-        if (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) {
-            OUTPUT.real = GSL_NAN;
-        } else {
-            OUTPUT.real = t1;
-        }
+        OUTPUT.real = (gsl_sf_elljac_e(in[0].real, in[1].real, &t1, &t2, &t3) != GSL_SUCCESS) ? GSL_NAN : t1;
     }
     if (ppl_funcCheckOutput(&call)) return;
 }
@@ -2214,9 +2181,8 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     if (lcm > INT_MAX) {
         // Report the overflow
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            *status = 1;
-            *errType = ERR_OVERFLOW;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Integer overflow in the %s function.", FunctionDescription);
+            ppl_funcError(status, errType, errText, ERR_OVERFLOW,
+                    "Integer overflow in the %s function.", FunctionDescription);
             return;
         } else {
             {
@@ -2234,9 +2200,8 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         if (lcm > INT_MAX) {
             // Report the overflow
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                *status = 1;
-                *errType = ERR_OVERFLOW;
-                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Integer overflow in the %s function.", FunctionDescription);
+                ppl_funcError(status, errType, errText, ERR_OVERFLOW,
+                        "Integer overflow in the %s function.", FunctionDescription);
                 return;
             } else {
                 {
@@ -2325,11 +2290,9 @@ void pplfunc_len(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     else if (t == PPLOBJ_MAT) OUTPUT.real = ((pplMatrix *) in->auxil)->m->size1;
     // Other types have no length
     else {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "Object of type <%s> is not a compound object and has no property of length",
-                          pplObjTypeNames[t]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "Object of type <%s> is not a compound object and has no property of length",
+                pplObjTypeNames[t]);
         return;
     }
     return;
@@ -2458,17 +2421,13 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     n = ceil(log(end / start) / log(step));
     // The step must give a sensible number of values
     if ((!gsl_finite(n)) || (n > INT_MAX)) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Invalid step size.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL, "%s", "Invalid step size.");
         return;
     }
     if (n < 0) n = 0;
     // The output is a vector of n values
     if (pplObjVector(&OUTPUT, 0, 1, n) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
     for (i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start * pow(step, i));
@@ -2625,10 +2584,7 @@ void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     if (in[0].real * ppl_machineEpsilon * 10 > in[1].real) {
         // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            *status = 1;
-            *errType = ERR_NUMERICAL;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
                     "Loss of accuracy in the function %s; the remainder of this division is lost in floating-point rounding.",
                     FunctionDescription);
             return;
@@ -2659,16 +2615,12 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     char *mode;
     // The arguments are the filename, and optionally the mode, e.g. "w"
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The open() function requires string arguments.");
         return;
     }
     // The mode must be a string
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The open() function requires string arguments.");
         return;
     }
     if (nArgs > 1) mode = (char *) in[1].auxil;
@@ -2676,9 +2628,7 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     f = fopen((char *) in[0].auxil, mode);
     // Report a failure to open the file
     if (f == NULL) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
         return;
     }
     pplObjFile(&OUTPUT, 0, 1, f, 0);
@@ -2699,10 +2649,9 @@ void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     int t = in[0].objType;
     // The argument must be a string
     if (t != PPLOBJ_STR) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Argument to %s must be a string. Supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[t]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "Argument to %s must be a string. Supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[t]);
         return;
     }
     OUTPUT.real = (double) ((char *) in[0].auxil)[0];
@@ -2731,9 +2680,7 @@ void pplfunc_ordinal(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     out = (char *) malloc(n + 8);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     if (((i % 100) < 21) && ((i % 100) > 3)) sprintf(out, "%dth", i);
@@ -2817,10 +2764,9 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
     if (in[0].real < 1) {
         // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            *status = 1;
-            *errType = ERR_RANGE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function's argument must be in the range 1 <= x < %d.",
-                              FunctionDescription, INT_MAX);
+            ppl_funcError(status, errType, errText, ERR_RANGE,
+                    "The %s function's argument must be in the range 1 <= x < %d.",
+                    FunctionDescription, INT_MAX);
             return;
         } else {
             {
@@ -2831,9 +2777,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
     }
     // The output is a list of the factors
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -2886,11 +2830,7 @@ void pplfunc_radians(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     // Dimensionless angles are taken to be in degrees; angles with units are already in radians
-    if (in[0].dimensionless) {
-        OUTPUT.real = ppl_rads(in[0].real);
-    } else {
-        OUTPUT.real = in[0].real;
-    }
+    OUTPUT.real = in[0].dimensionless ? ppl_rads(in[0].real) : in[0].real;
     if (ppl_funcCheckOutput(&call)) return;
 }
 
@@ -2908,27 +2848,20 @@ void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     char *FunctionDescription = "raise(e,s)";
     // raise(e, s) raises the exception e with the message s
     if (nArgs != 2) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function expects two input arguments.", FunctionDescription);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The %s function expects two input arguments.", FunctionDescription);
         return;
     }
     // The first argument must be an exception
     if (in[0].objType != PPLOBJ_EXC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The first argument to the %s function should be an exception object; supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     // The second argument must be a string
     if (in[1].objType != PPLOBJ_STR) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The second argument to the %s function should be a string object; supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
@@ -2984,17 +2917,13 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     n = ceil((end - start) / step);
     // The step must give a sensible number of values
     if ((!gsl_finite(n)) || (n > INT_MAX)) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Invalid step size.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL, "%s", "Invalid step size.");
         return;
     }
     if (n < 0) n = 0;
     // The output is a vector of n values
     if (pplObjVector(&OUTPUT, 0, 1, n) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
     for (i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start + i * step);
@@ -3055,17 +2984,14 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     if (ppl_funcCheckInt(&call, &in[0], "n", "function's input must be an integer")) return;
     // The number must be between 1 and 10000
     if ((in[0].real < 1) || (in[0].real > 10000)) {
-        *status = 1;
-        *errType = ERR_RANGE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Argument to %s must be in the range 0<n<=10000.", FunctionDescription);
+        ppl_funcError(status, errType, errText, ERR_RANGE,
+                "Argument to %s must be in the range 0<n<=10000.", FunctionDescription);
         return;
     }
     out = (char *) malloc(32);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     n = (int) in[0].real;
@@ -3631,6 +3557,42 @@ void pplfunc_typeOf(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     OUTPUT.self_lval = NULL;
 }
 
+//! zernike - Evaluate the (n,m)th Zernike polynomial at radius r, for the functions zernike() and zernikeR()
+//! \param [in] call - The details of the function call, whose arguments are n, m, r and, optionally, phi
+//! \param [in] angular - Flag indicating whether to include the angular part of the polynomial, which depends on the
+//! fourth argument phi
+
+static void zernike(pplFuncCall *call, const int angular) {
+    pplObj *in = call->in;
+    const int n = in[0].real, ms = in[1].real, m = abs(ms);
+    const double r = in[2].real;
+    // m may not exceed n. Report an error, or return NaN if errors are switched off.
+    if (m > n) {
+        if (call->c->set->term_current.ExplicitErrors == SW_ONOFF_ON)
+            ppl_funcError(call->status, call->errType, call->errText, ERR_RANGE,
+                          "The function %s is only defined for -n<=m<=n.", call->description);
+        else ppl_funcNullOutput(call);
+        return;
+    }
+    // Outside the unit disk, the polynomial is undefined
+    if ((r < 0) || (r > 1)) {
+        OUTPUT.real = GSL_NAN;
+    } else {
+        int sgn = 1;
+        if ((n % 2) != (m % 2)) return; // Defined to be zero
+        // Sum the series for the radial polynomial R_n^m(r)
+        for (int i = 0; i < (1 + (n - m) / 2); i++) {
+            OUTPUT.real += sgn * gsl_sf_fact(n - i) /
+                    (gsl_sf_fact(i) * gsl_sf_fact((n + m) / 2 - i) * gsl_sf_fact((n - m) / 2 - i)) * pow(r, n - 2 * i);
+            sgn *= -1;
+        }
+        // Multiply by the angular part of the polynomial
+        if (angular && (ms > 0)) OUTPUT.real *= cos(m * in[3].real);
+        else if (angular && (ms < 0)) OUTPUT.real *= sin(m * in[3].real);
+    }
+    ppl_funcCheckOutput(call);
+}
+
 //! pplfunc_zernike - Implement the function zernike(n,m,r,phi) in the default namespace, which evaluates the (n,m)th
 //! Zernike polynomial at radius r and position angle phi
 //! \param [in] c - The Pyxplot context
@@ -3643,53 +3605,13 @@ void pplfunc_typeOf(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // zernike(n,m,r,phi) evaluates the Zernike polynomial Z_n^m at the polar position (r,phi) in the unit disk
-    int i;
     char *FunctionDescription = "zernike(n,m,r,phi)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckDimensionless(&call, 3)) return;
     if (ppl_funcCheckInt(&call, &in[0], "n", "function can only evaluate Zernike polynomials")) return;
     if (ppl_funcCheckSignedInt(&call, &in[1], "m", "function can only evaluate Zernike polynomials")) return;
     if (ppl_funcCheckUnit(&call, &in[3], "fourth", "an angle", UNIT_ANGLE, 1)) return;
-    {
-        int n, m, ms, sgn = 1;
-        double r;
-        n = in[0].real;
-        ms = in[1].real;
-        m = abs(ms);
-        r = in[2].real;
-        // m may not exceed n
-        if (m > n) {
-            // Report an error, or return NaN if errors are switched off
-            if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                *status = 1;
-                *errType = ERR_RANGE;
-                ppl_snprintfTrunc(errText, LSTR_LENGTH, "The function %s is only defined for -n<=m<=n.",
-                                  FunctionDescription);
-                return;
-            } else {
-                {
-                    ppl_funcNullOutput(&call);
-                    return;
-                }
-            }
-        }
-        // Outside the unit disk, the polynomial is undefined
-        if ((r < 0) || (r > 1)) {
-            OUTPUT.real = GSL_NAN; // Defined only within the unit disk
-        } else {
-            if ((n % 2) != (m % 2)) return; // Defined to be zero
-            // Sum the series for the radial polynomial R_n^m(r)
-            for (i = 0; i < (1 + (n - m) / 2); i++) {
-                OUTPUT.real += sgn * gsl_sf_fact(n - i) /
-                        (gsl_sf_fact(i) * gsl_sf_fact((n + m) / 2 - i) * gsl_sf_fact((n - m) / 2 - i)) *
-                        pow(r, n - 2 * i);
-                sgn *= -1;
-            }
-            if (ms > 0) OUTPUT.real *= cos(m * in[3].real);
-            else if (ms < 0) OUTPUT.real *= sin(m * in[3].real);
-        }
-    }
-    if (ppl_funcCheckOutput(&call)) return;
+    zernike(&call, 1);
 }
 
 //! pplfunc_zernikeR - Implement the function zernikeR(n,m,r) in the default namespace, which evaluates the (n,m)th
@@ -3704,50 +3626,11 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // zernikeR(n,m,r) evaluates the radial Zernike polynomial R_n^m(r)
-    int i;
     char *FunctionDescription = "zernikeR(n,m,r)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "n", "function can only evaluate Zernike polynomials")) return;
     if (ppl_funcCheckSignedInt(&call, &in[1], "m", "function can only evaluate Zernike polynomials")) return;
-    {
-        int n, m, ms, sgn = 1;
-        double r;
-        n = in[0].real;
-        ms = in[1].real;
-        m = abs(ms);
-        r = in[2].real;
-        // m may not exceed n
-        if (m > n) {
-            // Report an error, or return NaN if errors are switched off
-            if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-                *status = 1;
-                *errType = ERR_RANGE;
-                ppl_snprintfTrunc(errText, LSTR_LENGTH, "The function %s is only defined for -n<=m<=n.",
-                                  FunctionDescription);
-                return;
-            } else {
-                {
-                    ppl_funcNullOutput(&call);
-                    return;
-                }
-            }
-        }
-        // Outside the unit disk, the polynomial is undefined
-        if ((r < 0) || (r > 1)) {
-            OUTPUT.real = GSL_NAN; // Defined only within the unit disk
-        } else {
-            if ((n % 2) != (m % 2)) return; // Defined to be zero
-
-            // Sum the series for the radial polynomial
-            for (i = 0; i < (1 + (n - m) / 2); i++) {
-                OUTPUT.real += sgn * gsl_sf_fact(n - i) /
-                        (gsl_sf_fact(i) * gsl_sf_fact((n + m) / 2 - i) * gsl_sf_fact((n - m) / 2 - i)) *
-                        pow(r, n - 2 * i);
-                sgn *= -1;
-            }
-        }
-    }
-    if (ppl_funcCheckOutput(&call)) return;
+    zernike(&call, 0);
 }
 
 //! pplfunc_zeta - Implement the function zeta(x) in the default namespace, which evaluates the Riemann zeta function at

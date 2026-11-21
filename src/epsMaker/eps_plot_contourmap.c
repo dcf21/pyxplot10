@@ -60,6 +60,7 @@
 #include "settings/epsColors.h"
 #include "epsMaker/eps_plot.h"
 #include "epsMaker/eps_plot_canvas.h"
+#include "epsMaker/eps_plot_colormap.h"
 #include "epsMaker/eps_plot_contourmap.h"
 #include "epsMaker/eps_plot_legend.h"
 #include "epsMaker/eps_settings.h"
@@ -113,9 +114,9 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
                                                                           : x->current->settings.SamplesX;
     const int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesY;
-    int i, j, k, Ncol;
+    int k, Ncol;
     double CMin, CMax, min_prelim, max_prelim, OoM, UnitMultiplier;
-    unsigned char CMinAuto, CMinSet, CMaxAuto, CMaxSet, CLog;
+    unsigned char CMinAuto, CMaxAuto, CLog;
     char *UnitString;
 
     // Check that we have some data
@@ -124,39 +125,9 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     blk = data->first;
 
     // Work out normalisation of variable c1
+    if (!eps_plot_colormap_findCRange(sg, 0, blk, Ncol, XSize, YSize, &CMin, &CMax, &CLog)) return; // No data present
     CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
-    CMinSet = !CMinAuto;
-    CMin = sg->Cmin[0].real;
     CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
-    CMaxSet = !CMaxAuto;
-    CMax = sg->Cmax[0].real;
-    CLog = (sg->Clog[0] == SW_BOOL_TRUE);
-
-    // Find extremal values
-    if (CMinAuto || CMaxAuto)
-        for (j = 0; j < YSize; j++)
-            // Find the smallest and largest finite values of c1, which must be positive on logarithmic scales
-            for (i = 0; i < XSize; i++) {
-                const double val = blk->data_real[2 + Ncol * (i + XSize * j)];
-                if (!gsl_finite(val)) continue;
-                // A new minimum
-                if ((CMinAuto) && ((!CMinSet) || (CMin > val)) && ((!CLog) || (val > 0.0))) {
-                    CMin = val;
-                    CMinSet = 1;
-                }
-                // A new maximum
-                if ((CMaxAuto) && ((!CMaxSet) || (CMax < val)) && ((!CLog) || (val > 0.0))) {
-                    CMax = val;
-                    CMaxSet = 1;
-                }
-            }
-
-    // If no data present, stop now
-    if ((!CMinSet) || (!CMaxSet)) return;
-
-    // If log spacing, make sure range is strictly positive
-    if (CLog && (CMin < 1e-200)) CMin = 1e-200;
-    if (CLog && (CMax < 1e-200)) CMax = 1e-200;
 
     // If there's no spread of data, make a spread up
     if ((fabs(CMax) <= fabs(CMin)) || (fabs(CMin - CMax) <= fabs(1e-14 * CMax))) {
@@ -568,7 +539,6 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
                         const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                         const double origin_y, const double width, const double height, const double zdepth) {
     char msg[PPL_MSG_LENGTH];
-    double scale_x, scale_y, scale_z;
     dataBlock *blk;
     const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesX;
@@ -589,15 +559,6 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     // Ncol_real = data->Ncolumns_real;
     // Ncol_obj  = data->Ncolumns_obj;
     // if (eps_plot_WithWordsCheckUsingItemsDimLess(&pd->ww_final, data->firstEntries, Ncol_real, NULL, Ncol_obj)) return 1;
-    if (!ThreeDim) {
-        scale_x = width;
-        scale_y = height;
-        scale_z = 1.0;
-    } else {
-        scale_x = width;
-        scale_y = height;
-        scale_z = zdepth;
-    }
     blk = data->first;
 
     // A list of the contours traced, and a buffer for error messages
@@ -609,54 +570,9 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
         return 1;
     }
 
-    // Work out orientation of contourmap
-    if (!ThreeDim) {
-        xo = origin_x;
-        yo = origin_y;
-        Lx = scale_x;
-        Ly = scale_y;
-        ThetaX = M_PI / 2;
-        ThetaY = 0.0;
-        // If the data are plotted against the y axis horizontally, swap the directions of the grid
-        if (xn != 0) {
-            double t1 = Lx, t2 = ThetaX;
-            Lx = Ly;
-            ThetaX = ThetaY;
-            Ly = t1;
-            ThetaY = t2;
-        }
-    } else // 3D case: put color map on back face of cuboid
-    {
-        double ap[3] = {0.5, 0.5, 0.0}, xtmp, ytmp, z0tmp, z1tmp;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z0tmp);
-        ap[2] = 1.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z1tmp);
-        ap[2] = (z1tmp > z0tmp) ? 1.0 : 0.0; // Determine whether zap=0 or zap=1 represents back of cuboid
-
-        // The origin of the grid is the corner of the back face where both axes are at their minimum
-        ap[0] = ap[1] = 0.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xo, &yo,
-                                 &z0tmp);
-
-        // The direction and length of the grid's horizontal edge
-        ap[0] = 1.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z0tmp);
-        Lx = hypot(xtmp - xo, ytmp - yo);
-        ThetaX = atan2(xtmp - xo, ytmp - yo);
-        if (!gsl_finite(ThetaX)) ThetaX = 0.0;
-
-        // The direction and length of the grid's vertical edge
-        ap[0] = 0.0;
-        ap[1] = 1.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z0tmp);
-        Ly = hypot(xtmp - xo, ytmp - yo);
-        ThetaY = atan2(xtmp - xo, ytmp - yo);
-        if (!gsl_finite(ThetaY)) ThetaY = 0.0;
-    }
+    // Work out orientation of the grid on the page
+    eps_plot_colormap_orientation(sg, ThreeDim, xn, yn, zn, origin_x, origin_y, width, height, zdepth, &xo, &yo, &Lx,
+                                  &Ly, &ThetaX, &ThetaY);
 
     // Look up normalisation of variable c1
     CLog = (sg->Clog[0] == SW_BOOL_TRUE);

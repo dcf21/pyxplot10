@@ -40,6 +40,7 @@
 #include "coreUtils/memAlloc.h"
 #include "mathsTools/dcfmath.h"
 #include "stringTools/asciidouble.h"
+#include "settings/axes_fns.h"
 #include "settings/settings.h"
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
@@ -342,7 +343,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                         OverlayMatch = 0;
                         // Find a minor tick at the same position, and remove it
                         for (k = 0; k < TL_trial_len; k++) {
-                            const double pos = eps_plot_axis_GetPosition(TL_trial[k] / UnitMultiplier, axis, 0, 0);
+                            const double pos = pplaxis_GetPosition(TL_trial[k] / UnitMultiplier, axis, 0, 0);
                             if (fabs(pos - axis->TickListPositions[j]) > 1e-4) continue;
                             for (k++; k < TL_trial_len; k++) TL_trial[k - 1] = TL_trial[k];
                             TL_trial_len--;
@@ -354,7 +355,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                     // Log the failure in debugging mode
                     if (DEBUG && !OverlayMatch) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "FAIL: Did not overlay major tick at %g (axis pos %.3f)",
-                                          eps_plot_axis_InvGetPosition(axis->TickListPositions[j], axis),
+                                          pplaxis_InvGetPosition(axis->TickListPositions[j], axis),
                                           axis->TickListPositions[j]);
                         ppl_log(&x->c->errcontext, msg);
                     }
@@ -401,7 +402,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
             // Commit list of ticks
             for (i = j = 0; i < TL_best_len; i++) {
                 const double xtmp = TL_best[i];
-                TLP[j] = eps_plot_axis_GetPosition(xtmp / UnitMultiplier, axis, 0, 0);
+                TLP[j] = pplaxis_GetPosition(xtmp / UnitMultiplier, axis, 0, 0);
                 if (!gsl_finite(TLP[j])) continue;
                 // Label major ticks, either automatically or with the axis's format; minor ticks have no labels
                 if (major) {
@@ -444,7 +445,7 @@ FAIL:
         double X;
         X = ((double) i) / (N - 1);
         axis->TickListPositions[i] = X;
-        X = eps_plot_axis_InvGetPosition(X, axis);
+        X = pplaxis_InvGetPosition(X, axis);
         if (axis->format == NULL)
             TickLabelAutoGen(x, &axis->TickListStrings[i], X * UnitMultiplier, axis->tics.logBase, OutContext);
         else TickLabelFromFormat(x, &axis->TickListStrings[i], axis->format, X, &axis->DataUnit, axis->xyz, OutContext);

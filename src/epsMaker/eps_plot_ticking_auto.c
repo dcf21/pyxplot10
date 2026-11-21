@@ -49,6 +49,7 @@
 #include "expressions/traceback_fns.h"
 #include "mathsTools/dcfmath.h"
 #include "stringTools/asciidouble.h"
+#include "settings/axes_fns.h"
 #include "settings/settings.h"
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
@@ -418,7 +419,7 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
 
                 // Evaluate the argument at the middle of the interval
                 axispos_mid = (axispos_min + axispos_max) / 2;
-                VarVal->real = eps_plot_axis_InvGetPosition(axispos_mid, axis) * UnitMultiplier;
+                VarVal->real = pplaxis_InvGetPosition(axispos_mid, axis) * UnitMultiplier;
 
                 // Evaluate the argument
                 o = ppl_expEval(c, formatExp[tick->ArgNo], &lOp, 1, X->iterDepth + 1);
@@ -458,9 +459,9 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
                 count_steps++;
             }
             axispos = (axispos_min + axispos_max) / 2;
-            x = eps_plot_axis_InvGetPosition(axispos, axis);
-            x1 = eps_plot_axis_InvGetPosition(axispos - 1e-14, axis);
-            x2 = eps_plot_axis_InvGetPosition(axispos + 1e-14, axis);
+            x = pplaxis_InvGetPosition(axispos, axis);
+            x1 = pplaxis_InvGetPosition(axispos - 1e-14, axis);
+            x2 = pplaxis_InvGetPosition(axispos + 1e-14, axis);
             if (((x1 <= 0.0) && (x2 >= 0.0)) || ((x1 >= 0.0) && (x2 <= 0.0)))
                 x = 0.0; // When tick is very close to a zero, enforce that it is at zero
 
@@ -649,7 +650,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     CentralValue.amMalloced = VarVal->amMalloced;
     CentralValue.flagComplex = 0;
     CentralValue.imag = 0.0;
-    CentralValue.real = eps_plot_axis_InvGetPosition(0.5, axis);
+    CentralValue.real = pplaxis_InvGetPosition(0.5, axis);
     *VarVal = CentralValue;
     for (i = 0; i < NArgs; i++) {
         const int stkLevelOld = c->stackPtr;
@@ -694,7 +695,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     }
     // Evaluate each argument at each step along the axis
     for (j = 0; j < N_STEPS; j++) {
-        VarVal->real = eps_plot_axis_InvGetPosition(j / (N_STEPS - 1.0), axis) * UnitMultiplier;
+        VarVal->real = pplaxis_InvGetPosition(j / (N_STEPS - 1.0), axis) * UnitMultiplier;
         // Each argument
         for (i = 0; i < NArgs; i++) {
             const int stkLevelOld = c->stackPtr;

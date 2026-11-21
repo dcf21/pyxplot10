@@ -71,6 +71,8 @@ int ppl_funcCheckSignedInt(pplFuncCall *f, const pplObj *x, const char *var, con
 int ppl_funcCheckRealDimensionlessFinite(pplFuncCall *f, const pplObj *x, const char *var);
 int ppl_funcCheckUnit(pplFuncCall *f, const pplObj *x, const char *description, const char *unitName, int unit,
                       int power);
+void ppl_funcError(int *status, int *errType, char *errText, int type, const char *format, ...)
+        __attribute__((format(printf, 5, 6)));
 char *ppl_funcStrdup(pplFuncCall *f, const char *str);
 void ppl_funcSetComplexOutput(pplObj *out, gsl_complex z);
 void ppl_funcSetOutputUnit(ppl_context *c, pplObj *out, int unit);

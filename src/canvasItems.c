@@ -997,6 +997,35 @@ static int canvas_delete(ppl_context *c, const int id) {
     return 0;
 }
 
+//! canvas_redisplay - Redraw the multiplot canvas after it has been changed, if the display is enabled. If an item
+//! which has just been added cannot be drawn, it is removed from the canvas again.
+//! \param [in] c - The Pyxplot context
+//! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
+//! \param [in] id - The id number of the item which has just been added, or -1 if no item has been added
+//! \param [in] itemName - The name of the type of item which has just been added, used in error messages
+//! \return Zero on success, or one on failure
+
+static int canvas_redisplay(ppl_context *c, const int iterDepth, const int id, const char *itemName) {
+    if ((c->set->term_current.display != SW_ONOFF_ON) || cancellationFlag) return 0;
+    unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+    // Failure to allocate memory is reported as an error
+    if (unsuccessful_ops == NULL) {
+        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+        return 1;
+    }
+    ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
+    const int failed = (id >= 0) && unsuccessful_ops[id];
+    free(unsuccessful_ops);
+    if (!failed) return 0;
+
+    // If the new item could not be drawn, remove it again
+    char msg[128];
+    canvas_delete(c, id);
+    snprintf(msg, sizeof(msg), "%s has been removed from multiplot, because it generated an error.", itemName);
+    ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
+    return 1;
+}
+
 //! ppl_directive_delete - Implement the delete command, which removes items from the multiplot canvas
 //! \param [in] c - The Pyxplot context
 //! \param [in] pl - The compiled command line, used to report errors
@@ -1030,18 +1059,7 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
     }
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, -1, NULL);
 }
 
 //! ppl_directive_undelete - Implement the undelete command, which restores items which have been deleted from the
@@ -1091,18 +1109,7 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     }
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, -1, NULL);
 }
 
 //! ppl_directive_move - Implement the move command, which moves an item on the multiplot canvas to a new position,
@@ -1195,18 +1202,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     }
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, -1, NULL);
 }
 
 //! ppl_directive_swap - Implement the swap command, which swaps the positions of two items in the multiplot canvas's
@@ -1270,18 +1266,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     (*ptr2)->next = temp;
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, -1, NULL);
 }
 
 //! ppl_directive_arrow - Implement the arrow and line commands, which add an arrow or line to the multiplot canvas
@@ -1325,27 +1310,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
     else ptr->ArrowType = (strcmp(tempstr2, "arrow") == 0) ? SW_ARROWTYPE_HEAD : SW_ARROWTYPE_NOHEAD;
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Arrow has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Arrow");
 }
 
 //! ppl_directive_box - Implement the box command, which adds a rectangle to the multiplot canvas
@@ -1413,27 +1378,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
     ppl_withWordsFromDict(c, in, pl, PARSE_TABLE_box_, 0, &ptr->with_data);
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Box has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Box");
 }
 
 //! ppl_directive_circle - Implement the circle and arc commands, which add a circle or circular arc to the multiplot
@@ -1482,27 +1427,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
     ppl_withWordsFromDict(c, in, pl, amArc ? PARSE_TABLE_arc_ : PARSE_TABLE_circle_, 0, &ptr->with_data);
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Circle has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Circle");
 }
 
 //! ppl_directive_ellipse - Implement the ellipse command, which adds an ellipse to the multiplot canvas. The ellipse
@@ -1616,11 +1541,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     } else if (p == 2) // User has specified both centre and focus of the ellipse, and one further piece of information
     {
         // Measure the angle of the major axis from the centre to the focus
-        if (ppl_dblEqual(xc, xf) && ppl_dblEqual(yc, yf)) {
-            ang = 0.0;
-        } else {
-            ang = atan2(yc - yf, xc - xf);
-        }
+        ang = (ppl_dblEqual(xc, xf) && ppl_dblEqual(yc, yf)) ? 0.0 : atan2(yc - yf, xc - xf);
         xc = xc;
         yc = yc;
 
@@ -1636,11 +1557,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
                 return 1;
             }
             // A circle has its focus at its centre
-            if (ppl_dblEqual(ecc, 0.0)) {
-                b = a;
-            } else {
-                b = a * sqrt(1.0 - pow(ecc, 2));
-            }
+            b = (ppl_dblEqual(ecc, 0.0)) ? a : a * sqrt(1.0 - pow(ecc, 2));
         } else if (gotB) // minor axis...
         {
             b = fabs(b);
@@ -1657,11 +1574,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         {
             a = hypot(xc - xf, yc - yf) / ecc;
             // A circle has its focus at its centre
-            if (ppl_dblEqual(ecc, 0.0)) {
-                b = a;
-            } else {
-                b = a * sqrt(1.0 - pow(ecc, 2));
-            }
+            b = (ppl_dblEqual(ecc, 0.0)) ? a : a * sqrt(1.0 - pow(ecc, 2));
         } else if (gotSlr) // or semi-latus rectum...
         {
             ratio = hypot(xc - xf, yc - yf) / slr;
@@ -1812,27 +1725,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     ppl_withWordsFromDict(c, in, pl, PARSE_TABLE_ellipse_, 0, &ptr->with_data);
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Ellipse has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Ellipse");
 }
 
 //! ppl_directive_eps - Implement the eps command, which adds an encapsulated PostScript image to the multiplot canvas
@@ -1882,23 +1775,11 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
     }
 
     // Store each property which was given
-    if (gotX) {
-        ptr->xpos = x;
-    } else {
-        ptr->xpos = c->set->graph_current.OriginX.real;
-    }
+    ptr->xpos = gotX ? x : c->set->graph_current.OriginX.real;
     // The y position
-    if (gotY) {
-        ptr->ypos = y;
-    } else {
-        ptr->ypos = c->set->graph_current.OriginY.real;
-    }
+    ptr->ypos = gotY ? y : c->set->graph_current.OriginY.real;
     // The rotation
-    if (gotAng) {
-        ptr->rotation = ang;
-    } else {
-        ptr->rotation = 0.0;
-    }
+    ptr->rotation = gotAng ? ang : 0.0;
     // The width
     if (gotWidth) {
         ptr->xpos2 = width;
@@ -1920,27 +1801,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
     ptr->calcbbox = calcbbox;
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "EPS image has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "EPS image");
 }
 
 //! ppl_directive_point - Implement the point command, which adds a point, optionally labelled, to the multiplot
@@ -1987,27 +1848,7 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
     }
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Point has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Point");
 }
 
 //! ppl_directive_polygon - Implement the polygon command, which adds a polygon to the multiplot canvas
@@ -2158,27 +1999,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     ppl_withWordsFromDict(c, in, pl, PARSE_TABLE_polygon_, 0, &ptr->with_data);
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Polygon has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Polygon");
 }
 
 //! ppl_directive_text - Implement the text command, which adds a text label to the multiplot canvas
@@ -2235,56 +2056,20 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ptr->settings.TextVAlign = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_VALIGN_INT, SW_VALIGN_STR);
 
     // Store each property which was given
-    if (gotX) {
-        ptr->xpos = x;
-    } else {
-        ptr->xpos = c->set->graph_current.OriginX.real;
-    }
+    ptr->xpos = gotX ? x : c->set->graph_current.OriginX.real;
     // The y position
-    if (gotY) {
-        ptr->ypos = y;
-    } else {
-        ptr->ypos = c->set->graph_current.OriginY.real;
-    }
+    ptr->ypos = gotY ? y : c->set->graph_current.OriginY.real;
     // The gap between the text and its position
-    if (gotGap) {
-        ptr->xpos2 = gap;
-    } else {
-        ptr->xpos2 = 0.0;
-    }
+    ptr->xpos2 = gotGap ? gap : 0.0;
     // The rotation
-    if (gotAng) {
-        ptr->rotation = ang;
-    } else {
-        ptr->rotation = 0.0;
-    }
+    ptr->rotation = gotAng ? ang : 0.0;
     ptr->text = text;
 
     // Read in color information, if available
     ppl_withWordsFromDict(c, in, pl, PARSE_TABLE_text_, 0, &ptr->with_data);
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Text item has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Text item");
 }
 
 //! ppl_directive_image - Implement the image command, which adds a bitmap image to the multiplot canvas
@@ -2344,23 +2129,11 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     }
 
     // Store each property which was given
-    if (gotX) {
-        ptr->xpos = x;
-    } else {
-        ptr->xpos = c->set->graph_current.OriginX.real;
-    }
+    ptr->xpos = gotX ? x : c->set->graph_current.OriginX.real;
     // The y position
-    if (gotY) {
-        ptr->ypos = y;
-    } else {
-        ptr->ypos = c->set->graph_current.OriginY.real;
-    }
+    ptr->ypos = gotY ? y : c->set->graph_current.OriginY.real;
     // The rotation
-    if (gotAng) {
-        ptr->rotation = ang;
-    } else {
-        ptr->rotation = 0.0;
-    }
+    ptr->rotation = gotAng ? ang : 0.0;
     // The width
     if (gotWidth) {
         ptr->xpos2 = width;
@@ -2379,17 +2152,9 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     }
     ptr->text = text;
     // Smooth the image when it is scaled
-    if (smooth) {
-        ptr->smooth = 1;
-    } else {
-        ptr->smooth = 0;
-    }
+    ptr->smooth = smooth;
     // Ignore any transparency in the image
-    if (noTrans) {
-        ptr->NoTransparency = 1;
-    } else {
-        ptr->NoTransparency = 0;
-    }
+    ptr->NoTransparency = noTrans;
     // Make a color transparent
     if (cTrans) {
         ptr->CustomTransparency = 1;
@@ -2401,27 +2166,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     }
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Bitmap image has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Bitmap image");
 }
 
 
@@ -2874,11 +2619,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     if (ptab[PARSE_INDEX_label] > 0) {
         pplObj *o = &stk[stkbase + ptab[PARSE_INDEX_label]];
         // The label must be an expression
-        if (o->objType != PPLOBJ_EXP) {
-            new->label = NULL;
-        } else {
-            new->label = pplExpr_cpy((pplExpr *) o->auxil);
-        }
+        new->label = (o->objType != PPLOBJ_EXP) ? NULL : pplExpr_cpy((pplExpr *) o->auxil);
     }
 
     // Read continuous flag
@@ -3098,27 +2839,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
     }
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Piechart has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Piechart");
 }
 
 //! ppl_directive_plot - Implement the plot and replot commands, which add a graph to the multiplot canvas, or add
@@ -3450,25 +3171,5 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     }
 
     // Redisplay the canvas as required
-    if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
-        unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
-        int failed;
-        // Failure to allocate memory is reported as an error
-        if (unsuccessful_ops == NULL) {
-            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-            return 1;
-        }
-        ppl_canvas_draw(c, unsuccessful_ops, iterDepth);
-        failed = unsuccessful_ops[id];
-        free(unsuccessful_ops);
-        unsuccessful_ops = NULL;
-        // If the new item could not be drawn, remove it again
-        if (failed) {
-            canvas_delete(c, id);
-            ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
-                      "Plot has been removed from multiplot, because it generated an error.");
-            return 1;
-        }
-    }
-    return 0;
+    return canvas_redisplay(c, iterDepth, id, "Plot");
 }

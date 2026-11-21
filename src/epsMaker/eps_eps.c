@@ -233,6 +233,23 @@ void eps_eps_RenderEPS(EPSComm *x) {
     return;
 }
 
+//! readBBox - Read the four numbers which follow a %%BoundingBox: or %%HiResBoundingBox: comment
+//! \param [in] msg - The remainder of the line after the comment's name
+//! \param [out] box - The four numbers read: left, bottom, right and top
+//! \return One if four numbers were read, or zero if the bounding box was malformed
+
+static int readBBox(const char *msg, double *box) {
+    int i = 0;
+    for (int k = 0; k < 4; k++) {
+        int j;
+        while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
+        box[k] = ppl_getFloat(msg + i, &j);
+        if (j <= 0) return 0;
+        i += j;
+    }
+    return 1;
+}
+
 //! eps_eps_ExtractBBox - Read the bounding box of an EPS file from its %%BoundingBox (or %%HiResBoundingBox) comment
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 //! \param [in] in - The file handle of the EPS file
@@ -244,93 +261,29 @@ void eps_eps_RenderEPS(EPSComm *x) {
 
 void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, double *br, double *bt,
                          unsigned char *GotBox) {
-    char msg[PPL_MSG_LENGTH];
-    const char BBoxStr[] = "%%BoundingBox:";
-    const char HRBBoxStr[] = "%%HiResBoundingBox:";
-    int bbox_i = 0, hrbbox_i = 0, j, bbox_len, hrbbox_len, i;
-    double blt, bbt, brt, btt; // Temporary bounding box values
-
-    // Search the file for the two comments, matching each one character by character as the file is read
-    bbox_len = strlen(BBoxStr);
-    hrbbox_len = strlen(HRBBoxStr);
-
+    const char *const boxStr[2] = {"%%BoundingBox:", "%%HiResBoundingBox:"};
+    int matched[2] = {0, 0}, j;
     *GotBox = 0;
 
-    while ((j = fgetc(in)) != EOF) // Search input file for bounding box strings
-    {
-        // Advance through the %%BoundingBox: string while the characters match
-        if (BBoxStr[bbox_i] == j) {
-            bbox_i++;
-        } else {
-            bbox_i = 0;
-        }
-        // Advance through the %%HiResBoundingBox: string while the characters match
-        if (HRBBoxStr[hrbbox_i] == j) {
-            hrbbox_i++;
-        } else {
-            hrbbox_i = 0;
-        }
-
-        // After %%BoundingBox:, read four numbers; keep searching, in case there is also a high-resolution bounding box
-        if (bbox_i == bbox_len) {
-            bbox_i = 0;
-            if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%BoundingBox: . . . .
-            {
-                i = 0;
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                blt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                bbt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                brt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                btt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                *bl = blt;
-                *bb = bbt;
-                *br = brt;
-                *bt = btt; // Carry on looping to see if we can find a high resolution bounding box
-                *GotBox = 1;
-            }
-        }
-
-        // After %%HiResBoundingBox:, read four numbers, which take precedence
-        if (hrbbox_i == hrbbox_len) {
-            hrbbox_i = 0;
-            if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%HiResBoundingBox: . . . .
-            {
-                i = 0;
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                blt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                bbt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                brt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                while (((unsigned char) msg[i] <= ' ') && (msg[i] != '\0')) i++;
-                btt = ppl_getFloat(msg + i, &j);
-                if (j <= 0) continue;
-                else i += j; // If j<=0, bad bounding box
-                *bl = blt;
-                *bb = bbt;
-                *br = brt;
-                *bt = btt;
-                *GotBox = 1;
-                return; // A high resolution bounding box is better than a low resolution bounding box, so we've got all we need
-            }
+    // Search the file for the two comments, matching each one character by character as the file is read
+    while ((j = fgetc(in)) != EOF) {
+        for (int k = 0; k < 2; k++) {
+            char msg[PPL_MSG_LENGTH];
+            double box[4];
+            // Advance through the comment's name while the characters match
+            matched[k] = (boxStr[k][matched[k]] == j) ? (matched[k] + 1) : 0;
+            if (boxStr[k][matched[k]] != '\0') continue;
+            // After the comment's name, read four numbers
+            matched[k] = 0;
+            if ((fgets(msg, FNAME_LENGTH, in) == NULL) || !readBBox(msg, box)) continue;
+            *bl = box[0];
+            *bb = box[1];
+            *br = box[2];
+            *bt = box[3];
+            *GotBox = 1;
+            // A high resolution bounding box takes precedence, so we've got all we need. Otherwise, keep searching in
+            // case there is also a high resolution bounding box.
+            if (k == 1) return;
         }
     }
-    return;
 }

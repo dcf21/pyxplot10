@@ -32,72 +32,9 @@
 
 #include <gsl/gsl_math.h>
 
+#include "settings/axes_fns.h"
 #include "settings/settings.h"
 #include "settings/settingTypes.h"
-
-//! eps_plot_axis_GetPosition - Return the fractional position along an axis at which a value should be plotted. This is
-//! a wrapper for pplaxis_GetPosition().
-//! \param [in] xin - The value to locate on the axis
-//! \param [in] xa - The axis, or NULL to return <xin> unchanged
-//! \param [in] xrn - For axes whose values are linearly interpolated from a non-monotonic function, the number of the
-//! monotonic region of the axis in which to look for <xin>
-//! \param [in] AllowOffBounds - If true, values outside the range of the axis return positions outside the range 0-1;
-//! otherwise they return NaN
-//! \return The position along the axis, in the range 0 to 1, or NaN if the value cannot be placed on the axis
-
-double eps_plot_axis_GetPosition(const double xin, pplset_axis *xa, const int xrn, const unsigned char AllowOffBounds) {
-    // With no axis, the value is already a fractional position
-    int imin, imax, i;
-    if (xa == NULL) return xin;
-    if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
-    {
-        imin = xa->AxisTurnings[xrn];
-        imax = xa->AxisTurnings[xrn + 1];
-        // An axis whose mapping is tabulated: find the interval of the table containing the value, within the monotonic
-        // section xrn, and interpolate within it
-        for (i = imin; i < imax; i++) {
-            if (((xa->AxisLinearInterpolation[i] < xin) && (xa->AxisLinearInterpolation[i + 1] >= xin)) ||
-                ((xa->AxisLinearInterpolation[i] > xin) && (xa->AxisLinearInterpolation[i + 1] <= xin)))
-                return (i +
-                        (xin - xa->AxisLinearInterpolation[i]) /
-                                (xa->AxisLinearInterpolation[i + 1] - xa->AxisLinearInterpolation[i])) /
-                        (AXISLINEARINTERPOLATION_NPOINTS - 1);
-        }
-        return GSL_NAN;
-    }
-    // Values outside the axis's range have no position, unless positions off the ends are allowed
-    if (!AllowOffBounds) {
-        // The axis may run in either direction
-        if (xa->MaxFinal > xa->MinFinal) {
-            if ((xin < xa->MinFinal) || (xin > xa->MaxFinal)) return GSL_NAN;
-        } else {
-            if ((xin > xa->MinFinal) || (xin < xa->MaxFinal)) return GSL_NAN;
-        }
-    }
-    if ((xa->LogFinal == SW_BOOL_TRUE) && (xin <= 0)) return GSL_NAN;
-    if (xa->LogFinal != SW_BOOL_TRUE) return (xin - xa->MinFinal) / (xa->MaxFinal - xa->MinFinal); // Either linear...
-    else return (log(xin) - log(xa->MinFinal)) / (log(xa->MaxFinal) - log(xa->MinFinal)); // ... or logarithmic
-}
-
-//! eps_plot_axis_InvGetPosition - Return the value of an axis at a fractional position along it. This is a wrapper for
-//! pplaxis_InvGetPosition().
-//! \param [in] xin - The position along the axis, in the range 0 to 1
-//! \param [in] xa - The axis
-//! \return The value of the axis at position <xin>
-
-double eps_plot_axis_InvGetPosition(const double xin, pplset_axis *xa) {
-    if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
-    {
-        const int i = floor(xin * (AXISLINEARINTERPOLATION_NPOINTS - 1));
-        const double x = xin * (AXISLINEARINTERPOLATION_NPOINTS - 1) - i;
-        if (i >= AXISLINEARINTERPOLATION_NPOINTS - 1)
-            return xa->AxisLinearInterpolation[AXISLINEARINTERPOLATION_NPOINTS - 1];
-        if (i < 0) return xa->AxisLinearInterpolation[0];
-        return xa->AxisLinearInterpolation[i] * (1 - x) + xa->AxisLinearInterpolation[i + 1] * x;
-    }
-    if (xa->LogFinal != SW_BOOL_TRUE) return xa->MinFinal + xin * (xa->MaxFinal - xa->MinFinal); // Either linear...
-    else return xa->MinFinal * pow(xa->MaxFinal / xa->MinFinal, xin); // ... or logarithmic
-}
 
 //! eps_plot_axis_InRange - Test whether a value lies within the range of an axis
 //! \param [in] xa - The axis
@@ -112,7 +49,7 @@ int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
     // An axis whose mapping is tabulated: the value is in range if it lies on any monotonic section of the table
     if (xa->AxisLinearInterpolation != NULL) {
         for (xrn = 0; xrn <= xa->AxisValueTurnings; xrn++)
-            if (gsl_finite(eps_plot_axis_GetPosition(xin, xa, xrn, 0))) return 1;
+            if (gsl_finite(pplaxis_GetPosition(xin, xa, xrn, 0))) return 1;
         return 0;
     }
 
@@ -224,10 +161,10 @@ void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap
                           const double origin_x, const double origin_y, const double width, const double height,
                           const double zdepth, const unsigned char AllowOffBounds) {
     // Convert (xin,yin,zin) to axis positions on the range of 0-1
-    *xap = eps_plot_axis_GetPosition(xin, xa, xrn, 1);
-    *yap = eps_plot_axis_GetPosition(yin, ya, yrn, 1);
+    *xap = pplaxis_GetPosition(xin, xa, xrn, 1);
+    *yap = pplaxis_GetPosition(yin, ya, yrn, 1);
     *zap = 0.5;
-    if (ThreeDim) *zap = eps_plot_axis_GetPosition(zin, za, zrn, 1);
+    if (ThreeDim) *zap = pplaxis_GetPosition(zin, za, zrn, 1);
 
     // Values which cannot be placed on an axis have no position
     if ((!gsl_finite(*xap)) || (!gsl_finite(*yap)) || (!gsl_finite(*zap))) {

@@ -238,13 +238,11 @@ static int checkLcdmInputs(pplFuncCall *f, const int h0Index, const char *h0Posi
     if (in[h0Index].dimensionless) in[h0Index].real *= 1e3 / (PPL_CONST_PARSEC * 1e6); // From km/s/Mpc
     // The densities of matter and dark energy must be dimensionless
     if (!(in[h0Index + 1].dimensionless && in[h0Index + 2].dimensionless)) {
-        *f->status = 1;
-        *f->errType = ERR_UNIT;
-        ppl_snprintfTrunc(f->errText, LSTR_LENGTH,
-                          "The %s function can only act upon dimensionless values for w_m and w_l. Supplied values "
-                          "have dimensions of <%s> and <%s>.",
-                          f->description, ppl_printUnit(f->c, &in[h0Index + 1], NULL, NULL, 0, 1, 0),
-                          ppl_printUnit(f->c, &in[h0Index + 2], NULL, NULL, 1, 1, 0));
+        ppl_funcError(f->status, f->errType, f->errText, ERR_UNIT,
+                "The %s function can only act upon dimensionless values for w_m and w_l. Supplied values "
+                "have dimensions of <%s> and <%s>.",
+                f->description, ppl_printUnit(f->c, &in[h0Index + 1], NULL, NULL, 0, 1, 0),
+                ppl_printUnit(f->c, &in[h0Index + 2], NULL, NULL, 1, 1, 0));
         return 1;
     }
     return 0;
@@ -256,12 +254,10 @@ static int checkLcdmInputs(pplFuncCall *f, const int h0Index, const char *h0Posi
 
 static int checkRedshift(pplFuncCall *f) {
     if (f->in[0].dimensionless) return 0;
-    *f->status = 1;
-    *f->errType = ERR_UNIT;
-    ppl_snprintfTrunc(f->errText, LSTR_LENGTH,
-                      "The %s function can only act upon dimensionless values for redshift. Supplied value has "
-                      "dimensions of <%s>.",
-                      f->description, ppl_printUnit(f->c, &f->in[0], NULL, NULL, 0, 1, 0));
+    ppl_funcError(f->status, f->errType, f->errText, ERR_UNIT,
+            "The %s function can only act upon dimensionless values for redshift. Supplied value has "
+            "dimensions of <%s>.",
+            f->description, ppl_printUnit(f->c, &f->in[0], NULL, NULL, 0, 1, 0));
     return 1;
 }
 
@@ -420,10 +416,7 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Check the type of the argument
     if ((nArgs != 1) || ((in[0].objType != PPLOBJ_NUM) && (in[0].objType != PPLOBJ_DATE))) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The function %s requires a date object or numeric Unix time as its first argument; supplied argument had type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -466,10 +459,7 @@ void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status,
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Check the type of the argument
     if ((nArgs != 1) || ((in[0].objType != PPLOBJ_NUM) && (in[0].objType != PPLOBJ_DATE))) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The function %s requires a date object or numeric Unix time as its first argument; supplied argument had type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;

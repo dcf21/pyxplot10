@@ -44,6 +44,7 @@
 #include "expressions/expEval.h"
 #include "expressions/traceback_fns.h"
 #include "mathsTools/dcfmath.h"
+#include "settings/axes_fns.h"
 #include "settings/settingTypes.h"
 #include "stringTools/asciidouble.h"
 #include "userspace/context.h"
@@ -392,7 +393,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
          l++) // Loop over samples we are going to take from axis linkage function
     {
         p = ((double) l) / (AXISLINEARINTERPOLATION_NPOINTS - 1);
-        x = eps_plot_axis_InvGetPosition(p, in);
+        x = pplaxis_InvGetPosition(p, in);
         pplExpr *olu = (pplExpr *) out->linkusing;
 
         // Set value of x (or y/z)

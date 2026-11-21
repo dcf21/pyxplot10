@@ -42,6 +42,7 @@
 #include "expressions/traceback_fns.h"
 #include "mathsTools/dcfmath.h"
 #include "stringTools/asciidouble.h"
+#include "settings/axes_fns.h"
 #include "settings/settings.h"
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
@@ -155,8 +156,8 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
     CentralValue = axis->DataUnit;
     CentralValue.flagComplex = 0;
     CentralValue.imag = 0.0;
-    CentralValue.real = (axis->format == NULL) ? eps_plot_axis_InvGetPosition(0.5, axis) : 1.0;
-    if (CentralValue.real == 0.0) CentralValue.real = eps_plot_axis_InvGetPosition(0.25, axis);
+    CentralValue.real = (axis->format == NULL) ? pplaxis_InvGetPosition(0.5, axis) : 1.0;
+    if (CentralValue.real == 0.0) CentralValue.real = pplaxis_InvGetPosition(0.25, axis);
     UnitString = ppl_printUnit(x->c, &CentralValue, &UnitMultiplier, NULL, 0, 0, SW_DISPLAY_L);
     UnitMultiplier /= CentralValue.real;
     if (!gsl_finite(UnitMultiplier)) UnitMultiplier = 1.0;
@@ -330,7 +331,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                 for (i = j = 0; i < N; i++)
                     // Place each tick on each monotonic section of the axis, skipping those beyond its ends
                     for (xrn = 0; xrn <= axis->AxisValueTurnings; xrn++) {
-                        (*TickListPositions)[j] = eps_plot_axis_GetPosition(TickList[i], axis, xrn, 0);
+                        (*TickListPositions)[j] = pplaxis_GetPosition(TickList[i], axis, xrn, 0);
                         if ((!gsl_finite((*TickListPositions)[j])) || ((*TickListPositions)[j] < 0.0) ||
                             ((*TickListPositions)[j] > 1.0))
                             continue; // Filter out ticks which are off the end of the axis
@@ -443,7 +444,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                         if (((!inverted) && (tmp > TMax)) || ((inverted) && (tmp < TMin))) break;
                         if ((axis->LogFinal != SW_BOOL_TRUE) && (fabs(tmp) < fabs(TStep * 1e-14)))
                             tmp = 0; // Enforce that ticks close to zero are at zero
-                        (*TickListPositions)[j] = eps_plot_axis_GetPosition(tmp, axis, xrn, 0);
+                        (*TickListPositions)[j] = pplaxis_GetPosition(tmp, axis, xrn, 0);
                         if ((!gsl_finite((*TickListPositions)[j])) || ((*TickListPositions)[j] < 0.0) ||
                             ((*TickListPositions)[j] > 1.0))
                             continue; // Filter out ticks which are off the end of the axis

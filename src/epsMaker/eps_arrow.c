@@ -72,6 +72,37 @@ void eps_arrow_RenderEPS(EPSComm *x) {
     return;
 }
 
+//! eps_arrowHead - Work out the corners of an arrowhead, and write postscript to draw it as a filled quadrilateral
+//! \param [in] tipX - The x coordinate of the tip of the arrowhead, in postscript points
+//! \param [in] tipY - The y coordinate of the tip of the arrowhead, in postscript points
+//! \param [in] direction - The direction in which the arrowhead points, in radians clockwise from vertical
+//! \param [in] size - The length of the sides of the arrowhead, in postscript points
+//! \param [out] out - Character buffer into which to write the postscript
+//! \param [in] outLen - The size of the buffer <out>
+//! \param [out] corners - Set to the positions {x3,y3,x4,y4,x5,y5} of the two pointy back corners of the arrowhead
+//! (x3,y3 and x5,y5), and of the point where its back crosses the stalk (x4,y4)
+
+void eps_arrowHead(const double tipX, const double tipY, const double direction, const double size, char *out,
+                   const size_t outLen, double *corners) {
+    const double x3 = tipX - size * sin(direction - EPS_ARROW_ANGLE / 2);
+    const double y3 = tipY - size * cos(direction - EPS_ARROW_ANGLE / 2);
+    const double x4 = tipX - size * sin(direction) * (1.0 - EPS_ARROW_CONSTRICT) * cos(EPS_ARROW_ANGLE / 2);
+    const double y4 = tipY - size * cos(direction) * (1.0 - EPS_ARROW_CONSTRICT) * cos(EPS_ARROW_ANGLE / 2);
+    const double x5 = tipX - size * sin(direction + EPS_ARROW_ANGLE / 2);
+    const double y5 = tipY - size * cos(direction + EPS_ARROW_ANGLE / 2);
+    ppl_snprintfTrunc(out, outLen,
+                      "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
+                      x4, y4, x3, y3, tipX, tipY, x5, y5);
+    if (corners != NULL) {
+        corners[0] = x3;
+        corners[1] = y3;
+        corners[2] = x4;
+        corners[3] = y4;
+        corners[4] = x5;
+        corners[5] = y5;
+    }
+}
+
 //! eps_primitive_arrow - Draw an arrow in postscript, with the given arrow head style. Used by arrow canvas items, and
 //! by arrows on graphs.
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -88,7 +119,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                          const double *z2, withWords *with_data) {
     char msg[PPL_MSG_LENGTH];
     int lt;
-    double lw, lw_scale, x3, y3, x4, y4, x5, y5, xstart, ystart, xend, yend, direction;
+    double lw, lw_scale, xstart, ystart, xend, yend, direction;
     const unsigned char ThreeDim = (z1 != NULL) && (z2 != NULL);
     char *last_colstr = NULL;
 
@@ -127,36 +158,17 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
 
     // Draw arrowhead on beginning of arrow if desired
     if (ArrowType == SW_ARROWTYPE_TWOWAY) {
-        x3 = x1 -
-                EPS_ARROW_HEADSIZE * lw_scale *
-                        sin((direction + M_PI) - EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on one side
-        y3 = y1 - EPS_ARROW_HEADSIZE * lw_scale * cos((direction + M_PI) - EPS_ARROW_ANGLE / 2);
-        x5 = x1 -
-                EPS_ARROW_HEADSIZE * lw_scale *
-                        sin((direction + M_PI) + EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on other side
-        y5 = y1 - EPS_ARROW_HEADSIZE * lw_scale * cos((direction + M_PI) + EPS_ARROW_ANGLE / 2);
-
-        // The point where the back of the arrowhead crosses the stalk
-        x4 = x1 -
-                EPS_ARROW_HEADSIZE * lw_scale * sin(direction + M_PI) * (1.0 - EPS_ARROW_CONSTRICT) *
-                        cos(EPS_ARROW_ANGLE / 2); // Point where back of arrowhead crosses stalk
-        y4 = y1 -
-                EPS_ARROW_HEADSIZE * lw_scale * cos(direction + M_PI) * (1.0 - EPS_ARROW_CONSTRICT) *
-                        cos(EPS_ARROW_ANGLE / 2);
-
-        // Draw the arrowhead as a filled quadrilateral, in two or three dimensions
+        double p[6];
+        eps_arrowHead(x1, y1, direction + M_PI, EPS_ARROW_HEADSIZE * lw_scale, msg, sizeof(msg), p);
+        // Draw the arrowhead, in two or three dimensions
         if (eps_core_isVisible(x)) {
-            ppl_snprintfTrunc(
-                    msg, sizeof(msg),
-                    "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
-                    x4, y4, x3, y3, x1, y1, x5, y5);
             if (!ThreeDim) fprintf(x->epsbuffer, "%s", msg);
             else ThreeDimBuffer_writeps(x, *z1, lt, lw, 0.0, 1, last_colstr, msg);
-            eps_core_PlotBoundingBox(x, x3, y3, lw, 1);
-            eps_core_PlotBoundingBox(x, x5, y5, lw, 1);
+            eps_core_PlotBoundingBox(x, p[0], p[1], lw, 1);
+            eps_core_PlotBoundingBox(x, p[4], p[5], lw, 1);
         }
-        xstart = x4;
-        ystart = y4;
+        xstart = p[2];
+        ystart = p[3];
     } else {
         xstart = x1;
         ystart = y1;
@@ -164,35 +176,17 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
 
     // Draw arrowhead on end of arrow if desired
     if ((ArrowType == SW_ARROWTYPE_HEAD) || (ArrowType == SW_ARROWTYPE_TWOWAY)) {
-        x3 = x2 -
-                EPS_ARROW_HEADSIZE * lw_scale *
-                        sin(direction - EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on one side
-        y3 = y2 - EPS_ARROW_HEADSIZE * lw_scale * cos(direction - EPS_ARROW_ANGLE / 2);
-        x5 = x2 -
-                EPS_ARROW_HEADSIZE * lw_scale *
-                        sin(direction + EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on other side
-        y5 = y2 - EPS_ARROW_HEADSIZE * lw_scale * cos(direction + EPS_ARROW_ANGLE / 2);
-
-        // The point where the back of the arrowhead crosses the stalk
-        x4 = x2 -
-                EPS_ARROW_HEADSIZE * lw_scale * sin(direction) * (1.0 - EPS_ARROW_CONSTRICT) *
-                        cos(EPS_ARROW_ANGLE / 2); // Point where back of arrowhead crosses stalk
-        y4 = y2 -
-                EPS_ARROW_HEADSIZE * lw_scale * cos(direction) * (1.0 - EPS_ARROW_CONSTRICT) * cos(EPS_ARROW_ANGLE / 2);
-
-        // Draw the arrowhead as a filled quadrilateral, in two or three dimensions
+        double p[6];
+        eps_arrowHead(x2, y2, direction, EPS_ARROW_HEADSIZE * lw_scale, msg, sizeof(msg), p);
+        // Draw the arrowhead, in two or three dimensions
         if (eps_core_isVisible(x)) {
-            ppl_snprintfTrunc(
-                    msg, sizeof(msg),
-                    "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
-                    x4, y4, x3, y3, x2, y2, x5, y5);
             if (!ThreeDim) fprintf(x->epsbuffer, "%s", msg);
             else ThreeDimBuffer_writeps(x, *z2, lt, lw, 0.0, 1, last_colstr, msg);
-            eps_core_PlotBoundingBox(x, x3, y3, lw, 1);
-            eps_core_PlotBoundingBox(x, x5, y5, lw, 1);
+            eps_core_PlotBoundingBox(x, p[0], p[1], lw, 1);
+            eps_core_PlotBoundingBox(x, p[4], p[5], lw, 1);
         }
-        xend = x4;
-        yend = y4;
+        xend = p[2];
+        yend = p[3];
     } else {
         xend = x2;
         yend = y2;

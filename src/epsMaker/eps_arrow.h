@@ -26,6 +26,8 @@
 #include "epsMaker/eps_comm.h"
 
 void eps_arrow_RenderEPS(EPSComm *x);
+void eps_arrowHead(double tipX, double tipY, double direction, double size, char *out, size_t outLen,
+                   double *corners);
 void eps_primitive_arrow(EPSComm *x, int ArrowType, double x1, double y1, const double *z1, double x2, double y2,
                          const double *z2, withWords *with_data);
 

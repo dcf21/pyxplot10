@@ -25,5 +25,6 @@
 #include "userspace/context.h"
 
 void ppl_readconfig(ppl_context *c);
+void ppl_restoreDefaultSettings(ppl_context *c);
 
 #endif

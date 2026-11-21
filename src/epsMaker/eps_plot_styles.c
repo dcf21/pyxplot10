@@ -1857,7 +1857,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                 else if ((style == SW_STYLE_LOWERLIMITS) || (style == SW_STYLE_UPPERLIMITS)) // LOWERLIMITS, UPPERLIMITS
                 {
                     int an;
-                    double ps, sgn, lw, theta[3], x2, y2, x3, y3, x4, y4, x5, y5;
+                    double ps, sgn, lw, theta[3], x2, y2;
                     double offset_barx, offset_bary, offset_arrx, offset_arry;
                     ps = pd->ww_final.pointsize * EPS_DEFAULT_PS / M_TO_PS;
                     sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
@@ -1922,26 +1922,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 x2 = xpos + sgn * 2 * ps * M_TO_PS * sin(theta[an]);
                                 y2 = ypos + sgn * 2 * ps * M_TO_PS * cos(theta[an]);
                                 if (sgn < 0.0) theta[an] += M_PI;
-                                x3 = x2 -
-                                        EPS_ARROW_HEADSIZE / 2 * lw *
-                                                sin(theta[an] -
-                                                    EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on one side
-                                y3 = y2 - EPS_ARROW_HEADSIZE / 2 * lw * cos(theta[an] - EPS_ARROW_ANGLE / 2);
-                                x5 = x2 -
-                                        EPS_ARROW_HEADSIZE / 2 * lw *
-                                                sin(theta[an] +
-                                                    EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on other side
-                                y5 = y2 - EPS_ARROW_HEADSIZE / 2 * lw * cos(theta[an] + EPS_ARROW_ANGLE / 2);
-                                x4 = x2 -
-                                        EPS_ARROW_HEADSIZE / 2 * lw * sin(theta[an]) * (1.0 - EPS_ARROW_CONSTRICT) *
-                                                cos(EPS_ARROW_ANGLE / 2); // Point where back of arrowhead crosses stalk
-                                y4 = y2 -
-                                        EPS_ARROW_HEADSIZE / 2 * lw * cos(theta[an]) * (1.0 - EPS_ARROW_CONSTRICT) *
-                                                cos(EPS_ARROW_ANGLE / 2);
-                                ppl_snprintfTrunc(
-                                        epsbuff, sizeof(epsbuff),
-                                        "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
-                                        x4, y4, x3, y3, x2, y2, x5, y5);
+                                eps_arrowHead(x2, y2, theta[an], EPS_ARROW_HEADSIZE / 2 * lw, epsbuff, sizeof(epsbuff),
+                                              NULL);
                                 ThreeDimBuffer_writeps(x, depth, 1, lw, 0.0, 1.0, last_colstr, epsbuff);
                             }
 
@@ -2134,28 +2116,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 // Draw an arrowhead at the start, if it is within the graph
                                 if ((style == SW_STYLE_ARROWS_TWOHEAD) && (xap >= 0.0) && (xap <= 1.0) &&
                                     (yap >= 0.0) && (yap <= 1.0) && ((!ThreeDim) || ((zap >= 0.0) && (zap <= 1.0)))) {
-                                    double x2 = xpos, y2 = ypos, x3, y3, x4, y4, x5, y5, theta_y = theta + M_PI;
-                                    x3 = x2 -
-                                            EPS_ARROW_HEADSIZE * lw *
-                                                    sin(theta_y -
-                                                        EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on one side
-                                    y3 = y2 - EPS_ARROW_HEADSIZE * lw * cos(theta_y - EPS_ARROW_ANGLE / 2);
-                                    x5 = x2 -
-                                            EPS_ARROW_HEADSIZE * lw *
-                                                    sin(theta_y +
-                                                        EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on other side
-                                    y5 = y2 - EPS_ARROW_HEADSIZE * lw * cos(theta_y + EPS_ARROW_ANGLE / 2);
-                                    x4 = x2 -
-                                            EPS_ARROW_HEADSIZE * lw * sin(theta_y) * (1.0 - EPS_ARROW_CONSTRICT) *
-                                                    cos(EPS_ARROW_ANGLE /
-                                                        2); // Point where back of arrowhead crosses stalk
-                                    y4 = y2 -
-                                            EPS_ARROW_HEADSIZE * lw * cos(theta_y) * (1.0 - EPS_ARROW_CONSTRICT) *
-                                                    cos(EPS_ARROW_ANGLE / 2);
-                                    ppl_snprintfTrunc(
-                                            epsbuff, sizeof(epsbuff),
-                                            "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
-                                            x4, y4, x3, y3, x2, y2, x5, y5);
+                                    eps_arrowHead(xpos, ypos, theta + M_PI, EPS_ARROW_HEADSIZE * lw, epsbuff, sizeof(epsbuff), NULL);
                                     ThreeDimBuffer_writeps(x, depth, 1, lw, 0.0, 1.0, last_colstr, epsbuff);
                                 }
 
@@ -2163,28 +2124,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 if (((style == SW_STYLE_ARROWS_TWOHEAD) || (style == SW_STYLE_ARROWS_HEAD)) &&
                                     (xap2 >= 0.0) && (xap2 <= 1.0) && (yap2 >= 0.0) && (yap2 <= 1.0) &&
                                     ((!ThreeDim) || ((zap2 >= 0.0) && (zap2 <= 1.0)))) {
-                                    double x2 = xpos2, y2 = ypos2, x3, y3, x4, y4, x5, y5, theta_y = theta;
-                                    x3 = x2 -
-                                            EPS_ARROW_HEADSIZE * lw *
-                                                    sin(theta_y -
-                                                        EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on one side
-                                    y3 = y2 - EPS_ARROW_HEADSIZE * lw * cos(theta_y - EPS_ARROW_ANGLE / 2);
-                                    x5 = x2 -
-                                            EPS_ARROW_HEADSIZE * lw *
-                                                    sin(theta_y +
-                                                        EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on other side
-                                    y5 = y2 - EPS_ARROW_HEADSIZE * lw * cos(theta_y + EPS_ARROW_ANGLE / 2);
-                                    x4 = x2 -
-                                            EPS_ARROW_HEADSIZE * lw * sin(theta_y) * (1.0 - EPS_ARROW_CONSTRICT) *
-                                                    cos(EPS_ARROW_ANGLE /
-                                                        2); // Point where back of arrowhead crosses stalk
-                                    y4 = y2 -
-                                            EPS_ARROW_HEADSIZE * lw * cos(theta_y) * (1.0 - EPS_ARROW_CONSTRICT) *
-                                                    cos(EPS_ARROW_ANGLE / 2);
-                                    ppl_snprintfTrunc(
-                                            epsbuff, sizeof(epsbuff),
-                                            "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n%.2f %.2f lineto\nclosepath\nfill\n",
-                                            x4, y4, x3, y3, x2, y2, x5, y5);
+                                    eps_arrowHead(xpos2, ypos2, theta, EPS_ARROW_HEADSIZE * lw, epsbuff, sizeof(epsbuff), NULL);
                                     ThreeDimBuffer_writeps(x, depth2, 1, lw, 0.0, 1.0, last_colstr, epsbuff);
                                 }
                             }

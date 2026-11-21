@@ -46,6 +46,7 @@
 #include "userspace/unitsDisp.h"
 
 #include "pplConstants.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 
 //! ppl_opAdd - Evaluate the + operator, which adds numbers, vectors and matrices, concatenates strings and lists,
@@ -77,9 +78,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         tmp = (char *) malloc(l);
         // Failure to allocate memory is reported as an error
         if (tmp == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         strcpy(tmp, (char *) a->auxil);
@@ -116,10 +115,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
             // The number added to a date must have units of time
             if (num->exponent[i] != (i == UNIT_TIME)) {
-                *status = 1;
-                *errType = ERR_UNIT;
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
+                ppl_funcError(status, errType, errText, ERR_UNIT,
                         "Can only add quantities with units of time to dates. Attempt to add a quantity with units of <%s>.",
                         ppl_printUnit(context, num, NULL, NULL, 1, 1, 0));
                 return;
@@ -166,9 +162,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         // The output is a new vector
         if (pplObjVector(o, 0, 1, v1->size) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         vo = ((pplVector *) (o->auxil))->v;
@@ -182,9 +176,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         list *l;
         // Adding lists concatenates them into a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         l = (list *) o->auxil;
@@ -210,9 +202,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         list *l;
         // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         l = (list *) o->auxil;
@@ -239,9 +229,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         list *l;
         // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         l = (list *) o->auxil;
@@ -268,9 +256,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         char *key;
         // Adding dictionaries or modules merges them; items of the second override those of the first
         if (((t1 == PPLOBJ_DICT) ? pplObjDict(o, 0, 1, NULL) : pplObjModule(o, 0, 1, 0)) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         d = (dict *) o->auxil;
@@ -327,9 +313,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         // The output is a new matrix
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         mo = ((pplMatrix *) (o->auxil))->m;
@@ -397,10 +381,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
             // The number subtracted from a date must have units of time
             if (b->exponent[i] != (i == UNIT_TIME)) {
-                *status = 1;
-                *errType = ERR_UNIT;
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
+                ppl_funcError(status, errType, errText, ERR_UNIT,
                         "Can only subtract quantities with units of time from dates. Attempt to subtract a quantity with units of <%s>.",
                         ppl_printUnit(context, b, NULL, NULL, 1, 1, 0));
                 return;
@@ -470,9 +451,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         // The output is a new vector
         if (pplObjVector(o, 0, 1, v1->size) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         vo = ((pplVector *) (o->auxil))->v;
@@ -519,9 +498,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         // The output is a new matrix
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         mo = ((pplMatrix *) (o->auxil))->m;
@@ -648,9 +625,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         vec->flagComplex = 0;
         // The output is a new vector, each element multiplied by the number
         if (pplObjVector(o, 0, 1, v->size) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         ppl_uaMul(context, a, b, o, status, errType, errText);
@@ -678,9 +653,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         mat->flagComplex = 0;
         // The output is a new matrix, each element multiplied by the number
         if (pplObjMatrix(o, 0, 1, m->size1, m->size2) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         ppl_uaMul(context, a, b, o, status, errType, errText);
@@ -706,9 +679,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         // The output is a vector with one element per row of the matrix
         if (pplObjVector(o, 0, 1, m->size1) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         a->real = b->real = 1;
@@ -718,9 +689,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         vo = ((pplVector *) (o->auxil))->v;
         // Compute the product with BLAS
         if ((gslerr = gsl_blas_dgemv(CblasNoTrans, 1, m, v, 0, vo)) != 0) {
-            *status = 1;
-            *errType = ERR_NUMERICAL;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", gsl_strerror(gslerr));
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL, "%s", gsl_strerror(gslerr));
             return;
         }
     } else if ((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_MAT)) // matrix-matrix multiplication
@@ -741,9 +710,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         // The output is a new matrix
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         a->real = b->real = 1;
@@ -753,9 +720,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         mo = ((pplMatrix *) (o->auxil))->m;
         // Compute the product with BLAS
         if ((gslerr = gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1, m1, m2, 0, mo)) != 0) {
-            *status = 1;
-            *errType = ERR_NUMERICAL;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", gsl_strerror(gslerr));
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL, "%s", gsl_strerror(gslerr));
             return;
         }
     } else // multiplying numbers
@@ -847,9 +812,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         a->flagComplex = 0;
         // The output is a new vector, each element divided by the number
         if (pplObjVector(o, 0, 1, v->size) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         ppl_uaDiv(context, a, b, o, status, errType, errText);
@@ -874,9 +837,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         a->flagComplex = 0;
         // The output is a new matrix, each element divided by the number
         if (pplObjMatrix(o, 0, 1, m->size1, m->size2) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         ppl_uaDiv(context, a, b, o, status, errType, errText);

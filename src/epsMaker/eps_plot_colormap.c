@@ -82,6 +82,125 @@ static void clipComponents(double comp[4]) {
 }
 
 
+//! eps_plot_colormap_findCRange - Find the range of one of the variables c1...c4 to be represented by a color scale,
+//! from the user's settings where set, or else from the extremal values of the gridded data
+//! \param [in] sg - The graph settings
+//! \param [in] c - The number of the variable (0 for c1, up to 3 for c4); its values are in data column c+2
+//! \param [in] blk - The block of gridded data
+//! \param [in] Ncol - The number of real columns in the gridded data
+//! \param [in] XSize - The horizontal size of the grid
+//! \param [in] YSize - The vertical size of the grid
+//! \param [out] CMin - The lower limit of the variable
+//! \param [out] CMax - The upper limit of the variable
+//! \param [out] CLog - Flag indicating whether the variable is on a logarithmic scale
+//! \return One if a range was found, or zero if no data were present to set an automatic limit
+
+int eps_plot_colormap_findCRange(const pplset_graph *sg, const int c, const dataBlock *blk, const int Ncol,
+                                 const int XSize, const int YSize, double *CMin, double *CMax, unsigned char *CLog) {
+    const unsigned char CMinAuto = (sg->Cminauto[c] == SW_BOOL_TRUE);
+    const unsigned char CMaxAuto = (sg->Cmaxauto[c] == SW_BOOL_TRUE);
+    unsigned char CMinSet = !CMinAuto, CMaxSet = !CMaxAuto;
+    *CMin = sg->Cmin[c].real;
+    *CMax = sg->Cmax[c].real;
+    *CLog = (sg->Clog[c] == SW_BOOL_TRUE);
+
+    // Find extremal values
+    if (CMinAuto || CMaxAuto)
+        for (int j = 0; j < YSize; j++)
+            // Find the smallest and largest finite values, which must be positive on logarithmic scales
+            for (int i = 0; i < XSize; i++) {
+                const double val = blk->data_real[c + 2 + Ncol * (i + XSize * j)];
+                if ((!gsl_finite(val)) || (*CLog && (val <= 0.0))) continue;
+                // A new minimum
+                if (CMinAuto && ((!CMinSet) || (*CMin > val))) {
+                    *CMin = val;
+                    CMinSet = 1;
+                }
+                // A new maximum
+                if (CMaxAuto && ((!CMaxSet) || (*CMax < val))) {
+                    *CMax = val;
+                    CMaxSet = 1;
+                }
+            }
+
+    // If log spacing, make sure range is strictly positive
+    if (*CLog && (*CMin < 1e-200)) *CMin = 1e-200;
+    if (*CLog && (*CMax < 1e-200)) *CMax = 1e-200;
+    return CMinSet && CMaxSet;
+}
+
+//! eps_plot_colormap_orientation - Work out the position and orientation on the page of the grid onto which a
+//! colormap or contourmap is resampled. On 3D graphs, this is the back face of the cuboid.
+//! \param [in] sg - The graph settings
+//! \param [in] ThreeDim - Flag indicating whether the graph is three-dimensional
+//! \param [in] xn - The axis direction (0=x, 1=y, 2=z) onto which the first data column is plotted
+//! \param [in] yn - The axis direction (0=x, 1=y, 2=z) onto which the second data column is plotted
+//! \param [in] zn - The axis direction (0=x, 1=y, 2=z) onto which the third data column is plotted
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \param [out] xo - The x coordinate of the origin of the grid, in postscript points
+//! \param [out] yo - The y coordinate of the origin of the grid, in postscript points
+//! \param [out] Lx - The length of the grid's horizontal edge, in postscript points
+//! \param [out] Ly - The length of the grid's vertical edge, in postscript points
+//! \param [out] ThetaX - The direction of the grid's horizontal edge, in radians clockwise from vertical
+//! \param [out] ThetaY - The direction of the grid's vertical edge, in radians clockwise from vertical
+
+void eps_plot_colormap_orientation(pplset_graph *sg, const unsigned char ThreeDim, const int xn, const int yn,
+                                   const int zn, const double origin_x, const double origin_y, const double width,
+                                   const double height, const double zdepth, double *xo, double *yo, double *Lx,
+                                   double *Ly, double *ThetaX, double *ThetaY) {
+    if (!ThreeDim) {
+        *xo = origin_x;
+        *yo = origin_y;
+        *Lx = width;
+        *Ly = height;
+        *ThetaX = M_PI / 2;
+        *ThetaY = 0.0;
+        // If the data are plotted against the y axis horizontally, swap the directions of the grid
+        if (xn != 0) {
+            const double t1 = *Lx, t2 = *ThetaX;
+            *Lx = *Ly;
+            *ThetaX = *ThetaY;
+            *Ly = t1;
+            *ThetaY = t2;
+        }
+        return;
+    }
+
+    // In 3D, find which of zap=0 or zap=1 represents the back of the cuboid
+    double ap[3] = {0.5, 0.5, 0.0}, xtmp, ytmp, z0tmp, z1tmp;
+    eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, width, height, zdepth, &xtmp, &ytmp,
+                             &z0tmp);
+    ap[2] = 1.0;
+    eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, width, height, zdepth, &xtmp, &ytmp,
+                             &z1tmp);
+    ap[2] = (z1tmp > z0tmp) ? 1.0 : 0.0;
+
+    // The origin of the grid is the corner of the back face where both axes are at their minimum
+    ap[0] = ap[1] = 0.0;
+    eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, width, height, zdepth, xo, yo, &z0tmp);
+
+    // The direction and length of the grid's horizontal edge
+    ap[0] = 1.0;
+    eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, width, height, zdepth, &xtmp, &ytmp,
+                             &z0tmp);
+    *Lx = hypot(xtmp - *xo, ytmp - *yo);
+    *ThetaX = atan2(xtmp - *xo, ytmp - *yo);
+    if (!gsl_finite(*ThetaX)) *ThetaX = 0.0;
+
+    // The direction and length of the grid's vertical edge
+    ap[0] = 0.0;
+    ap[1] = 1.0;
+    eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, width, height, zdepth, &xtmp, &ytmp,
+                             &z0tmp);
+    *Ly = hypot(xtmp - *xo, ytmp - *yo);
+    *ThetaY = atan2(xtmp - *xo, ytmp - *yo);
+    if (!gsl_finite(*ThetaY)) *ThetaY = 0.0;
+}
+
 //! eps_plot_colormap_YieldText - Collect the text items which label the color scale of a colormap, so that they can be
 //! typeset
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -94,11 +213,11 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     dataBlock *blk;
     const int XSize = pd->GridXSize;
     const int YSize = pd->GridYSize;
-    int i, j, k, l, Ncol;
+    int k, l, Ncol;
     double CMin, CMax, PhysicalLength, PhysicalLengthMajor, PhysicalLengthMinor;
     double origin_x, origin_y, width, height, zdepth;
     double xmin, xmax, ymin, ymax;
-    unsigned char CMinAuto, CMinSet, CMaxAuto, CMaxSet, CLog, horizontal;
+    unsigned char CLog, horizontal;
 
     // Check that we have some data
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
@@ -115,39 +234,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     else zdepth = width * x->current->settings.zaspect;
 
     // Work out normalisation of variable c1
-    CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
-    CMinSet = !CMinAuto;
-    CMin = sg->Cmin[0].real;
-    CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
-    CMaxSet = !CMaxAuto;
-    CMax = sg->Cmax[0].real;
-    CLog = (sg->Clog[0] == SW_BOOL_TRUE);
-
-    // Find extremal values
-    if (CMinAuto || CMaxAuto)
-        for (j = 0; j < YSize; j++)
-            // Find the smallest and largest finite values of c1, which must be positive on logarithmic scales
-            for (i = 0; i < XSize; i++) {
-                const double val = blk->data_real[2 + Ncol * (i + XSize * j)];
-                if (!gsl_finite(val)) continue;
-                // A new minimum
-                if ((CMinAuto) && ((!CMinSet) || (CMin > val)) && ((!CLog) || (val > 0.0))) {
-                    CMin = val;
-                    CMinSet = 1;
-                }
-                // A new maximum
-                if ((CMaxAuto) && ((!CMaxSet) || (CMax < val)) && ((!CLog) || (val > 0.0))) {
-                    CMax = val;
-                    CMaxSet = 1;
-                }
-            }
-
-    // If no data present, stop now
-    if ((!CMinSet) || (!CMaxSet)) return;
-
-    // If log spacing, make sure range is strictly positive
-    if (CLog && (CMin < 1e-200)) CMin = 1e-200;
-    if (CLog && (CMax < 1e-200)) CMax = 1e-200;
+    if (!eps_plot_colormap_findCRange(sg, 0, blk, Ncol, XSize, YSize, &CMin, &CMax, &CLog)) return; // No data present
 
     // Estimate length of color key
     if (!x->current->ThreeDim) {
@@ -539,7 +626,6 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                       const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                       const double origin_y, const double width, const double height, const double zdepth) {
     char msg[PPL_MSG_LENGTH];
-    double scale_x, scale_y, scale_z;
     dataBlock *blk;
     int XSize = pd->GridXSize;
     int YSize = pd->GridYSize;
@@ -547,7 +633,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     long p;
     double xo, yo, Lx, Ly, ThetaX, ThetaY, CMin[4], CMax[4];
     pplObj *CVar[4], *C1Var, CDummy[4];
-    unsigned char CMinAuto[4], CMinSet[4], CMaxAuto[4], CMaxSet[4], CLog[4];
+    unsigned char CMinAuto[4], CMaxAuto[4], CLog[4];
     char *errtext;
     unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
     bitmap_data img;
@@ -558,16 +644,6 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     if (eps_plot_WithWordsCheckUsingItemsDimLess(x->c, &pd->ww_final, data->firstEntries, Ncol_real, Ncol_obj,
                                                  &NcolsData))
         return 1;
-    // The size of the graph
-    if (!ThreeDim) {
-        scale_x = width;
-        scale_y = height;
-        scale_z = 1.0;
-    } else {
-        scale_x = width;
-        scale_y = height;
-        scale_z = zdepth;
-    }
     blk = data->first;
 
     // A buffer for error messages
@@ -578,54 +654,9 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         return 1;
     }
 
-    // Work out orientation of colormap
-    if (!ThreeDim) {
-        xo = origin_x;
-        yo = origin_y;
-        Lx = scale_x;
-        Ly = scale_y;
-        ThetaX = M_PI / 2;
-        ThetaY = 0.0;
-        // If the data are plotted against the y axis horizontally, swap the directions of the image
-        if (xn != 0) {
-            double t1 = Lx, t2 = ThetaX;
-            Lx = Ly;
-            ThetaX = ThetaY;
-            Ly = t1;
-            ThetaY = t2;
-        }
-    } else // 3D case: put color map on back face of cuboid
-    {
-        double ap[3] = {0.5, 0.5, 0.0}, xtmp, ytmp, z0tmp, z1tmp;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z0tmp);
-        ap[2] = 1.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z1tmp);
-        ap[2] = (z1tmp > z0tmp) ? 1.0 : 0.0; // Determine whether zap=0 or zap=1 represents back of cuboid
-
-        // The origin of the image is the corner of the back face where both axes are at their minimum
-        ap[0] = ap[1] = 0.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xo, &yo,
-                                 &z0tmp);
-
-        // The direction and length of the image's horizontal edge
-        ap[0] = 1.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z0tmp);
-        Lx = hypot(xtmp - xo, ytmp - yo);
-        ThetaX = atan2(xtmp - xo, ytmp - yo);
-        if (!gsl_finite(ThetaX)) ThetaX = 0.0;
-
-        // The direction and length of the image's vertical edge
-        ap[0] = 0.0;
-        ap[1] = 1.0;
-        eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
-                                 &ytmp, &z0tmp);
-        Ly = hypot(xtmp - xo, ytmp - yo);
-        ThetaY = atan2(xtmp - xo, ytmp - yo);
-        if (!gsl_finite(ThetaY)) ThetaY = 0.0;
-    }
+    // Work out orientation of the grid on the page
+    eps_plot_colormap_orientation(sg, ThreeDim, xn, yn, zn, origin_x, origin_y, width, height, zdepth, &xo, &yo, &Lx,
+                                  &Ly, &ThetaX, &ThetaY);
 
     // Update bounding box
     eps_core_BoundingBox(x, xo, yo, 0);
@@ -667,51 +698,23 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 
     // Work out normalisation of variables c1...c4
     for (c = 0; ((c < 4) && (c < NcolsData - 2)); c++) {
+        const int found = eps_plot_colormap_findCRange(sg, c, blk, Ncol_real, XSize, YSize, &CMin[c], &CMax[c],
+                                                       &CLog[c]);
         CMinAuto[c] = (sg->Cminauto[c] == SW_BOOL_TRUE);
-        CMinSet[c] = !CMinAuto[c];
-        CMin[c] = sg->Cmin[c].real;
         CMaxAuto[c] = (sg->Cmaxauto[c] == SW_BOOL_TRUE);
-        CMaxSet[c] = !CMaxAuto[c];
-        CMax[c] = sg->Cmax[c].real;
-        CLog[c] = (sg->Clog[c] == SW_BOOL_TRUE);
-
-        // Find extremal values
-        if (CMinAuto[c] || CMaxAuto[c])
-            for (j = 0; j < YSize; j++)
-                // Find the smallest and largest finite values, which must be positive on logarithmic scales
-                for (i = 0; i < XSize; i++) {
-                    const double val = blk->data_real[c + 2 + Ncol_real * (i + XSize * j)];
-                    if (!gsl_finite(val)) continue;
-                    // A new minimum
-                    if ((CMinAuto[c]) && ((!CMinSet[c]) || (CMin[c] > val)) && ((!CLog[c]) || (val > 0.0))) {
-                        CMin[c] = val;
-                        CMinSet[c] = 1;
-                    }
-                    // A new maximum
-                    if ((CMaxAuto[c]) && ((!CMaxSet[c]) || (CMax[c] < val)) && ((!CLog[c]) || (val > 0.0))) {
-                        CMax[c] = val;
-                        CMaxSet[c] = 1;
-                    }
-                }
-
-        // If log spacing, make sure range is strictly positive
-        if (CLog[c] && (CMin[c] < 1e-200)) CMin[c] = 1e-200;
-        if (CLog[c] && (CMax[c] < 1e-200)) CMax[c] = 1e-200;
 
         // Reverse range of color scale if requested
         if (sg->Creverse[c] == SW_BOOL_TRUE) {
             const double td = CMin[c];
-            unsigned char tc = CMinSet[c], tc2 = CMinAuto[c];
+            const unsigned char tc = CMinAuto[c];
             CMinAuto[c] = CMaxAuto[c];
-            CMinSet[c] = CMaxSet[c];
             CMin[c] = CMax[c];
-            CMaxAuto[c] = tc2;
-            CMaxSet[c] = tc;
+            CMaxAuto[c] = tc;
             CMax[c] = td;
         }
 
         // If no data present, stop now
-        if ((!CMinSet[c]) || (!CMaxSet[c])) {
+        if (!found) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No data supplied to determine range for variable c%d", c + 1);
             ppl_log(&x->c->errcontext, msg);
             // Restore the variables c1...c4 before giving up

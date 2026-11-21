@@ -110,17 +110,9 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     }
 
     // Undo scaling of axes so that linewidths come out right
-    if (a < 1e-8) {
-        a_inv = 1e8;
-    } else {
-        a_inv = 1.0 / a;
-    }
+    a_inv = (a < 1e-8) ? 1e8 : 1.0 / a;
     // Avoid dividing by a semi-minor axis of zero
-    if (b < 1e-8) {
-        b_inv = 1e8;
-    } else {
-        b_inv = 1.0 / b;
-    }
+    b_inv = (b < 1e-8) ? 1e8 : 1.0 / b;
     fprintf(x->epsbuffer, "%f %f scale\n", a_inv, b_inv);
 
     // Now we can stroke the path of the ellipse

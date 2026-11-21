@@ -148,6 +148,119 @@ void ppl_parserAtomAdd(parserLine *in, const int stackOutPos, const int linePos,
 //! \param [in] blockDepth - The depth of nesting of code blocks
 //! \param [out] match - Set to true if the command line matched the node
 //! \return 0 if the command line did not match, 1 if it matched, 2 if a tab completion was found, or 3 if another
+static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcLineN, long srcId, char *srcFname,
+                         char *line, int *linepos, parserNode *node, int *tabCompNo, int tabCompStart, char *tabCompTxt,
+                         int level, int blockDepth, int *match);
+
+//! parse_repeat - Match the repetitions of a [ ] structure in the parser's description of a command
+//! \param [in] node - The node of the [ ] structure
+//! \param [in] first - Flag indicating whether no repetition has yet been matched
+//! \param [in] oldStackOffset - The position in the stack of the parser output before the structure
+//! Other parameters, and the return value, are as for parse_descend()
+
+static int parse_repeat(ppl_context *c, parserStatus *s, const int writeOut, const int srcLineN, const long srcId,
+                        char *srcFname, char *line, int *linepos, parserNode *node, int *tabCompNo,
+                        const int tabCompStart, char *tabCompTxt, const int level, int blockDepth, int *match, int first,
+                        const int oldStackOffset) {
+    int status = 0, separator = 1;
+    char sepStr[4];
+    parserNode sepNode;
+    sepStr[0] = node->varName[strlen(node->varName) - 1];
+    sepStr[1] = '\0';
+    if (isalnum(sepStr[0])) separator = 0;
+    sepNode.type = PN_TYPE_ITEM;
+    sepNode.listLen = 0;
+    sepNode.acLevel = -1;
+    sepNode.matchString = sepStr;
+    sepNode.outString = sepStr;
+    sepNode.varName = "X";
+    sepNode.outStackPos = PARSE_arc_X;
+    sepNode.firstChild = NULL;
+    sepNode.nextSibling = NULL;
+
+    // A [ ] structure matches its children repeatedly. Each repetition is first tried without writing output;
+    // if it matches, it is matched again writing output into a new block of stack slots, the first slot of
+    // which points to the next block.
+    while (1) {
+        const int lineposOld = *linepos;
+        const int matchOld = *match;
+        int lineposOld2;
+        parserNode *nodeIter = node->firstChild;
+
+        // Between repetitions there must be a separator, if the variable name ends in one, e.g. "," in
+        // "var_names,". If it is absent, the repetitions have ended.
+        if (separator && !first) {
+            status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, &sepNode, tabCompNo,
+                                   tabCompStart, tabCompTxt, level + 1, blockDepth, match);
+            if (status == 3) { status = 0; } // Separator shouldn't ask for more lines!
+            // No separator: the repetition has ended, successfully
+            if (status == 0) {
+                *linepos = lineposOld;
+                *match = matchOld;
+                status = 1;
+                goto repCleanup;
+            }
+            if (status == 2) goto repCleanup;
+        }
+        lineposOld2 = *linepos;
+        // Test, without writing any output, whether the line contains another repetition
+        while (nodeIter != NULL) {
+            status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, nodeIter, tabCompNo,
+                                   tabCompStart, tabCompTxt, level + 1, blockDepth, match);
+            // A trial run which reaches the end of the line has failed
+            if (status == 3) {
+                status = 0;
+                goto repCleanup;
+            } // Trial run with writeOut=0 shouldn't ask for more lines!
+            // Another repetition does not match
+            if (status == 0) {
+                // Failing to match ends the repetitions successfully if no first repetition is required (REP2),
+                // or after any repetition without a separator; after a separator, another repetition must
+                // follow
+                if (first ? (node->type == PN_TYPE_REP2) : !separator) {
+                    status = 1;
+                    *linepos = lineposOld;
+                    *match = matchOld;
+                }
+                goto repCleanup;
+            }
+            if (status == 2) goto repCleanup;
+            nodeIter = nodeIter->nextSibling;
+        }
+        // Match the repetition again, writing output
+        if ((s != NULL) && writeOut) {
+            const int oldStackLen = s->pl[blockDepth]->stackLen;
+            pplObj val;
+            val.refCount = 1;
+            pplObjNum(&val, 1, oldStackLen, 0);
+            ppl_parserAtomAdd(
+                    s->pl[blockDepth],
+                    s->pl[blockDepth]->stackOffset +
+                            ((s->pl[blockDepth]->stackOffset == oldStackOffset) ? node->outStackPos : 0),
+                    *linepos, "", NULL, &val);
+            s->pl[blockDepth]->stackLen += node->listLen;
+            s->pl[blockDepth]->stackOffset = oldStackLen;
+            nodeIter = node->firstChild;
+            *linepos = lineposOld2;
+            *match = matchOld;
+            while (nodeIter != NULL) {
+                // Add an atom to the parserLine to point to the beginning of structure
+                // This is written to either stack location (offset + stackPos) if first iteration, or (offset + 0) subsequently
+                // In any repeating structure, first stack position is pointer to next item
+                status = parse_descend(c, s, writeOut, srcLineN, srcId, srcFname, line, linepos, nodeIter,
+                                       tabCompNo, tabCompStart, tabCompTxt, level + 1, blockDepth, match);
+                if (status == 3) return status;
+                if (status != 1) goto repCleanup;
+                nodeIter = nodeIter->nextSibling;
+            }
+        }
+        first = 0;
+    }
+repCleanup:
+    if (s != NULL) s->pl[blockDepth]->stackOffset = oldStackOffset;
+    return status;
+}
+
 //! line of input is required
 
 static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, const int srcLineN, const long srcId,
@@ -168,8 +281,10 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
             if (status != 1) goto cleanup;
 
             // We came out of child node with a success return code. This means we carry on chomping along the SEQ
-            // If we've come out of an OPT, treat it as a SEQ now...
-            if ((node->type == PN_TYPE_SEQ) || (node->type == PN_TYPE_OPT)) {
+            // If we've come out of an OPT, treat it as a SEQ now. If we're in the middle of a REP, treat the rest of
+            // the current repetition as a SEQ.
+            if ((node->type == PN_TYPE_SEQ) || (node->type == PN_TYPE_OPT) || (node->type == PN_TYPE_REP) ||
+                (node->type == PN_TYPE_REP2)) {
                 while ((nodeIter != nodeNext) && (nodeIter != NULL))
                     nodeIter = nodeIter->nextSibling; // Work out where we were...
                 if (nodeIter == nodeNext) nodeIter = nodeIter->nextSibling;
@@ -180,114 +295,11 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                     if (status != 1) goto cleanup;
                     nodeIter = nodeIter->nextSibling;
                 }
-            } else if ((node->type == PN_TYPE_REP) || (node->type == PN_TYPE_REP2)) {
-                int separator = 1;
-                char sepStr[4];
-                parserNode sepNode;
-                const int oldStackOffset = s->oldStackOffset[blockDepth][level];
-                sepStr[0] = node->varName[strlen(node->varName) - 1];
-                sepStr[1] = '\0';
-                if (isalnum(sepStr[0])) separator = 0;
-                sepNode.type = PN_TYPE_ITEM;
-                sepNode.listLen = 0;
-                sepNode.acLevel = -1;
-                sepNode.matchString = sepStr;
-                sepNode.outString = sepStr;
-                sepNode.varName = "X";
-                sepNode.outStackPos = PARSE_arc_X;
-                sepNode.firstChild = NULL;
-                sepNode.nextSibling = NULL;
-
-                // Treat the run through the REP that we're in the middle of as a SEQ
-                while ((nodeIter != nodeNext) && (nodeIter != NULL))
-                    nodeIter = nodeIter->nextSibling; // Work out where we were...
-                if (nodeIter == nodeNext) nodeIter = nodeIter->nextSibling;
-                // Match each of the remaining nodes in the current repetition
-                while (nodeIter != NULL) {
-                    status = parse_descend(c, s, writeOut, srcLineN, srcId, srcFname, line, linepos, nodeIter,
-                                           tabCompNo, tabCompStart, tabCompTxt, level + 1, blockDepth, match);
-                    if (status != 1) goto cleanup;
-                    nodeIter = nodeIter->nextSibling;
-                }
-
-                // See whether REP repeats again
-                while (1) {
-                    const int lineposOld = *linepos;
-                    const int matchOld = *match;
-                    int lineposOld2;
-                    parserNode *nodeIter = node->firstChild;
-
-                    // Repeated items may be separated by a character, which is the last character of the variable name,
-                    // e.g. "," in "var_names,". If the separator is not present, the repetitions have ended.
-                    if (separator) {
-                        status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, &sepNode, tabCompNo,
-                                               tabCompStart, tabCompTxt, level + 1, blockDepth, match);
-                        if (status == 3) { status = 0; } // Separator shouldn't ask for more lines!
-                        // No separator: the repetition has ended, successfully
-                        if (status == 0) {
-                            *linepos = lineposOld;
-                            *match = matchOld;
-                            status = 1;
-                            goto repLoopCleanup;
-                        }
-                        if (status == 2) goto repLoopCleanup;
-                    }
-                    lineposOld2 = *linepos;
-                    // Test, without writing any output, whether the line contains another repetition
-                    while (nodeIter != NULL) {
-                        status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, nodeIter, tabCompNo,
-                                               tabCompStart, tabCompTxt, level + 1, blockDepth, match);
-                        // A trial run which reaches the end of the line has failed
-                        if (status == 3) {
-                            status = 0;
-                            goto repLoopCleanup;
-                        } // Trial run with writeOut=0 shouldn't ask for more lines!
-                        // Another repetition does not match
-                        if (status == 0) {
-                            // Without a separator, a failure to match means that the repetitions have ended,
-                            // successfully. After a separator, another repetition must follow.
-                            if (!separator) {
-                                status = 1;
-                                *linepos = lineposOld;
-                                *match = matchOld;
-                            }
-                            goto repLoopCleanup;
-                        }
-                        if (status == 2) goto repLoopCleanup;
-                        nodeIter = nodeIter->nextSibling;
-                    }
-                    // The trial matched: match the repetition again, this time writing output. Each repetition is
-                    // stored in a new block of stack slots, the first slot of which points to the next block.
-                    if ((s != NULL) && writeOut) {
-                        const int oldStackLen = s->pl[blockDepth]->stackLen;
-                        pplObj val;
-                        val.refCount = 1;
-                        pplObjNum(&val, 1, oldStackLen, 0);
-                        ppl_parserAtomAdd(
-                                s->pl[blockDepth],
-                                s->pl[blockDepth]->stackOffset +
-                                        ((s->pl[blockDepth]->stackOffset == oldStackOffset) ? node->outStackPos : 0),
-                                *linepos, "", NULL, &val);
-                        s->pl[blockDepth]->stackLen += node->listLen;
-                        s->pl[blockDepth]->stackOffset = oldStackLen;
-                        nodeIter = node->firstChild;
-                        *linepos = lineposOld2;
-                        *match = matchOld;
-                        while (nodeIter != NULL) {
-                            // Add an atom to the parserLine to point to the beginning of structure
-                            // This is written to either stack location (offset + stackPos) if first iteration, or (offset + 0) subsequently
-                            // In any repeating structure, first stack position is pointer to next item
-                            status = parse_descend(c, s, writeOut, srcLineN, srcId, srcFname, line, linepos, nodeIter,
-                                                   tabCompNo, tabCompStart, tabCompTxt, level + 1, blockDepth, match);
-                            if (status == 3) goto cleanup;
-                            if (status != 1) goto repLoopCleanup;
-                            nodeIter = nodeIter->nextSibling;
-                        }
-                    }
-                }
-            repLoopCleanup:
-                s->pl[blockDepth]->stackOffset = oldStackOffset;
-                goto cleanup;
+                // See whether a REP repeats again
+                if ((node->type == PN_TYPE_REP) || (node->type == PN_TYPE_REP2))
+                    status = parse_repeat(c, s, writeOut, srcLineN, srcId, srcFname, line, linepos, node, tabCompNo,
+                                          tabCompStart, tabCompTxt, level, blockDepth, match, 0,
+                                          s->oldStackOffset[blockDepth][level]);
             } else {
                 status = 0;
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -1021,104 +1033,10 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
         }
         case PN_TYPE_REP:
         case PN_TYPE_REP2: {
-            int first = 1, separator = 1;
-            char sepStr[4];
-            parserNode sepNode;
             const int oldStackOffset = (s == NULL) ? 0 : s->pl[blockDepth]->stackOffset;
             if (s != NULL) s->oldStackOffset[blockDepth][level] = oldStackOffset;
-            sepStr[0] = node->varName[strlen(node->varName) - 1];
-            sepStr[1] = '\0';
-            if (isalnum(sepStr[0])) separator = 0;
-            sepNode.type = PN_TYPE_ITEM;
-            sepNode.listLen = 0;
-            sepNode.acLevel = -1;
-            sepNode.matchString = sepStr;
-            sepNode.outString = sepStr;
-            sepNode.varName = "X";
-            sepNode.outStackPos = PARSE_arc_X;
-            sepNode.firstChild = NULL;
-            sepNode.nextSibling = NULL;
-
-            // A [ ] structure matches its children repeatedly. Each repetition is first tried without writing output;
-            // if it matches, it is matched again writing output into a new block of stack slots, the first slot of
-            // which points to the next block.
-            while (1) {
-                const int lineposOld = *linepos;
-                const int matchOld = *match;
-                int lineposOld2;
-                parserNode *nodeIter = node->firstChild;
-
-                // Between repetitions there must be a separator, if the variable name ends in one, e.g. "," in
-                // "var_names,". If it is absent, the repetitions have ended.
-                if (separator && !first) {
-                    status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, &sepNode, tabCompNo,
-                                           tabCompStart, tabCompTxt, level + 1, blockDepth, match);
-                    if (status == 3) { status = 0; } // Separator shouldn't ask for more lines!
-                    // No separator: the repetition has ended, successfully
-                    if (status == 0) {
-                        *linepos = lineposOld;
-                        *match = matchOld;
-                        status = 1;
-                        goto repCleanup;
-                    }
-                    if (status == 2) goto repCleanup;
-                }
-                lineposOld2 = *linepos;
-                // Test, without writing any output, whether the line contains another repetition
-                while (nodeIter != NULL) {
-                    status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, nodeIter, tabCompNo,
-                                           tabCompStart, tabCompTxt, level + 1, blockDepth, match);
-                    // A trial run which reaches the end of the line has failed
-                    if (status == 3) {
-                        status = 0;
-                        goto repCleanup;
-                    } // Trial run with writeOut=0 shouldn't ask for more lines!
-                    // Another repetition does not match
-                    if (status == 0) {
-                        // Failing to match ends the repetitions successfully if no first repetition is required (REP2),
-                        // or after any repetition without a separator; after a separator, another repetition must
-                        // follow
-                        if (first ? (node->type == PN_TYPE_REP2) : !separator) {
-                            status = 1;
-                            *linepos = lineposOld;
-                            *match = matchOld;
-                        }
-                        goto repCleanup;
-                    }
-                    if (status == 2) goto repCleanup;
-                    nodeIter = nodeIter->nextSibling;
-                }
-                // Match the repetition again, writing output
-                if ((s != NULL) && writeOut) {
-                    const int oldStackLen = s->pl[blockDepth]->stackLen;
-                    pplObj val;
-                    val.refCount = 1;
-                    pplObjNum(&val, 1, oldStackLen, 0);
-                    ppl_parserAtomAdd(
-                            s->pl[blockDepth],
-                            s->pl[blockDepth]->stackOffset +
-                                    ((s->pl[blockDepth]->stackOffset == oldStackOffset) ? node->outStackPos : 0),
-                            *linepos, "", NULL, &val);
-                    s->pl[blockDepth]->stackLen += node->listLen;
-                    s->pl[blockDepth]->stackOffset = oldStackLen;
-                    nodeIter = node->firstChild;
-                    *linepos = lineposOld2;
-                    *match = matchOld;
-                    while (nodeIter != NULL) {
-                        // Add an atom to the parserLine to point to the beginning of structure
-                        // This is written to either stack location (offset + stackPos) if first iteration, or (offset + 0) subsequently
-                        // In any repeating structure, first stack position is pointer to next item
-                        status = parse_descend(c, s, writeOut, srcLineN, srcId, srcFname, line, linepos, nodeIter,
-                                               tabCompNo, tabCompStart, tabCompTxt, level + 1, blockDepth, match);
-                        if (status == 3) goto cleanup;
-                        if (status != 1) goto repCleanup;
-                        nodeIter = nodeIter->nextSibling;
-                    }
-                }
-                first = 0;
-            }
-        repCleanup:
-            if (s != NULL) s->pl[blockDepth]->stackOffset = oldStackOffset;
+            status = parse_repeat(c, s, writeOut, srcLineN, srcId, srcFname, line, linepos, node, tabCompNo,
+                                  tabCompStart, tabCompTxt, level, blockDepth, match, 1, oldStackOffset);
             goto cleanup;
         }
         case PN_TYPE_OPT: {

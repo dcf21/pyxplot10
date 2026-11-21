@@ -129,11 +129,9 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
     if (ppl_funcCheckInt(&call, &in[5], "sec", "function's sixth input (seconds) must be an integer")) return;
     // The optional timezone must be a string
     if ((nArgs > 6) && (in[6].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a string as its seventh argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[6].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a string as its seventh argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[6].objType]);
         return;
     }
     if (nArgs > 6) ppl_calendarTimezoneSet(c, 1, (char *) in[6].auxil);
@@ -162,20 +160,16 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *stat
     char *FunctionDescription = "interval(t2,t1)";
     // Both arguments must be dates
     if (in[0].objType != PPLOBJ_DATE) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a date as its first argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a date as its first argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     // The second argument must be a date
     if (in[1].objType != PPLOBJ_DATE) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a date as its second argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a date as its second argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     pplObjNum(&OUTPUT, 0, in[0].real - in[1].real, 0);
@@ -199,29 +193,23 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     char *format = NULL, *out = NULL;
     // The first argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a date as its first argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a date as its first argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     // The second argument must be a date
     if (in[1].objType != PPLOBJ_DATE) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a date as its second argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[1].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a date as its second argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
     // The optional format must be a string
     if ((nArgs > 2) && (in[2].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a string as its third argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[2].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a string as its third argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[2].objType]);
         return;
     }
 
@@ -229,9 +217,7 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     out = (char *) malloc(8192);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
 
@@ -315,29 +301,23 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
     double offset;
     // The first argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a date as its first argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a date as its first argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     // The optional format must be a string
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a string as its second argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[1].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a string as its second argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
     // The optional timezone must be a string
     if ((nArgs > 2) && (in[2].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a string as its third argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[2].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a string as its third argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[2].objType]);
         return;
     }
 
@@ -345,9 +325,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
     out = (char *) malloc(8192);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
 
@@ -407,11 +385,9 @@ void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
     // The argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a date as its argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a date as its argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     // Sleep until the date, if it is in the future, restarting the sleep if it is interrupted by a signal

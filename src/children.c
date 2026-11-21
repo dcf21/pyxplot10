@@ -91,8 +91,7 @@ void pplcsp_init(ppl_context *context) {
     // Failure to allocate memory is fatal
     if ((GhostViews == NULL) || (GhostView_Persists == NULL) || (HelperPIDs == NULL))
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Out of memory.");
-    for (i = 0; i < PTABLE_LISTLEN; i++) GhostViews[i] = 0;
-    for (i = 0; i < PTABLE_LISTLEN; i++) GhostView_Persists[i] = 0;
+    for (i = 0; i < PTABLE_LISTLEN; i++) GhostViews[i] = GhostView_Persists[i] = 0;
     for (i = 0; i < PTABLE_LISTLEN; i++) HelperPIDs[i] = 0;
 
     // The string "signal 15" we filter out of GhostView's output

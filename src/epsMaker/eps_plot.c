@@ -42,6 +42,7 @@
 #include "coreUtils/memAlloc.h"
 #include "expressions/expCompile_fns.h"
 #include "expressions/traceback_fns.h"
+#include "settings/axes_fns.h"
 #include "settings/colors.h"
 #include "settings/settings.h"
 #include "settings/settingTypes.h"
@@ -984,20 +985,20 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                     // boxes and histeps plot styles have their own special rasters
                     int k;
                     double left, right, left2 = GSL_NAN, right2 = GSL_NAN, width;
-                    left = eps_plot_axis_InvGetPosition(0.0, *_OrdinateAxis);
-                    right = eps_plot_axis_InvGetPosition(1.0, *_OrdinateAxis);
+                    left = pplaxis_InvGetPosition(0.0, *_OrdinateAxis);
+                    right = pplaxis_InvGetPosition(1.0, *_OrdinateAxis);
                     if (x->current->settings.BoxWidth.real > 0) width = x->current->settings.BoxWidth.real;
                     else width = fabs(left - right) / (x->current->settings.samples);
                     left += width / 2 * ((right > left) ? 1.0 : -1.0);
                     right += width / 2 * ((left > right) ? 1.0 : -1.0);
                     // Find the position of the left end of the raster on the axis
                     for (k = 0; k <= (*_OrdinateAxis)->AxisValueTurnings; k++) {
-                        left2 = eps_plot_axis_GetPosition(left, *_OrdinateAxis, k, 0);
+                        left2 = pplaxis_GetPosition(left, *_OrdinateAxis, k, 0);
                         if (gsl_finite(left2)) break;
                     }
                     // Find the position of the right end of the raster on the axis
                     for (k = (*_OrdinateAxis)->AxisValueTurnings; k >= 0; k--) {
-                        right2 = eps_plot_axis_GetPosition(right, *_OrdinateAxis, k, 0);
+                        right2 = pplaxis_GetPosition(right, *_OrdinateAxis, k, 0);
                         if (gsl_finite(right2)) break;
                     }
                     if ((!gsl_finite(left2)) || (!gsl_finite(right2)) || (right2 <= left2) || (left2 < 0) ||
@@ -1013,7 +1014,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                         return;
                     }
                     for (j = 0; j < x->current->settings.samples; j++)
-                        (*_OrdinateRaster)[j] = eps_plot_axis_InvGetPosition(
+                        (*_OrdinateRaster)[j] = pplaxis_InvGetPosition(
                                 left2 + (right2 - left2) * ((double) j) / (x->current->settings.samples - 1),
                                 *_OrdinateAxis);
                     *_OrdinateRasterLen = x->current->settings.samples;
@@ -1037,7 +1038,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                         }
                         for (j = 0; j < Nsamp; j++)
                             (*_OrdinateRaster)[j] =
-                                    eps_plot_axis_InvGetPosition(((double) j) / (Nsamp - 1), *_OrdinateAxis);
+                                    pplaxis_InvGetPosition(((double) j) / (Nsamp - 1), *_OrdinateAxis);
                         *_OrdinateRasterLen = Nsamp;
                         if (!SampleGrid) {
                             (*_OrdinateAxis)->OrdinateRaster = *_OrdinateRaster;

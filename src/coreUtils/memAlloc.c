@@ -79,8 +79,7 @@ void fastmalloc_init() {
     _fastmalloc_currentblock_alloc_ptr = (long *) malloc(PPL_MAX_CONTEXTS * sizeof(long));
 
     // Every context starts with no blocks
-    for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_firstblocklist[i] = NULL;
-    for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_currentblocklist[i] = NULL;
+    for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_firstblocklist[i] = _fastmalloc_currentblocklist[i] = NULL;
     for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_currentblock_alloc_ptr[i] = 0;
 
     // Reset the statistics

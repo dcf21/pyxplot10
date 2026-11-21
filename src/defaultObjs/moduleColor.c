@@ -227,6 +227,37 @@ static int constrain_rgb(double *r, double *g, double *b) {
 //! \param [in] nArgs - The number of arguments passed to the function
 //! \param [out] status - Set to one if an error occurred
 //! \param [out] errType - Set to the type of error, one of the ERR_* constants, if an error occurred
+//! xyzToColor - Convert a color from XYZ coordinates into an RGB color object, after fudging the brightness of the
+//! spectrum, bringing the color within the gamut which can be displayed, and scaling it by a normalisation
+//! \param [in] x - The X coordinate of the color
+//! \param [in] y - The Y coordinate of the color
+//! \param [in] z - The Z coordinate of the color
+//! \param [in] norm - The normalisation by which to scale the brightness of the color
+//! \param [out] out - The color object
+
+static void xyzToColor(double x, double y, double z, const double norm, pplObj *out) {
+    double r, g, b;
+    // Fudge to brightness of spectrum
+    double xyz = gsl_hypot3(x, y, z);
+    if (xyz > 1) xyz = 1;
+    if (xyz < 0) xyz = 0;
+    const double gamma = pow(xyz, GAMMA_FUDGE) / xyz;
+    x *= gamma;
+    y *= gamma;
+    z *= gamma;
+
+    // Convert to RGB, bring the color within the gamut which can be displayed, and scale it by the normalisation
+    xyz_to_rgb(&SMPTEsystem, x, y, z, &r, &g, &b);
+    if (!inside_gamut(r, g, b)) constrain_rgb(&r, &g, &b);
+    double *const rgb[3] = {&r, &g, &b};
+    for (int i = 0; i < 3; i++) {
+        *rgb[i] *= fabs(norm);
+        if (*rgb[i] < 0) *rgb[i] = 0;
+        if (*rgb[i] > 1) *rgb[i] = 1;
+    }
+    pplObjColor(out, 0, SW_COLSPACE_RGB, r, g, b, 0);
+}
+
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
@@ -234,17 +265,14 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     // entries either side of it, with weights wi and wj
     char *FunctionDescription = "wavelength(lambda,norm)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    double p0, wi, wj, x, y, z, r, g, b, norm;
+    double p0, wi, wj, x, y, z, norm;
     int i, j;
 
     // The wavelength must have units of length, and the normalisation must be dimensionless
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a wavelength", UNIT_LENGTH, 1)) return;
     // Report a normalisation with units
     if (!in[1].dimensionless) {
-        *status = 1;
-        *errType = ERR_UNIT;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_UNIT,
                 "The %s function requires a dimensionless renormalisation constant as its second argument. Supplied value has dimensions of <%s>.",
                 FunctionDescription, ppl_printUnit(c, &in[1], NULL, NULL, 0, 1, 0));
         return;
@@ -273,32 +301,7 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     y = cie_color_match[i][1] * wi + cie_color_match[j][1] * wj;
     z = cie_color_match[i][2] * wi + cie_color_match[j][2] * wj;
 
-    // Fudge to brightness of spectrum
-    {
-        double xyz = gsl_hypot3(x, y, z);
-        if (xyz > 1) xyz = 1;
-        if (xyz < 0) xyz = 0;
-        const double XYZ = pow(xyz, GAMMA_FUDGE);
-        const double gamma = XYZ / xyz;
-        x *= gamma;
-        y *= gamma;
-        z *= gamma;
-    }
-
-    // Convert to RGB, bring the color within the gamut which can be displayed, and scale it by the normalisation
-    xyz_to_rgb(&SMPTEsystem, x, y, z, &r, &g, &b);
-    if (!inside_gamut(r, g, b)) constrain_rgb(&r, &g, &b);
-    r *= fabs(norm);
-    if (r < 0) r = 0;
-    if (r > 1) r = 1;
-    g *= fabs(norm);
-    if (g < 0) g = 0;
-    if (g > 1) g = 1;
-    b *= fabs(norm);
-    if (b < 0) b = 0;
-    if (b > 1) b = 1;
-    pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, r, g, b, 0);
-    return;
+    xyzToColor(x, y, z, norm, &OUTPUT);
 }
 
 
@@ -318,15 +321,12 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     char *FunctionDescription = "spectrum(spec,norm)";
     pplFunc *fi;
     const int stkLevelOld = c->stackPtr;
-    double x = 0, y = 0, z = 0, r, g, b, norm;
+    double x = 0, y = 0, z = 0, norm;
     int i;
 
     // The first argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s function requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -334,20 +334,14 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s function requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
     }
     // The normalisation must be dimensionless
     if (!in[1].dimensionless) {
-        *status = 1;
-        *errType = ERR_UNIT;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_UNIT,
                 "The %s function requires a dimensionless renormalisation constant as its second argument. Supplied value has dimensions of <%s>.",
                 FunctionDescription, ppl_printUnit(c, &in[1], NULL, NULL, 0, 1, 0));
         return;
@@ -361,9 +355,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "stack overflow in the colors.spectrum function.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "stack overflow in the colors.spectrum function.");
         return;
     }
 
@@ -395,19 +387,15 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
         // Propagate error if function failed
         if (c->errStat.status) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside spectrum function supplied to the %s function: %s",
-                              FunctionDescription, c->errStat.errMsgExpr);
+            ppl_funcError(status, errType, errText, ERR_TYPE,
+                    "Error inside spectrum function supplied to the %s function: %s",
+                    FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
         // Return error if function didn't return a number
         if (c->stack[c->stackPtr - 1].objType != PPLOBJ_NUM) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_TYPE,
                     "The %s function requires a spectrum function that returns a number. Supplied function returned an object of type <%s>.",
                     FunctionDescription, pplObjTypeNames[c->stack[c->stackPtr - 1].objType]);
             return;
@@ -424,30 +412,5 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         z += cie_color_match[i][2] * w;
     }
 
-    // Fudge to brightness of spectrum
-    {
-        double xyz = gsl_hypot3(x, y, z);
-        if (xyz > 1) xyz = 1;
-        if (xyz < 0) xyz = 0;
-        const double XYZ = pow(xyz, GAMMA_FUDGE);
-        const double gamma = XYZ / xyz;
-        x *= gamma;
-        y *= gamma;
-        z *= gamma;
-    }
-
-    // Convert to RGB, bring the color within the gamut which can be displayed, and scale it by the normalisation
-    xyz_to_rgb(&SMPTEsystem, x, y, z, &r, &g, &b);
-    if (!inside_gamut(r, g, b)) constrain_rgb(&r, &g, &b);
-    r *= fabs(norm);
-    if (r < 0) r = 0;
-    if (r > 1) r = 1;
-    g *= fabs(norm);
-    if (g < 0) g = 0;
-    if (g > 1) g = 1;
-    b *= fabs(norm);
-    if (b < 0) b = 0;
-    if (b > 1) b = 1;
-    pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, r, g, b, 0);
-    return;
+    xyzToColor(x, y, z, norm, &OUTPUT);
 }

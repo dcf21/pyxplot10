@@ -93,6 +93,52 @@ static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *st
     OUTPUT.self_lval = NULL;
 }
 
+//! listMembers - Implement the data(), contents() and methods() methods of all objects, which list the names of some
+//! or all of the members of an object. The members of the object itself are listed first, then those of its class,
+//! and so on up the chain of prototypes, and finally the built-in methods of the object's type. Members of an
+//! instance hide those of its class, so each name is listed only once.
+//! \param [in] call - The details of the method call, including its arguments and where to report errors
+//! \param [in] functions - 1 to list only functions (methods); 0 to list only other members; -1 to list all members
+
+static void listMembers(pplFuncCall *call, const int functions) {
+    pplObj *in = call->in;
+    pplObj *iter = in[-1].self_this;
+    dict *const builtIn = pplObjMethods[iter->objType];
+    char *keys[4096], *key;
+    int count = 0;
+    // The output is a new list
+    if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
+        ppl_funcError(call->status, call->errType, call->errText, ERR_MEMORY, "Out of memory.");
+        return;
+    }
+    list *l = (list *) OUTPUT.auxil;
+    // Work through the dictionaries of members of each object in the chain, followed by the built-in methods
+    for (int last = 0; !last; iter = iter->objPrototype) {
+        const int t = iter->objType;
+        last = (t != PPLOBJ_MOD) && (t != PPLOBJ_USER);
+        dictIterator *di = ppl_dictIterateInit(last ? builtIn : (dict *) iter->auxil);
+        const pplObj *item;
+        // Consider each member of this dictionary
+        while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
+            int i;
+            // Skip names already listed, and members of the wrong kind
+            for (i = 0; (i < count) && (strcmp(key, keys[i]) != 0); i++);
+            if (i < count) continue;
+            if ((functions >= 0) && ((item->objType == PPLOBJ_FUNC) != functions)) continue;
+            // Add the name to the output list
+            char *tmp = ppl_funcStrdup(call, key);
+            if (tmp == NULL) return;
+            pplObj v;
+            v.refCount = 1;
+            pplObjStr(&v, 1, 1, tmp);
+            ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
+            keys[count++] = key;
+            if (count > 4094) break;
+        }
+        if (last) break;
+    }
+}
+
 //! pplmethod_data - Implement the data() method of all objects, which returns a list of all the internal variables (not
 //! methods) of an object
 //! \param [in] c - The Pyxplot context
@@ -105,67 +151,8 @@ static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *st
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    // st is the object whose members are listed; keys records the names already listed, since members of an instance
-    // hide those of its class
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_data()"};
-    int count = 0;
-    char *keys[4096], *key, *tmp;
-    pplObj v;
-    pplObj *st = in[-1].self_this;
-    pplObj *iter = in[-1].self_this;
-    int t = iter->objType;
-    pplObj *item;
-    list *l;
-    dictIterator *di;
-    // The output is a new list
-    if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
-        return;
-    }
-    v.refCount = 1;
-    l = (list *) OUTPUT.auxil;
-    // List the members of the object, then of its class, and so on up the chain of prototypes, skipping functions
-    // (which are methods) and any name already listed
-    for (; (t == PPLOBJ_MOD) || (t == PPLOBJ_USER); iter = iter->objPrototype, t = iter->objType) {
-        di = ppl_dictIterateInit((dict *) iter->auxil);
-        // Consider each member of this object in the chain
-        while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-            int i, new = 1;
-            for (i = 0; i < count; i++)
-                // Skip names already listed
-                if (strcmp(key, keys[i]) == 0) {
-                    new = 0;
-                    break;
-                }
-            if (!new) continue;
-            if (item->objType == PPLOBJ_FUNC) continue; // Non-methods only
-            if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
-            pplObjStr(&v, 1, 1, tmp);
-            ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
-            keys[count++] = key;
-            if (count > 4094) break;
-        }
-    }
-    di = ppl_dictIterateInit(pplObjMethods[st->objType]);
-    // The built-in methods of the object's type are not data, but must still hide nothing: record their names
-    while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-        int i, new = 1;
-        for (i = 0; i < count; i++)
-            // Skip names already listed
-            if (strcmp(key, keys[i]) == 0) {
-                new = 0;
-                break;
-            }
-        if (!new) continue;
-        if (item->objType == PPLOBJ_FUNC) continue; // Non-methods only
-        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
-        pplObjStr(&v, 1, 1, tmp);
-        ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
-        keys[count++] = key;
-        if (count > 4094) break;
-    }
+    listMembers(&call, 0);
 }
 
 //! pplmethod_contents - Implement the contents() method of all objects, which returns a list of all the methods and
@@ -180,65 +167,8 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    // st is the object whose members are listed; keys records the names already listed, since members of an instance
-    // hide those of its class
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_contents()"};
-    int count = 0;
-    char *keys[4096], *key, *tmp;
-    pplObj v;
-    pplObj *st = in[-1].self_this;
-    pplObj *iter = in[-1].self_this;
-    int t = iter->objType;
-    pplObj *item;
-    list *l;
-    dictIterator *di;
-    // The output is a new list
-    if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
-        return;
-    }
-    v.refCount = 1;
-    l = (list *) OUTPUT.auxil;
-    // List the members of the object, then of its class, and so on up the chain of prototypes, skipping any name
-    // already listed
-    for (; (t == PPLOBJ_MOD) || (t == PPLOBJ_USER); iter = iter->objPrototype, t = iter->objType) {
-        di = ppl_dictIterateInit((dict *) iter->auxil);
-        // Consider each member of this object in the chain
-        while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-            int i, new = 1;
-            for (i = 0; i < count; i++)
-                // Skip names already listed
-                if (strcmp(key, keys[i]) == 0) {
-                    new = 0;
-                    break;
-                }
-            if (!new) continue;
-            if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
-            pplObjStr(&v, 1, 1, tmp);
-            ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
-            keys[count++] = key;
-            if (count > 4094) break;
-        }
-    }
-    di = ppl_dictIterateInit(pplObjMethods[st->objType]);
-    // Then list the built-in methods of the object's type
-    while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-        int i, new = 1;
-        for (i = 0; i < count; i++)
-            // Skip names already listed
-            if (strcmp(key, keys[i]) == 0) {
-                new = 0;
-                break;
-            }
-        if (!new) continue;
-        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
-        pplObjStr(&v, 1, 1, tmp);
-        ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
-        keys[count++] = key;
-        if (count > 4094) break;
-    }
+    listMembers(&call, -1);
 }
 
 //! pplmethod_methods - Implement the methods() method of all objects, which returns a list of the methods of an object
@@ -252,67 +182,8 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    // st is the object whose methods are listed; keys records the names already listed, since members of an instance
-    // hide those of its class
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_methods()"};
-    int count = 0;
-    char *keys[4096], *key, *tmp;
-    pplObj v;
-    pplObj *st = in[-1].self_this;
-    pplObj *iter = in[-1].self_this;
-    int t = iter->objType;
-    pplObj *item;
-    list *l;
-    dictIterator *di;
-    // The output is a new list
-    if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
-        return;
-    }
-    v.refCount = 1;
-    l = (list *) OUTPUT.auxil;
-    // List the functions among the members of the object, then of its class, and so on up the chain of prototypes,
-    // skipping any name already listed
-    for (; (t == PPLOBJ_MOD) || (t == PPLOBJ_USER); iter = iter->objPrototype, t = iter->objType) {
-        di = ppl_dictIterateInit((dict *) iter->auxil);
-        // Consider each member of this object in the chain
-        while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-            int i, new = 1;
-            for (i = 0; i < count; i++)
-                // Skip names already listed
-                if (strcmp(key, keys[i]) == 0) {
-                    new = 0;
-                    break;
-                }
-            if (!new) continue;
-            if (item->objType != PPLOBJ_FUNC) continue; // List methods only
-            if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
-            pplObjStr(&v, 1, 1, tmp);
-            ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
-            keys[count++] = key;
-            if (count > 4094) break;
-        }
-    }
-    di = ppl_dictIterateInit(pplObjMethods[st->objType]);
-    // Then list the built-in methods of the object's type
-    while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
-        int i, new = 1;
-        for (i = 0; i < count; i++)
-            // Skip names already listed
-            if (strcmp(key, keys[i]) == 0) {
-                new = 0;
-                break;
-            }
-        if (!new) continue;
-        if (item->objType != PPLOBJ_FUNC) continue; // List methods only
-        if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
-        pplObjStr(&v, 1, 1, tmp);
-        ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
-        keys[count++] = key;
-        if (count > 4094) break;
-    }
+    listMembers(&call, 1);
 }
 
 //! pplmethod_str - Implement the str() method of all objects, which returns a string representation of an object
@@ -424,9 +295,7 @@ static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int 
     list *lst;
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     lst = (list *) OUTPUT.auxil;
@@ -470,19 +339,14 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
     for (i = 0; i < nArgs; i++)
         // Every separator must be a string
         if (in[i].objType != PPLOBJ_STR) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_TYPE,
                     "The splitOn() method requires all its arguments to be strings; argument %d has type <%s>.", i + 1,
                     pplObjTypeNames[in[i].objType]);
             return;
         }
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     lst = (list *) OUTPUT.auxil;
@@ -694,23 +558,17 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
     int alen;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The append() method requires a single string argument.");
         return;
     }
     // The string must be a variable, so that it can be extended in place
     if ((t == NULL) || (t->self_lval == NULL)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method can only be called on a string lvalue.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The append() method can only be called on a string lvalue.");
         return;
     }
     // Immutable strings cannot be changed
     if ((t->immutable) || (t->self_lval->immutable)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method cannot act on immutable strings.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The append() method cannot act on immutable strings.");
         return;
     }
     t = t->self_lval;
@@ -725,9 +583,7 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
         instr = (char *) realloc(t->auxil, newlen);
         // Failure to allocate memory is reported as an error
         if (instr == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         t->auxilLen = newlen;
@@ -738,9 +594,7 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
         char *ns = (char *) malloc(newlen);
         // Failure to allocate memory is reported as an error
         if (ns == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         t->auxilLen = newlen;
@@ -769,9 +623,7 @@ static void pplmethod_strBeginsWith(ppl_context *c, pplObj *in, const int nArgs,
     char *instr = (char *) t->auxil, *cmpstr;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The beginsWith() method requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The beginsWith() method requires a single string argument.");
         return;
     }
     cmpstr = (char *) in[0].auxil;
@@ -796,9 +648,7 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
     int il, cl;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The endsWith() method requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The endsWith() method requires a single string argument.");
         return;
     }
     cmpstr = (char *) in[0].auxil;
@@ -830,9 +680,7 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
     int il, cl, pmax, p;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The find() method requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The find() method requires a single string argument.");
         return;
     }
     cmpstr = (char *) in[0].auxil;
@@ -868,16 +716,12 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     list *l;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The findAll() method requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The findAll() method requires a single string argument.");
         return;
     }
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -925,11 +769,9 @@ static int methodTimezoneOffset(pplFuncCall *f, const int nArgs, const pplObj *t
     const pplObj *in = f->in;
     // The optional timezone must be a string
     if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) {
-        *f->status = 1;
-        *f->errType = ERR_TYPE;
-        ppl_snprintfTrunc(f->errText, LSTR_LENGTH,
-                          "The function %s requires a string as its first argument; supplied argument had type <%s>.",
-                          f->description, pplObjTypeNames[in[0].objType]);
+        ppl_funcError(f->status, f->errType, f->errText, ERR_TYPE,
+                "The function %s requires a string as its first argument; supplied argument had type <%s>.",
+                f->description, pplObjTypeNames[in[0].objType]);
         return 1;
     }
     if (nArgs > 0) ppl_calendarTimezoneSet(f->c, 1, (char *) in[0].auxil);
@@ -1215,28 +1057,22 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
     double offset;
     // The optional format must be a string
     if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a string as its first argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a string as its first argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     // The optional timezone must be a string
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function %s requires a string as its second argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[1].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function %s requires a string as its second argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
     out = (char *) malloc(8192);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
 
@@ -1519,9 +1355,7 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
     }
     // Make a new vector, one element longer
     if (pplObjVector(&OUTPUT, 0, 1, v->size + 1) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1589,10 +1423,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     } else if (t == PPLOBJ_LIST) {
         l = ((list *) in[0].auxil)->length;
     } else {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "Argument to the extend(x) method must be either a list or a vector. Supplied argument had type <%s>.",
                 pplObjTypeNames[t]);
         return;
@@ -1600,9 +1431,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
 
     // Make a new vector, long enough for both
     if (pplObjVector(&OUTPUT, 0, 1, va->size + l) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1622,11 +1451,9 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             // Report an item which is not a number
             if (item->objType != PPLOBJ_NUM) {
-                *status = 1;
-                *errType = ERR_TYPE;
-                ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                                  "Can only append numbers to vectors; supplied object has type <%s>.",
-                                  pplObjTypeNames[item->objType]);
+                ppl_funcError(status, errType, errText, ERR_TYPE,
+                        "Can only append numbers to vectors; supplied object has type <%s>.",
+                        pplObjTypeNames[item->objType]);
                 return;
             }
             // Check the item's units
@@ -1654,10 +1481,8 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
             }
             // Vectors cannot hold complex numbers
             if (item->flagComplex) {
-                *status = 1;
-                *errType = ERR_TYPE;
-                ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                                  "Can only append real numbers to vectors; supplied value is complex.");
+                ppl_funcError(status, errType, errText, ERR_TYPE,
+                        "Can only append real numbers to vectors; supplied value is complex.");
                 return;
             }
             gsl_vector_set(vo, i++, item->real);
@@ -1704,18 +1529,13 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
     // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -1723,10 +1543,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -1736,9 +1553,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     ovec = (double *) malloc(va->size * sizeof(double));
     // Failure to allocate memory is reported as an error
     if (ovec == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
 
@@ -1770,10 +1585,9 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
 
         // Propagate error if function failed
         if (c->errStat.status) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
-                              FunctionDescription, c->errStat.errMsgExpr);
+            ppl_funcError(status, errType, errText, ERR_TYPE,
+                    "Error inside function supplied to the %s function: %s",
+                    FunctionDescription, c->errStat.errMsgExpr);
             free(ovec);
             ovec = NULL;
             return;
@@ -1787,9 +1601,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
 
     // Make a vector of the elements which passed
     if (pplObjVector(&OUTPUT, 0, 1, ovlen) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         free(ovec);
         ovec = NULL;
         return;
@@ -1819,19 +1631,14 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     gsl_vector *vo;
     // The position must be a real number, within or at the end of the vector
     if (in[0].objType != PPLOBJ_NUM) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
-                          pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
+                pplObjTypeNames[in[0].objType]);
         return;
     }
     // The position must be real
     if (in[0].flagComplex) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "First argument to the insert(n,x) method must be a real number. Supplied argument is complex.");
         return;
     }
@@ -1839,16 +1646,13 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     p = (long) round(in[0].real);
     // The position cannot be before the start of the vector
     if (p < 0) {
-        *status = 1;
-        *errType = ERR_RANGE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to insert a vector item before the beginning of a vector.");
+        ppl_funcError(status, errType, errText, ERR_RANGE,
+                "Attempt to insert a vector item before the beginning of a vector.");
         return;
     }
     // The position cannot be beyond the end of the vector
     if (p > v->size) {
-        *status = 1;
-        *errType = ERR_RANGE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Vector index out of range.");
+        ppl_funcError(status, errType, errText, ERR_RANGE, "Vector index out of range.");
         return;
     }
     // The new element must have the same units as the vector
@@ -1876,9 +1680,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     }
     // Make a new vector, one element longer
     if (pplObjVector(&OUTPUT, 0, 1, v->size + 1) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     vo = ((pplVector *) (OUTPUT.auxil))->v;
@@ -1975,18 +1777,13 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
     // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -1994,19 +1791,14 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
     }
     // The output is a vector of the same length
     if (pplObjVector(&OUTPUT, 0, 1, vec->size) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     ovec = ((pplVector *) OUTPUT.auxil)->v;
@@ -2039,19 +1831,15 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
 
         // Propagate error if function failed
         if (c->errStat.status) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
-                              FunctionDescription, c->errStat.errMsgExpr);
+            ppl_funcError(status, errType, errText, ERR_TYPE,
+                    "Error inside function supplied to the %s function: %s",
+                    FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
         // The function must return a number
         if (c->stack[c->stackPtr - 1].objType != PPLOBJ_NUM) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_TYPE,
                     "Error inside function supplied to the %s function: function should have returned number, but returned object of type <%s> for element %d.",
                     FunctionDescription, pplObjTypeNames[c->stack[c->stackPtr - 1].objType], i);
             return;
@@ -2061,10 +1849,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         if (i == 0) memcpy(&val2, &c->stack[c->stackPtr - 1], sizeof(pplObj));
         // Report a result with different units
         else if (!ppl_unitsDimEqual(&val2, &c->stack[c->stackPtr - 1])) {
-            *status = 1;
-            *errType = ERR_UNIT;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_UNIT,
                     "Error inside function supplied to the %s function: function returned values with inconsistent units of <%s> and <%s>. All of the elements of a vector must have matching dimensions.",
                     FunctionDescription, ppl_printUnit(c, &val2, NULL, NULL, 0, 1, 0),
                     ppl_printUnit(c, &c->stack[c->stackPtr - 1], NULL, NULL, 1, 1, 0));
@@ -2073,10 +1858,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
 
         // Vectors cannot hold complex numbers
         if (c->stack[c->stackPtr - 1].flagComplex) {
-            *status = 1;
-            *errType = ERR_NUMERICAL;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
                     "Error inside function supplied to the %s function: function returned a complex number for element %d; vectors can only hold real numbers.",
                     FunctionDescription, i);
             return;
@@ -2137,18 +1919,13 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
     // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2156,20 +1933,14 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
     }
     // Reducing needs at least two elements
     if (v->size < 2) {
-        *status = 1;
-        *errType = ERR_RANGE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_RANGE,
                 "The %s method cannot be called on vectors containing fewer than two elements. Supplied vector has %d element.",
                 FunctionDescription, (int) v->size);
         return;
@@ -2208,10 +1979,9 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
 
         // Propagate error if function failed
         if (c->errStat.status) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
-                              FunctionDescription, c->errStat.errMsgExpr);
+            ppl_funcError(status, errType, errText, ERR_TYPE,
+                    "Error inside function supplied to the %s function: %s",
+                    FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2362,10 +2132,7 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
             ppl_listAppendCpy(l, &v, sizeof(pplObj));
         }
     } else {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "Argument to the extend(x) method must be either a list or a vector. Supplied argument had type <%s>.",
                 pplObjTypeNames[t]);
         return;
@@ -2400,18 +2167,13 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
     // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2419,19 +2181,14 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
     }
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     ol = (list *) OUTPUT.auxil;
@@ -2458,10 +2215,9 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
 
         // Propagate error if function failed
         if (c->errStat.status) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
-                              FunctionDescription, c->errStat.errMsgExpr);
+            ppl_funcError(status, errType, errText, ERR_TYPE,
+                    "Error inside function supplied to the %s function: %s",
+                    FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2532,19 +2288,14 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
     list *l = (list *) st->auxil;
     // The position must be a real number, within or at the end of the list
     if (in[0].objType != PPLOBJ_NUM) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
-                          pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "First argument to the insert(n,x) method must be a number. Supplied argument had type <%s>.",
+                pplObjTypeNames[in[0].objType]);
         return;
     }
     // The position must be real
     if (in[0].flagComplex) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "First argument to the insert(n,x) method must be a real number. Supplied argument is complex.");
         return;
     }
@@ -2552,16 +2303,13 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
     p = (long) round(in[0].real);
     // The position cannot be before the start of the list
     if (p < 0) {
-        *status = 1;
-        *errType = ERR_RANGE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to insert a list item before the beginning of a list.");
+        ppl_funcError(status, errType, errText, ERR_RANGE,
+                "Attempt to insert a list item before the beginning of a list.");
         return;
     }
     // The position cannot be beyond the end of the list
     if (p > l->length) {
-        *status = 1;
-        *errType = ERR_RANGE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "List index out of range.");
+        ppl_funcError(status, errType, errText, ERR_RANGE, "List index out of range.");
         return;
     }
     v.refCount = 1;
@@ -2611,18 +2359,13 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
     // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2630,19 +2373,14 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
     }
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     ol = (list *) OUTPUT.auxil;
@@ -2669,10 +2407,9 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
 
         // Propagate error if function failed
         if (c->errStat.status) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
-                              FunctionDescription, c->errStat.errMsgExpr);
+            ppl_funcError(status, errType, errText, ERR_TYPE,
+                    "Error inside function supplied to the %s function: %s",
+                    FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2757,20 +2494,14 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
         long p;
         // The position must be a real number within the list
         if (in[0].objType != PPLOBJ_NUM) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_TYPE,
                     "Optional argument to the pop(n) method must be a number. Supplied argument had type <%s>.",
                     pplObjTypeNames[in[0].objType]);
             return;
         }
         // The position must be real
         if (in[0].flagComplex) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_TYPE,
                     "Optional argument to the pop(n) method must be a real number. Supplied argument is complex.");
             return;
         }
@@ -2778,16 +2509,13 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
         p = (long) round(in[0].real);
         // The position cannot be before the start of the list
         if (p < 0) {
-            *status = 1;
-            *errType = ERR_RANGE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to pop a list item before the beginning of a list.");
+            ppl_funcError(status, errType, errText, ERR_RANGE,
+                    "Attempt to pop a list item before the beginning of a list.");
             return;
         }
         // The position cannot be beyond the end of the list
         if (p >= l->length) {
-            *status = 1;
-            *errType = ERR_RANGE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "List index out of range.");
+            ppl_funcError(status, errType, errText, ERR_RANGE, "List index out of range.");
             return;
         }
         obj = ppl_listPopItem(l, p);
@@ -2823,18 +2551,13 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
     // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -2842,20 +2565,14 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
     }
     // Reducing needs at least two items
     if (l->length < 2) {
-        *status = 1;
-        *errType = ERR_RANGE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_RANGE,
                 "The %s method cannot be called on lists containing fewer than two items. Supplied list has length %d.",
                 FunctionDescription, l->length);
         return;
@@ -2892,10 +2609,9 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
 
         // Propagate error if function failed
         if (c->errStat.status) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Error inside function supplied to the %s function: %s",
-                              FunctionDescription, c->errStat.errMsgExpr);
+            ppl_funcError(status, errType, errText, ERR_TYPE,
+                    "Error inside function supplied to the %s function: %s",
+                    FunctionDescription, c->errStat.errMsgExpr);
             return;
         }
 
@@ -2964,9 +2680,7 @@ static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int 
     items = (pplObj **) malloc(n * sizeof(pplObj *));
     // Failure to allocate memory is reported as an error
     if (items == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
     i = 0;
@@ -3085,18 +2799,13 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     ppl_stackMustHave(c, 4);
     // Report a full stack
     if (c->stackFull) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Stack overflow.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "Stack overflow.");
         return;
     }
 
     // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Supplied object is of type <%s>.",
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
@@ -3104,10 +2813,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(
-                errText, LSTR_LENGTH,
+        ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The %s method requires a function object as its first argument. Integration and differentiation operators are not suitable functions.",
                 FunctionDescription);
         return;
@@ -3117,9 +2823,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     items = (pplObj **) malloc(n * sizeof(pplObj *));
     // Failure to allocate memory is reported as an error
     if (items == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
     i = 0;
@@ -3138,9 +2842,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     pplmethod_listSortOnCustom_context = NULL;
     // The user's comparison function failed
     if (fail) {
-        *status = 1;
-        *errType = ERR_GENERIC;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Failure of user-supplied comparison function.");
+        ppl_funcError(status, errType, errText, ERR_GENERIC, "%s", "Failure of user-supplied comparison function.");
         return;
     }
     li = ppl_listIterateInit(l);
@@ -3182,10 +2884,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
         i++;
         // Report an item which is not a list
         if (o->objType != PPLOBJ_LIST) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_TYPE,
                     "The sortOnElement() method expects to be sorting a list of lists. Element %ld of list is not a list, but has type <%s>.",
                     i, pplObjTypeNames[o->objType]);
             return;
@@ -3200,10 +2899,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
         i++;
         // Report a sublist which is too short
         if ((eNum >= o->length) || (eNum < -o->length)) {
-            *status = 1;
-            *errType = ERR_RANGE;
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_RANGE,
                     "The sortOnElement() method is sorting on element number %d of each sublist. However, sublist %ld only has elements 0-%d.",
                     eNum, i, o->length - 1);
             return;
@@ -3214,9 +2910,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     items = (pplObj **) malloc(n * 2 * sizeof(pplObj *));
     // Failure to allocate memory is reported as an error
     if (items == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
     li = ppl_listIterateInit(l);
@@ -3371,18 +3065,15 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     char *instr;
     // The key must be a string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The method delete(x) requires a string as its argument; supplied argument had type <%s>.",
-                          pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The method delete(x) requires a string as its argument; supplied argument had type <%s>.",
+                pplObjTypeNames[in[0].objType]);
         return;
     }
     // Immutable dictionaries, and immutable items, cannot be deleted from
     if (in[-1].self_this->immutable) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The method delete(x) cannot be called on an immutable object.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The method delete(x) cannot be called on an immutable object.");
         return;
     }
     instr = (char *) in[0].auxil;
@@ -3390,9 +3081,8 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     if (item == NULL) return;
     // The item itself may be immutable
     if (item->immutable) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The method delete(x) cannot be called on an immutable object.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The method delete(x) cannot be called on an immutable object.");
         return;
     }
     item->amMalloced = 0;
@@ -3420,11 +3110,9 @@ static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, in
     char *instr;
     // The key must be a string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The method hasKey() requires a string as its argument; supplied argument had type <%s>.",
-                          pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The method hasKey() requires a string as its argument; supplied argument had type <%s>.",
+                pplObjTypeNames[in[0].objType]);
         return;
     }
     instr = (char *) in[0].auxil;
@@ -3452,9 +3140,7 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
     dictIterator *di = ppl_dictIterateInit((dict *) in[-1].self_this->auxil);
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     l = (list *) OUTPUT.auxil;
@@ -3466,17 +3152,13 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
         if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         // The key
         if (pplObjStr(&va, 1, 1, tmp) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         pplObjCpy(&vb, item, 0, 1, 1);
         // The list holding the key and value
         if (pplObjList(&v, 1, 1, NULL) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         l2 = (list *) v.auxil;
@@ -3504,9 +3186,7 @@ static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int 
     dictIterator *di = ppl_dictIterateInit((dict *) in[-1].self_this->auxil);
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -3553,9 +3233,7 @@ static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, in
     dictIterator *di = ppl_dictIterateInit((dict *) in[-1].self_this->auxil);
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -3592,31 +3270,25 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     gsl_permutation *p = NULL;
     // Only square matrices have determinants
     if (m->size1 != m->size2) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The determinant is only defined for square matrices.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "The determinant is only defined for square matrices.");
         return;
     }
     // Work on a copy, since the decomposition overwrites the matrix
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp, m);
     // The permutation of the rows made by the decomposition
     if ((p = gsl_permutation_alloc(n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     // Decompose the matrix
     if (gsl_linalg_LU_decomp(tmp, p, &s) != 0) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "LU decomposition failed whilst computing matrix determinant.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "LU decomposition failed whilst computing matrix determinant.");
         return;
     }
     d = gsl_linalg_LU_det(tmp, s);
@@ -3681,50 +3353,40 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
     gsl_eigen_symm_workspace *w;
     // Eigenvalues are only computed for square, symmetric matrices, whose eigenvalues are real
     if (m->size1 != m->size2) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Eigenvalues are only defined for square matrices.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "Eigenvalues are only defined for square matrices.");
         return;
     }
     for (i = 0; i < m->size1; i++)
         for (j = 0; j < i; j++)
             // The matrix must be symmetric
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
-                *status = 1;
-                *errType = ERR_NUMERICAL;
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH, "%s",
+                ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                        "%s",
                         "Eigenvalues can only be computed for symmetric matrices; supplied matrix is not symmetric.");
                 return;
             }
     // GSL's workspace for the calculation
     if ((w = gsl_eigen_symm_alloc(n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     // Work on a copy, since the calculation overwrites the matrix
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp, m);
     // The output is a vector of the eigenvalues
     if (pplObjVector(&OUTPUT, 0, 1, n) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     vo = ((pplVector *) OUTPUT.auxil)->v;
     // Compute the eigenvalues
     if (gsl_eigen_symm(tmp, vo, w) != 0) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Numerical failure whilst trying to compute eigenvalues.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "Numerical failure whilst trying to compute eigenvalues.");
         return;
     }
     gsl_matrix_free(tmp);
@@ -3761,56 +3423,44 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     v.refCount = 1;
     // Eigenvectors are only computed for square, symmetric matrices, whose eigenvalues are real
     if (m->size1 != m->size2) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Eigenvectors are only defined for square matrices.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "Eigenvectors are only defined for square matrices.");
         return;
     }
     for (i = 0; i < m->size1; i++)
         for (j = 0; j < i; j++)
             // The matrix must be symmetric
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
-                *status = 1;
-                *errType = ERR_NUMERICAL;
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH, "%s",
+                ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                        "%s",
                         "Eigenvectors can only be computed for symmetric matrices; supplied matrix is not symmetric.");
                 return;
             }
     // GSL's workspace for the calculation
     if ((w = gsl_eigen_symmv_alloc(n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     // A copy of the matrix, since the calculation overwrites it
     if ((tmp1 = gsl_matrix_alloc(n, n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     // A matrix whose columns will be the eigenvectors
     if ((tmp2 = gsl_matrix_alloc(n, n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     // A vector of the eigenvalues
     if ((vtmp = gsl_vector_alloc(n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp1, m);
     // Compute the eigenvalues and eigenvectors
     if (gsl_eigen_symmv(tmp1, vtmp, tmp2, w) != 0) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Numerical failure whilst trying to compute eigenvectors.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "Numerical failure whilst trying to compute eigenvectors.");
         return;
     }
     gsl_matrix_free(tmp1);
@@ -3820,9 +3470,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     gsl_eigen_symmv_sort(vtmp, tmp2, GSL_EIGEN_SORT_VAL_ASC); // In the same order as eigenvalues() lists eigenvalues
     // The output is a list of vectors
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     lo = (list *) OUTPUT.auxil;
@@ -3830,9 +3478,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     for (i = 0; i < n; i++) {
         // Make a vector for the eigenvector
         if (pplObjVector(&v, 1, 1, n) == NULL) {
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         vo = ((pplVector *) v.auxil)->v;
@@ -3864,46 +3510,37 @@ static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int
     gsl_permutation *p = NULL;
     // Only square matrices have inverses
     if (m->size1 != m->size2) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The inverse is only defined for square matrices.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "The inverse is only defined for square matrices.");
         return;
     }
     // Work on a copy, since the decomposition overwrites the matrix
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     gsl_matrix_memcpy(tmp, m);
     // The permutation of the rows made by the decomposition
     if ((p = gsl_permutation_alloc(n)) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     // Decompose the matrix
     if (gsl_linalg_LU_decomp(tmp, p, &s) != 0) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "LU decomposition failed whilst computing matrix determinant.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "LU decomposition failed whilst computing matrix determinant.");
         return;
     }
     // The output is a new matrix
     if (pplObjMatrix(&OUTPUT, 0, 1, n, n) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     mo = ((pplMatrix *) OUTPUT.auxil)->m;
     // Compute the inverse
     if (gsl_linalg_LU_invert(tmp, p, mo)) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Numerical failure while computing matrix inverse.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "Numerical failure while computing matrix inverse.");
         return;
     }
     gsl_permutation_free(p);
@@ -3929,9 +3566,7 @@ static void pplmethod_matrixSize(ppl_context *c, pplObj *in, const int nArgs, in
     gsl_vector *vo;
     // The output is a vector of the numbers of rows and columns
     if (pplObjVector(&OUTPUT, 0, 1, 2) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
     vo = ((pplVector *) OUTPUT.auxil)->v;
@@ -3987,16 +3622,13 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
     gsl_matrix *vo = NULL;
     // Only square matrices can be transposed by this method
     if (m->size1 != m->size2) {
-        *status = 1;
-        *errType = ERR_NUMERICAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The transpose is only defined for square matrices.");
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "%s", "The transpose is only defined for square matrices.");
         return;
     }
     // The output is a new matrix
     if (pplObjMatrix(&OUTPUT, 0, 1, n, n) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     vo = ((pplMatrix *) OUTPUT.auxil)->m;
@@ -4023,9 +3655,7 @@ static void pplmethod_fileClose(ppl_context *c, pplObj *in, const int nArgs, int
     if (f->open) {
         // stdin may not be closed
         if (f->pipe == 2) {
-            *status = 1;
-            *errType = ERR_TYPE;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "It is not permitted to close this file handle.");
+            ppl_funcError(status, errType, errText, ERR_TYPE, "%s", "It is not permitted to close this file handle.");
             return;
         }
         f->open = 0;
@@ -4093,9 +3723,7 @@ static void pplmethod_fileFlush(ppl_context *c, pplObj *in, const int nArgs, int
     }
     // Report failure to flush the file
     if (fflush(f->file) < 0) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
         return;
     }
 }
@@ -4122,9 +3750,7 @@ static void pplmethod_fileGetpos(ppl_context *c, pplObj *in, const int nArgs, in
     }
     // Report failure to read the position
     if ((fp = ftell(f->file)) < 0) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
         return;
     }
     pplObjNum(&OUTPUT, 0, fp * 8, 0);
@@ -4182,9 +3808,7 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
                 free(out);
                 out = NULL;
             }
-            *status = 1;
-            *errType = ERR_MEMORY;
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
         out = new;
@@ -4224,9 +3848,7 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
     out = (char *) malloc(chunk);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     // Read one byte at a time until the end of the line or the file
@@ -4247,9 +3869,7 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
                     free(out);
                     out = NULL;
                 }
-                *status = 1;
-                *errType = ERR_MEMORY;
-                ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+                ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
                 return;
             }
             out = new;
@@ -4284,9 +3904,7 @@ static void pplmethod_fileReadlines(ppl_context *c, pplObj *in, const int nArgs,
     }
     // The output is a list of lines
     if (pplObjList(&v, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     l = (list *) v.auxil;
@@ -4332,17 +3950,13 @@ static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, in
     if (!in[0].dimensionless) fp /= 8;
     // Move to the new position
     if (fseek(f->file, fp, SEEK_SET) != 0) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
         return;
     }
 
     // Return the new position, in bytes
     if ((fp = ftell(f->file)) < 0) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
         return;
     }
     pplObjNum(&OUTPUT, 0, fp * 8, 0);
@@ -4365,11 +3979,9 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
     long int l, o;
     // The argument must be a string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function write() requires a string as its argument; supplied argument had type <%s>.",
-                          pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function write() requires a string as its argument; supplied argument had type <%s>.",
+                pplObjTypeNames[in[0].objType]);
         return;
     }
     // A closed file returns null
@@ -4381,9 +3993,7 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
     o = fwrite(s, 1, l, f->file);
     // Report failure to write the whole string
     if (o != l) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
         return;
     }
 }
@@ -4403,11 +4013,9 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
 static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The argument must be a string, which becomes the error message
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The function raise() requires a string as its argument; supplied argument had type <%s>.",
-                          pplObjTypeNames[in[0].objType]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The function raise() requires a string as its argument; supplied argument had type <%s>.",
+                pplObjTypeNames[in[0].objType]);
         return;
     }
     *status = 1;

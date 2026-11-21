@@ -38,6 +38,7 @@
 #include "coreUtils/errorReport.h"
 
 #include "epsMaker/canvasDraw.h"
+#include "settings/axes_fns.h"
 #include "settings/settings.h"
 #include "settings/withWords_fns.h"
 #include "settings/settingTypes.h"
@@ -222,8 +223,8 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                             if (xl > 1.0) xl = 1.0;
                             if (xr < 0.0) xr = 0.0;
                             if (xr > 1.0) xr = 1.0;
-                            xl = eps_plot_axis_InvGetPosition(xl, a);
-                            xr = eps_plot_axis_InvGetPosition(xr, a);
+                            xl = pplaxis_InvGetPosition(xl, a);
+                            xr = pplaxis_InvGetPosition(xr, a);
                             if ((gsl_finite(xl)) && (gsl_finite(xr)) &&
                                 ((xl == 0) || (xr == 0) || ((xl < 0) && (xr > 0)) || ((xl > 0) && (xr < 0)))) {
                                 if (xyz != 0) // y/z-axis -- only put label at zero if axis is at edge of graph
@@ -610,7 +611,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                             pos[0] = 0.5;
                             LastX = ((j == 0) || (!PerpAxisX->FinalActive) || (xrn > PerpAxisX->AxisValueTurnings));
                             if ((j != 0) && (PerpAxisX->FinalActive))
-                                pos[0] = eps_plot_axis_GetPosition(0.0, PerpAxisX, xrn, 0);
+                                pos[0] = pplaxis_GetPosition(0.0, PerpAxisX, xrn, 0);
                             if ((!gsl_finite(pos[0])) && (!DoneX) && LastX) pos[0] = 0.5;
                             if (!gsl_finite(pos[0])) continue;
 
@@ -619,7 +620,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                                 pos[1] = 0.5;
                                 LastY = ((j == 1) || (!PerpAxisY->FinalActive) || (yrn > PerpAxisY->AxisValueTurnings));
                                 if ((j != 1) && (PerpAxisY->FinalActive))
-                                    pos[1] = eps_plot_axis_GetPosition(0.0, PerpAxisY, yrn, 0);
+                                    pos[1] = pplaxis_GetPosition(0.0, PerpAxisY, yrn, 0);
                                 if ((!gsl_finite(pos[1])) && (!DoneY) && LastY) pos[1] = 0.5;
                                 if (!gsl_finite(pos[1])) continue;
 
@@ -629,7 +630,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                                     LastZ = ((j == 2) || (!x->current->ThreeDim) || (!PerpAxisZ->FinalActive) ||
                                              (zrn > PerpAxisZ->AxisValueTurnings));
                                     if ((j != 2) && (PerpAxisZ->FinalActive))
-                                        pos[2] = eps_plot_axis_GetPosition(0.0, PerpAxisZ, zrn, 0);
+                                        pos[2] = pplaxis_GetPosition(0.0, PerpAxisZ, zrn, 0);
                                     if ((!gsl_finite(pos[2])) && (!DoneZ) && LastZ) pos[2] = 0.5;
                                     if (!gsl_finite(pos[2])) continue;
 

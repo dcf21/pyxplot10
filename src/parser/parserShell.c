@@ -60,6 +60,7 @@
 
 #include "parser/cmdList.h"
 #include "parser/parser.h"
+#include "readConf.h"
 
 #include "expressions/expEval.h"
 #include "expressions/traceback_fns.h"
@@ -253,37 +254,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     } else if (strcmp(d, "replot") == 0) ppl_directive_plot(c, pl, in, interactive, iterDepth, 1);
     // reset: restore every setting to its default value, and clear the multiplot canvas
     else if (strcmp(d, "reset") == 0) {
-        int i;
-        c->set->term_current = c->set->term_default;
-        c->set->graph_current = c->set->graph_default;
-
-        // Restore the default palettes
-        for (i = 0; i < PALETTE_LENGTH; i++) {
-            c->set->palette_current[i] = c->set->palette_default[i];
-            c->set->paletteS_current[i] = c->set->paletteS_default[i];
-            c->set->palette1_current[i] = c->set->palette1_default[i];
-            c->set->palette2_current[i] = c->set->palette2_default[i];
-            c->set->palette3_current[i] = c->set->palette3_default[i];
-            c->set->palette4_current[i] = c->set->palette4_default[i];
-        }
-        // Restore the default settings of every axis
-        for (i = 0; i < MAX_AXES; i++) {
-            pplaxis_destroy(c, &(c->set->XAxes[i]));
-            pplaxis_copy(c, &(c->set->XAxes[i]), &(c->set->XAxesDefault[i]));
-            pplaxis_destroy(c, &(c->set->YAxes[i]));
-            pplaxis_copy(c, &(c->set->YAxes[i]), &(c->set->YAxesDefault[i]));
-            pplaxis_destroy(c, &(c->set->ZAxes[i]));
-            pplaxis_copy(c, &(c->set->ZAxes[i]), &(c->set->ZAxesDefault[i]));
-        }
-        // Restore the default numbered plot styles, and then the default arrows and labels
-        for (i = 0; i < MAX_PLOTSTYLES; i++) {
-            ppl_withWordsDestroy(c, &(c->set->plot_styles[i]));
-            ppl_withWordsCpy(c, &(c->set->plot_styles[i]), &(c->set->plot_styles_default[i]));
-        }
-        pplarrow_list_destroy(c, &c->set->pplarrow_list);
-        pplarrow_list_copy(c, &c->set->pplarrow_list, &c->set->pplarrow_list_default);
-        ppllabel_list_destroy(c, &c->set->ppllabel_list);
-        ppllabel_list_copy(c, &c->set->ppllabel_list, &c->set->ppllabel_list_default);
+        ppl_restoreDefaultSettings(c);
         ppl_directive_clear(c, NULL, NULL, 0);
         pplcsp_sendCommand(c, "A\n");
     } else if (strcmp(d, "return") == 0) ppl_directive_return(c, pl, in, interactive, iterDepth);

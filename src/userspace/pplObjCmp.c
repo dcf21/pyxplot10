@@ -37,6 +37,7 @@
 #include "userspace/pplObjCmp.h"
 #include "userspace/unitsArithmetic.h"
 #include "userspace/unitsDisp.h"
+#include "defaultObjs/defaultFuncsChecks.h"
 
 //! pplcol_RGBtoHSB - Convert a color from RGB to HSB components
 //! \param [in] ri - Red component, 0-1
@@ -260,11 +261,9 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     // Objects of different types: an error when comparing for the user, or ordered by type when sorting quietly (when c
     // is NULL)
     if ((c != NULL) && (t1o != t2o)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "Attempt to compare an object of type <%s> with an object of type <%s>.", pplObjTypeNames[t1],
-                          pplObjTypeNames[t2]);
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "Attempt to compare an object of type <%s> with an object of type <%s>.", pplObjTypeNames[t1],
+                pplObjTypeNames[t2]);
         return -2;
     }
     if (t1o < t2o) return -1;

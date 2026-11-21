@@ -69,6 +69,64 @@
 //! \param [in] inExprCharPos - The position of the call within <inExpr>, used to report errors
 //! \param [in] nArgs - The number of arguments passed to the function
 //! \param [in] dollarAllowed - If true, the function may use the $ operator
+//! vectorSetItem - Set one element of a vector being made by the vector() constructor, checking that the item is a
+//! real number. The units of the first element become those of the vector; each further element must match them.
+//! \param [in] context - The Pyxplot context
+//! \param [in] inExpr - The expression being evaluated, used for error reporting
+//! \param [in] inExprCharPos - The position of the function call within <inExpr>
+//! \param [in,out] out - The vector being made
+//! \param [in] i - The number of the element to set
+//! \param [in] item - The value of the element
+//! \return Zero on success, or one if an error was reported
+
+static int vectorSetItem(ppl_context *context, const pplExpr *inExpr, const int inExprCharPos, pplObj *out,
+                         const long i, const pplObj *item) {
+    // Report an item which is not a number
+    if (item->objType != PPLOBJ_NUM) {
+        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                          "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
+                          pplObjTypeNames[item->objType]);
+        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
+        return 1;
+    }
+    // Vectors cannot hold complex numbers
+    if (item->flagComplex) {
+        ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                          "Vectors can only hold real numeric values. Attempt to add a complex number.");
+        ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
+        return 1;
+    }
+    // The first item sets the units of the vector
+    if (i == 0) {
+        ppl_unitsDimCpy(out, item);
+    }
+    // Report an item with different units
+    else if (!ppl_unitsDimEqual(item, out)) {
+        // Describe the conflicting units in the error message
+        if (out->dimensionless) {
+            ppl_snprintfTrunc(
+                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                    "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
+                    i + 1, ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
+        } else if (item->dimensionless) {
+            ppl_snprintfTrunc(
+                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                    "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
+                    i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0));
+        } else {
+            ppl_snprintfTrunc(
+                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
+                    "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
+                    i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
+                    ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
+        }
+        ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
+        return 1;
+    }
+    gsl_vector_set(((pplVector *) out->auxil)->v, i, item->real);
+    return 0;
+}
+
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, int nArgs, const int dollarAllowed,
@@ -404,11 +462,9 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         for (i = 0; i < len; i++) { gsl_vector_set(v, i, 0); }
                         goto cleanup;
                     } else if (args[0].objType == PPLOBJ_LIST) {
-                        long i = 0;
                         list *listin = (list *) args[0].auxil;
                         listIterator *li = ppl_listIterateInit(listin);
                         const long len = listin->length;
-                        gsl_vector *v;
                         // A vector cannot be empty
                         if (len == 0) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -423,157 +479,24 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
-                        v = ((pplVector *) out->auxil)->v;
-                        // The first item must be a real number; its units become those of the vector
-                        if (len > 0) {
-                            pplObj *item = (pplObj *) ppl_listIterate(&li);
-                            // Report an item which is not a number
-                            if (item->objType != PPLOBJ_NUM) {
-                                ppl_snprintfTrunc(
-                                        context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                        "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
-                                        pplObjTypeNames[item->objType]);
-                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
+                        // Copy each item into the vector
+                        for (long i = 0; i < len; i++)
+                            if (vectorSetItem(context, inExpr, inExprCharPos, out, i, (pplObj *) ppl_listIterate(&li)))
                                 goto cleanup;
-                            }
-                            // Vectors cannot hold complex numbers
-                            if (item->flagComplex) {
-                                ppl_snprintfTrunc(
-                                        context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                        "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
-                                goto cleanup;
-                            }
-                            ppl_unitsDimCpy(out, item);
-                            gsl_vector_set(v, i, item->real);
-                        }
-                        // Every further item must be a real number with the same units
-                        for (i = 1; i < len; i++) {
-                            pplObj *item = (pplObj *) ppl_listIterate(&li);
-                            // Report an item which is not a number
-                            if (item->objType != PPLOBJ_NUM) {
-                                ppl_snprintfTrunc(
-                                        context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                        "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
-                                        pplObjTypeNames[item->objType]);
-                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
-                                goto cleanup;
-                            }
-                            // Vectors cannot hold complex numbers
-                            if (item->flagComplex) {
-                                ppl_snprintfTrunc(
-                                        context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                        "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                                ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
-                                goto cleanup;
-                            }
-                            // Report an item with different units
-                            if (!ppl_unitsDimEqual(item, out)) {
-                                // Describe the conflicting units in the error message
-                                if (out->dimensionless) {
-                                    ppl_snprintfTrunc(
-                                            context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                            "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
-                                            i + 1, ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
-                                } else if (item->dimensionless) {
-                                    ppl_snprintfTrunc(
-                                            context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                            "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
-                                            i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0));
-                                } else {
-                                    ppl_snprintfTrunc(
-                                            context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                            "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
-                                            i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
-                                            ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
-                                }
-                                ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
-                                goto cleanup;
-                            }
-                            gsl_vector_set(v, i, item->real);
-                        }
                         goto cleanup;
                     }
                 }
                 // List is to made up from arguments supplied to constructor
                 {
-                    long i = 0;
-                    gsl_vector *v;
                     // Make a vector with one element per argument
                     if (pplObjVector(out, 0, 1, nArgs) == NULL) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
                         ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
-                    v = ((pplVector *) out->auxil)->v;
-                    // The first argument must be a real number; its units become those of the vector
-                    if (nArgs > 0) {
-                        pplObj *item = &args[0];
-                        // Report an argument which is not a number
-                        if (item->objType != PPLOBJ_NUM) {
-                            ppl_snprintfTrunc(
-                                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                    "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
-                                    pplObjTypeNames[item->objType]);
-                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
-                            goto cleanup;
-                        }
-                        // Vectors cannot hold complex numbers
-                        if (item->flagComplex) {
-                            ppl_snprintfTrunc(
-                                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                    "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
-                            goto cleanup;
-                        }
-                        ppl_unitsDimCpy(out, item);
-                        gsl_vector_set(v, i, item->real);
-                    }
-                    // Every further argument must be a real number with the same units
-                    for (i = 1; i < nArgs; i++) {
-                        pplObj *item = &args[i];
-                        // Report an argument which is not a number
-                        if (item->objType != PPLOBJ_NUM) {
-                            ppl_snprintfTrunc(
-                                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                    "Vectors can only hold numeric values. Attempt to add object of type <%s> to vector.",
-                                    pplObjTypeNames[item->objType]);
-                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
-                            goto cleanup;
-                        }
-                        // Vectors cannot hold complex numbers
-                        if (item->flagComplex) {
-                            ppl_snprintfTrunc(
-                                    context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                    "Vectors can only hold real numeric values. Attempt to add a complex number.");
-                            ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
-                            goto cleanup;
-                        }
-                        // Report an argument with different units
-                        if (!ppl_unitsDimEqual(item, out)) {
-                            // Describe the conflicting units in the error message
-                            if (out->dimensionless) {
-                                ppl_snprintfTrunc(
-                                        context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                        "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
-                                        i + 1, ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
-                            } else if (item->dimensionless) {
-                                ppl_snprintfTrunc(
-                                        context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                        "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
-                                        i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0));
-                            } else {
-                                ppl_snprintfTrunc(
-                                        context->errStat.errBuff, sizeof(context->errStat.errBuff),
-                                        "Attempt to append a number (argument %ld) to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
-                                        i + 1, ppl_printUnit(context, out, NULL, NULL, 0, 1, 0),
-                                        ppl_printUnit(context, item, NULL, NULL, 1, 1, 0));
-                            }
-                            ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
-                            goto cleanup;
-                        }
-                        gsl_vector_set(v, i, item->real);
-                    }
+                    // Copy each argument into the vector
+                    for (long i = 0; i < nArgs; i++)
+                        if (vectorSetItem(context, inExpr, inExprCharPos, out, i, &args[i])) goto cleanup;
                     goto cleanup;
                 }
             case PPLOBJ_MAT:

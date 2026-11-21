@@ -63,16 +63,12 @@
 void pplfunc_osChdir(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The argument must be a single string, the directory
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.chdir() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The os.chdir() function requires a single string argument.");
         return;
     }
     // Report a failure to change directory
     if (chdir((char *) in[0].auxil) != 0) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.chdir() encountered an error: %s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "The os.chdir() encountered an error: %s", strerror(errno));
         return;
     }
     // Record the absolute path of the new working directory, to which Pyxplot returns after, e.g., making plots in a
@@ -214,9 +210,7 @@ void pplfunc_osGetHome(ppl_context *c, pplObj *in, const int nArgs, int *status,
     out = (char *) malloc(strlen(tmp) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     strcpy(out, tmp);
@@ -239,9 +233,7 @@ void pplfunc_osGetHost(ppl_context *c, pplObj *in, const int nArgs, int *status,
     out = (char *) malloc(outlen);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     gethostname(out, outlen);
@@ -266,9 +258,7 @@ void pplfunc_osGetLogin(ppl_context *c, pplObj *in, const int nArgs, int *status
     out = (char *) malloc(strlen(tmp) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     strcpy(out, tmp);
@@ -291,9 +281,7 @@ void pplfunc_osGetRealName(ppl_context *c, pplObj *in, const int nArgs, int *sta
     out = (char *) malloc(strlen(tmp) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     strcpy(out, tmp);
@@ -324,16 +312,12 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     int i, j;
     // The argument must be a single string, the pattern
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.glob() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The os.glob() function requires a single string argument.");
         return;
     }
     // The output is a list of matching filenames
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     v.refCount = 1;
@@ -378,16 +362,12 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     char *mode;
     // The arguments are the command, and optionally the mode ("r" or "w")
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The open() function requires string arguments.");
         return;
     }
     // The mode must be a string
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The open() function requires string arguments.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The open() function requires string arguments.");
         return;
     }
     if (nArgs > 1) mode = (char *) in[1].auxil;
@@ -395,9 +375,7 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     f = popen((char *) in[0].auxil, mode);
     // Report a failure to start the command
     if (f == NULL) {
-        *status = 1;
-        *errType = ERR_FILE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", strerror(errno));
+        ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
         return;
     }
     pplObjFile(&OUTPUT, 0, 1, f, 1);
@@ -422,9 +400,7 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     struct stat s;
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.stat() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE, "The os.stat() function requires a single string argument.");
         return;
     }
     // A file which cannot be examined returns null
@@ -436,9 +412,7 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     tmp = (char *) malloc(LSTR_LENGTH);
     // The output is a dictionary of the file's properties
     if (pplObjDict(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     d = (dict *) OUTPUT.auxil;
@@ -509,9 +483,8 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 void pplfunc_osSystem(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The argument must be a single string, the command
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.system() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.system() function requires a single string argument.");
         return;
     }
     pplObjNum(&OUTPUT, 0, system((char *) in[0].auxil), 0);
@@ -550,18 +523,14 @@ void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     struct utsname u;
     // Report a failure of uname()
     if (uname(&u)) {
-        *status = 1;
-        *errType = ERR_INTERNAL;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The uname() function failed.");
+        ppl_funcError(status, errType, errText, ERR_INTERNAL, "The uname() function failed.");
         return;
     }
     v.refCount = 1;
     tmp = (char *) malloc(LSTR_LENGTH);
     // The output is a new dictionary
     if (pplObjDict(&OUTPUT, 0, 1, NULL) == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     d = (dict *) OUTPUT.auxil;
@@ -598,9 +567,8 @@ void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 void pplfunc_osPathExists(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.exists() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.path.exists() function requires a single string argument.");
         return;
     }
     pplObjBool(&OUTPUT, 0, !access((char *) in[0].auxil, F_OK));
@@ -622,9 +590,8 @@ void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *st
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.filesize() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.path.filesize() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -653,9 +620,8 @@ void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.atime() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.path.atime() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -683,9 +649,8 @@ void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.ctime() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.path.ctime() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -713,9 +678,8 @@ void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.mtime() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.path.mtime() function requires a single string argument.");
         return;
     }
     st = stat((char *) in[0].auxil, &buffer);
@@ -742,17 +706,14 @@ void pplfunc_osPathExpandUser(ppl_context *c, pplObj *in, const int nArgs, int *
     char *out;
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The os.path.expanduser() function requires a single string argument.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.path.expanduser() function requires a single string argument.");
         return;
     }
     out = (char *) malloc(outlen);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     ppl_unixExpandUserHomeDir(&c->errcontext, (char *) in[0].auxil, c->errcontext.session_default.cwd, out, outlen);
@@ -817,18 +778,14 @@ void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (nArgs < 1) return;
     // The arguments are either a single list of strings, or one or more strings
     if ((in[0].objType == PPLOBJ_LIST) && (nArgs > 1)) {
-        *status = 1;
-        *errType = ERR_TYPE;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The os.path.join() function must be called with a single list of strings.");
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The os.path.join() function must be called with a single list of strings.");
         return;
     }
     out = (char *) malloc(outLen);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     out[0] = '\0';
@@ -842,10 +799,7 @@ void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status
         while ((item = (pplObj *) ppl_listIterate(&iter)) != NULL) {
             // Report an item which is not a string
             if (item->objType != PPLOBJ_STR) {
-                *status = 1;
-                *errType = ERR_TYPE;
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
+                ppl_funcError(status, errType, errText, ERR_TYPE,
                         "The os.path.join() function must be passed a list of string; input %d has type <%s>.", i + 1,
                         pplObjTypeNames[item->objType]);
                 free(out);
@@ -860,10 +814,7 @@ void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status
         for (i = 0; i < nArgs; i++) {
             // Every argument must be a string
             if (in[i].objType != PPLOBJ_STR) {
-                *status = 1;
-                *errType = ERR_TYPE;
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
+                ppl_funcError(status, errType, errText, ERR_TYPE,
                         "The os.path.join() function must be passed a list of string; input %d has type <%s>.", i + 1,
                         pplObjTypeNames[in[i].objType]);
                 free(out);
@@ -875,9 +826,7 @@ void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status
     }
     // A failure to allocate memory while joining
     if (out == NULL) {
-        *status = 1;
-        *errType = ERR_MEMORY;
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     pplObjStr(&OUTPUT, 0, 1, out);

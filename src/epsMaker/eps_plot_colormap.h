@@ -24,6 +24,11 @@
 
 #include "settings/settings.h"
 
+int eps_plot_colormap_findCRange(const pplset_graph *sg, int c, const dataBlock *blk, int Ncol, int XSize, int YSize,
+                                 double *CMin, double *CMax, unsigned char *CLog);
+void eps_plot_colormap_orientation(pplset_graph *sg, unsigned char ThreeDim, int xn, int yn, int zn, double origin_x,
+                                   double origin_y, double width, double height, double zdepth, double *xo, double *yo,
+                                   double *Lx, double *Ly, double *ThetaX, double *ThetaY);
 void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph *sg, canvas_plotdesc *pd);
 int eps_plot_colormap(EPSComm *x, dataTable *data, unsigned char ThreeDim, int xn, int yn, int zn, pplset_graph *sg,
                       canvas_plotdesc *pd, int pdn, double origin_x, double origin_y, double width, double height,

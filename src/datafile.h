@@ -134,4 +134,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                      const double *max, const int *maxSet, pplObj *unitRange, int persistent, int *status,
                      char *errtext, int *errCount, int iterDepth);
 
+int ppldata_readRange(ppl_context *c, parserLine *pl, const parserOutput *in, int pos, int o1, int o2, int nr,
+                      const char *varName, pplObj *unit, double *min, int *minSet, double *max, int *maxSet);
+
 #endif
