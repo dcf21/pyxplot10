@@ -208,25 +208,34 @@ pplFunc *pplObjFuncCpy(pplFunc *f) {
     for (j = 0, i = 0; i < Nargs; i++)
         while (f->argList[j++] != '\0');
 
-    // Copy the descriptor, the expression, the argument names and the ranges of the arguments
+    // Copy the descriptor, including its flags; the pointers which it owns are copied separately below
     if ((o = (pplFunc *) malloc(sizeof(pplFunc))) == NULL) return NULL;
-    o->functionType = PPL_FUNC_USERDEF;
-    o->minArgs = f->minArgs;
-    o->maxArgs = f->maxArgs;
-    if ((o->functionPtr = (void *) pplExpr_cpy((pplExpr *) f->functionPtr)) == NULL) return NULL;
-    if ((o->argList = (char *) malloc(j)) == NULL) return NULL;
-    memcpy(o->argList, f->argList, j);
-    if ((o->min = (pplObj *) malloc(Nargs * sizeof(pplObj))) == NULL) return NULL;
-    memcpy(o->min, f->min, Nargs * sizeof(pplObj));
-    if ((o->max = (pplObj *) malloc(Nargs * sizeof(pplObj))) == NULL) return NULL;
-    memcpy(o->max, f->max, Nargs * sizeof(pplObj));
-    if ((o->minActive = (unsigned char *) malloc(Nargs)) == NULL) return NULL;
-    memcpy(o->minActive, f->minActive, Nargs);
-    if ((o->maxActive = (unsigned char *) malloc(Nargs)) == NULL) return NULL;
-    memcpy(o->maxActive, f->maxActive, Nargs);
+    *o = *f;
+    o->refCount = 1;
+    o->functionPtr = NULL;
+    o->argList = NULL;
+    o->min = o->max = NULL;
+    o->minActive = o->maxActive = NULL;
     o->next = NULL;
     o->description = NULL;
     o->descriptionShort = NULL;
     o->LaTeX = NULL;
+
+    // Copy the expression, the argument names and the ranges of the arguments. On failure, free whatever was copied.
+    if (((f->functionPtr != NULL) &&
+         ((o->functionPtr = (void *) pplExpr_cpy((pplExpr *) f->functionPtr)) == NULL)) ||
+        ((o->argList = (char *) malloc(j)) == NULL) ||
+        ((o->min = (pplObj *) malloc(Nargs * sizeof(pplObj))) == NULL) ||
+        ((o->max = (pplObj *) malloc(Nargs * sizeof(pplObj))) == NULL) ||
+        ((o->minActive = (unsigned char *) malloc(Nargs)) == NULL) ||
+        ((o->maxActive = (unsigned char *) malloc(Nargs)) == NULL)) {
+        pplObjFuncDestroy(o);
+        return NULL;
+    }
+    memcpy(o->argList, f->argList, j);
+    memcpy(o->min, f->min, Nargs * sizeof(pplObj));
+    memcpy(o->max, f->max, Nargs * sizeof(pplObj));
+    memcpy(o->minActive, f->minActive, Nargs);
+    memcpy(o->maxActive, f->maxActive, Nargs);
     return o;
 }

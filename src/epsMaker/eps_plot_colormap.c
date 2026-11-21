@@ -323,6 +323,7 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
             ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             ppl_tbWrite(x->c);
             ppl_tbClear(x->c);
+            ppl_stackClean(x->c, stkLevelOld); // Stack: discard anything left by the failed evaluation
             return 1;
         }
         // Masked pixels are transparent
@@ -347,12 +348,14 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
             ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             ppl_tbWrite(x->c);
             ppl_tbClear(x->c);
+            ppl_stackClean(x->c, stkLevelOld); // Stack: discard anything left by the failed evaluation
             return 1;
         }
         lOP = ppl_colorFromObj(x->c, v, &outcol, &colspace, NULL, comp, comp + 1, comp + 2, comp + 3, &d1, &d2, msg);
         // Report an expression which does not return a color
         if (lOP) {
             ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+            ppl_stackClean(x->c, stkLevelOld); // Stack: discard anything left by the failed evaluation
             return 1;
         }
         // Named colors are converted to CMYK components
@@ -502,6 +505,18 @@ static void writePostscriptImage(EPSComm *x, const bitmap_data *img) {
     ppl_bmp_A85(&x->c->errcontext, x->epsbuffer, img->data, img->data_len);
 }
 
+//! restoreColorVars - Restore the user's variables c1...c4, after a colormap has finished using them
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] CDummy - The values of c1...c4 saved by ppl_contextGetVarPointer()
+
+static void restoreColorVars(EPSComm *x, pplObj *CDummy) {
+    int i;
+    // Restore each variable
+    for (i = 0; i < 4; i++) {
+        char v[3] = {'c', '1' + i, '\0'};
+        ppl_contextRestoreVarPointer(x->c, v, CDummy + i);
+    }
+}
 //! eps_plot_colormap - Render a dataset as a colormap, by resampling it onto a regular grid and writing it as a bitmap
 //! image
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -729,6 +744,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                     ppl_printUnit(x->c, (sg->Cminauto[c] == SW_BOOL_TRUE) ? (&sg->Cmax[c]) : (&sg->Cmin[c]), NULL, NULL,
                                   1, 1, 0));
             ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+            restoreColorVars(x, CDummy);
             return 1;
         }
 
@@ -758,7 +774,10 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 
             // Color the pixel
             C1Var = CVar[0];
-            if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) return 1;
+            if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) {
+                restoreColorVars(x, CDummy);
+                return 1;
+            }
             p += 3;
         }
 
@@ -893,7 +912,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                 y2 = ymax;
                 x1 = x2 = x->current->PlotRightMargin + MARGIN;
             } else {
-                continue;
+                goto nextDataset; // An unrecognised position: draw no scale
             }
 
             // Its outer edge is a fixed width further out
@@ -914,7 +933,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                 y4 = y2;
                 x3 = x4 = x1 + WIDTH;
             } else {
-                continue;
+                goto nextDataset; // An unrecognised position: draw no scale
             }
 
             // The direction and length of the image's edges
@@ -939,7 +958,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                 ThetaX = 0;
                 ThetaY = 3 * M_PI / 2;
             } else {
-                continue;
+                goto nextDataset; // An unrecognised position: draw no scale
             }
 
             // Paint bitmap image portion of colorscale
@@ -1026,6 +1045,8 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             eps_plot_axispaint(x, &ww, &pd->C1Axis, 0, GSL_NAN, !Lr, x3, y3, NULL, x4, y4, NULL, theta + M_PI,
                                theta + M_PI, &dummy, 1);
         }
+    // Move on to the next dataset
+    nextDataset:
         pd = pd->next;
         k++;
     }

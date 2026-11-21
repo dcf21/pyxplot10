@@ -315,7 +315,7 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     double size = 0, sizelast = 0, sizelast2 = 0;
     const gsl_multimin_fminimizer_type *T =
             gsl_multimin_fminimizer_nmsimplex; // We don't use nmsimplex2 here because it was new in gsl 1.12
-    gsl_multimin_fminimizer *s;
+    gsl_multimin_fminimizer *s = NULL;
     gsl_vector *x, *ss;
     gsl_multimin_function fn;
 
@@ -366,7 +366,7 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
 
         // If initial value we are giving the minimiser produces an algebraic error, it's not worth continuing
         MultiMinSlave(x, (void *) commlink);
-        if (c->errStat.status) return;
+        if (c->errStat.status) goto cleanup;
         // Report a numerical error in the expression, pointing to where it occurred
         if (commlink->warnPos >= 0) {
             const int i = commlink->warnExprId;
@@ -378,7 +378,7 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
             else
                 ppl_tbAdd(c, commlink->expr2[i]->srcLineN, commlink->expr2[i]->srcId, commlink->expr2[i]->srcFname, 1,
                           ERR_NUMERICAL, commlink->expr2pos[i] + commlink->warnPos, commlink->inLine, "");
-            return;
+            goto cleanup;
         }
 
         // Iterate the minimiser until the simplex stops shrinking
@@ -427,9 +427,13 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     if (status) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Failed to converge. GSL returned error: %s",
                           gsl_strerror(status));
-        ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_UNIT, 0, pl->linetxt, "");
-        return;
+        ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_NUMERICAL, 0, pl->linetxt, "");
     }
+
+// Free the minimiser, if a pass was abandoned, and the vectors
+cleanup:
+    if (s != NULL) gsl_multimin_fminimizer_free(s);
+    s = NULL;
     gsl_vector_free(x);
     x = NULL;
     gsl_vector_free(ss);

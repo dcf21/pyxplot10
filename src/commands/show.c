@@ -2081,7 +2081,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         itemSet[0] = '\0';
     } else {
         canvas_itemlist *canvas_items = c->canvas_items;
-        canvas_item *ptr = canvas_items->first;
+        canvas_item *ptr;
         int editNo = (int) round(stk[PARSE_show_editno].real);
         // The multiplot item number must be valid
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
@@ -2089,6 +2089,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
+        ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
         // Report a multiplot item which does not exist
         if (ptr == NULL) {

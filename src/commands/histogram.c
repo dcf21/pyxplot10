@@ -171,7 +171,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
                 if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                            "The minimum and maximum limits specified in range %d in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
+                            "The minimum and maximum limits specified in range %d in the histogram command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                             j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
                     ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");

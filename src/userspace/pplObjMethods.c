@@ -690,7 +690,7 @@ static void pplmethod_strisalnum(ppl_context *c, pplObj *in, const int nArgs, in
 static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // t is the string on which the method was called
     pplObj *t = in[-1].self_this;
-    char *instr = (char *) t->auxil, *astr;
+    char *instr, *astr;
     int alen;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -714,10 +714,12 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     t = t->self_lval;
+    instr = (char *) t->auxil;
     astr = (char *) in[0].auxil;
     alen = strlen(astr);
-    // Extend the string's buffer with realloc(), or copy both strings into a new buffer
-    if (in[0].auxilMalloced) {
+    // Extend the string's buffer with realloc() if it was allocated with malloc(); otherwise copy both strings into a
+    // new buffer from malloc(), leaving the old one to be freed with its memory context
+    if (t->auxilMalloced) {
         const int ilen = t->auxilLen - 1;
         int newlen = t->auxilLen + alen;
         instr = (char *) realloc(t->auxil, newlen);
@@ -742,6 +744,7 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
             return;
         }
         t->auxilLen = newlen;
+        t->auxilMalloced = 1;
         sprintf(ns, "%s%s", instr, astr);
         instr = ns;
     }
@@ -3366,7 +3369,7 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     dict *di = (dict *) st->auxil;
     char *instr;
     // The key must be a string
-    if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
+    if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH,
@@ -3415,7 +3418,7 @@ static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, in
     dict *di = (dict *) st->auxil;
     char *instr;
     // The key must be a string
-    if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
+    if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH,
@@ -4360,7 +4363,7 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
     char *s = (char *) in[0].auxil;
     long int l, o;
     // The argument must be a string
-    if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
+    if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH,
@@ -4398,7 +4401,7 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
 
 static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The argument must be a string, which becomes the error message
-    if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
+    if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH,

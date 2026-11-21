@@ -1,0 +1,4 @@
+# test: mode=stdin
+# Before Pyxplot 0.10.0, show item crashed if nothing had yet been put on the multiplot canvas
+show item 1 xrange
+print "survived"

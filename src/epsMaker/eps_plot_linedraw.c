@@ -273,7 +273,7 @@ void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double
         ld->x0set = 0;
     } else if ((!Inside1) && (Inside2)) // We have just entered clip region; previous point was outside
     {
-        ThreeDimBuffer_linesegment(ld->x, z, linetype, linewidth, colstr, cx1, cy1, cx1, cy1, cx2, cy2, 1, 0, 0.0);
+        ThreeDimBuffer_linesegment(ld->x, depth, linetype, linewidth, colstr, cx1, cy1, cx1, cy1, cx2, cy2, 1, 0, 0.0);
         // Remember where this run of the line started
         if ((!ld->x0set) || (cx1 != cx2) || (cy1 != cy2)) {
             ld->x0 = cx1;

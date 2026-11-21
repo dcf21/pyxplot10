@@ -25,7 +25,7 @@
 // interpolate_2d_engine.c, and bitmap interpolation returns the red, green or blue component of the pixel.
 // ppl_spline_evaluate() and ppl_interp2d_evaluate() are called by the expression evaluator when the functions are used.
 
-#define _FFT_C 1
+#define _INTERPOLATE_C 1
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -248,7 +248,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                 if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                            "The minimum and maximum limits specified in range %ld in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
+                            "The minimum and maximum limits specified in range %ld in the interpolate command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                             j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
                     ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
@@ -424,7 +424,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             buff[i] = (unsigned char) j;
         }
         // Bitmap files start with the letters BM
-        if ((buff[0] != 'B') && (buff[1] != 'M')) {
+        if ((buff[0] != 'B') || (buff[1] != 'M')) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "File '%s' does not appear to be a valid bitmap image.", filenameOut);
             ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
@@ -810,9 +810,9 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     if (*status != 0) {
         // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            *status = 1;
             ppl_snprintfTrunc(errout, LSTR_LENGTH, "Error whilst evaluating the %s(x) function: %s", FuncName,
                               gsl_strerror(*status));
+            *status = 1;
         } else {
             *status = 0;
             pplObjNum(out, 0, 0, 0);

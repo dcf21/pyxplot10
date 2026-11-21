@@ -1,0 +1,6 @@
+# test: mode=stdin
+# Before Pyxplot 0.10.0, positions given as lists ignored their units, so lengths were misread and other units were
+# accepted
+arrow from [1*unit(cm),1*unit(cm)] to [2*unit(cm),3*unit(cm)]
+arrow from [1*unit(s),1*unit(s)] to [2,3]
+list

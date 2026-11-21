@@ -1,0 +1,22 @@
+
+Type error:
+
+In piped input, line 4, position 6 below:
+ print d.hasKey(1)
+In piped input, line 4, position 8 below:
+
+ d.hasKey(1)
+        /|\
+         |
+The method hasKey() requires a string as its argument; supplied argument had type <number>.
+
+
+Type error:
+
+In piped input, line 5, position 8 below:
+
+ d.delete(1)
+        /|\
+         |
+The method delete(x) requires a string as its argument; supplied argument had type <number>.
+

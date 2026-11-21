@@ -1,0 +1,10 @@
+# test: mode=stdin
+# Before Pyxplot 0.10.0, the polygon command's error messages were garbage, and coordinates given as lists with units
+# of length were rejected
+polygon [[0,0]]
+polygon [[1*unit(s),2],[3,4]]
+polygon [[1,2],[3,4],[5]]
+polygon [[1*unit(cm),2*unit(cm)],[3*unit(cm),4*unit(cm)],[3*unit(cm),1*unit(cm)]]
+list
+polygon [[1*unit(cm),2],[3,4*unit(cm)]]
+list

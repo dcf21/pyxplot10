@@ -51,7 +51,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     unsigned char buff[8], flags, len, *rawz;
     int gcm, ncols, interlaced;
     long lxoff, lyoff, lw, lh, lzwcs;
-    unsigned long datalen, width, height;
+    unsigned long datalen, rawzLen, width, height;
     static unsigned char trans;
 
     // Log progress in debugging mode
@@ -275,11 +275,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Local number of colours=%d", ncols);
             ppl_log(ec, msg);
         }
-        // Discard the global color map
-        if (gcm) {
-            free(image->palette);
-            image->palette = NULL;
-        }
+        // Discard the global color map; it was allocated with ppl_memAlloc(), so it is freed with its memory context
+        if (gcm) image->palette = NULL;
         image->palette = ppl_memAlloc(ncols * 3);
         // Failure to allocate memory is reported as an error
         if (image->palette == NULL) {
@@ -323,8 +320,9 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         ppl_log(ec, msg);
     }
 
-    // A buffer for the compressed data
-    rawz = (unsigned char *) malloc((width * height * 3) / 2);
+    // A buffer for the compressed data, which is enlarged as needed
+    rawzLen = (width * height * 3) / 2 + 1024;
+    rawz = (unsigned char *) malloc(rawzLen);
     // Failure to allocate memory is reported as an error
     if (rawz == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -343,6 +341,19 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
     // Read each sub-block
     while (len) {
+        // Enlarge the buffer if the sub-block will not fit, leaving room for the three bytes which the decoder may read
+        // beyond the end of the data
+        if (datalen + len + 3 > rawzLen) {
+            unsigned char *grown = (unsigned char *) realloc(rawz, rawzLen * 2);
+            if (grown == NULL) {
+                ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
+                free(rawz);
+                rawz = NULL;
+                return;
+            }
+            rawz = grown;
+            rawzLen *= 2;
+        }
         // Read the data
         if (fread(rawz + datalen, len, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
@@ -359,6 +370,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             return;
         }
     }
+    // Zero the bytes after the data, which the decoder may read when extracting the last code
+    memset(rawz + datalen, 0, 3);
     // Log the amount of data in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Total GIF data length=%ld", datalen);
@@ -376,7 +389,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // Decompress the data
-    datalen = ppl_bmp_de_lzw(ec, rawz, image->data, width * height, lzwcs);
+    datalen = ppl_bmp_de_lzw(ec, rawz, datalen, image->data, width * height, lzwcs);
     free(rawz);
     rawz = NULL;
 
@@ -477,13 +490,14 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
 //! ppl_bmp_de_lzw - Decompress the LZW-compressed pixel data of a GIF image
 //! \param [in] ec - The error-reporting context
 //! \param [in] buff - The compressed data
+//! \param [in] buffLen - The number of bytes of compressed data
 //! \param [out] out - Buffer into which to write the decompressed pixel data
 //! \param [in] len - The size of the buffer <out>
 //! \param [in] cs - The initial LZW code size, in bits
 //! \return The number of bytes of decompressed data, or zero on failure
 
-unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned char *out, const unsigned long len,
-                             int cs) {
+unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsigned long buffLen, unsigned char *out,
+                             const unsigned long len, int cs) {
     char msg[PPL_MSG_LENGTH];
     unsigned char store[256], *start, *end;
     unsigned int off, tpos, eoi, clr;
@@ -535,6 +549,11 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
     // Read each code; each new code adds the previous string plus one pixel to the table, which is filled in when the
     // next code is written
     while (1) {
+        // The data must not run out before the end-of-information code
+        if ((off >> 3) >= buffLen) {
+            ppl_error(ec, ERR_FILE, -1, -1, "Whilst decoding GIF image file, the data ended unexpectedly");
+            return 0;
+        }
         i = ppl_bmp_de_lzw_bits(ec, buff + (off >> 3), off & 7, ccs);
         off += ccs;
 
@@ -572,7 +591,7 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned c
         }
 
         // Write the string for this code
-        for (j = 0; (j < table[i].len) && (out <= end); j++) *(out++) = *(table[i].s + j);
+        for (j = 0; (j < table[i].len) && (out < end); j++) *(out++) = *(table[i].s + j);
 
         // Lengthen the codes when the table outgrows them
         if ((tpos == (1 << ccs) + 1) && (ccs < MAXCS)) ccs++;

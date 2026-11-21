@@ -172,6 +172,7 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
     int pos, TrialNumber;
+    ssize_t nread;
     char linebuffer[SSTR_LENGTH];
 
     // Check whether the pipe from the CSP is readable, retrying up to three times if interrupted by a signal
@@ -197,7 +198,10 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
 
     // Read what is waiting, and report it line by line
     pos = strlen(PipeOutputBuffer);
-    if (read(PipeCSP2MAIN[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5) > 0)
+    nread = read(PipeCSP2MAIN[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
+    // read() does not terminate the string, so terminate it after the new bytes
+    if (nread > 0) PipeOutputBuffer[pos + nread] = '\0';
+    if (nread > 0)
         // Report each complete line, ignoring messages about viewers being killed
         while (PipeOutputBuffer[0] != '\0') {
             ppl_strRemoveCompleteLine(PipeOutputBuffer, linebuffer);
@@ -320,6 +324,7 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
     int pos, TrialNumber;
+    ssize_t nread;
     char linebuffer[SSTR_LENGTH];
 
     // Check whether the pipe from the main process is readable, retrying up to three times if interrupted by a signal
@@ -345,7 +350,10 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
 
     // Read what is waiting, and process it command by command
     pos = strlen(PipeOutputBuffer);
-    if (read(PipeMAIN2CSP[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5) > 0)
+    nread = read(PipeMAIN2CSP[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
+    // read() does not terminate the string, so terminate it after the new bytes
+    if (nread > 0) PipeOutputBuffer[pos + nread] = '\0';
+    if (nread > 0)
         // Process each complete line
         while (1) {
             ppl_strRemoveCompleteLine(PipeOutputBuffer, linebuffer);

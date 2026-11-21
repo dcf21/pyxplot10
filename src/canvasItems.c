@@ -1170,14 +1170,16 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
                 ptr->polygonPoints[2 * c + 1] += oy;
             }
         } else {
-            // Rotate each point about the first point, and place it relative to the new position
+            // Rotate each point about the first point, and place it relative to the new position. The first point's
+            // original position is kept, since the first iteration moves it.
+            const double x0 = ptr->polygonPoints[0];
+            const double y0 = ptr->polygonPoints[1];
             for (c = 0; c < ptr->NpolygonPoints; c++) {
-                double ox = ptr->polygonPoints[2 * c] - ptr->polygonPoints[0];
-                double oy = ptr->polygonPoints[2 * c + 1] - ptr->polygonPoints[1];
-                ox = ox * cos(rotation) + oy * -sin(rotation);
-                oy = ox * sin(rotation) + oy * cos(rotation);
-                ptr->polygonPoints[2 * c] = ox + x;
-                ptr->polygonPoints[2 * c + 1] = oy + y;
+                // The offset of this point from the first point, before it is moved
+                const double ox = ptr->polygonPoints[2 * c] - x0;
+                const double oy = ptr->polygonPoints[2 * c + 1] - y0;
+                ptr->polygonPoints[2 * c] = ox * cos(rotation) - oy * sin(rotation) + x;
+                ptr->polygonPoints[2 * c + 1] = ox * sin(rotation) + oy * cos(rotation) + y;
             }
         }
     } else if ((ptr->type != CANVAS_PLOT) &&
@@ -2043,7 +2045,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     }
     // A polygon needs at least two points
     if (Npts < 2) {
-        printf(msg, "A minimum of two points are required to specify the outline of a polygon.");
+        ppl_snprintfTrunc(msg, sizeof(msg), "A minimum of two points are required to specify the outline of a polygon.");
         goto fail;
     }
     // Read each point, which may be a vector or a list of two numbers, with units of length or dimensionless (in
@@ -2068,7 +2070,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
                     }
                 // Report a position with the wrong units
                 if (p < 0) {
-                    printf(msg,
+                    ppl_snprintfTrunc(msg, sizeof(msg),
                            "Point %d of polygon should have specified as a position vector; supplied position had wrong units.",
                            i + 1);
                     goto fail;
@@ -2076,7 +2078,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
             }
             // The vector must have two components
             if (l != 2) {
-                printf(msg,
+                ppl_snprintfTrunc(msg, sizeof(msg),
                        "Point %d of polygon should have specified as a two-component position vector; supplied vector had %d components.",
                        i + 1, l);
                 goto fail;
@@ -2085,12 +2087,12 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
             y = gsl_vector_get(v->v, 1) * m;
         } else if (item->objType == PPLOBJ_LIST) {
             int j, p;
-            double m = 1;
+            double m[2] = {1, 1}; // The scaling of each coordinate, which may differ if only one has units
             list *l = (list *) item->auxil;
             pplObj *xo[2];
             // A point given as a list must have two items
             if (ppl_listLen(l) != 2) {
-                printf(msg,
+                ppl_snprintfTrunc(msg, sizeof(msg),
                        "Point %d of polygon should have specified as a two-component position vector; supplied vector had %d components.",
                        i + 1, ppl_listLen(l));
                 goto fail;
@@ -2100,38 +2102,38 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
                 xo[j] = (pplObj *) ppl_listGetItem(l, j);
                 // The coordinate must be a number
                 if (xo[j]->objType != PPLOBJ_NUM) {
-                    printf(msg,
+                    ppl_snprintfTrunc(msg, sizeof(msg),
                            "Point %d of polygon should have specified as a position vector; supplied object had type <%s>.",
                            i + 1, pplObjTypeNames[xo[j]->objType]);
                     goto fail;
                 }
                 // The coordinate must be real
                 if (xo[j]->flagComplex) {
-                    printf(msg,
+                    ppl_snprintfTrunc(msg, sizeof(msg),
                            "Point %d of polygon should have specified as a position vector; supplied object was complex.",
                            i + 1);
                     goto fail;
                 }
-                if (xo[j]->dimensionless) m = 0.01;
+                if (xo[j]->dimensionless) m[j] = 0.01;
                 // Dimensionless coordinates are in centimetres; otherwise they must be lengths
                 else {
                     for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
-                        // Check the units are those of length
-                        if (xo[j]->exponent[p] != UNIT_LENGTH) {
+                        // The exponent of every base unit must be zero, except length, which must be one
+                        if (xo[j]->exponent[p] != (p == UNIT_LENGTH)) {
                             p = -1;
                             break;
                         }
                     // Report a coordinate with the wrong units
                     if (p < 0) {
-                        printf(msg,
+                        ppl_snprintfTrunc(msg, sizeof(msg),
                                "Point %d of polygon should have specified as a position vector; supplied position had wrong units.",
                                i + 1);
                         goto fail;
                     }
                 }
             }
-            x = xo[0]->real * m;
-            y = xo[1]->real * m;
+            x = xo[0]->real * m[0];
+            y = xo[1]->real * m[1];
         } else {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),

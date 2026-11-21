@@ -1,0 +1,5 @@
+# test: mode=stdin
+# Before Pyxplot 0.10.0, the error reported by Im() with complex arithmetic turned off had no error type
+set numerics real
+set numerics errors explicit
+print Im(2)

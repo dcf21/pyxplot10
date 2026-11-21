@@ -142,7 +142,8 @@ static void fftwindow_lanczos(pplObj *x, const int Ndim, int *Npos, int *Nstep) 
     // The window is the product of the window function in each dimension
     for (i = 0; i < Ndim; i++) {
         z = 2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)) - M_PI;
-        y *= sin(z) / z;
+        // sin(z)/z tends to one at the central sample, where z is zero
+        if (z != 0.0) y *= sin(z) / z;
     }
     x->real *= y;
     x->imag *= y;
@@ -353,7 +354,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             if ((stk[pos + o3].objType == PPLOBJ_NUM) || (stk[pos + o3].objType == PPLOBJ_DATE) ||
                 (stk[pos + o3].objType == PPLOBJ_BOOL)) {
-                int tempDbl;
+                double tempDbl;
                 // The step must have the same type as the limits
                 if (unit[nr].objType != stk[pos + o3].objType) {
                     ppl_snprintfTrunc(
@@ -431,15 +432,15 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         WindowType = fftwindow_rectangular;
         // Select the window function named in the command
         if (gotWindow) {
-            if (strcmp(cptr, "hamming") != 0) WindowType = fftwindow_hamming;
-            else if (strcmp(cptr, "hann") != 0) WindowType = fftwindow_hann;
-            else if (strcmp(cptr, "cosine") != 0) WindowType = fftwindow_cosine;
-            else if (strcmp(cptr, "lanczos") != 0) WindowType = fftwindow_lanczos;
-            else if (strcmp(cptr, "bartlett") != 0) WindowType = fftwindow_bartlett;
-            else if (strcmp(cptr, "triangular") != 0) WindowType = fftwindow_triangular;
-            else if (strcmp(cptr, "gauss") != 0) WindowType = fftwindow_gauss;
-            else if (strcmp(cptr, "bartletthann") != 0) WindowType = fftwindow_bartletthann;
-            else if (strcmp(cptr, "blackman") != 0) WindowType = fftwindow_blackman;
+            if (strcmp(cptr, "hamming") == 0) WindowType = fftwindow_hamming;
+            else if (strcmp(cptr, "hann") == 0) WindowType = fftwindow_hann;
+            else if (strcmp(cptr, "cosine") == 0) WindowType = fftwindow_cosine;
+            else if (strcmp(cptr, "lanczos") == 0) WindowType = fftwindow_lanczos;
+            else if (strcmp(cptr, "bartlett") == 0) WindowType = fftwindow_bartlett;
+            else if (strcmp(cptr, "triangular") == 0) WindowType = fftwindow_triangular;
+            else if (strcmp(cptr, "gauss") == 0) WindowType = fftwindow_gauss;
+            else if (strcmp(cptr, "bartletthann") == 0) WindowType = fftwindow_bartletthann;
+            else if (strcmp(cptr, "blackman") == 0) WindowType = fftwindow_blackman;
         }
     }
 
@@ -465,7 +466,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                            "The minimum and maximum limits specified in range %d in the fit command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
+                            "The minimum and maximum limits specified in range %d in the fft command have conflicting physical dimensions with the data returned from the data file. The limits have units of <%s>, whilst the data have units of <%s>.",
                             j + 1, ppl_printUnit(c, unit + j, NULL, NULL, 0, 1, 0),
                             ppl_printUnit(c, data->firstEntries + j, NULL, NULL, 1, 1, 0));
                     ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
@@ -830,11 +831,19 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 normI = normI2;
             }
 #ifdef HAVE_FFTW3
-            datagrid[i][0] = datagrid[i][0] * normR - datagrid[i][1] * normI;
-            datagrid[i][1] = datagrid[i][0] * normI + datagrid[i][1] * normR;
+            {
+                // Multiply by the phase factor, keeping the old real part until the imaginary part has used it
+                const double re = datagrid[i][0], im = datagrid[i][1];
+                datagrid[i][0] = re * normR - im * normI;
+                datagrid[i][1] = re * normI + im * normR;
+            }
 #else
-            datagrid[i].re = datagrid[i].re * normR - datagrid[i].im * normI;
-            datagrid[i].im = datagrid[i].re * normI + datagrid[i].im * normR;
+            {
+                // Multiply by the phase factor, keeping the old real part until the imaginary part has used it
+                const double re = datagrid[i].re, im = datagrid[i].im;
+                datagrid[i].re = re * normR - im * normI;
+                datagrid[i].im = re * normI + im * normR;
+            }
 #endif
         }
     }
@@ -847,7 +856,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         // Multiply the units of the function by the units of each dimension
         for (i = 0; i < Ndims; i++) {
             ppl_uaMul(c, &output->outputUnit, &output->range[i], &output->outputUnit, &status, &et, c->errStat.errBuff);
-            if (status >= 0) break;
+            if (status) break;
         }
         // Give up if the units could not be multiplied
         if (status) {

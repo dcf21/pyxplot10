@@ -1,0 +1,10 @@
+# Before Pyxplot 0.10.0, a parametric plot given only a range of t sampled a grid of u and v instead
+set samples 5
+tabulate parametric [0:1] t:t**2
+i = 0
+foreach datum a,b in "pyxplot.txt" {
+ assert abs(a - i/4) < 1e-12
+ assert abs(b - (i/4)**2) < 1e-12
+ i = i + 1
+}
+assert i == 5

@@ -220,6 +220,11 @@ static void setNoTicks(pplset_tics *t) {
     tics_rm(t);
     t->tickList = (double *) malloc(sizeof(double));
     t->tickStrs = (char **) malloc(sizeof(char *));
+    // If memory runs out, the axis is left with automatic ticks
+    if ((t->tickList == NULL) || (t->tickStrs == NULL)) {
+        tics_rm(t);
+        return;
+    }
     t->tickStrs[0] = NULL;
 }
 
@@ -432,7 +437,14 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             i++;
         }
         t->tickList = (double *) malloc((i + 1) * sizeof(double));
-        t->tickStrs = (char **) malloc((i + 1) * sizeof(char *));
+        // The labels are a NULL-terminated list, so it is zeroed, keeping it terminated if a label cannot be allocated
+        t->tickStrs = (char **) calloc(i + 1, sizeof(char *));
+        // Failure to allocate memory is reported as an error
+        if ((t->tickList == NULL) || (t->tickStrs == NULL)) {
+            tics_rm(t);
+            ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+            return 1;
+        }
         pos = ptab[PARSE_INDEX_0tick_list];
         i = 0;
         // Store each tick position and its label
@@ -454,6 +466,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             t->tickStrs[i] = (char *) malloc(strlen(label) + 1);
             // Failure to allocate memory is reported as an error
             if (t->tickStrs[i] == NULL) {
+                tics_rm(t);
                 ppl_snprintfTrunc(msg, sizeof(msg), "Out of memory.");
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, msg);
                 return 1;
@@ -722,7 +735,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "binorigin") == 0)) /* set binorigin */
     {
         // An automatic bin origin, or a value
-        if (command[PARSE_set_binwidth_auto].objType == PPLOBJ_STR) {
+        if (command[PARSE_set_binorigin_auto].objType == PPLOBJ_STR) {
             c->set->term_current.BinOriginAuto = 1;
         } else {
             const double tempdbl = command[PARSE_set_binorigin_bin_origin].real;
@@ -1803,7 +1816,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     setNoTicks(&(a->ticsM));
                 }
             }
-        } else {
+        } else if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
+            // Axis settings cannot be changed for multiplot items which have no axes
             int i;
             // Remove the ticks from all enabled x axes
             for (i = 0; i < MAX_AXES; i++) {
@@ -2476,7 +2490,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         return;
                 }
             }
-        } else {
+        } else if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
+            // Axis settings cannot be changed for multiplot items which have no axes
             int i;
             char *cmd = m ? "mtics" : "tics";
             // Set the ticks of all enabled x axes
@@ -2571,7 +2586,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     unsetTicks(a, ad, m);
                 }
             }
-        } else {
+        } else if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
+            // Axis settings cannot be changed for multiplot items which have no axes
             int i;
             // Restore the default ticks of all x axes
             for (i = 0; i < MAX_AXES; i++) {

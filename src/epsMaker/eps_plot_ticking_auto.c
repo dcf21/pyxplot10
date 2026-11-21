@@ -1369,6 +1369,16 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 FAIL:
     if (DEBUG) ppl_log(&x->c->errcontext, "eps_plot_ticking_auto() has failed");
 
+    // Free the compiled expressions before the rough workspace, which holds the array of pointers to them
+    if (formatExp != NULL)
+        for (i = 0; i < NArgs; i++)
+            // Each compiled expression
+            if (formatExp[i] != NULL) {
+                pplExpr_free(formatExp[i]);
+                formatExp[i] = NULL;
+            }
+    formatExp = NULL;
+
     // When clever logic fails, revert to Pyxplot 0.7 ticking algorithm
     if (ContextRough > 0) ppl_memAlloc_AscendOutOfContext(ContextRough);
     ContextRough = -1;

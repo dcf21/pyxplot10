@@ -1,0 +1,10 @@
+
+Type error:
+
+In piped input, line 5, position 11 below:
+
+ arrow from [1*unit(s),1*unit(s)] to [2,3]
+           /|\
+            |
+Expression evaluates to the wrong type: needed a position vector.
+

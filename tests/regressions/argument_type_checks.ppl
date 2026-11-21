@@ -1,0 +1,6 @@
+# test: mode=stdin
+# Before Pyxplot 0.10.0, the hasKey() and delete() methods of dictionaries accepted keys which were not strings
+d = {"a":1}
+print d.hasKey(1)
+d.delete(1)
+print d

@@ -166,7 +166,7 @@ static int clipArrowEnd(double *pos[6], const double grad[3][6], const int xyz, 
     const double t = ap[P];
     int k;
     if (!(apv ? (t > 1) : (t < 0))) return 0; // This end of the arrow lies inside the face
-    if (ap[1 - P] < 0.0) return 1; // Both ends lie beyond the face
+    if (apv ? (ap[1 - P] > 1) : (ap[1 - P] < 0)) return 1; // Both ends lie beyond the face
     for (k = 0; k < 6; k++) pos[k][P] += grad[xyz][k] * (apv - t);
 
     // Remove the arrowhead from the end which has been clipped

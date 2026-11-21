@@ -34,7 +34,8 @@
 
 void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image);
 int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image);
-unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned char *out, unsigned long len, int cs);
+unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, unsigned long buffLen, unsigned char *out,
+                             unsigned long len, int cs);
 unsigned int ppl_bmp_de_lzw_bits(const pplerr_context *ec, unsigned char *c, int st, int len);
 
 #endif

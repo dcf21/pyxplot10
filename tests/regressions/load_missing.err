@@ -1,0 +1,10 @@
+
+File error:
+
+In piped input, line 3, position 5 below:
+
+ load "missing.ppl"
+     /|\
+      |
+Could not access file 'missing.ppl'.
+

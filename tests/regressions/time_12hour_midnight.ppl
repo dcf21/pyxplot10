@@ -1,0 +1,8 @@
+# Before Pyxplot 0.10.0, the 12-hour clock formats %I and %l showed the hour after midnight as 00 instead of 12
+t = time.fromCalendar(2020,1,1,0,30,0)
+assert t.str("%I:%M %p") == "12:30 am"
+assert t.str("%l") == "12"
+t = time.fromCalendar(2020,1,1,12,30,0)
+assert t.str("%I:%M %p") == "12:30 pm"
+t = time.fromCalendar(2020,1,1,13,30,0)
+assert t.str("%I %l") == "01 1"

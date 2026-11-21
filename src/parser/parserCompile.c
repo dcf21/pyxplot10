@@ -303,13 +303,13 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
     if ((s != NULL) && writeOut && (level == 0)) {
         parserLine *output = NULL;
         ppl_parserLineInit(&output, srcLineN, srcId, srcFname, line);
-        output->stackLen = node->listLen;
         // Failure to allocate memory is reported as an error
         if (output == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
             parseTbAdd(c, srcLineN, srcId, srcFname, ERR_MEMORY, 0, line);
             return 0;
         }
+        output->stackLen = node->listLen;
         ppl_parserStatAdd(s, blockDepth, output);
     }
 
@@ -1664,15 +1664,16 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                                 if (outbuff[obPos] != '\0') obPos++;
                                 // Grow the output buffer when it is nearly full
                                 if (obPos > obLen - 16) {
-                                    obLen += LSTR_LENGTH;
-                                    outbuff = (char *) realloc(outbuff, obLen);
-                                    // Failure to allocate memory is reported as an error
-                                    if (outbuff == NULL) {
+                                    char *grown = (char *) realloc(outbuff, obLen + LSTR_LENGTH);
+                                    // Failure to allocate memory is reported as an error; the old buffer remains valid
+                                    if (grown == NULL) {
                                         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                                           "Out of memory.");
                                         fail = 1;
                                         break;
                                     }
+                                    outbuff = grown;
+                                    obLen += LSTR_LENGTH;
                                 }
                             }
                             status = pclose(substPipe);
@@ -1741,13 +1742,18 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                                 }
                                 // Grow the output buffer if the string will not fit
                                 if (obPos + strlen((char *) obj->auxil) > obLen - 16) {
-                                    obLen += strlen((char *) obj->auxil) + LSTR_LENGTH;
-                                    outbuff = (char *) realloc(outbuff, obLen);
-                                    // Failure to allocate memory abandons the substitution
-                                    if (outbuff == NULL) {
+                                    const int newLen = obLen + strlen((char *) obj->auxil) + LSTR_LENGTH;
+                                    char *grown = (char *) realloc(outbuff, newLen);
+                                    // Failure to allocate memory abandons the substitution; the old buffer remains
+                                    // valid
+                                    if (grown == NULL) {
+                                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
+                                                          "Out of memory.");
                                         got = -2;
                                         break;
                                     }
+                                    outbuff = grown;
+                                    obLen = newLen;
                                 }
                                 strcpy(outbuff + obPos, (char *) obj->auxil);
                                 obPos += strlen(outbuff + obPos);
@@ -1774,8 +1780,12 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                             break;
                         }
                     } // Loop over characters
+                    outbuff[obPos++] = '\0';
+                } else {
+                    // Failure to allocate memory is reported as an error
+                    ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
+                    fail = 1;
                 }
-                outbuff[obPos++] = '\0';
 
                 // Clean up after macro substitution
                 if ((!fail) && (outbuff != NULL)) {

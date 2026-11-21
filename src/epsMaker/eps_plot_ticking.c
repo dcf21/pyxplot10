@@ -195,7 +195,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
             ((axis->LogFinal != SW_BOOL_TRUE) || (min_prelim > 1e-300)))
             axis->MinFinal = min_prelim;
         if (gsl_finite(max_prelim) && (!axis->HardMaxSet) &&
-            ((axis->LogFinal != SW_BOOL_TRUE) || (min_prelim > 1e-300)))
+            ((axis->LogFinal != SW_BOOL_TRUE) || (max_prelim > 1e-300)))
             axis->MaxFinal = max_prelim;
 
         // Print out debugging report
@@ -592,13 +592,10 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     } else {
         tmp_string = (char *) outval->auxil;
     }
+    // Copy the label; if memory runs out, *output is left NULL, but the stack and variable are still restored
     *output = (char *) ppl_memAlloc_incontext(strlen(tmp_string) + 3, OutContext);
-    if ((*output) == NULL) return;
-    ppl_snprintfTrunc(*output, strlen(tmp_string) + 3, "%s", tmp_string);
-    {
-        EPSComm *x = X;
-        ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
-    }
+    if ((*output) != NULL) ppl_snprintfTrunc(*output, strlen(tmp_string) + 3, "%s", tmp_string);
+    ppl_stackClean(X->c, stkLevelOld); // Discard anything left on the stack
 
     // Restore original value of x (or y/z)
     ppl_contextRestoreVarPointer(X->c, VarName, &DummyTemp);

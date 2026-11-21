@@ -382,15 +382,17 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                                     // Otherwise the coordinate must have dimensions of length
                                     else {
                                         for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
-                                            // Check the coordinate's units
-                                            if (val->exponent[p] != UNIT_LENGTH) {
+                                            // The exponent of every base unit must be zero, except length, which must
+                                            // be one
+                                            if (xo->exponent[p] != (p == UNIT_LENGTH)) {
                                                 p = -1;
                                                 break;
                                             }
-                                        if (p < 0) break; // vector has wrong units
+                                        if (p < 0) break; // coordinate has wrong units
                                     }
                                     x[i] = xo->real * m;
                                 }
+                                if (i < l) break; // one of the coordinates was not a real length
                                 rc = val->refCount;
                                 ppl_garbageObject(val);
                                 val->refCount = rc;

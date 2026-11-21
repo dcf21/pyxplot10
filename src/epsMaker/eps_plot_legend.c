@@ -340,7 +340,8 @@ static canvas_plotdesc *titledDataset(canvas_plotdesc *pd, int *iDataSet) {
 //! \param [in] TrialHeight - The maximum height of each column, in postscript points
 //! \param [out] AttainedHeight - Set to the height of the tallest column
 //! \param [out] Ncolumns - Set to the number of columns used
-//! \param [out] ColumnX - Array into which to write the x position of each column
+//! \param [out] ColumnX - Array into which to write the x position of each column, followed by the right-hand edge of
+//! the last column; it must have MAX_LEGEND_COLUMNS + 1 elements
 //! \param [out] ColumnHeight - Array into which to write the height of each column
 //! \param [out] ColumnNItems - Array into which to write the number of items in each column
 
@@ -390,7 +391,8 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     // Variables for arranging the legend
     double fs = x->current->settings.FontSize, CombinedHeight = 0.0, MinimumHeight = 0.0;
     double xoff = 0, yoff = 0;
-    double ColumnX[MAX_LEGEND_COLUMNS], ColumnHeight[MAX_LEGEND_COLUMNS];
+    // ColumnX has one more element than there are columns, holding the right-hand edge of the last column
+    double ColumnX[MAX_LEGEND_COLUMNS + 1], ColumnHeight[MAX_LEGEND_COLUMNS];
     double BestHeight, AttainedHeight, TrialHeight;
     int Ncolumns, ColumnNItems[MAX_LEGEND_COLUMNS];
     double height1, height2, bb_top, bb_bottom, ab_left, ab_right, ab_top, ab_bottom;
@@ -704,8 +706,8 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
             // Datasets with no data have no icon
             if ((data == NULL) || (data->Nrows < 1)) {
                 x->LaTeXpageno++;
-                return;
-            } // No data present
+                continue;
+            } // No data present: skip this dataset's entry, but draw the others
             axissets[0] = x->current->XAxes;
             axissets[1] = x->current->YAxes;
             axissets[2] = x->current->ZAxes;

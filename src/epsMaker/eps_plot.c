@@ -610,8 +610,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                                                                            : x->current->settings.SamplesY;
 
         // The rasters of u and v values along which parametric surfaces are sampled
-        ordinate_raster = (double *) ppl_memAlloc(x->current->settings.SamplesX * sizeof(double));
-        ordinate2_raster = (double *) ppl_memAlloc(x->current->settings.SamplesY * sizeof(double));
+        ordinate_raster = (double *) ppl_memAlloc(SX * sizeof(double));
+        ordinate2_raster = (double *) ppl_memAlloc(SY * sizeof(double));
         // Failure to allocate memory is reported as an error
         if ((ordinate_raster == NULL) || (ordinate2_raster == NULL)) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (f).");
@@ -996,7 +996,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                         if (gsl_finite(left2)) break;
                     }
                     // Find the position of the right end of the raster on the axis
-                    for (k = (*_OrdinateAxis)->AxisValueTurnings; k >= 0; k++) {
+                    for (k = (*_OrdinateAxis)->AxisValueTurnings; k >= 0; k--) {
                         right2 = eps_plot_axis_GetPosition(right, *_OrdinateAxis, k, 0);
                         if (gsl_finite(right2)) break;
                     }

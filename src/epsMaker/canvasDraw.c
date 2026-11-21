@@ -304,8 +304,8 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
             for (i = 0; comm.title[i] != '\0'; i++)
                 // Strip the directory from the filename to make the document title
                 if ((comm.title[i] == PATHLINK[0]) && ((i == 0) || (comm.title[i - 1] != '\\'))) {
-                    comm.title += i;
-                    i = 0;
+                    comm.title += i + 1;
+                    i = -1;
                 }
         }
     }
@@ -583,7 +583,8 @@ void canvas_CallLaTeX(EPSComm *x) {
     // Failure to allocate memory is reported as an error
     if (str_buffer == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (y).");
-        return;
+        *(x->status) = 1;
+        goto restoreCwd;
     }
 
     // Start writing LaTeX document
@@ -595,7 +596,7 @@ void canvas_CallLaTeX(EPSComm *x) {
         *(x->status) = 1;
         free(str_buffer);
         str_buffer = NULL;
-        return;
+        goto restoreCwd;
     }
     fprintfLineCount(output, TextHeader1, &linecount);
     fprintfLineCount(output, x->c->set->term_current.LatexPreamble, &linecount);
@@ -819,9 +820,10 @@ void canvas_CallLaTeX(EPSComm *x) {
     // Convert dvi into postscript fragments
     ppl_snprintfTrunc(filename, sizeof(filename), "%s.dvi", x->TeXFilename);
     x->dvi = ReadDviFile(&x->c->errcontext, filename, x->status);
-    if (*(x->status)) return; // DVI interpreter failed
+    // If the DVI interpreter failed, x->status is already set
 
-    // Return to user's current working directory after LaTeX has finished making a mess
+// Return to user's current working directory after LaTeX has finished making a mess, whether or not it succeeded
+restoreCwd:
     if (chdir(x->c->errcontext.session_default.cwd) < 0) {
         ppl_fatal(&x->c->errcontext, __FILE__, __LINE__, "chdir into cwd failed.");
     }

@@ -548,6 +548,12 @@ static void applyUsingFail(ppl_context *c, const char *errtext, int *errCount, c
     if (DEBUG) ppl_log(&c->errcontext, (char *) errtext);
 }
 
+//! stackTop - Return a pointer to the object on the top of the stack, which is where expressions leave their results
+//! \param [in] c - The Pyxplot context
+//! \return Pointer to the top object on the stack
+
+static pplObj *stackTop(ppl_context *c) { return &c->stack[c->stackPtr - 1]; }
+
 //! ppldata_ApplyUsingList - Evaluate all of the "using" expressions, the label expression and the select expression for
 //! the current row of data, and append the result as a new row of the output data table
 //! \param [in] c - The Pyxplot context
@@ -594,7 +600,6 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
     const int memContext = out->memContext;
     int i;
 
-#define stkObj (&c->stack[c->stackPtr - 1])
 
     *status = 0;
     *labOut = NULL;
@@ -614,9 +619,9 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                 return;
             }
         }
-        ppl_castToBool(c, stkObj);
+        ppl_castToBool(c, stackTop(c));
         // Rows which fail the select criterion are skipped, leaving a break in the line if the data are discontinuous
-        if (stkObj->real == 0) {
+        if (stackTop(c)->real == 0) {
             ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
             *discontinuity = (continuity == DATAFILE_DISCONTINUOUS);
             *status = 0;
@@ -642,17 +647,17 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
             }
         }
         // The label must be a string
-        if (stkObj->objType != PPLOBJ_STR) {
+        if (stackTop(c)->objType != PPLOBJ_STR) {
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                               "%s:%ld: Label expression '%s' did not evaluate to a string, but to type <%s>.", filename,
-                              file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
+                              file_linenumber, ex->ascii, pplObjTypeNames[stackTop(c)->objType]);
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             {
                 applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
                 return;
             }
         }
-        labIn = (char *) stkObj->auxil;
+        labIn = (char *) stackTop(c)->auxil;
         *labOut = (char *) ppl_memAlloc_incontext(strlen(labIn) + 1, memContext);
         if (*labOut != NULL) strcpy(*labOut, labIn);
         ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
@@ -677,12 +682,12 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
         }
         // Columns of real values must be numbers, dates or booleans; other columns hold objects, such as colors
         if (!outObj) {
-            if ((stkObj->objType != PPLOBJ_NUM) && (stkObj->objType != PPLOBJ_BOOL) &&
-                (stkObj->objType != PPLOBJ_DATE)) {
+            if ((stackTop(c)->objType != PPLOBJ_NUM) && (stackTop(c)->objType != PPLOBJ_BOOL) &&
+                (stackTop(c)->objType != PPLOBJ_DATE)) {
                 ppl_snprintfTrunc(
                         errtext, PPL_MSG_LENGTH,
                         "%s:%ld: Data item calculated from expression '%s' was not a number, but had type <%s>.",
-                        filename, file_linenumber, ex->ascii, pplObjTypeNames[stkObj->objType]);
+                        filename, file_linenumber, ex->ascii, pplObjTypeNames[stackTop(c)->objType]);
                 ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                 {
                     applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
@@ -690,7 +695,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                 }
             }
             // Values must be real
-            if ((stkObj->objType == PPLOBJ_NUM) && (stkObj->flagComplex)) {
+            if ((stackTop(c)->objType == PPLOBJ_NUM) && (stackTop(c)->flagComplex)) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                                   "%s:%ld: Data item calculated from expression '%s' was a complex number.", filename,
                                   file_linenumber, ex->ascii);
@@ -702,17 +707,17 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
             }
             // The first row sets the type and units of each column; later rows must match them
             if (out->Nrows == 0) {
-                out->firstEntries[i] = *stkObj;
+                out->firstEntries[i] = *stackTop(c);
                 out->firstEntries[i].refCount = 1; // no memory leak here, as all allowed types have no auxilary data
                 out->firstEntries[i].amMalloced = 0;
             } else {
                 // The value must have the same type as the first row's
-                if (out->firstEntries[i].objType != stkObj->objType) {
+                if (out->firstEntries[i].objType != stackTop(c)->objType) {
                     ppl_snprintfTrunc(
                             errtext, PPL_MSG_LENGTH,
                             "%s:%ld: Data item calculated from expression '%s' has inconsistent types, including <%s> and <%s>.",
                             filename, file_linenumber, ex->ascii, pplObjTypeNames[out->firstEntries[i].objType],
-                            pplObjTypeNames[stkObj->objType]);
+                            pplObjTypeNames[stackTop(c)->objType]);
                     ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                     {
                         applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
@@ -720,13 +725,13 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                     }
                 }
                 if ((out->firstEntries[i].objType == PPLOBJ_NUM) &&
-                    (!ppl_unitsDimEqual(&out->firstEntries[i], stkObj))) {
+                    (!ppl_unitsDimEqual(&out->firstEntries[i], stackTop(c)))) {
                     ppl_snprintfTrunc(
                             errtext, PPL_MSG_LENGTH,
                             "%s:%ld: Data item calculated from expression '%s' has inconsistent physical units, including <%s> and <%s>.",
                             filename, file_linenumber, ex->ascii,
                             ppl_printUnit(c, &out->firstEntries[i], NULL, NULL, 0, 1, 0),
-                            ppl_printUnit(c, stkObj, NULL, NULL, 1, 1, 0));
+                            ppl_printUnit(c, stackTop(c), NULL, NULL, 1, 1, 0));
                     ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
                     {
                         applyUsingFail(c, errtext, errCount, filename, file_linenumber, status, discontinuity);
@@ -734,11 +739,11 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                     }
                 }
             }
-            out->current->data_real[idx + out->current->blockPosition * out->Ncolumns_real] = stkObj->real;
+            out->current->data_real[idx + out->current->blockPosition * out->Ncolumns_real] = stackTop(c)->real;
         } else {
             pplObj *oo = &out->current->data_obj[idx + out->current->blockPosition * out->Ncolumns_obj];
             oo->refCount = 1;
-            pplObjCpy(oo, stkObj, 0, 0, 1);
+            pplObjCpy(oo, stackTop(c), 0, 0, 1);
         }
         ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
     }
@@ -2205,10 +2210,12 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         const int pos1 = ptab[PARSE_INDEX_parametric];
         const int pos2 = ptab[PARSE_INDEX_vmin];
         const int pos3 = ptab[PARSE_INDEX_tmin];
+        const int gotV = (pos2 > 0) && (stko[pos2].objType != PPLOBJ_ZOM);
+        const int gotT = (pos3 > 0) && (stko[pos3].objType != PPLOBJ_ZOM);
         if ((pos1 > 0) && (stko[pos1].objType == PPLOBJ_STR)) parametric = 1;
-        if (parametric && ((pos2 > 0) && (stko[pos1].objType != PPLOBJ_ZOM))) sampleGrid = 1;
-        if (parametric && ((pos3 <= 0) || (stko[pos3].objType == PPLOBJ_ZOM)) && c->set->graph_current.USE_T_or_uv)
-            sampleGrid = 0;
+        // A parametric plot samples a (u,v) grid if a v range is given, or if no ranges are given and the most recent
+        // of set trange and set urange/vrange was the latter
+        if (parametric && (gotV || ((!gotT) && (!c->set->graph_current.USE_T_or_uv)))) sampleGrid = 1;
     }
 
     // Devise range for functions

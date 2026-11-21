@@ -129,7 +129,7 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
             font->pfaPath = NULL;
             font->psName = (char *) ppl_memAlloc(strlen(builtinFontNames[i]) + 1);
             // Failure to allocate memory is reported as an error
-            if (font->name == NULL) {
+            if (font->psName == NULL) {
                 ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
                 return DVIE_MEMORY;
             }
@@ -593,6 +593,19 @@ char *psNameFromPFA(pplerr_context *ec, const char *PFApath) {
     return s;
 }
 
+//! pfbReadLength - Read the length of a PFB record, which is a four-byte little-endian integer
+//! \param [in] in - The PFB file to read
+//! \return The length of the record
+
+static int pfbReadLength(FILE *in) {
+    // Read the bytes one at a time, since C does not fix the order in which the operands of | are evaluated
+    const int b0 = getc(in);
+    const int b1 = getc(in);
+    const int b2 = getc(in);
+    const int b3 = getc(in);
+    return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
+}
+
 //! pfb2pfa - Convert a type 1 font from binary PFB format into ASCII PFA format
 //! \param [in] ec - The error-reporting context
 //! \param [in] in - The PFB file to read
@@ -616,7 +629,7 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
         // Copy text records, converting carriage returns to newlines; write binary records in hexadecimal
         if (i == 1) {
             // Ascii text record
-            len = getc(in) | getc(in) << 8 | getc(in) << 16 | getc(in) << 24;
+            len = pfbReadLength(in);
             // Copy each character of the text record
             for (j = 0; j < len; j++) {
                 if ((c = getc(in)) == '\r') putc('\n', out);
@@ -624,7 +637,7 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
             }
         } else if (i == 2) {
             // Binary data record
-            len = getc(in) | getc(in) << 8 | getc(in) << 16 | getc(in) << 24;
+            len = pfbReadLength(in);
             // Write each byte of the binary record as two hexadecimal digits
             for (j = 0; j < len; j++) {
                 fprintf(out, "%02x", getc(in));
@@ -772,11 +785,12 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     // If present, read the seven-bit safe flag and the face code
     if (lh > 0) {
         int temp;
+        // The word holds the seven-bit safe flag, two unused bytes, and the face code
+        if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
+        if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
         if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
         if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
         tfm->face = temp;
-        if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
-        if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
         lh--;
         // Log the face code in debugging mode
         if (DEBUG) {

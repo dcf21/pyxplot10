@@ -247,8 +247,8 @@ pplObj *pplObjModule(pplObj *in, const unsigned char amMalloced, unsigned char a
                      const unsigned char frozen) {
     in->objType = PPLOBJ_ZOM;
     in->auxil = (void *) ppl_dictInit(auxilMalloced);
-    ((dict *) in->auxil)->immutable = frozen;
     if (in->auxil == NULL) return NULL;
+    ((dict *) in->auxil)->immutable = frozen;
     in->auxilMalloced = auxilMalloced;
     in->auxilLen = 0;
     in->objPrototype = &pplObjPrototypes[PPLOBJ_MOD];
@@ -753,10 +753,13 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsig
 
 pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned char outMalloced,
                       unsigned char useMalloc) {
-    const int t = in->objType;
+    int t, rc;
 
     // Nothing to copy
     if (in == NULL) return NULL;
+    t = in->objType;
+    // Like pplObjCpy(), the copy keeps the reference count of the destination, or starts with one if it is new
+    rc = (out == NULL) ? 1 : out->refCount;
 
     // If no destination is given, allocate one
     if (out == NULL) {
@@ -776,6 +779,7 @@ pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned ch
             dict *d;
             dictIterator *di = ppl_dictIterateInit((dict *) in->auxil);
             memcpy(out, in, sizeof(pplObj));
+            out->refCount = rc;
             out->objType = PPLOBJ_ZOM;
             out->self_lval = NULL;
             out->self_dval = NULL;
@@ -799,6 +803,7 @@ pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned ch
             list *l;
             listIterator *li = ppl_listIterateInit((list *) in->auxil);
             memcpy(out, in, sizeof(pplObj));
+            out->refCount = rc;
             out->objType = PPLOBJ_ZOM;
             out->self_lval = NULL;
             out->self_dval = NULL;

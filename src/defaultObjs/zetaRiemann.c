@@ -89,7 +89,7 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
 
     // Use Peter Borwein's method.
     // This is Algorithm 3 from his 2000 Canadian Math. Soc. Proc. paper.
-    n = (int) (2.1 + 1.2 * DECIMAL_PLACES + 0.76 * abs(y) + 0.25 * log(1 + (y * y / (x * x))));
+    n = (int) (2.1 + 1.2 * DECIMAL_PLACES + 0.76 * fabs(y) + 0.25 * log(1 + (y * y / (x * x))));
     m = n;
     am = gsl_complex_negative(a);
     e = GSL_COMPLEX_ZERO;
@@ -172,7 +172,7 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
         *status = 0;
         *output = gsl_complex_rect(-0.5, 0.0);
         return;
-    } else if (abs(y) > 1000000.0) {
+    } else if (fabs(y) > 1000000.0) {
         *status = 1; /* would take too long to evaluate */
         ppl_snprintfTrunc(
                 errText, LSTR_LENGTH, "%s",
@@ -197,7 +197,7 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
         c = gsl_complex_mul_real(gsl_complex_sub_real(in, 1.0), log(M_PI));
         b = gsl_complex_add(b, c);
         // At the trivial zeros (negative even integers), the sine term is exactly zero
-        if (abs(y) < 41) {
+        if (fabs(y) < 41) {
             c = gsl_complex_sin(gsl_complex_mul_real(in, M_PI_2));
             // A trivial zero
             if ((GSL_REAL(c) == 0) && (GSL_IMAG(c) == 0)) {

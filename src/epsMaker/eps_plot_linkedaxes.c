@@ -465,16 +465,13 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
             goto FAIL;
         }
         out->AxisLinearInterpolation[l] = outVal->real;
-        if (l > 0) // Check for turning points
-        {
+        ppl_stackClean(X->c, stkLevelOld); // Discard anything left on the stack
+        // Check for turning points; flat steps are ignored
+        if (l > 0) {
             newsgn = ppl_sgn(out->AxisLinearInterpolation[l] - out->AxisLinearInterpolation[l - 1]);
             if (newsgn == 0) continue;
             if ((newsgn != oldsgn) && (oldsgn > -10)) out->AxisTurnings[xrn++] = l - 1;
             oldsgn = newsgn;
-        }
-        {
-            EPSComm *x = X;
-            ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
         }
     }
 
@@ -642,6 +639,12 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
         // Give up if the expression cannot be evaluated at the starting point
         if (!gsl_finite(testval)) {
             commlink->fail = 1;
+            gsl_multimin_fminimizer_free(s);
+            s = NULL;
+            gsl_vector_free(x);
+            x = NULL;
+            gsl_vector_free(ss);
+            ss = NULL;
             return;
         }
         iter = 0;

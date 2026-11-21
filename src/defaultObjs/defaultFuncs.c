@@ -2054,7 +2054,7 @@ void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
         // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
-            *errText = ERR_NUMERICAL;
+            *errType = ERR_NUMERICAL;
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
                     "The function %s can only be used when complex arithmetic is enabled; type 'set numerics complex' first.",

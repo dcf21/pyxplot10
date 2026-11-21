@@ -58,6 +58,8 @@ void pplcol_RGBtoHSB(const double ri, const double gi, const double bi, double *
     *so = C / M;
     *bo = M;
     if (!gsl_finite(*so)) *so = 0;
+    // Hues are cyclic, so a negative hue (red with more blue than green) wraps round to just below one
+    if (*ho < 0) *ho += 1;
     if (*ho < 0) *ho = 0;
     if (*ho > 1) *ho = 1;
     if (*so < 0) *so = 0;
@@ -429,7 +431,7 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     } else if ((t1o == 12) || (t1o == 13)) // 12 - function; 13 - file handle
     {
         if (a->auxil < b->auxil) return -1;
-        if (a->auxil > b->auxil) return -1;
+        if (a->auxil > b->auxil) return 1;
         return 0;
     }
     return -2;

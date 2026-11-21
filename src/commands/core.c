@@ -491,7 +491,7 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
     // Local variables can only be declared inside a subroutine or module
     if (c->ns_ptr < 2) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
-                          "Cannot declare global variables when not in a subroutine or module namespace.");
+                          "Cannot declare local variables when not in a subroutine or module namespace.");
         ppl_tbAddLine(c, pl, ERR_NAMESPACE, 0, "");
         return;
     }

@@ -1,0 +1,5 @@
+# test: mode=stdin
+# Before Pyxplot 0.10.0, local outside a subroutine reported that global variables could not be declared, and a
+# function's argument range with incompatible limits printed the units of the minimum twice
+local a
+f(x)[1*unit(m):2*unit(s)] = x

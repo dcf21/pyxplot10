@@ -531,7 +531,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
                            ppl_numericDisplayDefault(context, defn->fillcolor1, 0),
                            ppl_numericDisplayDefault(context, defn->fillcolor2, 1),
                            ppl_numericDisplayDefault(context, defn->fillcolor3, 2),
-                           ppl_numericDisplayDefault(context, defn->fillcolor4, 2));
+                           ppl_numericDisplayDefault(context, defn->fillcolor4, 3));
     } else if (defn->USEfillcolor) {
         ppl_strAppendf(out, outLen, &i, "fillcolor %s ",
                        *(char **) ppl_fetchSettingName(&context->errcontext, defn->fillcolor, SW_COLOR_INT,

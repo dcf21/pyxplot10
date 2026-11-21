@@ -180,6 +180,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     if (indata == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory whilst resampling data.");
         *output = NULL;
+        ppl_memAlloc_AscendOutOfContext(tempContext);
         return;
     }
     for (ct = 0; ct < k; ct++) d[ct] = indata + ct * InSize;

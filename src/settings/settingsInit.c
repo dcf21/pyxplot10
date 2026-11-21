@@ -497,12 +497,6 @@ void pplset_makedefault(ppl_context *context) {
             }
             s->term_default.PaperHeight.real = PaperHeight / 1000;
             s->term_default.PaperWidth.real = PaperWidth / 1000;
-            // This block is only entered via the goto, when the locale's output could not be read
-            if (0) {
-            LC_PAPERSIZE_DONE:
-                if (DEBUG) ppl_log(&context->errcontext, "Failed to read papersize from the locale command.");
-            }
-            pclose(LocalePipe);
             ppl_GetPaperName(s->term_default.PaperName, &PaperHeight, &PaperWidth);
             // Log the name of the paper size
             if (DEBUG) {
@@ -510,6 +504,13 @@ void pplset_makedefault(ppl_context *context) {
                 ppl_log(&context->errcontext, msg);
             }
             //gotPaperSize = 1;
+            // This block is only entered via the goto, when the locale's output could not be read; the paper size
+            // found earlier, if any, is kept
+            if (0) {
+            LC_PAPERSIZE_DONE:
+                if (DEBUG) ppl_log(&context->errcontext, "Failed to read papersize from the locale command.");
+            }
+            pclose(LocalePipe);
         }
     }
 

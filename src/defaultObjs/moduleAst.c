@@ -419,7 +419,7 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
     char *FunctionDescription = "siderealTime(d)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Check the type of the argument
-    if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
+    if ((nArgs != 1) || ((in[0].objType != PPLOBJ_NUM) && (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(
@@ -465,7 +465,7 @@ void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status,
     char *FunctionDescription = "moonPhase(d)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Check the type of the argument
-    if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
+    if ((nArgs != 1) || ((in[0].objType != PPLOBJ_NUM) && (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(

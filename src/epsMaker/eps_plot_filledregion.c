@@ -186,8 +186,8 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
     // Move fractionally off test point
     if (dir_x == -1) X -= fabs(1e-15 * X);
     else if (dir_x == 1) X += fabs(1e-15 * X);
-    else if (dir_y == -1) Y -= fabs(1e-15 * X);
-    else if (dir_y == 1) Y += fabs(1e-15 * X);
+    else if (dir_y == -1) Y -= fabs(1e-15 * Y);
+    else if (dir_y == 1) Y += fabs(1e-15 * Y);
 
     // Count how many segments of the outline cross a ray from the point in the chosen direction; an odd number means
     // the point is inside
@@ -403,8 +403,8 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                     if ((!CrossPointList[i].used) &&
                         ((CrossPointList[i].point == lil) || (CrossPointList[i].point == li)))
                         break;
-                if (!((!CrossPointList[i].used) &&
-                      ((CrossPointList[i].point == lil) || (CrossPointList[i].point == li)))) {
+                // Fail if no crossing point was found (in which case i == nac, past the end of the list)
+                if (i >= nac) {
                     ppl_error(&fr->x->c->errcontext, ERR_INTERNAL, -1, -1, "Failure within FilledRegion");
                     fail = 1;
                     break;

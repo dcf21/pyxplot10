@@ -206,8 +206,9 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     max_prelim /= UnitMultiplier;
 
     // Use the rounded range, if it is sensible
-    if (gsl_finite(min_prelim) && (CLog || (min_prelim > 1e-300))) CMin = min_prelim;
-    if (gsl_finite(max_prelim) && (CLog || (min_prelim > 1e-300))) CMax = max_prelim;
+    // (on logarithmic scales the limits must be positive, as in eps_plot_ticking.c)
+    if (gsl_finite(min_prelim) && ((!CLog) || (min_prelim > 1e-300))) CMin = min_prelim;
+    if (gsl_finite(max_prelim) && ((!CLog) || (max_prelim > 1e-300))) CMax = max_prelim;
 
     // Loop over all contours submitting labels
     for (k = 0; (k < MAX_CONTOURS) &&
@@ -927,7 +928,6 @@ GOT_CONTOURS:
                     unsigned char clip[] = {0, 0, 0, 0, 0, 0, 0, 2};
                     pplObj *outval;
                     double dbl;
-                    int errpos = -1;
 
                     // Stop at the end of the list of expressions
                     if (clip[i] > 1) break;
@@ -936,13 +936,14 @@ GOT_CONTOURS:
                     // Evaluate the expression
                     outval = ppl_expEval(x->c, expr[i], &lOP, 1, x->iterDepth + 1);
 
-                    // Report an expression which could not be evaluated
-                    if (errpos >= 0) {
-                        ppl_snprintfTrunc(
-                                msg, sizeof(msg),
-                                "Could not evaluate the style expression <%s>. The error, encountered at character position %d, was: '%s'",
-                                expr[i]->ascii, errpos, errtext);
+                    // Report an expression which could not be evaluated, followed by the traceback of the error
+                    if (x->c->errStat.status) {
+                        ppl_snprintfTrunc(msg, sizeof(msg), "Could not evaluate the style expression <%s>.",
+                                          expr[i]->ascii);
                         ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
+                        ppl_tbWrite(x->c);
+                        ppl_tbClear(x->c);
+                        ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
                         continue;
                     }
                     // The result must be dimensionless

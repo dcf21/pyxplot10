@@ -253,7 +253,7 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not find command file '%s'. Skipping on to next command file.",
                           full_filename);
         ppl_error(&context->errcontext, ERR_FILE, -1, -1, msg);
-        goto restore;
+        goto restoreCaller; // The input buffer is still the caller's, so it must not be freed
     }
 
     // A new input buffer and parser state for the script
@@ -262,6 +262,8 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     // Failure to allocate memory is reported as an error
     if ((ps == NULL) || (context->inputLineBuffer == NULL)) {
         ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+        fclose(infile);
+        if (ps != NULL) ppl_parserStatFree(&ps);
         goto restore;
     }
 
@@ -332,6 +334,9 @@ restore:
         free(context->inputLineBuffer);
         context->inputLineBuffer = NULL;
     }
+
+// Restore the caller's input buffers
+restoreCaller:
     context->inputLineBuffer = oldInputLineBuffer;
     context->inputLineBufferLen = oldInputLineBufferLen;
     context->inputLineAddBuffer = oldInputLineAddBuffer;

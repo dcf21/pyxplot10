@@ -774,7 +774,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "foreach datum statement");
-                return;
+                ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
+                goto freeData;
             }
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
             // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
@@ -789,7 +790,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
         if (status) break;
     }
 
-    // Free data tables
+// Free data tables
+freeData:
     blk = data->first;
     // Free the objects held in the data table
     while (blk != NULL) {

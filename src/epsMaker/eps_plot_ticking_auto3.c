@@ -92,9 +92,9 @@ void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMult
         // Label each tick with this axis's format, using exactly zero for values which straddle zero
         for (i = 0; i < Nticks_maj; i++) {
             double xtmpA, xtmp, xtmpB;
-            xtmpA = eps_plot_axis_InvGetPosition(axis->TickListPositions[i] - 1e8, axis) * UnitMultiplier;
+            xtmpA = eps_plot_axis_InvGetPosition(axis->TickListPositions[i] - 1e-8, axis) * UnitMultiplier;
             xtmp = eps_plot_axis_InvGetPosition(axis->TickListPositions[i], axis) * UnitMultiplier;
-            xtmpB = eps_plot_axis_InvGetPosition(axis->TickListPositions[i], axis) * UnitMultiplier;
+            xtmpB = eps_plot_axis_InvGetPosition(axis->TickListPositions[i] + 1e-8, axis) * UnitMultiplier;
             if ((gsl_finite(xtmpA)) && (gsl_finite(xtmpB)) &&
                 (((xtmpA <= 0.0) && (xtmpB >= 0.0)) || ((xtmpA >= 0.0) && (xtmpB <= 0.0))))
                 xtmp = 0.0;

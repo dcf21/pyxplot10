@@ -179,7 +179,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "The minimum and maximum values specified for argument number %d are dimensionally incompatible: the minimum has dimensions of <%s>, while the maximum has dimensions of <%s>.",
                             j + 1, ppl_printUnit(c, min, NULL, NULL, 0, 1, 0),
-                            ppl_printUnit(c, min, NULL, NULL, 1, 1, 0));
+                            ppl_printUnit(c, max, NULL, NULL, 1, 1, 0));
                     ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_max_0range_list], "");
                     goto fail;
                 }
@@ -293,6 +293,12 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                 } else // Old definition is cut in two by the new definition; duplicate it.
                 {
                     pplFunc *dup = pplObjFuncCpy(fIter);
+                    // Failure to allocate memory is reported as an error
+                    if (dup == NULL) {
+                        ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
+                        ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
+                        goto fail;
+                    }
                     fIter->max[lastOverlapK] = f->min[lastOverlapK];
                     fIter->maxActive[lastOverlapK] = 1;
                     dup->min[lastOverlapK] = f->max[lastOverlapK];

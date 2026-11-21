@@ -391,7 +391,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
 
     // Calculate position of centre of piechart, and its radius
     xpos = x->current->settings.OriginX.real * M_TO_PS;
-    ypos = x->current->settings.OriginX.real * M_TO_PS;
+    ypos = x->current->settings.OriginY.real * M_TO_PS;
     rad = x->current->settings.width.real * M_TO_PS / 2;
     vtitle = ypos + rad;
 

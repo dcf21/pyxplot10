@@ -72,9 +72,9 @@ static int sameValue(const pplObj *a, const pplObj *b) {
 
 void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
     // The coordinate system of each coordinate, the label's text, rotation and gap, and the record of the label
-    int i, system_x, system_y, system_z, gotTempstr, gotGap, gotAng;
+    int i, system_x, system_y, system_z, gotTempstr, gotGap, gotAng, gotFontsize;
     char *tempstr, *label;
-    double gap, ang;
+    double gap, ang, fontsize;
     ppllabel_object *out;
 
     // Read the coordinate system of each coordinate
@@ -106,6 +106,27 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     gap = in->stk[ptab[PARSE_INDEX_gap]].real; // Check for gap modifier
     gotGap = (in->stk[ptab[PARSE_INDEX_gap]].objType == PPLOBJ_NUM);
 
+    // See if fontsize is specified. Font sizes must be positive and finite; this is checked before any existing label
+    // with this ID is changed.
+    gotFontsize = (in->stk[ptab[PARSE_INDEX_fontsize]].objType == PPLOBJ_NUM);
+    fontsize = in->stk[ptab[PARSE_INDEX_fontsize]].real;
+    if (gotFontsize) {
+        // Reject negative font sizes
+        if (fontsize < 0) {
+            ppl_error(&context->errcontext, ERR_RANGE, -1, -1,
+                      "Fontsize specified in 'set label' command was less than zero.");
+            free(label);
+            return;
+        }
+        // Reject infinite font sizes
+        if (!gsl_finite(fontsize)) {
+            ppl_error(&context->errcontext, ERR_RANGE, -1, -1,
+                      "Fontsize specified in 'set label' command was not finite.");
+            free(label);
+            return;
+        }
+    }
+
     // Look up ID number of the label we are adding and find appropriate place for it in label list
     i = (int) round(in->stk[ptab[PARSE_INDEX_label_id]].real);
     while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
@@ -113,11 +134,14 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     if ((*inlist != NULL) && ((*inlist)->id == i)) {
         out = *inlist;
         ppl_withWordsDestroy(context, &out->style);
+        if (out->text != NULL) free(out->text);
+        out->text = NULL;
     } else {
         out = (ppllabel_object *) malloc(sizeof(ppllabel_object));
         // Failure to allocate memory is reported as an error
         if (out == NULL) {
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
+            free(label);
             return;
         }
         out->id = i;
@@ -141,27 +165,9 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     if (gotGap) out->gap = gap;
     else out->gap = 0.0;
 
-    // See if fontsize is specified
-    out->fontsizeSet = (in->stk[ptab[PARSE_INDEX_fontsize]].objType == PPLOBJ_NUM);
-    // Font sizes must be positive and finite
-    if (out->fontsizeSet) {
-        double f = in->stk[ptab[PARSE_INDEX_fontsize]].real;
-        // Reject negative font sizes
-        if (f < 0) {
-            f = 1;
-            ppl_error(&context->errcontext, ERR_MEMORY, -1, -1,
-                      "Fontsize specified in 'set fontsize' command was less than zero.");
-            return;
-        }
-        // Reject infinite font sizes
-        if (!gsl_finite(f)) {
-            f = 1;
-            ppl_error(&context->errcontext, ERR_MEMORY, -1, -1,
-                      "Fontsize specified in 'set fontsize' command was not finite.");
-            return;
-        }
-        out->fontsize = f;
-    }
+    // The font size, if given
+    out->fontsizeSet = gotFontsize;
+    if (gotFontsize) out->fontsize = fontsize;
 
     // Store the label's style, text, and the coordinate system, axis number and value of each coordinate
     ppl_withWordsFromDict(context, in, pl, ptab, 0, &out->style);

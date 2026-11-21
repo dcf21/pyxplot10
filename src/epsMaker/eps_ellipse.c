@@ -119,7 +119,7 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     if (b < 1e-8) {
         b_inv = 1e8;
     } else {
-        b_inv = 1.0 / a;
+        b_inv = 1.0 / b;
     }
     fprintf(x->epsbuffer, "%f %f scale\n", a_inv, b_inv);
 

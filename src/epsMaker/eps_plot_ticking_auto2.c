@@ -118,7 +118,8 @@ static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, c
     }
     // Add a scheme with ticks at every integer multiple of each power of the base
     if (*NTickSchemes < TICKS_MAXIMUM) {
-        for (i = 1; ((i < LogBase) && (i < TICKS_MAXIMUM)); i++) TickSchemes[*NTickSchemes].mantissa[i] = i;
+        // The mantissas are 1, 2, ..., LogBase-1
+        for (i = 0; ((i < LogBase - 1) && (i < TICKS_MAXIMUM)); i++) TickSchemes[*NTickSchemes].mantissa[i] = i + 1;
         TickSchemes[*NTickSchemes].Nmantissas = i;
         TickSchemes[*NTickSchemes].ticksep = 1.0;
         TickSchemes[*NTickSchemes].offset = 0.0;

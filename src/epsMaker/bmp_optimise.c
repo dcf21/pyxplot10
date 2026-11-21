@@ -306,8 +306,12 @@ void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
                 *p = 0;
                 for (; j < width; j++) *p = (*p << 1) + *p2++;
                 *p = *p << (8 - (width & 7));
-                ctmp = *(p - 1) & ((1 << (8 - (width & 7))) - 1); // this might help the rle
-                *p |= ctmp; // ditto
+                // Fill the unused bits with those of the previous byte, which might help the rle; there is no previous
+                // byte at the start of the image
+                if (p > image->data) {
+                    ctmp = *(p - 1) & ((1 << (8 - (width & 7))) - 1);
+                    *p |= ctmp;
+                }
                 p++;
             }
         }
@@ -324,8 +328,12 @@ void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
                 *p = 0;
                 for (; j < width; j++) *p = (*p << 2) + *p2++;
                 *p = *p << (2 * (4 - (width & 3)));
-                ctmp = *(p - 1) & ((1 << (2 * (4 - (width & 3)))) - 1); // this might help the rle
-                *p |= ctmp; // ditto
+                // Fill the unused bits with those of the previous byte, which might help the rle; there is no previous
+                // byte at the start of the image
+                if (p > image->data) {
+                    ctmp = *(p - 1) & ((1 << (2 * (4 - (width & 3)))) - 1);
+                    *p |= ctmp;
+                }
                 p++;
             }
         }
@@ -340,7 +348,7 @@ void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
             // An odd pixel at the end of the row has a byte of its own
             if (j == (width - 1)) {
                 *p = (*(p2++)) << 4;
-                *p |= *(p - 1) & 0xf; // to help rle
+                if (p > image->data) *p |= *(p - 1) & 0xf; // to help rle; there is no previous byte at the start
                 p++;
             }
         }

@@ -197,19 +197,16 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             return;
         }
         p = image->palette;
-        // Read the palette two entries at a time, converting BGR to RGB
-        for (i = 0; i < image->pal_len; i += 2) {
+        // Read the palette one entry at a time, converting BGR to RGB
+        for (i = 0; i < image->pal_len; i++) {
             // MS Windows uses BGR0, OS/2 uses BGR
-            if (fread(buff, 8 - 2 * os2, 1, in) != 1) {
+            if (fread(buff, 4 - os2, 1, in) != 1) {
                 ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
                 return;
             }
             *(p++) = buff[2];
             *(p++) = buff[1];
             *(p++) = buff[0];
-            *(p++) = buff[6 - os2];
-            *(p++) = buff[5 - os2];
-            *(p++) = buff[4 - os2];
         }
         image->type = BMP_COLOUR_PALETTE;
         image->colour = BMP_COLOUR_PALETTE;
@@ -438,7 +435,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
 int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, const unsigned long len) {
     // Variables for decoding
     char msg[PPL_MSG_LENGTH];
-    unsigned char *out, *c_in, *c_out, code, *end, odd, even;
+    unsigned char *out, *c_in, *c_out, code, *end, odd, even, *inEnd;
     unsigned long i, j, delta, size, height, width;
     int eol, rle;
 
@@ -470,17 +467,24 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
         return 1;
     }
 
+    // Pixels skipped over by delta codes are left as colour zero
+    memset(out, 0, image->data_len);
+
     // Pointers into the input and output
     c_in = in;
     c_out = out;
+    inEnd = in + len;
 
-    // Decode each row, from the bottom of the image up
+    // Decode each row, from the bottom of the image up. Rows are stored from the top down, so row i starts at
+    // out + (height - i) * width.
     for (i = 1; i <= height; i++) {
         c_out = out + (height - i) * width;
         end = c_out + width - 1;
         eol = 0;
         // Decode codes until the row is full or ends
         while ((c_out <= end) && (eol == 0)) {
+            // Each code is at least two bytes long
+            if (c_in + 2 > inEnd) goto truncated;
             code = *c_in++;
             if (code) // a run
             {
@@ -491,12 +495,8 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
                     even = (*c_in & 0xf0) >> 4;
                     c_in++;
                 }
-                // Write the run
-                for (j = 0; (j < code / 2) && (c_out <= end); j++) {
-                    *c_out++ = even;
-                    *c_out++ = odd;
-                }
-                if (code & 1) *c_out++ = even;
+                // Write the run, without passing the end of the row
+                for (j = 0; (j < code) && (c_out <= end); j++) *c_out++ = (j & 1) ? odd : even;
             } else {
                 code = *c_in++;
                 // A zero byte is followed by an escape code: end of line, end of data, a jump, or a run of literal
@@ -509,32 +509,36 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
                         eol = 2;
                         break;
                     case (2): // Delta
+                    {
+                        // Jump dx pixels right and dy rows up the image, i.e. towards the start of the output buffer
+                        unsigned long column = c_out - (out + (height - i) * width);
+                        if (c_in + 2 > inEnd) goto truncated;
                         delta = *c_in++; // dx
-                        for (j = 0; (j < delta) && (c_out <= end); j++) { *c_out++ = 0; }
+                        column += delta;
                         delta = *c_in++; // dy
                         // The jump must stay within the image
-                        if (i + delta > height) {
+                        if ((i + delta > height) || (column > width)) {
                             ppl_error(ec, ERR_FILE, -1, -1, "Image overflow whilst decoding RLE in bitmap image file");
                             return 1;
                         }
-                        for (j = 0; j < delta * width; j++) { *c_out++ = 0; }
                         i += delta;
-                        end += width * delta;
+                        c_out = out + (height - i) * width + column;
+                        end = out + (height - i) * width + width - 1;
                         break;
+                    }
                     default: // Literal
-                        // Copy the literal pixels, one or two per byte
-                        if (rle == 8) {
-                            for (j = 0; (j < code) && (c_out <= end); j++) { *c_out++ = *c_in++; }
-                            if (code & 1) c_in++; // Keep word aligned
-                        } else {
-                            // Two pixels per byte
-                            for (j = 0; (j < code / 2) && (c_out <= end); j++) {
-                                *c_out++ = (*c_in & 0xf0) >> 4;
-                                *c_out++ = (*c_in++) & 0xf;
-                            }
-                            if (code & 1) *c_out++ = ((*c_in++) & 0xf0) >> 4;
-                            if ((code + 1) & 2) c_in++; // Keep word aligned
+                    {
+                        // The literal pixels take one byte each in RLE8, or two per byte in RLE4, padded to a whole
+                        // number of 16-bit words
+                        const unsigned long nbytes = (rle == 8) ? code : ((code + 1) / 2);
+                        if (c_in + nbytes + (nbytes & 1) > inEnd) goto truncated;
+                        // Copy the literal pixels, without passing the end of the row
+                        for (j = 0; (j < code) && (c_out <= end); j++) {
+                            if (rle == 8) *c_out++ = c_in[j];
+                            else *c_out++ = (j & 1) ? (c_in[j / 2] & 0xf) : ((c_in[j / 2] & 0xf0) >> 4);
                         }
+                        c_in += nbytes + (nbytes & 1); // Keep word aligned
+                    }
                 }
             }
         }
@@ -548,6 +552,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
         }
 
         // Should now have an EOL or EOD code
+        if (c_in + 2 > inEnd) goto truncated;
         if (*(c_in++) != 0) {
             ppl_snprintfTrunc(msg, sizeof(msg),
                               "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
@@ -556,7 +561,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
             return 1;
         }
         // Check the end-of-line or end-of-data code
-        if ((*c_in != 0) && ((*c_in != 1) && (i = height))) {
+        if ((*c_in != 0) && (*c_in != 1)) {
             ppl_snprintfTrunc(msg, sizeof(msg),
                               "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
                               i);
@@ -569,4 +574,9 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
     // Return the decoded image
     image->data = out;
     return 0;
+
+// The encoded data ended before the image was complete
+truncated:
+    ppl_error(ec, ERR_FILE, -1, -1, "Bitmap image file ended unexpectedly whilst decoding RLE");
+    return 1;
 }

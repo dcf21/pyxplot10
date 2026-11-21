@@ -417,7 +417,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
         *status = 1;
         ppl_snprintfTrunc(errText, LSTR_LENGTH,
                           "Supplied day number in the Hebrew month of %s in the year AM %d must be in the range 1-%d.",
-                          ppl_getMonthName(ct, month), year, hebrewMonthLengths[YearTypes[1]][i]);
+                          ppl_getMonthName(ct, month), year, hebrewMonthLengths[YearTypes[0]][i]);
         return 0.0;
     }
     JD += day - 1;
@@ -828,13 +828,13 @@ void ppl_dateString(ppl_context *ct, char *out, const size_t outLen, double UT, 
                 ppl_strAppendf(out, outLen, &k, "%02d", hour);
                 break;
             case 'I':
-                ppl_strAppendf(out, outLen, &k, "%02d", ((hour - 1) % 12) + 1);
+                ppl_strAppendf(out, outLen, &k, "%02d", ((hour + 11) % 12) + 1);
                 break;
             case 'k':
                 ppl_strAppendf(out, outLen, &k, "%d", hour);
                 break;
             case 'l':
-                ppl_strAppendf(out, outLen, &k, "%d", ((hour - 1) % 12) + 1);
+                ppl_strAppendf(out, outLen, &k, "%d", ((hour + 11) % 12) + 1);
                 break;
             case 'm':
                 ppl_strAppendf(out, outLen, &k, "%02d", month);

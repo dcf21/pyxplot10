@@ -231,7 +231,7 @@ void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap
 
     // Values which cannot be placed on an axis have no position
     if ((!gsl_finite(*xap)) || (!gsl_finite(*yap)) || (!gsl_finite(*zap))) {
-        *xpos = *ypos = GSL_NAN;
+        *xpos = *ypos = *depth = GSL_NAN;
         return;
     }
 
@@ -241,7 +241,7 @@ void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap
     // Crop axis positions to range 0-1
     if ((!AllowOffBounds) &&
         ((*xap < 0.0) || (*xap > 1.0) || (*yap < 0.0) || (*yap > 1.0) || (*zap < 0.0) || (*zap > 1.0))) {
-        *xpos = *ypos = GSL_NAN;
+        *xpos = *ypos = *depth = GSL_NAN;
         return;
     }
 

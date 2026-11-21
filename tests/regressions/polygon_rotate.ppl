@@ -1,0 +1,4 @@
+# Before Pyxplot 0.10.0, rotating a polygon with the move command distorted it
+polygon [[1,1],[2,1],[2,2]]
+move 1 to 0,0 rotate 90
+list

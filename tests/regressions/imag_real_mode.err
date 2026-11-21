@@ -1,0 +1,12 @@
+
+Numerical error:
+
+In piped input, line 5, position 6 below:
+ print Im(2)
+In piped input, line 5, position 2 below:
+
+ Im(2)
+  /|\
+   |
+The function Im(z) can only be used when complex arithmetic is enabled; type 'set numerics complex' first.
+

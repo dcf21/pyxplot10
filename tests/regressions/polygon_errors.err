@@ -1,0 +1,3 @@
+piped input:4: Type error: A minimum of two points are required to specify the outline of a polygon.
+piped input:5: Type error: Point 1 of polygon should have specified as a position vector; supplied position had wrong units.
+piped input:6: Type error: Point 3 of polygon should have specified as a two-component position vector; supplied vector had 1 components.

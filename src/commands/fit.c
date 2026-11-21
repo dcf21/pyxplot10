@@ -435,9 +435,9 @@ static gsl_matrix *GetHessian(fitComm *p) {
         for (j = 0; j < p->NParams; j++) // Loop over elements of Hessian matrix
         {
             p->diff1 = i;
-            p->diff1step = ((output = gsl_vector_get(p->paramVals, i) * 1e-6) < 1e-100) ? 1e-6 : output;
+            p->diff1step = ((output = fabs(gsl_vector_get(p->paramVals, i)) * 1e-6) < 1e-100) ? 1e-6 : output;
             p->diff2 = j;
-            p->diff2step = ((output = gsl_vector_get(p->paramVals, j) * 1e-6) < 1e-100) ? 1e-6 : output;
+            p->diff2step = ((output = fabs(gsl_vector_get(p->paramVals, j)) * 1e-6) < 1e-100) ? 1e-6 : output;
             gsl_deriv_central(&fn, gsl_vector_get(p->paramVals, p->diff1), p->diff1step, &output, &output_error);
             gsl_matrix_set(out, i, j, -output); // Minus sign here since fitResidual returns the negative of log(P)
         }

@@ -1,0 +1,20 @@
+
+Namespace error:
+
+In piped input, line 4, position 0 below:
+
+ local a
+/|\
+ |
+Cannot declare local variables when not in a subroutine or module namespace.
+
+
+Numerical error:
+
+In piped input, line 5, position 15 below:
+
+ f(x)[1*unit(m):2*unit(s)] = x
+               /|\
+                |
+The minimum and maximum values specified for argument number 1 are dimensionally incompatible: the minimum has dimensions of <m>, while the maximum has dimensions of <s>.
+

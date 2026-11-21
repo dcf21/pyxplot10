@@ -1,0 +1,11 @@
+# Before Pyxplot 0.10.0, every window name other than "hamming" selected the Hamming window, "hamming" selected the
+# Hann window, and the Lanczos window was NaN at its central sample
+set numerics complex
+gs(x) = exp(-x**2)
+fft [-5:4.5:0.5] fhann() of gs() window hann
+fft [-5:4.5:0.5] fhamming() of gs() window hamming
+fft [-5:5:0.5] flanczos() of gs() window lanczos
+assert abs(fhann(0.3) - (0.71400902+0.033956157*i)) < 1e-6
+assert abs(fhamming(0.3) - (0.71230239+0.031239665*i)) < 1e-6
+# The transform of a symmetric function sampled symmetrically about zero is finite and real
+assert abs(flanczos(0.3) - 0.76839061) < 1e-6

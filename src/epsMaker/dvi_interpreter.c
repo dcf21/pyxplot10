@@ -260,8 +260,9 @@ int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
             return DVIE_MEMORY;
         }
         *(interp->currentString) = '\0';
-        interp->currentStrlen = LSTR_LENGTH;
-    } else if (strlen(interp->currentString) == interp->currentStrlen - 2) // If the string is full, extend it
+        interp->currentStrlen = SSTR_LENGTH;
+    } else if (strlen(interp->currentString) + 3 >= interp->currentStrlen) // If the string is full, start a new one;
+                                                                           // up to two characters and a \0 are added
     {
         if ((err = dviTypeset(ec, interp)) != 0) return err;
         interp->currentString = (char *) ppl_memAlloc(SSTR_LENGTH);
@@ -271,7 +272,7 @@ int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
             return DVIE_MEMORY;
         }
         *(interp->currentString) = '\0';
-        interp->currentStrlen = LSTR_LENGTH;
+        interp->currentStrlen = SSTR_LENGTH;
     }
     // Write the character to the string
     s = interp->currentString + strlen(interp->currentString); // s now points to the \0
