@@ -35,17 +35,13 @@ for Microsoft Windows, and have no plans for porting it at this time.
 
 \section{Installation within Linux distributions}
 
-By far the easiest way to install Pyxplot under Linux is to use your
-distribution's package manager.  If you use a recent release of
-Gentoo\index{Gentoo Linux}\index{installation!under Gentoo}\footnote{See
-\url{http://gentoo-portage.com/sci-visualization/pyxplot}}, Ubuntu\index{Ubuntu
+Debian\index{Debian Linux}\index{installation!under Debian}\footnote{See
+\url{https://packages.debian.org/pyxplot}} and Ubuntu\index{Ubuntu
 Linux}\index{installation!under Ubuntu}\footnote{See
-\url{http://packages.ubuntu.com/pyxplot}} or Debian\footnote{See
-\url{http://packages.debian.org/pyxplot}}, your package manager can install
-Pyxplot and all its dependencies for you, though the packaged version may be
-several months behind the latest release. Please note that this manual
-describes Pyxplot~0.10.x. Pyxplot~0.9.x was a very substantial upgrade to version~0.8.x.
-To install the packaged version of Pyxplot under Debian or Ubuntu, simply type:
+\url{https://packages.ubuntu.com/pyxplot}} include Pyxplot in their package
+archives, though at the time of writing they offer Pyxplot~0.9.2. Please note
+that this manual describes Pyxplot~0.10.x. To install the packaged version of
+Pyxplot under Debian or Ubuntu, simply type:
 
 \begin{verbatim}
 apt-get install pyxplot gv
@@ -70,6 +66,7 @@ the source tarball:\index{system requirements}
 \item \latexdcf\ (version $2\epsilon$; a full installation is likely to be required in distributions which offer a choice) \index{latex}
 \item libpng (version 1.2+) \index{libpng}
 \item libxml2 (version 2.6+) \index{libxml}
+\item pkg-config (or pkgconf, which provides it) \index{pkg-config}
 \item zlib \index{zlib}
 \end{itemize}
 \vspace{0.5cm}
@@ -80,10 +77,10 @@ also be installed:
 \vspace{0.5cm}
 \begin{itemize}
 \item cfitsio -- required for Pyxplot to be able to plot \datafile s in FITS format.
-\item Ghostview \index{Ghostview} (or {\tt ggv}) -- required for Pyxplot to be able to display plots live on the screen; Pyxplot remains able to generate image files on disk without it. Alternatively, the \indcmdt{set viewer} within Pyxplot allows a different PostScript viewer to be used.
+\item Ghostview \index{Ghostview} ({\tt gv}) -- required for Pyxplot to be able to display plots live on the screen; Pyxplot remains able to generate image files on disk without it. Alternatively, the \indcmdt{set viewer} within Pyxplot allows a different PostScript viewer to be used.
 \item gunzip \index{gunzip} -- required for Pyxplot to be able to plot compressed \datafile s in {\tt .gz} format.
 \item The Gnu Readline Library (version 5+) \index{readline} -- required for Pyxplot to be able to provide tab completion and command histories in Pyxplot's interactive command-line interface.
-\item libkpathsea \index{libkpathsea} -- required to efficiently find the fonts used by \latexdcf.
+\item libkpathsea \index{libkpathsea} -- required to efficiently find the fonts used by \latexdcf. Without it, Pyxplot uses the {\tt kpsewhich} program, which is part of TeX Live, instead.
 \item wget \index{wget} -- required for Pyxplot to be able to plot \datafile s directly from the Internet.
 \end{itemize}
 \vspace{0.5cm}
@@ -94,30 +91,33 @@ found. Installation can proceed, but some of Pyxplot's features will be
 disabled. If they are later added to the system, Pyxplot should be reinstalled
 to take advantage of their presence.
 
+If the C compiler supports OpenMP\index{OpenMP}, as {\tt gcc} does, Pyxplot
+uses it to sample functions on several processor cores at once.
+
 \subsection{Dependencies in Debian and Ubuntu}
 
 Debian and Ubuntu users can find the above software in the following
-packages\footnote{The package names listed here are correct as of Debian
-Squeeze and Ubuntu 12.04 (Precise). However, packages occasionally change name
-between versions.}: \index{Debian Linux}\index{Ubuntu
+packages\footnote{The package names listed here were checked against Ubuntu
+26.04, and are also used by recent Debian releases. However, packages
+occasionally change name between versions.}: \index{Debian Linux}\index{Ubuntu
 Linux}\index{installation!under Debian}\index{installation!under Ubuntu}
 
 \vspace{2mm}
-\noindent {\tt fftw3-dev}, {\tt gcc}, {\tt ghostscript}, {\tt gv}, {\tt imagemagick}, {\tt libc6-dev},\newline
-\noindent {\tt libcfitsio3-dev}, {\tt libgsl0-dev}, {\tt libkpathsea-dev}, {\tt libpng12-dev},\newline
-\noindent {\tt libreadline-dev}, {\tt libxml2-dev}, {\tt make}, {\tt texlive-latex-extra},\newline
-\noindent {\tt texlive-latex-recommended}, {\tt texlive-fonts-extra},\newline
-\noindent {\tt texlive-fonts-recommended}, {\tt wget}, {\tt zlib1g-dev}.
+\noindent {\tt gcc}, {\tt ghostscript}, {\tt gv}, {\tt imagemagick}, {\tt libc6-dev}, {\tt libcfitsio-dev},\newline
+\noindent {\tt libfftw3-dev}, {\tt libgsl-dev}, {\tt libkpathsea-dev}, {\tt libpng-dev},\newline
+\noindent {\tt libreadline-dev}, {\tt libxml2-dev}, {\tt make}, {\tt pkgconf}, {\tt texlive-fonts-extra},\newline
+\noindent {\tt texlive-fonts-recommended}, {\tt texlive-latex-extra},\newline
+\noindent {\tt texlive-latex-recommended}, {\tt wget}, {\tt zlib1g-dev}.
 \vspace{2mm}
 
 \noindent These packages may be installed from a command prompt by typing, all on one line:
 
 \begin{verbatim}
-sudo apt-get install fftw3-dev gcc ghostscript gv imagemagick
-       libc6-dev libcfitsio3-dev libgsl0-dev libkpathsea-dev
-       libpng12-dev libreadline-dev libxml2-dev make
-       texlive-latex-extra texlive-latex-recommended
-       texlive-fonts-extra texlive-fonts-recommended wget
+sudo apt-get install gcc ghostscript gv imagemagick libc6-dev
+       libcfitsio-dev libfftw3-dev libgsl-dev libkpathsea-dev
+       libpng-dev libreadline-dev libxml2-dev make pkgconf
+       texlive-fonts-extra texlive-fonts-recommended
+       texlive-latex-extra texlive-latex-recommended wget
        zlib1g-dev
 \end{verbatim}
 
@@ -150,21 +150,59 @@ sudo apparmor_parser -r /etc/apparmor.d/gs
 the Ghostscript executable, e.g.\ by typing {\tt set viewer okular} within
 Pyxplot (see the {\tt set viewer} command in Chapter~\ref{ch:reference}).
 
-\subsection{Dependencies in MacOS}
+\subsection{Dependencies in Fedora}
+\index{Fedora Linux}\index{installation!under Fedora}
 
-Users of MacOS~X can find the above software in the following MacPorts packages:
+Fedora users can install the above software by typing, all on one
+line\footnote{The package names listed here were checked against Fedora~43
+and~44.}:
+
+\begin{verbatim}
+sudo dnf install cfitsio-devel fftw-devel gcc ghostscript
+       gsl-devel gv ImageMagick libpng-devel libxml2-devel make
+       pkgconf-pkg-config readline-devel texlive-latex
+       texlive-lib-devel wget2-wget zlib-ng-compat-devel
+\end{verbatim}
+
+\noindent If \latexdcf\ reports that packages or fonts are missing, a larger
+TeX Live scheme, e.g.\ {\tt texlive-scheme-medium}, should be installed.
+
+\subsection{Dependencies in MacOS}
 \index{MacOS X}\index{MacPorts}
 
+Users of MacOS can find the above software in the following MacPorts packages:
+
 \vspace{2mm}
-\noindent {\tt cfitsio}, {\tt fftw-3}, {\tt ghostscript}, {\tt gsl-devel}, {\tt gv}, {\tt ImageMagick}, {\tt libpng},\newline
-\noindent {\tt libxml2}, {\tt readline-5}, {\tt texlive}, {\tt wget}, {\tt zlib}.
+\noindent {\tt cfitsio}, {\tt fftw-3}, {\tt ghostscript}, {\tt gsl}, {\tt gv}, {\tt ImageMagick}, {\tt libpng},\newline
+\noindent {\tt libxml2}, {\tt pkgconfig}, {\tt readline}, {\tt texlive}, {\tt wget}, {\tt zlib}.
 \vspace{2mm}
 
 It may then be necessary to run the command
 \begin{verbatim}
-export C_INCLUDE_PATH=/opt/local/include
+export C_INCLUDE_PATH=/opt/local/include LIBRARY_PATH=/opt/local/lib
 \end{verbatim}
-before running the {\tt configure} script below.
+before running the {\tt configure} script below. \ghostview\ is an X11
+application, and needs an X server such as XQuartz to display plots.
+
+Alternatively, users of Homebrew\index{Homebrew} can install the software by
+typing:
+
+\begin{verbatim}
+brew install cfitsio fftw ghostscript gsl imagemagick libpng
+       libxml2 pkgconf readline texlive wget
+\end{verbatim}
+
+\noindent and then, before running the {\tt configure} script below:
+
+\begin{verbatim}
+export C_INCLUDE_PATH=$(brew --prefix)/include
+export LIBRARY_PATH=$(brew --prefix)/lib
+\end{verbatim}
+
+\noindent Homebrew does not package \ghostview, so Pyxplot cannot display plots
+on the screen unless another PostScript viewer is selected with the
+\indcmdt{set viewer}; it can still write plots to files. Apple's C compiler does
+not support OpenMP, so Pyxplot samples functions on a single processor core.
 
 \section{Installation from source archive}
 \index{installation}

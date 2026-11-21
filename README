@@ -70,13 +70,14 @@ It requires that the following software packages (not included) be installed:
 - LaTeX                      (version 2e)
 - libpng                     (version 1.2+)
 - libxml2                    (version 2.6+)
+- pkg-config                 (or pkgconf, which provides it)
 - zlib
 
 It is also strongly recommended that the following software packages be
 installed:
 
 - cfitsio -- required for Pyxplot to be able to plot datafiles in FITS format.
-- Ghostview (or ggv) -- required for Pyxplot to be able to display plots live
+- Ghostview (gv) -- required for Pyxplot to be able to display plots live
   on the screen; Pyxplot remains able to generate image files on disk without
   it. Alternatively, the set viewer within Pyxplot allows a different
   postscript viewer to be used.
@@ -85,21 +86,28 @@ installed:
 - The Gnu Readline Library (version 5+) -- required for Pyxplot to be able to
   provide tab completion and command histories in Pyxplot's interactive
   command-line interface.
-- libkpathsea -- required to efficiently find the fonts used by LaTeX.
+- libkpathsea -- required to efficiently find the fonts used by LaTeX. Without
+  it, Pyxplot uses the kpsewhich program, which is part of TeX Live, instead.
 - wget -- required for Pyxplot to be able to plot datafiles directly from the
   Internet.
 
-Debian and Ubuntu users can find the above software in the following packages:
+If the C compiler supports OpenMP, as gcc does, Pyxplot uses it to sample
+functions on several processor cores at once.
 
-fftw3-dev, gcc, ghostscript, gv, imagemagick, libc6-dev, libcfitsio3-dev,
-libgsl0-dev, libkpathsea-dev, libpng12-dev, libreadline-dev, libxml2-dev, make,
-texlive-latex-extra, texlive-latex-recommended, texlive-fonts-extra,
-texlive-fonts-recommended, wget, zlib1g-dev.
+DEBIAN AND UBUNTU
+
+Debian and Ubuntu users can find the above software in the following packages
+(names checked against Ubuntu 26.04, and also used by recent Debian releases):
+
+gcc, ghostscript, gv, imagemagick, libc6-dev, libcfitsio-dev, libfftw3-dev,
+libgsl-dev, libkpathsea-dev, libpng-dev, libreadline-dev, libxml2-dev, make,
+pkgconf, texlive-fonts-extra, texlive-fonts-recommended, texlive-latex-extra,
+texlive-latex-recommended, wget, zlib1g-dev.
 
 These packages may be installed from a command prompt by typing, all on one
 line:
 
-sudo apt-get install fftw3-dev gcc ghostscript gv imagemagick libc6-dev libcfitsio3-dev libgsl0-dev libkpathsea-dev libpng12-dev libreadline-dev libxml2-dev make texlive-latex-extra texlive-latex-recommended texlive-fonts-extra texlive-fonts-recommended wget zlib1g-dev
+sudo apt-get install gcc ghostscript gv imagemagick libc6-dev libcfitsio-dev libfftw3-dev libgsl-dev libkpathsea-dev libpng-dev libreadline-dev libxml2-dev make pkgconf texlive-fonts-extra texlive-fonts-recommended texlive-latex-extra texlive-latex-recommended wget zlib1g-dev
 
 Users of Ubuntu 26.04 need to change the system's AppArmor security settings
 for Pyxplot to be able to display plots on the screen. Ubuntu 26.04 confines
@@ -121,16 +129,42 @@ sudo apparmor_parser -r /etc/apparmor.d/gs
 Alternatively, Pyxplot can be told to use a viewer which does not run the
 Ghostscript executable, e.g. by typing "set viewer okular" within Pyxplot.
 
-Users of MacOS X can find the above software in the following MacPorts packages:
+FEDORA
 
-cfitsio, fftw-3, ghostscript, gsl-devel, gv, ImageMagick, libpng, libxml2,
-readline-5, texlive, wget, zlib.
+Fedora users can find the above software in the following packages (names
+checked against Fedora 43 and 44):
+
+sudo dnf install cfitsio-devel fftw-devel gcc ghostscript gsl-devel gv ImageMagick libpng-devel libxml2-devel make pkgconf-pkg-config readline-devel texlive-latex texlive-lib-devel wget2-wget zlib-ng-compat-devel
+
+If LaTeX reports that packages or fonts are missing, install a larger TeX Live
+scheme, e.g. texlive-scheme-medium.
+
+MACOS
+
+Users of MacOS can find the above software in the following MacPorts packages:
+
+cfitsio, fftw-3, ghostscript, gsl, gv, ImageMagick, libpng, libxml2,
+pkgconfig, readline, texlive, wget, zlib.
 
 It may then be necessary to run the command
 
-export C_INCLUDE_PATH=/opt/local/include
+export C_INCLUDE_PATH=/opt/local/include LIBRARY_PATH=/opt/local/lib
 
-before running the configure script below.
+before running the configure script below. gv is an X11 application, and needs
+an X server such as XQuartz to display plots.
+
+Alternatively, users of Homebrew can install the software by typing:
+
+brew install cfitsio fftw ghostscript gsl imagemagick libpng libxml2 pkgconf readline texlive wget
+
+and then, before running the configure script below:
+
+export C_INCLUDE_PATH=$(brew --prefix)/include LIBRARY_PATH=$(brew --prefix)/lib
+
+Homebrew does not package gv, so Pyxplot cannot display plots on the screen
+unless another postscript viewer is selected with set viewer; it can still
+write plots to files. Apple's C compiler does not support OpenMP, so Pyxplot
+samples functions on a single processor core.
 
 
 3. INSTALLATION FROM SOURCE ARCHIVE
