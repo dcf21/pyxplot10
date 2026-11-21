@@ -326,20 +326,14 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1,
                   "Out of memory whilst trying to allocate buffers in show command.");
         // Free the output buffer
-        if (out != NULL) {
-            free(out);
-            out = NULL;
-        }
+        free(out);
+        out = NULL;
         // Free the value buffer
-        if (buf != NULL) {
-            free(buf);
-            buf = NULL;
-        }
+        free(buf);
+        buf = NULL;
         // Free the description buffer
-        if (buf2 != NULL) {
-            free(buf2);
-            buf2 = NULL;
-        }
+        free(buf2);
+        buf2 = NULL;
         return 1;
     }
 

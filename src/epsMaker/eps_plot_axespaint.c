@@ -429,6 +429,33 @@ static void swapChars(unsigned char *array, const int A, const int B) {
 //! \param [in] height - The height of the graph, in postscript points
 //! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
 //! \param [in] pass - For 3D plots, zero to draw the axes at the back of the plot (before the data), or one to draw
+//! eps_plot_setAxesStyle - Set the color and line width for painting axes and color scales, which are drawn in the
+//! color set with "set axescolor"
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [out] ww - The style of the axes, for use when painting them
+
+void eps_plot_setAxesStyle(EPSComm *x, withWords *ww) {
+    const pplset_graph *s = &x->current->settings;
+    ppl_withWordsZero(x->c, ww);
+    if (s->AxesColor > 0) {
+        ww->color = s->AxesColor;
+        ww->USEcolor = 1;
+    } else {
+        ww->Col1234Space = s->AxesCol1234Space;
+        ww->color1 = s->AxesColor1;
+        ww->color2 = s->AxesColor2;
+        ww->color3 = s->AxesColor3;
+        ww->color4 = s->AxesColor4;
+        ww->USEcolor1234 = 1;
+    }
+    ww->linewidth = EPS_AXES_LINEWIDTH;
+    ww->USElinewidth = 1;
+    ww->linetype = 1;
+    ww->USElinetype = 1;
+    eps_core_SetColor(x, ww, 1);
+    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1, 0.0);
+}
+
 //! those at the front (after the data). 2D plots draw all their axes in pass one.
 
 void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y, const double width,
@@ -440,26 +467,8 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
 
     if ((pass == 0) && (!x->current->ThreeDim)) return; // 2D plots do not have back axes
 
-    // Set color for painting axes
-    ppl_withWordsZero(x->c, &ww);
-    // Draw axes in the color set with "set axescolor"
-    if (x->current->settings.AxesColor > 0) {
-        ww.color = x->current->settings.AxesColor;
-        ww.USEcolor = 1;
-    } else {
-        ww.Col1234Space = x->current->settings.AxesCol1234Space;
-        ww.color1 = x->current->settings.AxesColor1;
-        ww.color2 = x->current->settings.AxesColor2;
-        ww.color3 = x->current->settings.AxesColor3;
-        ww.color4 = x->current->settings.AxesColor4;
-        ww.USEcolor1234 = 1;
-    }
-    ww.linewidth = EPS_AXES_LINEWIDTH;
-    ww.USElinewidth = 1;
-    ww.linetype = 1;
-    ww.USElinetype = 1;
-    eps_core_SetColor(x, &ww, 1);
-    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1, 0.0);
+    // Set color and line width for painting axes
+    eps_plot_setAxesStyle(x, &ww);
 
     // Reset plot bounding box; we're about to make this sensible below by factoring in plot vertices
     if ((pass == 0) || (!x->current->ThreeDim)) {

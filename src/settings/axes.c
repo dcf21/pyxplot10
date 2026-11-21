@@ -70,20 +70,16 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
         in->format = NULL;
     }
     // The axis label
-    if (in->label != NULL) {
-        free(in->label);
-        in->label = NULL;
-    }
+    free(in->label);
+    in->label = NULL;
     // The expression which maps a linked axis onto the axis it is linked to
     if (in->linkusing != NULL) {
         pplExpr_free((pplExpr *) in->linkusing);
         in->linkusing = NULL;
     }
     // The manually-specified positions of minor ticks
-    if (in->ticsM.tickList != NULL) {
-        free(in->ticsM.tickList);
-        in->ticsM.tickList = NULL;
-    }
+    free(in->ticsM.tickList);
+    in->ticsM.tickList = NULL;
     // The labels of minor ticks, a NULL-terminated array of strings
     if (in->ticsM.tickStrs != NULL) {
         // Free each label
@@ -95,10 +91,8 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
         in->ticsM.tickStrs = NULL;
     }
     // The manually-specified positions of major ticks
-    if (in->tics.tickList != NULL) {
-        free(in->tics.tickList);
-        in->tics.tickList = NULL;
-    }
+    free(in->tics.tickList);
+    in->tics.tickList = NULL;
     // The labels of major ticks, a NULL-terminated array of strings
     if (in->tics.tickStrs != NULL) {
         // Free each label

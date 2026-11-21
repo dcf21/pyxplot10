@@ -197,10 +197,8 @@ void ppl_interactiveSession(ppl_context *context) {
     }
 
     // Discard any unfinished continuation line
-    if (context->inputLineAddBuffer != NULL) {
-        free(context->inputLineAddBuffer);
-        context->inputLineAddBuffer = NULL;
-    }
+    free(context->inputLineAddBuffer);
+    context->inputLineAddBuffer = NULL;
     context->shellExiting = 0;
     signal(SIGINT, sigint_old); // Restore old SIGINT handler
 
@@ -296,10 +294,8 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
         {
             if (!context->shellExiting) ppl_error(&context->errcontext, ERR_FILE, -1, -1, "Aborting.");
             // Discard any unfinished continuation line
-            if (context->inputLineAddBuffer != NULL) {
-                free(context->inputLineAddBuffer);
-                context->inputLineAddBuffer = NULL;
-            }
+            free(context->inputLineAddBuffer);
+            context->inputLineAddBuffer = NULL;
             break;
         }
     }
@@ -314,10 +310,8 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
             ppl_error_setstreaminfo(&context->errcontext, -1, "");
             if (status > 0) ppl_error(&context->errcontext, ERR_FILE, -1, -1, "Aborting.");
             // Discard the continuation line
-            if (context->inputLineAddBuffer != NULL) {
-                free(context->inputLineAddBuffer);
-                context->inputLineAddBuffer = NULL;
-            }
+            free(context->inputLineAddBuffer);
+            context->inputLineAddBuffer = NULL;
         }
     context->shellExiting = 0;
     context->shellBreakable = shellBreakableOld;
@@ -330,10 +324,8 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
 // Free the script's input buffer, and restore the caller's
 restore:
     // Free the script's buffer
-    if (context->inputLineBuffer != NULL) {
-        free(context->inputLineBuffer);
-        context->inputLineBuffer = NULL;
-    }
+    free(context->inputLineBuffer);
+    context->inputLineBuffer = NULL;
 
 // Restore the caller's input buffers
 restoreCaller:
@@ -467,10 +459,8 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
     // Execute the last statement, and discard the joined line
     if (!status) status = ppl_ProcessStatement(context, ps, inputLineBuffer, interactive, iterDepth);
     // Discard the joined line
-    if (context->inputLineAddBuffer != NULL) {
-        free(context->inputLineAddBuffer);
-        context->inputLineAddBuffer = NULL;
-    }
+    free(context->inputLineAddBuffer);
+    context->inputLineAddBuffer = NULL;
     context->inputLineAddBuffer = NULL;
     return (status != 0);
 }

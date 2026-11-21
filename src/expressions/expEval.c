@@ -378,10 +378,8 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
 // An argument could not be cast to the type the token needs
 cast_fail:
     // Free the output buffer
-    if (out != NULL) {
-        free(out);
-        out = NULL;
-    }
+    free(out);
+    out = NULL;
     return;
 }
 

@@ -49,6 +49,70 @@
 #include "defaultObjs/defaultFuncsChecks.h"
 
 
+//! addSubArrays - Add or subtract two vectors, or two matrices, which must have the same units and size
+//! \param [in] context - The Pyxplot context
+//! \param [in] a - The left operand
+//! \param [in] b - The right operand, of the same type as <a>
+//! \param [out] o - The result
+//! \param [in] sub - Zero to add the operands, or one to subtract them
+//! \param [out] status - Set to one if an error occurred
+//! \param [out] errType - Set to the type of error, if an error occurred
+//! \param [out] errText - Buffer of LSTR_LENGTH bytes into which to write an error message
+
+static void addSubArrays(ppl_context *context, const pplObj *a, const pplObj *b, pplObj *o, const int sub,
+                         int *status, int *errType, char *errText) {
+    const char *const verb = sub ? "subtract" : "add";
+    // The operands can only be combined if they have the same units
+    if (!ppl_unitsDimEqual(a, b)) {
+        ppl_unitsConflictError(context, a, b, verb, status, errType, errText);
+        return;
+    }
+    // Vectors must have the same length
+    if (a->objType == PPLOBJ_VEC) {
+        const gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
+        const gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
+        if (v1->size != v2->size) {
+            ppl_funcError(status, errType, errText, ERR_RANGE,
+                          "Can only %s vectors of a common size. Left operand has length of %ld, while right operand has length of %ld.",
+                          verb, (long) v1->size, (long) v2->size);
+            return;
+        }
+        // The output is a new vector
+        if (pplObjVector(o, 0, 1, v1->size) == NULL) {
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
+            return;
+        }
+        gsl_vector *vo = ((pplVector *) (o->auxil))->v;
+        for (size_t i = 0; i < v1->size; i++) {
+            const double x = gsl_vector_get(v1, i), y = gsl_vector_get(v2, i);
+            gsl_vector_set(vo, i, sub ? (x - y) : (x + y));
+        }
+    }
+    // Matrices must have the same size
+    else {
+        const gsl_matrix *m1 = ((pplMatrix *) (a->auxil))->m;
+        const gsl_matrix *m2 = ((pplMatrix *) (b->auxil))->m;
+        if ((m1->size1 != m2->size1) || (m1->size2 != m2->size2)) {
+            ppl_funcError(status, errType, errText, ERR_RANGE,
+                          "Can only %s matrices of a common size. Left operand has size of %ldx%ld, while right operand has size of %ldx%ld.",
+                          verb, (long) m1->size1, (long) m1->size2, (long) m2->size1, (long) m2->size2);
+            return;
+        }
+        // The output is a new matrix
+        if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
+            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
+            return;
+        }
+        gsl_matrix *mo = ((pplMatrix *) (o->auxil))->m;
+        for (size_t i = 0; i < m1->size1; i++)
+            for (size_t j = 0; j < m1->size2; j++) {
+                const double x = gsl_matrix_get(m1, i, j), y = gsl_matrix_get(m2, i, j);
+                gsl_matrix_set(mo, i, j, sub ? (x - y) : (x + y));
+            }
+    }
+    ppl_unitsDimCpy(o, a);
+}
+
 //! ppl_opAdd - Evaluate the + operator, which adds numbers, vectors and matrices, concatenates strings and lists,
 //! merges dictionaries, and adds time intervals to dates
 //! \param [in] context - The Pyxplot context
@@ -111,34 +175,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObjDate(o, 0, a->real + b->real);
     } else if ((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_VEC)) // adding vectors
     {
-        int i;
-        gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
-        gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
-        gsl_vector *vo;
-        // Vectors can only be added if they have the same units
-        if (!ppl_unitsDimEqual(a, b)) {
-            // Describe the conflicting units in the error message
-            ppl_unitsConflictError(context, a, b, "add", status, errType, errText);
-            return;
-        }
-        // ...and the same length
-        if (v1->size != v2->size) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Can only add vectors of a common size. Left operand has length of %ld, while right operand has length of %ld.",
-                    (long) v1->size, (long) v2->size);
-            *errType = ERR_RANGE;
-            *status = 1;
-            return;
-        }
-        // The output is a new vector
-        if (pplObjVector(o, 0, 1, v1->size) == NULL) {
-            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
-            return;
-        }
-        vo = ((pplVector *) (o->auxil))->v;
-        for (i = 0; i < v1->size; i++) gsl_vector_set(vo, i, gsl_vector_get(v1, i) + gsl_vector_get(v2, i));
-        ppl_unitsDimCpy(o, a);
+        addSubArrays(context, a, b, o, 0, status, errType, errText);
     } else if ((t1 == PPLOBJ_LIST) && (t2 == PPLOBJ_LIST)) // adding lists
     {
         listIterator *li;
@@ -245,36 +282,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
     } else if ((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_MAT)) // adding matrices
     {
-        int i, j;
-        gsl_matrix *m1 = ((pplMatrix *) (a->auxil))->m;
-        gsl_matrix *m2 = ((pplMatrix *) (b->auxil))->m;
-        gsl_matrix *mo;
-        // Matrices can only be added if they have the same units
-        if (!ppl_unitsDimEqual(a, b)) {
-            // Describe the conflicting units in the error message
-            ppl_unitsConflictError(context, a, b, "add", status, errType, errText);
-            return;
-        }
-        // ...and the same size
-        if ((m1->size1 != m2->size1) || (m1->size2 != m2->size2)) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Can only add matrices of a common size. Left operand has size of %ldx%ld, while right operand has size of %ldx%ld.",
-                    (long) m1->size1, (long) m1->size2, (long) m2->size1, (long) m2->size2);
-            *errType = ERR_RANGE;
-            *status = 1;
-            return;
-        }
-        // The output is a new matrix
-        if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
-            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
-            return;
-        }
-        mo = ((pplMatrix *) (o->auxil))->m;
-        for (i = 0; i < m1->size1; i++)
-            for (j = 0; j < m1->size2; j++)
-                gsl_matrix_set(mo, i, j, gsl_matrix_get(m1, i, j) + gsl_matrix_get(m2, i, j));
-        ppl_unitsDimCpy(o, a);
+        addSubArrays(context, a, b, o, 0, status, errType, errText);
     } else // adding numbers
     {
         // Any other types must be cast to numbers, e.g. booleans
@@ -354,66 +362,10 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObjColor(o, 0, SW_COLSPACE_RGB, r1, g1, b1, 0);
     } else if ((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_VEC)) // subtracting vectors
     {
-        int i;
-        gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
-        gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
-        gsl_vector *vo;
-        // Vectors can only be subtracted if they have the same units
-        if (ppl_unitsDimEqual(a, b) == 0) {
-            // Describe the conflicting units in the error message
-            ppl_unitsConflictError(context, a, b, "subtract", status, errType, errText);
-            return;
-        }
-        // ...and the same length
-        if (v1->size != v2->size) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Can only subtract vectors of a common size. Left operand has length of %ld, while right operand has length of %ld.",
-                    (long) v1->size, (long) v2->size);
-            *errType = ERR_RANGE;
-            *status = 1;
-            return;
-        }
-        // The output is a new vector
-        if (pplObjVector(o, 0, 1, v1->size) == NULL) {
-            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
-            return;
-        }
-        vo = ((pplVector *) (o->auxil))->v;
-        for (i = 0; i < v1->size; i++) gsl_vector_set(vo, i, gsl_vector_get(v1, i) - gsl_vector_get(v2, i));
-        ppl_unitsDimCpy(o, a);
+        addSubArrays(context, a, b, o, 1, status, errType, errText);
     } else if ((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_MAT)) // subtracting matrices
     {
-        int i, j;
-        gsl_matrix *m1 = ((pplMatrix *) (a->auxil))->m;
-        gsl_matrix *m2 = ((pplMatrix *) (b->auxil))->m;
-        gsl_matrix *mo;
-        // Matrices can only be subtracted if they have the same units
-        if (ppl_unitsDimEqual(a, b) == 0) {
-            // Describe the conflicting units in the error message
-            ppl_unitsConflictError(context, a, b, "subtract", status, errType, errText);
-            return;
-        }
-        // ...and the same size
-        if ((m1->size1 != m2->size1) || (m1->size2 != m2->size2)) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Can only subtract matrices of a common size. Left operand has size of %ldx%ld, while right operand has size of %ldx%ld.",
-                    (long) m1->size1, (long) m1->size2, (long) m2->size1, (long) m2->size2);
-            *errType = ERR_RANGE;
-            *status = 1;
-            return;
-        }
-        // The output is a new matrix
-        if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
-            ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
-            return;
-        }
-        mo = ((pplMatrix *) (o->auxil))->m;
-        for (i = 0; i < m1->size1; i++)
-            for (j = 0; j < m1->size2; j++)
-                gsl_matrix_set(mo, i, j, gsl_matrix_get(m1, i, j) - gsl_matrix_get(m2, i, j));
-        ppl_unitsDimCpy(o, a);
+        addSubArrays(context, a, b, o, 1, status, errType, errText);
     } else // subtracting numbers
     {
         // Any other types must be cast to numbers, e.g. booleans
@@ -471,10 +423,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         const double m = n->real;
         // Colors can only be scaled by plain positive numbers
         if ((!n->dimensionless) || (n->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                              "Can only multiply colors by dimensionless, real, positive numbers.");
-            *errType = ERR_RANGE;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_RANGE,
+                    "Can only multiply colors by dimensionless, real, positive numbers.");
             return;
         }
         // Convert the color to RGB, and scale its components
@@ -491,12 +441,9 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         double acc = 0;
         // The product of two vectors is their dot product, which needs vectors of the same length
         if (v1->size != v2->size) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_RANGE,
                     "Can only form dot-product of vectors of a common size. Left operand has length of %ld, while right operand has length of %ld.",
                     (long) v1->size, (long) v2->size);
-            *errType = ERR_RANGE;
-            *status = 1;
             return;
         }
         a->real = a->imag = b->real = b->imag = 0;
@@ -516,10 +463,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *vo = NULL;
         // Multiplying a vector by a number: the number must be real
         if (num->flagComplex) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                              "Vectors can only contain real numbers, and cannot be multiplied by complex numbers.");
-            *errType = ERR_NUMERICAL;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                    "Vectors can only contain real numbers, and cannot be multiplied by complex numbers.");
             return;
         }
         vec->real = 1;
@@ -544,10 +489,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *mo = NULL;
         // Multiplying a matrix by a number: the number must be real
         if (num->flagComplex) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                              "Matrices can only contain real numbers, and cannot be multiplied by complex numbers.");
-            *errType = ERR_NUMERICAL;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                    "Matrices can only contain real numbers, and cannot be multiplied by complex numbers.");
             return;
         }
         mat->real = 1;
@@ -571,12 +514,9 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *vo = NULL;
         // A matrix times a vector needs as many columns in the matrix as there are elements in the vector
         if (m->size2 != v->size) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
                     "Matrices can only be multiplied by vectors when the number of matrix columns (%ld) equals the number of vector rows (%ld).",
                     (long) m->size2, (long) v->size);
-            *errType = ERR_NUMERICAL;
-            *status = 1;
             return;
         }
         // The output is a vector with one element per row of the matrix
@@ -602,12 +542,9 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *mo = NULL;
         // A matrix product needs as many columns in the left matrix as rows in the right
         if (m1->size2 != m2->size1) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
                     "Matrices can only be multiplied when the number of matrix columns (%ld) in the left matrix equals the number of rows (%ld) in the right matrix.",
                     (long) m1->size2, (long) m2->size1);
-            *errType = ERR_NUMERICAL;
-            *status = 1;
             return;
         }
         // The output is a new matrix
@@ -679,9 +616,8 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         const double m = b->real;
         // Colors can only be divided by plain positive numbers
         if ((!b->dimensionless) || (b->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Can only divide colors by dimensionless, real, positive numbers.");
-            *errType = ERR_RANGE;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_RANGE,
+                    "Can only divide colors by dimensionless, real, positive numbers.");
             return;
         }
         // Convert the color to RGB, and divide its components
@@ -697,10 +633,8 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *vo = NULL;
         // Dividing a vector by a number: the number must be real
         if (b->flagComplex) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                              "Vectors can only contain real numbers, and cannot be divided by complex numbers.");
-            *errType = ERR_NUMERICAL;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                    "Vectors can only contain real numbers, and cannot be divided by complex numbers.");
             return;
         }
         a->real = 1;
@@ -722,10 +656,8 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *mo = NULL;
         // Dividing a matrix by a number: the number must be real
         if (b->flagComplex) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                              "Matrices can only contain real numbers, and cannot be divided by complex numbers.");
-            *errType = ERR_NUMERICAL;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                    "Matrices can only contain real numbers, and cannot be divided by complex numbers.");
             return;
         }
         a->real = 1;

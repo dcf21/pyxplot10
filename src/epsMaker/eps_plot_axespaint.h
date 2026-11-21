@@ -33,4 +33,6 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
 void eps_plot_axespaint(EPSComm *x, double origin_x, double origin_y, double width, double height, double zdepth,
                         int pass);
 
+void eps_plot_setAxesStyle(EPSComm *x, withWords *ww);
+
 #endif

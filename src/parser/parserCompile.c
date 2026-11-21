@@ -1365,15 +1365,11 @@ void ppl_parserLineFree(parserLine *in) {
         parserLine *next = item->next;
         ppl_parserAtomFree(&item->firstAtom);
         // Free the text of the line
-        if (item->linetxt != NULL) {
-            free(item->linetxt);
-            item->linetxt = NULL;
-        }
+        free(item->linetxt);
+        item->linetxt = NULL;
         // Free the filename of the line's source
-        if (item->srcFname != NULL) {
-            free(item->srcFname);
-            item->srcFname = NULL;
-        }
+        free(item->srcFname);
+        item->srcFname = NULL;
         free(item);
         item = next;
     }
@@ -1623,10 +1619,8 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                         // Free the command, and stop if it failed
                         shellSubstErr:
                             // Free the text of the shell command
-                            if (key != NULL) {
-                                free(key);
-                                key = NULL;
-                            }
+                            free(key);
+                            key = NULL;
                             if (fail) break;
                         }
 
@@ -1736,10 +1730,8 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
         // On error, abandon the partially-compiled block of code
         if (c->errStat.status) {
             // Free the line after macro substitution
-            if (outbuff != NULL) {
-                free(outbuff);
-                outbuff = NULL;
-            }
+            free(outbuff);
+            outbuff = NULL;
             ppl_parserStatReInit(s);
             return 1;
         }
@@ -1795,19 +1787,15 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
         // If we did match as far as '=', but got an error traceback, free the stack and return to the user
         if (c->errStat.status) {
             // Free the line after macro substitution
-            if (outbuff != NULL) {
-                free(outbuff);
-                outbuff = NULL;
-            }
+            free(outbuff);
+            outbuff = NULL;
             ppl_parserStatReInit(s);
             return 1;
         }
 
         // Success!
-        if (outbuff != NULL) {
-            free(outbuff);
-            outbuff = NULL;
-        }
+        free(outbuff);
+        outbuff = NULL;
         return 0;
     }
 
@@ -1815,10 +1803,8 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
     ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Unrecognised command.");
     parseTbAdd(c, srcLineN, srcId, srcFname, ERR_SYNTAX, 0, line);
     // Free the line after macro substitution
-    if (outbuff != NULL) {
-        free(outbuff);
-        outbuff = NULL;
-    }
+    free(outbuff);
+    outbuff = NULL;
     ppl_parserStatReInit(s);
     return 1;
 }

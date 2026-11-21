@@ -166,35 +166,6 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, cons
     return;
 }
 
-//! factorise - Find the factors of an integer
-//! \param [in] in - The integer to factorise
-//! \param [out] out - Array into which to write the factors
-//! \param [in] MaxFactors - The maximum number of factors to return
-//! \param [in] FactorMax - The maximum size of factor to return
-//! \param [out] NFactors - Set to the number of factors found
-
-static void factorise(const int in, int *out, const int MaxFactors, const int FactorMax, int *NFactors) {
-    int i, j = 0, k, N = sqrt(in);
-    for (i = 2; i <= N; i++)
-        // Record each factor, and its cofactor, filling the list from both ends
-        if (in % i == 0) {
-            out[j] = i;
-            out[MaxFactors - 1 - j] = in / i;
-            j++;
-            if (j >= MaxFactors / 2) break;
-        }
-    // Merge the cofactors into the list, skipping duplicates, then drop factors whose cofactors exceed the limit
-    for (i = MaxFactors - j; i <= MaxFactors - 1; i++) {
-        out[j] = out[i];
-        if (out[j] != out[j - 1]) j++;
-    }
-    for (i = 0; i < j; i++)
-        if (in / out[i] <= FactorMax) break;
-    for (k = 0; i < j; i++, k++) out[k] = out[i];
-    *NFactors = k;
-    return;
-}
-
 //! eps_plot_ticking_auto2 - Place ticks automatically on an axis without a format expression, trying each possible tick
 //! scheme and choosing the one which gives the closest to the ideal number of ticks
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -229,7 +200,8 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
 
     // Work out factors of log base of axis. In fact, work out factors of log base ** 2, so that ten divides by four.
     LogBase = IsLog ? axis->tics.logBase : 10;
-    factorise(pow(10.0, FACTOR_MULTIPLY), FactorsTen, MAX_FACTORS, axis->PhysicalLengthMinor, &NFactorsTen);
+    eps_plot_ticking_factorise(pow(10.0, FACTOR_MULTIPLY), FactorsTen, MAX_FACTORS, axis->PhysicalLengthMinor,
+                               &NFactorsTen);
 
     // Work out order of magnitude of axis range
     axis_min = axis->MinFinal * UnitMultiplier;

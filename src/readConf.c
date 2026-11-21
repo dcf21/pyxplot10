@@ -243,6 +243,39 @@ static int readConfigUnitName(ppl_context *c, const char *setkey, int *pos, char
     return 0;
 }
 
+//! readConf_execLine - Execute a line of a configuration file as a Pyxplot command, ignoring blank lines
+//! \param [in] c - The Pyxplot context
+//! \param [in] linebuffer - The line of the configuration file
+//! \param [in] linecounter - The line number within the configuration file, used in error messages
+//! \param [in] ConfigFname - The filename of the configuration file, used in error messages
+//! \param [in] command - The parser's name for the command which the line must be, e.g. "var_set"
+
+static void readConf_execLine(ppl_context *c, const char *linebuffer, const int linecounter, const char *ConfigFname,
+                              const char *command) {
+    parserLine *pl = NULL;
+    parserStatus *ps = NULL;
+    int i;
+    // If line is blank, ignore it
+    for (i = 0; (linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' '); i++);
+    if (linebuffer[i] == '\0') return;
+
+    ppl_error_setstreaminfo(&c->errcontext, linecounter, ConfigFname);
+    ppl_parserStatInit(&ps, &pl);
+    // Failure to allocate memory is reported as an error
+    if ((ps == NULL) || (c->inputLineBuffer == NULL)) {
+        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+        return;
+    }
+    ppl_tbClear(c);
+
+    // Compile and execute the line
+    const int stat = ppl_parserCompile(c, ps, c->errcontext.error_input_linenumber, c->errcontext.error_input_sourceId,
+                                       c->errcontext.error_input_filename, (char *) linebuffer, 0, 0);
+    if ((!stat) && (!c->errStat.status) && (ps->blockDepth == 0)) ppl_parserExecute(c, *ps->rootpl, command, 0, 1);
+    if (stat || c->errStat.status) ppl_tbWrite(c);
+    ppl_parserStatFree(&ps);
+}
+
 //! ppl_readConfigFile - Read a Pyxplot configuration file, applying the settings in each of its sections
 //! \param [in] c - The Pyxplot context
 //! \param [in] ConfigFname - The filename of the configuration file
@@ -1529,70 +1562,12 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             }
         } else if (state == 5) // [variables] section
         {
-            int stat = 0;
-            parserLine *pl = NULL;
-            parserStatus *ps = NULL;
-            ppl_error_setstreaminfo(&c->errcontext, linecounter, ConfigFname);
-            ppl_parserStatInit(&ps, &pl);
-            // Failure to allocate memory is reported as an error
-            if ((ps == NULL) || (c->inputLineBuffer == NULL)) {
-                ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-                continue;
-            }
-            ppl_tbClear(c);
-
-            // If line is blank, ignore it
-            {
-                int i = 0, j = 0;
-                for (i = 0; linebuffer[i] != '\0'; i++)
-                    // Look for any non-blank character
-                    if ((unsigned char) linebuffer[i] > ' ') {
-                        j = 1;
-                        break;
-                    }
-                if (j == 0) continue;
-            }
-
             // Execute the line as an assignment, with the parser's var_set command
-            stat = ppl_parserCompile(c, ps, c->errcontext.error_input_linenumber, c->errcontext.error_input_sourceId,
-                                     c->errcontext.error_input_filename, linebuffer, 0, 0);
-            if ((!stat) && (!c->errStat.status) && (ps->blockDepth == 0))
-                ppl_parserExecute(c, *ps->rootpl, "var_set", 0, 1);
-            if (stat || c->errStat.status) ppl_tbWrite(c);
-            ppl_parserStatFree(&ps);
+            readConf_execLine(c, linebuffer, linecounter, ConfigFname, "var_set");
         } else if (state == 6) // [functions] section
         {
-            int stat = 0;
-            parserLine *pl = NULL;
-            parserStatus *ps = NULL;
-            ppl_error_setstreaminfo(&c->errcontext, linecounter, ConfigFname);
-            ppl_parserStatInit(&ps, &pl);
-            // Failure to allocate memory is reported as an error
-            if ((ps == NULL) || (c->inputLineBuffer == NULL)) {
-                ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-                continue;
-            }
-            ppl_tbClear(c);
-
-            // If line is blank, ignore it
-            {
-                int i = 0, j = 0;
-                for (i = 0; linebuffer[i] != '\0'; i++)
-                    // Look for any non-blank character
-                    if ((unsigned char) linebuffer[i] > ' ') {
-                        j = 1;
-                        break;
-                    }
-                if (j == 0) continue;
-            }
-
             // Execute the line as a function definition, with the parser's func_set command
-            stat = ppl_parserCompile(c, ps, c->errcontext.error_input_linenumber, c->errcontext.error_input_sourceId,
-                                     c->errcontext.error_input_filename, linebuffer, 0, 0);
-            if ((!stat) && (!c->errStat.status) && (ps->blockDepth == 0))
-                ppl_parserExecute(c, *ps->rootpl, "func_set", 0, 1);
-            if (stat || c->errStat.status) ppl_tbWrite(c);
-            ppl_parserStatFree(&ps);
+            readConf_execLine(c, linebuffer, linecounter, ConfigFname, "func_set");
         } else if (state == 7) // [units] section
         {
             i = j = 0;
@@ -1684,40 +1659,8 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         {
             ppl_restoreDefaultSettings(c); // Copy settings for directive_set()
 
-            {
-                int stat = 0;
-                parserLine *pl = NULL;
-                parserStatus *ps = NULL;
-                ppl_parserStatInit(&ps, &pl);
-                ppl_error_setstreaminfo(&c->errcontext, linecounter, ConfigFname);
-                // Failure to allocate memory is reported as an error
-                if ((ps == NULL) || (c->inputLineBuffer == NULL)) {
-                    ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
-                    continue;
-                }
-                ppl_tbClear(c);
-
-                // If line is blank, ignore it
-                {
-                    int i = 0, j = 0;
-                    for (i = 0; linebuffer[i] != '\0'; i++)
-                        // Look for any non-blank character
-                        if ((unsigned char) linebuffer[i] > ' ') {
-                            j = 1;
-                            break;
-                        }
-                    if (j == 0) continue;
-                }
-
-                // Execute the line as a set command
-                stat = ppl_parserCompile(c, ps, c->errcontext.error_input_linenumber,
-                                         c->errcontext.error_input_sourceId, c->errcontext.error_input_filename,
-                                         linebuffer, 0, 0);
-                if ((!stat) && (!c->errStat.status) && (ps->blockDepth == 0))
-                    ppl_parserExecute(c, *ps->rootpl, "set", 0, 1);
-                if (stat || c->errStat.status) ppl_tbWrite(c);
-                ppl_parserStatFree(&ps);
-            }
+            // Execute the line as a set command
+            readConf_execLine(c, linebuffer, linecounter, ConfigFname, "set");
 
             c->set->term_default = c->set->term_current; // Copy changed settings into defaults
             c->set->graph_default = c->set->graph_current;

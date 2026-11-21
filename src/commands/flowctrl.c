@@ -975,10 +975,8 @@ fail:
     // Free the argument names and the descriptor
     if (f != NULL) {
         // The argument names
-        if (f->argList != NULL) {
-            free(f->argList);
-            f->argList = NULL;
-        }
+        free(f->argList);
+        f->argList = NULL;
         free(f);
         f = NULL;
     }

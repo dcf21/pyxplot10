@@ -1992,25 +1992,17 @@ void pplExpr_free(pplExpr *inExpr) {
     if (inExpr == NULL) return;
     if (__sync_sub_and_fetch(&inExpr->refCount, 1) > 0) return;
     // When the last reference has gone, free the text, filename, bytecode and strings
-    if (inExpr->ascii != NULL) {
-        free(inExpr->ascii);
-        inExpr->ascii = NULL;
-    }
+    free(inExpr->ascii);
+    inExpr->ascii = NULL;
     // The filename
-    if (inExpr->srcFname != NULL) {
-        free(inExpr->srcFname);
-        inExpr->srcFname = NULL;
-    }
+    free(inExpr->srcFname);
+    inExpr->srcFname = NULL;
     // The bytecode
-    if (inExpr->bytecode != NULL) {
-        free(inExpr->bytecode);
-        inExpr->bytecode = NULL;
-    }
+    free(inExpr->bytecode);
+    inExpr->bytecode = NULL;
     // The string table
-    if (inExpr->strings != NULL) {
-        free(inExpr->strings);
-        inExpr->strings = NULL;
-    }
+    free(inExpr->strings);
+    inExpr->strings = NULL;
     free(inExpr);
     inExpr = NULL;
     return;

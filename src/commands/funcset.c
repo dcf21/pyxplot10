@@ -349,30 +349,20 @@ fail:
     // Free each part of the descriptor which was allocated
     if (f != NULL) {
         // The argument names
-        if (f->argList != NULL) {
-            free(f->argList);
-            f->argList = NULL;
-        }
+        free(f->argList);
+        f->argList = NULL;
         // The lower limits of the ranges
-        if (f->min != NULL) {
-            free(f->min);
-            f->min = NULL;
-        }
+        free(f->min);
+        f->min = NULL;
         // The upper limits of the ranges
-        if (f->max != NULL) {
-            free(f->max);
-            f->max = NULL;
-        }
+        free(f->max);
+        f->max = NULL;
         // The flags saying which arguments have lower limits
-        if (f->minActive != NULL) {
-            free(f->minActive);
-            f->minActive = NULL;
-        }
+        free(f->minActive);
+        f->minActive = NULL;
         // The flags saying which arguments have upper limits
-        if (f->maxActive != NULL) {
-            free(f->maxActive);
-            f->maxActive = NULL;
-        }
+        free(f->maxActive);
+        f->maxActive = NULL;
         // The compiled expression
         if (f->functionPtr != NULL) {
             pplExpr_free((pplExpr *) f->functionPtr);

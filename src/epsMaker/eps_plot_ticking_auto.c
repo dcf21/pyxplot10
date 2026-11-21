@@ -161,14 +161,15 @@ int compare_PotentialTicks(const void *x, const void *y) {
     return 0;
 }
 
-//! factorise - Find the factors of an integer
+//! eps_plot_ticking_factorise - Find the factors of an integer
 //! \param [in] in - The integer to factorise
 //! \param [out] out - Array into which to write the factors
 //! \param [in] MaxFactors - The maximum number of factors to return
 //! \param [in] FactorMax - The maximum size of factor to return
 //! \param [out] NFactors - Set to the number of factors found
 
-static void factorise(const int in, int *out, const int MaxFactors, const int FactorMax, int *NFactors) {
+void eps_plot_ticking_factorise(const int in, int *out, const int MaxFactors, const int FactorMax,
+                                int *NFactors) {
     int i, j = 0, k, N = sqrt(in);
     for (i = 2; i <= N; i++)
         // Record each factor, and its cofactor, filling the list from both ends
@@ -758,8 +759,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
     // Work out factors of log base of axis. In fact, work out factors of log base ** 2, so that ten divides by four.
     LogBase = (axis->LogFinal == SW_BOOL_TRUE) ? axis->tics.logBase : 10;
-    factorise(pow(LogBase, FACTOR_MULTIPLY), FactorsLogBase, MAX_FACTORS, axis->PhysicalLengthMinor * 1.2,
-              &NFactorsLogBase);
+    eps_plot_ticking_factorise(pow(LogBase, FACTOR_MULTIPLY), FactorsLogBase, MAX_FACTORS,
+                               axis->PhysicalLengthMinor * 1.2, &NFactorsLogBase);
 
     // Work out throw of each argument (i.e. the spread of values that it takes)
     for (i = 0; i < NArgs; i++) {
@@ -771,8 +772,8 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
             args[i].Throw = 0.0;
         else args[i].Throw = throw;
         args[i].MinValue = floor(args[i].MinValue);
-        factorise(args[i].Throw * pow(LogBase, FACTOR_MULTIPLY - 1), args[i].FactorsThrow, MAX_FACTORS,
-                  axis->PhysicalLengthMinor * 1.2, &args[i].NFactorsThrow);
+        eps_plot_ticking_factorise(args[i].Throw * pow(LogBase, FACTOR_MULTIPLY - 1), args[i].FactorsThrow, MAX_FACTORS,
+                                   axis->PhysicalLengthMinor * 1.2, &args[i].NFactorsThrow);
     }
 
     // Compile scores of how fast each continuous argument moves

@@ -48,6 +48,7 @@
 #include "epsMaker/canvasDraw.h"
 #include "epsMaker/eps_comm.h"
 #include "epsMaker/eps_core.h"
+#include "epsMaker/eps_plot.h"
 #include "epsMaker/eps_plot_canvas.h"
 #include "epsMaker/eps_plot_legend.h"
 #include "epsMaker/eps_plot_styles.h"
@@ -56,20 +57,6 @@
 #include "texify.h"
 
 // Private routines for sorting 3D positions by depth and azimuth when working out where to put a legend on a 3D plot
-
-//! SortByDepth - Comparison function for qsort(), used to sort the possible positions of a legend on a 3D plot into
-//! order of depth
-//! \param [in] x - Pointer to the first position
-//! \param [in] y - Pointer to the second position
-//! \return -1, 0 or 1 depending on the order of the positions
-
-static int SortByDepth(const void *x, const void *y) {
-    const double *xd = (const double *) x;
-    const double *yd = (const double *) y;
-    if (xd[2] > yd[2]) return 1;
-    if (xd[2] < yd[2]) return -1;
-    return 0;
-}
 
 static double SortByAzimuthXCentre, SortByAzimuthYCentre, SortByAzimuthTarget;
 
@@ -92,18 +79,6 @@ static int SortByAzimuthProximity(const void *x, const void *y) {
     if (ax > ay) return 1;
     if (ax < ay) return -1;
     return 0;
-}
-
-//! TriSwap - Swap two doubles
-//! \param [in|out] a - The first double
-//! \param [in|out] b - The second double
-
-static void TriSwap(double *a, double *b) {
-    double t[3];
-    memcpy(t, a, 3 * sizeof(double));
-    memcpy(a, b, 3 * sizeof(double));
-    memcpy(b, t, 3 * sizeof(double));
-    return;
 }
 
 // Graph legend API routines
@@ -616,29 +591,13 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
 
         // Find the vertex of the graph closest to the target azimuth
         if (SortByAzimuthTarget > -100) {
-            int i;
-            double xap, yap, zap, data[3 * 8];
+            double data[3 * 8];
             const double origin_x = x->current->settings.OriginX.real * M_TO_PS;
             const double origin_y = x->current->settings.OriginY.real * M_TO_PS;
-            // Project each corner of the cube onto the page
-            for (i = 0; i < 8; i++) {
-                xap = ((i & 1) != 0);
-                yap = ((i & 2) != 0);
-                zap = ((i & 4) != 0);
-                eps_plot_ThreeDimProject(xap, yap, zap, &x->current->settings, origin_x, origin_y, width, height,
-                                         zdepth, data + 3 * i, data + 3 * i + 1, data + 3 * i + 2);
-            }
+            // Project each corner of the cube onto the page, in order of depth
+            eps_plot_projectCubeCorners(x, origin_x, origin_y, width, height, zdepth, data);
             SortByAzimuthXCentre = origin_x;
             SortByAzimuthYCentre = origin_y;
-            qsort((void *) (data), 8, 3 * sizeof(double), SortByDepth);
-            if ((data[3 * 0 + 2] == data[3 * 1 + 2]) &&
-                (hypot(data[3 * 0 + 0] - origin_x, data[3 * 0 + 1] - origin_y) >
-                 hypot(data[3 * 1 + 0] - origin_x, data[3 * 1 + 1] - origin_y)))
-                TriSwap(data + 3 * 0, data + 3 * 1);
-            if ((data[3 * 7 + 2] == data[3 * 6 + 2]) &&
-                (hypot(data[3 * 7 + 0] - origin_x, data[3 * 7 + 1] - origin_y) >
-                 hypot(data[3 * 6 + 0] - origin_x, data[3 * 6 + 1] - origin_y)))
-                TriSwap(data + 3 * 7, data + 3 * 6);
             qsort((void *) (data + 3), 6, 3 * sizeof(double), SortByAzimuthProximity);
             if ((kp == SW_KEYPOS_TM) || (kp == SW_KEYPOS_BM)) xoff += data[3 * 1 + 0];
             else yoff += data[3 * 1 + 1];

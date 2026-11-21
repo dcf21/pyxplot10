@@ -119,10 +119,8 @@ void ppl_garbageObject(pplObj *o) {
                 void *old = o->auxil;
                 o->auxil = NULL;
                 // Free the text
-                if (old != NULL) {
-                    free(old);
-                    old = NULL;
-                }
+                free(old);
+                old = NULL;
             }
             break;
         case PPLOBJ_EXP: {

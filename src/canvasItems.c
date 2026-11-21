@@ -81,15 +81,11 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     canvas_plotdesc *pd, *pd2;
 
     // Free the points of a polygon
-    if (ptr->polygonPoints != NULL) {
-        free(ptr->polygonPoints);
-        ptr->polygonPoints = NULL;
-    }
+    free(ptr->polygonPoints);
+    ptr->polygonPoints = NULL;
     // Free the item's text
-    if (ptr->text != NULL) {
-        free(ptr->text);
-        ptr->text = NULL;
-    }
+    free(ptr->text);
+    ptr->text = NULL;
     ppl_withWordsDestroy(c, &(ptr->settings.dataStyle));
     ppl_withWordsDestroy(c, &(ptr->settings.funcStyle));
     pplExpr_free(ptr->settings.ColMapExpr);
@@ -149,20 +145,14 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
         if (pd->vectors != NULL)
             for (i = 0; i < pd->NFunctions; i++) ppl_garbageObject(&pd->vectors[i]);
         // Free the filename
-        if (pd->filename != NULL) {
-            free(pd->filename);
-            pd->filename = NULL;
-        }
+        free(pd->filename);
+        pd->filename = NULL;
         // Free the list of functions
-        if (pd->functions != NULL) {
-            free(pd->functions);
-            pd->functions = NULL;
-        }
+        free(pd->functions);
+        pd->functions = NULL;
         // Free the list of vectors
-        if (pd->vectors != NULL) {
-            free(pd->vectors);
-            pd->vectors = NULL;
-        }
+        free(pd->vectors);
+        pd->vectors = NULL;
         // Free the label expression
         if (pd->label != NULL) {
             pplExpr_free(pd->label);
@@ -174,15 +164,11 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
             pd->SelectCriterion = NULL;
         }
         // Free the title
-        if (pd->title != NULL) {
-            free(pd->title);
-            pd->title = NULL;
-        }
+        free(pd->title);
+        pd->title = NULL;
         // Free the list of using expressions
-        if (pd->UsingList != NULL) {
-            free(pd->UsingList);
-            pd->UsingList = NULL;
-        }
+        free(pd->UsingList);
+        pd->UsingList = NULL;
         ppl_withWordsDestroy(c, &pd->ww);
         ppl_withWordsDestroy(c, &pd->ww_final);
         free(pd);
@@ -317,20 +303,14 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
         if ((ptr->XAxes == NULL) || (ptr->YAxes == NULL) || (ptr->ZAxes == NULL)) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (A).");
             // Free the x axes
-            if (ptr->XAxes != NULL) {
-                free(ptr->XAxes);
-                ptr->XAxes = NULL;
-            }
+            free(ptr->XAxes);
+            ptr->XAxes = NULL;
             // Free the y axes
-            if (ptr->YAxes != NULL) {
-                free(ptr->YAxes);
-                ptr->YAxes = NULL;
-            }
+            free(ptr->YAxes);
+            ptr->YAxes = NULL;
             // Free the z axes
-            if (ptr->ZAxes != NULL) {
-                free(ptr->ZAxes);
-                ptr->ZAxes = NULL;
-            }
+            free(ptr->ZAxes);
+            ptr->ZAxes = NULL;
             free(ptr);
             ptr = NULL;
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
@@ -1563,6 +1543,50 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     return canvas_redisplay(c, iterDepth, id, "Ellipse");
 }
 
+//! canvas_addImage - Add an EPS or bitmap image to the multiplot canvas, setting its filename, position, rotation
+//! and size from the parser output of the eps or image command
+//! \param [in] c - The Pyxplot context
+//! \param [in] stk - The parser output for the command
+//! \param [in] type - The type of canvas item, CANVAS_EPS or CANVAS_IMAGE
+//! \param [in] pFilename - The position in <stk> of the filename
+//! \param [in] pPos - The position in <stk> of the x and y coordinates of the image
+//! \param [in] pRot - The position in <stk> of the rotation of the image
+//! \param [in] pWidth - The position in <stk> of the width of the image
+//! \param [in] pHeight - The position in <stk> of the height of the image
+//! \param [out] ptr - The new canvas item
+//! \param [out] id - The id number of the new canvas item
+//! \return Zero on success, or one on failure
+
+static int canvas_addImage(ppl_context *c, pplObj *stk, const int type, const int pFilename, const int pPos,
+                           const int pRot, const int pWidth, const int pHeight, canvas_item **ptr, int *id) {
+    const char *fname = (char *) stk[pFilename].auxil;
+    char *text = (char *) malloc(strlen(fname) + 1);
+    // Failure to allocate memory is reported as an error
+    if (text == NULL) {
+        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
+        return 1;
+    }
+    strcpy(text, fname);
+
+    // Add this image to the linked list which describes the canvas
+    if (canvas_itemlist_add(c, stk, type, ptr, id, 0)) {
+        free(text);
+        return 1;
+    }
+
+    // Store each property which was given, using defaults for the others
+    canvas_item *p = *ptr;
+    p->text = text;
+    p->xpos = (stk[pPos].objType == PPLOBJ_NUM) ? stk[pPos].real : c->set->graph_current.OriginX.real;
+    p->ypos = (stk[pPos + 1].objType == PPLOBJ_NUM) ? stk[pPos + 1].real : c->set->graph_current.OriginY.real;
+    p->rotation = (stk[pRot].objType == PPLOBJ_NUM) ? stk[pRot].real : 0.0;
+    p->xpos2set = (stk[pWidth].objType == PPLOBJ_NUM);
+    p->xpos2 = p->xpos2set ? stk[pWidth].real : 0.0;
+    p->ypos2set = (stk[pHeight].objType == PPLOBJ_NUM);
+    p->ypos2 = p->ypos2set ? stk[pHeight].real : 0.0;
+    return 0;
+}
+
 //! ppl_directive_eps - Implement the eps command, which adds an encapsulated PostScript image to the multiplot canvas
 //! \param [in] c - The Pyxplot context
 //! \param [in] pl - The compiled command line, used to report errors
@@ -1576,64 +1600,11 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id;
-    double x, y, ang, width, height;
-    int gotX, gotY, gotAng, gotWidth, gotHeight, clip, calcbbox;
-    char *text, *fname;
-
-    // Read in positional information for this eps image
-    x = stk[PARSE_eps_p].real;
-    gotX = (stk[PARSE_eps_p].objType == PPLOBJ_NUM);
-    y = stk[PARSE_eps_p + 1].real;
-    gotY = (stk[PARSE_eps_p + 1].objType == PPLOBJ_NUM);
-    ang = stk[PARSE_eps_rotation].real;
-    gotAng = (stk[PARSE_eps_rotation].objType == PPLOBJ_NUM);
-    width = stk[PARSE_eps_width].real;
-    gotWidth = (stk[PARSE_eps_width].objType == PPLOBJ_NUM);
-    height = stk[PARSE_eps_height].real;
-    gotHeight = (stk[PARSE_eps_height].objType == PPLOBJ_NUM);
-    clip = (stk[PARSE_eps_clip].objType != PPLOBJ_ZOM);
-    calcbbox = (stk[PARSE_eps_calcbbox].objType != PPLOBJ_ZOM);
-    fname = (char *) stk[PARSE_eps_filename].auxil;
-    text = (char *) malloc(strlen(fname) + 1);
-    // Failure to allocate memory is reported as an error
-    if (text == NULL) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (F).");
+    if (canvas_addImage(c, stk, CANVAS_EPS, PARSE_eps_filename, PARSE_eps_p, PARSE_eps_rotation, PARSE_eps_width,
+                        PARSE_eps_height, &ptr, &id))
         return 1;
-    }
-    strcpy(text, fname);
-
-    // Add this eps image to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_EPS, &ptr, &id, 0)) {
-        free(text);
-        text = NULL;
-        return 1;
-    }
-
-    // Store each property which was given
-    ptr->xpos = gotX ? x : c->set->graph_current.OriginX.real;
-    // The y position
-    ptr->ypos = gotY ? y : c->set->graph_current.OriginY.real;
-    // The rotation
-    ptr->rotation = gotAng ? ang : 0.0;
-    // The width
-    if (gotWidth) {
-        ptr->xpos2 = width;
-        ptr->xpos2set = 1;
-    } else {
-        ptr->xpos2 = 0.0;
-        ptr->xpos2set = 0;
-    }
-    // The height
-    if (gotHeight) {
-        ptr->ypos2 = height;
-        ptr->ypos2set = 1;
-    } else {
-        ptr->ypos2 = 0.0;
-        ptr->ypos2set = 0;
-    }
-    ptr->text = text;
-    ptr->clip = clip;
-    ptr->calcbbox = calcbbox;
+    ptr->clip = (stk[PARSE_eps_clip].objType != PPLOBJ_ZOM);
+    ptr->calcbbox = (stk[PARSE_eps_calcbbox].objType != PPLOBJ_ZOM);
 
     // Redisplay the canvas as required
     return canvas_redisplay(c, iterDepth, id, "EPS image");
@@ -1919,85 +1890,19 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
                         const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;
-    int id, transR = 0, transG = 0, transB = 0, smooth, noTrans, cTrans;
-    double x, y, ang, width, height;
-    int gotX, gotY, gotAng, gotWidth, gotHeight;
-    char *text, *fname;
-
-    // Read the parameters of the image
-    x = stk[PARSE_image_p].real;
-    gotX = (stk[PARSE_image_p].objType == PPLOBJ_NUM);
-    y = stk[PARSE_image_p + 1].real;
-    gotY = (stk[PARSE_image_p + 1].objType == PPLOBJ_NUM);
-    ang = stk[PARSE_image_rotation].real;
-    gotAng = (stk[PARSE_image_rotation].objType == PPLOBJ_NUM);
-    width = stk[PARSE_image_width].real;
-    gotWidth = (stk[PARSE_image_width].objType == PPLOBJ_NUM);
-    height = stk[PARSE_image_height].real;
-    gotHeight = (stk[PARSE_image_height].objType == PPLOBJ_NUM);
-    smooth = (stk[PARSE_image_smooth].objType == PPLOBJ_STR);
-    noTrans = (stk[PARSE_image_notrans].objType == PPLOBJ_STR);
-    cTrans = (stk[PARSE_image_colorR].objType == PPLOBJ_NUM);
+    int id;
+    if (canvas_addImage(c, stk, CANVAS_IMAGE, PARSE_image_filename, PARSE_image_p, PARSE_image_rotation,
+                        PARSE_image_width, PARSE_image_height, &ptr, &id))
+        return 1;
+    // Smooth the image when it is scaled, and ignore any transparency in the image, if requested
+    ptr->smooth = (stk[PARSE_image_smooth].objType == PPLOBJ_STR);
+    ptr->NoTransparency = (stk[PARSE_image_notrans].objType == PPLOBJ_STR);
     // A transparent color, given by red, green and blue components between 0 and 1
-    if (cTrans) {
-        transR = (int) floor(stk[PARSE_image_colorR].real * 255);
-        transR = ppl_max(ppl_min(transR, 255), 0);
-        transG = (int) floor(stk[PARSE_image_colorG].real * 255);
-        transG = ppl_max(ppl_min(transG, 255), 0);
-        transB = (int) floor(stk[PARSE_image_colorB].real * 255);
-        transB = ppl_max(ppl_min(transB, 255), 0);
-    }
-    fname = (char *) stk[PARSE_eps_filename].auxil;
-    text = (char *) malloc(strlen(fname) + 1);
-    // Failure to allocate memory is reported as an error
-    if (text == NULL) {
-        ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (N).");
-        return 1;
-    }
-    strcpy(text, fname);
-
-    // Add this eps image to the linked list which decribes the canvas
-    if (canvas_itemlist_add(c, stk, CANVAS_IMAGE, &ptr, &id, 0)) {
-        free(text);
-        text = NULL;
-        return 1;
-    }
-
-    // Store each property which was given
-    ptr->xpos = gotX ? x : c->set->graph_current.OriginX.real;
-    // The y position
-    ptr->ypos = gotY ? y : c->set->graph_current.OriginY.real;
-    // The rotation
-    ptr->rotation = gotAng ? ang : 0.0;
-    // The width
-    if (gotWidth) {
-        ptr->xpos2 = width;
-        ptr->xpos2set = 1;
-    } else {
-        ptr->xpos2 = 0.0;
-        ptr->xpos2set = 0;
-    }
-    // The height
-    if (gotHeight) {
-        ptr->ypos2 = height;
-        ptr->ypos2set = 1;
-    } else {
-        ptr->ypos2 = 0.0;
-        ptr->ypos2set = 0;
-    }
-    ptr->text = text;
-    // Smooth the image when it is scaled
-    ptr->smooth = smooth;
-    // Ignore any transparency in the image
-    ptr->NoTransparency = noTrans;
-    // Make a color transparent
-    if (cTrans) {
-        ptr->CustomTransparency = 1;
-        ptr->TransColR = transR;
-        ptr->TransColG = transG;
-        ptr->TransColB = transB;
-    } else {
-        ptr->CustomTransparency = 0;
+    ptr->CustomTransparency = (stk[PARSE_image_colorR].objType == PPLOBJ_NUM);
+    if (ptr->CustomTransparency) {
+        ptr->TransColR = ppl_max(ppl_min((int) floor(stk[PARSE_image_colorR].real * 255), 255), 0);
+        ptr->TransColG = ppl_max(ppl_min((int) floor(stk[PARSE_image_colorG].real * 255), 255), 0);
+        ptr->TransColB = ppl_max(ppl_min((int) floor(stk[PARSE_image_colorB].real * 255), 255), 0);
     }
 
     // Redisplay the canvas as required
@@ -2756,20 +2661,14 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     if ((ptr->XAxes == NULL) || (ptr->YAxes == NULL) || (ptr->ZAxes == NULL)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (0).");
         // Free the x axes
-        if (ptr->XAxes != NULL) {
-            free(ptr->XAxes);
-            ptr->XAxes = NULL;
-        }
+        free(ptr->XAxes);
+        ptr->XAxes = NULL;
         // Free the y axes
-        if (ptr->YAxes != NULL) {
-            free(ptr->YAxes);
-            ptr->YAxes = NULL;
-        }
+        free(ptr->YAxes);
+        ptr->YAxes = NULL;
         // Free the z axes
-        if (ptr->ZAxes != NULL) {
-            free(ptr->ZAxes);
-            ptr->ZAxes = NULL;
-        }
+        free(ptr->ZAxes);
+        ptr->ZAxes = NULL;
         return 1;
     } else {
         int i;

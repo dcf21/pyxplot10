@@ -28,4 +28,6 @@
 void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, double UnitMultiplier, unsigned char *AutoTicks,
                            pplset_axis *linkedto);
 
+void eps_plot_ticking_factorise(int in, int *out, int MaxFactors, int FactorMax, int *NFactors);
+
 #endif

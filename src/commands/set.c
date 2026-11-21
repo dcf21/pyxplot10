@@ -81,10 +81,8 @@
 static void tics_rm(pplset_tics *a) {
     a->tickMinSet = a->tickMaxSet = a->tickStepSet = 0;
     // Free the tick positions
-    if (a->tickList != NULL) {
-        free(a->tickList);
-        a->tickList = NULL;
-    }
+    free(a->tickList);
+    a->tickList = NULL;
     // Free the tick labels, which form a NULL-terminated list
     if (a->tickStrs != NULL) {
         int i;
@@ -1891,10 +1889,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             else a = &xa[i];
             a->enabled = 1;
             // Free the old label
-            if (a->label != NULL) {
-                free(a->label);
-                a->label = NULL;
-            }
+            free(a->label);
+            a->label = NULL;
             a->label = NULL;
         }
     } else if (strcmp_set && (strcmp(setoption, "numerics") == 0)) /* set numerics */
@@ -3185,10 +3181,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     char *l = (char *) malloc(strlen(in) + 1);
                     if (l != NULL) strcpy(l, in);
                     // Free the old label
-                    if (a->label != NULL) {
-                        free(a->label);
-                        a->label = NULL;
-                    }
+                    free(a->label);
+                    a->label = NULL;
                     a->label = l;
                 }
                 // Set the angle of the label
@@ -3207,10 +3201,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 char *l = (in == NULL) ? NULL : (char *) malloc(strlen(in) + 1);
                 if (l != NULL) strcpy(l, in);
                 // Free the label
-                if (a->label != NULL) {
-                    free(a->label);
-                    a->label = NULL;
-                }
+                free(a->label);
+                a->label = NULL;
                 a->label = l;
                 a->LabelRotate = c->set->axis_default.LabelRotate;
             }

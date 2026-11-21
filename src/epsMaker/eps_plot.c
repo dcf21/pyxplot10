@@ -381,6 +381,31 @@ static void TriSwap(double *a, double *b) {
 }
 
 
+//! eps_plot_projectCubeCorners - Project the eight corners of the cuboid of a 3D graph onto the page, sorted into
+//! order of depth. Where the two nearest, or the two furthest, corners are at the same depth, the one closer to the
+//! origin of the graph on the page is put nearer the end of the list.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points
+//! \param [out] data - Array of 3x8 numbers, into which the x, y and depth of each corner are written
+
+void eps_plot_projectCubeCorners(EPSComm *x, const double origin_x, const double origin_y, const double width,
+                                 const double height, const double zdepth, double *data) {
+    for (int i = 0; i < 8; i++)
+        eps_plot_ThreeDimProject((i & 1) != 0, (i & 2) != 0, (i & 4) != 0, &x->current->settings, origin_x, origin_y,
+                                 width, height, zdepth, data + 3 * i, data + 3 * i + 1, data + 3 * i + 2);
+    qsort((void *) (data), 8, 3 * sizeof(double), SortByDepth);
+    if ((data[3 * 0 + 2] == data[3 * 1 + 2]) && (hypot(data[3 * 0 + 0] - origin_x, data[3 * 0 + 1] - origin_y) >
+                                                 hypot(data[3 * 1 + 0] - origin_x, data[3 * 1 + 1] - origin_y)))
+        TriSwap(data + 3 * 0, data + 3 * 1);
+    if ((data[3 * 7 + 2] == data[3 * 6 + 2]) && (hypot(data[3 * 7 + 0] - origin_x, data[3 * 7 + 1] - origin_y) >
+                                                 hypot(data[3 * 6 + 0] - origin_x, data[3 * 6 + 1] - origin_y)))
+        TriSwap(data + 3 * 7, data + 3 * 6);
+}
+
 // Loop through all of the datasets plotted in a single plot command.
 // Initialise the datastructures for the plot command which we will fill in the
 // process of deciding how to render the graph. Then read in data from
@@ -1222,26 +1247,11 @@ void eps_plot_RenderEPS(EPSComm *x) {
         if (x->current->ThreeDim) // 3D clip region is the edge of a cuboidal box
         {
             int i;
-            double xap, yap, zap, data[3 * 8];
-            // Project each corner of the cube onto the page, and clip to the outline of the projected cube
-            for (i = 0; i < 8; i++) {
-                xap = ((i & 1) != 0);
-                yap = ((i & 2) != 0);
-                zap = ((i & 4) != 0);
-                eps_plot_ThreeDimProject(xap, yap, zap, &x->current->settings, origin_x, origin_y, width, height,
-                                         zdepth, data + 3 * i, data + 3 * i + 1, data + 3 * i + 2);
-            }
+            double data[3 * 8];
+            // Project each corner of the cube onto the page, in order of depth
+            eps_plot_projectCubeCorners(x, origin_x, origin_y, width, height, zdepth, data);
             SortByAzimuthXCentre = origin_x;
             SortByAzimuthYCentre = origin_y;
-            qsort((void *) (data), 8, 3 * sizeof(double), SortByDepth);
-            if ((data[3 * 0 + 2] == data[3 * 1 + 2]) &&
-                (hypot(data[3 * 0 + 0] - origin_x, data[3 * 0 + 1] - origin_y) >
-                 hypot(data[3 * 1 + 0] - origin_x, data[3 * 1 + 1] - origin_y)))
-                TriSwap(data + 3 * 0, data + 3 * 1);
-            if ((data[3 * 7 + 2] == data[3 * 6 + 2]) &&
-                (hypot(data[3 * 7 + 0] - origin_x, data[3 * 7 + 1] - origin_y) >
-                 hypot(data[3 * 6 + 0] - origin_x, data[3 * 6 + 1] - origin_y)))
-                TriSwap(data + 3 * 7, data + 3 * 6);
             qsort((void *) (data + 3), 6, 3 * sizeof(double), SortByAzimuth);
             fprintf(x->epsbuffer, "gsave\nnewpath\n");
             for (i = 1; i < 7; i++)

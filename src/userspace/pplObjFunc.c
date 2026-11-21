@@ -93,10 +93,8 @@ void pplObjFuncDestroy(pplFunc *f) {
                     }
                 } else {
                     // Free the table of data points used for stepwise interpolation
-                    if (d->splineObj != NULL) {
-                        free(d->splineObj);
-                        d->splineObj = NULL;
-                    }
+                    free(d->splineObj);
+                    d->splineObj = NULL;
                 }
                 free(d);
                 d = NULL;
@@ -110,10 +108,8 @@ void pplObjFuncDestroy(pplFunc *f) {
             // Two-dimensional interpolations and bitmap images hold a plain array of data
             if (d != NULL) {
                 // Free the array
-                if (d->splineObj != NULL) {
-                    free(d->splineObj);
-                    d->splineObj = NULL;
-                }
+                free(d->splineObj);
+                d->splineObj = NULL;
                 free(d);
                 d = NULL;
             }
@@ -125,15 +121,11 @@ void pplObjFuncDestroy(pplFunc *f) {
             // A histogram holds the boundaries of its bins, and the value of each
             if (h != NULL) {
                 // Free the bin boundaries
-                if (h->bins != NULL) {
-                    free(h->bins);
-                    h->bins = NULL;
-                }
+                free(h->bins);
+                h->bins = NULL;
                 // Free the bin values
-                if (h->binvals != NULL) {
-                    free(h->binvals);
-                    h->binvals = NULL;
-                }
+                free(h->binvals);
+                h->binvals = NULL;
                 free(h);
                 h = NULL;
             }
@@ -163,30 +155,20 @@ void pplObjFuncDestroy(pplFunc *f) {
     }
 
     // Free the names of the arguments, and the range of argument values over which this definition applies
-    if (f->argList != NULL) {
-        free(f->argList);
-        f->argList = NULL;
-    }
+    free(f->argList);
+    f->argList = NULL;
     // Lower limits of the ranges of the arguments
-    if (f->min != NULL) {
-        free(f->min);
-        f->min = NULL;
-    }
+    free(f->min);
+    f->min = NULL;
     // Upper limits of the ranges of the arguments
-    if (f->max != NULL) {
-        free(f->max);
-        f->max = NULL;
-    }
+    free(f->max);
+    f->max = NULL;
     // Flags saying which lower limits apply
-    if (f->minActive != NULL) {
-        free(f->minActive);
-        f->minActive = NULL;
-    }
+    free(f->minActive);
+    f->minActive = NULL;
     // Flags saying which upper limits apply
-    if (f->maxActive != NULL) {
-        free(f->maxActive);
-        f->maxActive = NULL;
-    }
+    free(f->maxActive);
+    f->maxActive = NULL;
     free(f);
     f = NULL;
     return;

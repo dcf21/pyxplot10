@@ -42,10 +42,8 @@ void ppl_tbClear(ppl_context *c) {
     for (i = c->errStat.tracebackDepth - 1; i >= 0; i--) {
         traceback *t = &c->errStat.tbLevel[i];
         // Free the copy of the line
-        if (t->linetext != NULL) {
-            free(t->linetext);
-            t->linetext = NULL;
-        }
+        free(t->linetext);
+        t->linetext = NULL;
     }
     c->errStat.status = c->errStat.tracebackDepth = 0;
     c->errStat.errType = -1;

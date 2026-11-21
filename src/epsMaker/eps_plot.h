@@ -35,6 +35,8 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
 int eps_plot_WithWordsCheckUsingItemsDimLess(ppl_context *c, const withWords *ww, pplObj *firstValues,
                                              int Ncolumns_real, int Ncolumns_obj, int *NDataCols);
 
+void eps_plot_projectCubeCorners(EPSComm *x, double origin_x, double origin_y, double width, double height,
+                                 double zdepth, double *data);
 void eps_plot_ReadAccessibleData(EPSComm *x);
 void eps_plot_SampleFunctions(EPSComm *x);
 void eps_plot_DecideAxisRanges(EPSComm *x);

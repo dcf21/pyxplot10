@@ -1270,6 +1270,47 @@ static void pplmethod_colToHSB(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_HSB, h, s, b, 0);
 }
 
+//! vectorUnitError - Report an attempt to add a number to a vector with conflicting physical dimensions
+//! \param [in] c - The Pyxplot context
+//! \param [in] vec - The vector
+//! \param [in] num - The number
+//! \param [out] status - Set to one, to indicate that an error occurred
+//! \param [out] errType - Set to the type of error
+//! \param [out] errText - Buffer of LSTR_LENGTH bytes into which the error message is written
+
+static void vectorUnitError(ppl_context *c, const pplObj *vec, const pplObj *num, int *status, int *errType,
+                            char *errText) {
+    if (vec->dimensionless)
+        ppl_funcError(status, errType, errText, ERR_UNIT,
+                      "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
+                      ppl_printUnit(c, num, NULL, NULL, 1, 1, 0));
+    else if (num->dimensionless)
+        ppl_funcError(status, errType, errText, ERR_UNIT,
+                      "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
+                      ppl_printUnit(c, vec, NULL, NULL, 0, 1, 0));
+    else
+        ppl_funcError(status, errType, errText, ERR_UNIT,
+                      "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
+                      ppl_printUnit(c, vec, NULL, NULL, 0, 1, 0), ppl_printUnit(c, num, NULL, NULL, 1, 1, 0));
+}
+
+//! updateInPlace - If the object a method was called on is a variable, replace its value with the method's result,
+//! so that the method changes it in place
+//! \param [in] st - The object the method was called on
+//! \param [in] out - The result of the method
+
+static void updateInPlace(const pplObj *st, const pplObj *out) {
+    if (st->self_lval == NULL) return;
+    pplObj *o = st->self_lval;
+    const int om = o->amMalloced;
+    const int rc = o->refCount;
+    o->amMalloced = 0;
+    o->refCount = 1;
+    ppl_garbageObject(o);
+    o->refCount = rc;
+    pplObjCpy(o, (pplObj *) out, 0, om, 1);
+}
+
 // Vector methods
 
 //! pplmethod_vectorAppend - Implement the append(x) method of vectors, which appends the object x to a vector
@@ -1291,24 +1332,7 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
     // The new element must have the same units as the vector
     if (!ppl_unitsDimEqual(st, &in[0])) {
         // Describe the conflicting units in the error message
-        if (st->dimensionless) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
-                    ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
-        } else if (in[0].dimensionless) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
-                    ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
-        } else {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
-                    ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
-        }
-        *errType = ERR_UNIT;
-        *status = 1;
+        vectorUnitError(c, st, &in[0], status, errType, errText);
         return;
     }
     // Make a new vector, one element longer
@@ -1321,16 +1345,7 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
     gsl_vector_set(vo, i, in[0].real);
     ppl_unitsDimCpy(&OUTPUT, st);
     // If the vector is a variable, replace its value with the new vector, so that the method changes it in place
-    if (st->self_lval != NULL) {
-        pplObj *o = st->self_lval;
-        const int om = o->amMalloced;
-        const int rc = o->refCount;
-        o->amMalloced = 0;
-        o->refCount = 1;
-        ppl_garbageObject(o);
-        o->refCount = rc;
-        pplObjCpy(o, &OUTPUT, 0, om, 1);
-    }
+    updateInPlace(st, &OUTPUT);
 }
 
 //! pplmethod_vectorExtend - Implement the extend(x) method of vectors, which appends the members of the list x to the
@@ -1357,24 +1372,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
         // The vector must have the same units as this one
         if (!ppl_unitsDimEqual(st, &in[0])) {
             // Describe the conflicting units in the error message
-            if (st->dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
-                        ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
-            } else if (in[0].dimensionless) {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
-                        ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
-            } else {
-                ppl_snprintfTrunc(
-                        errText, LSTR_LENGTH,
-                        "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
-                        ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, &in[0], NULL, NULL, 1, 1, 0));
-            }
-            *errType = ERR_UNIT;
-            *status = 1;
+            vectorUnitError(c, st, &in[0], status, errType, errText);
             return;
         }
         l = ((pplVector *) in[0].auxil)->v->size;
@@ -1417,24 +1415,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
             // Check the item's units
             if (!ppl_unitsDimEqual(st, item)) {
                 // Describe the conflicting units in the error message
-                if (st->dimensionless) {
-                    ppl_snprintfTrunc(
-                            errText, LSTR_LENGTH,
-                            "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
-                            ppl_printUnit(c, item, NULL, NULL, 1, 1, 0));
-                } else if (item->dimensionless) {
-                    ppl_snprintfTrunc(
-                            errText, LSTR_LENGTH,
-                            "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
-                            ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
-                } else {
-                    ppl_snprintfTrunc(
-                            errText, LSTR_LENGTH,
-                            "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
-                            ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, item, NULL, NULL, 1, 1, 0));
-                }
-                *errType = ERR_UNIT;
-                *status = 1;
+                vectorUnitError(c, st, item, status, errType, errText);
                 return;
             }
             // Vectors cannot hold complex numbers
@@ -1447,16 +1428,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
         }
     }
     // If the vector is a variable, replace its value with the new vector, so that the method changes it in place
-    if (st->self_lval != NULL) {
-        pplObj *o = st->self_lval;
-        const int om = o->amMalloced;
-        const int rc = o->refCount;
-        o->amMalloced = 0;
-        o->refCount = 1;
-        ppl_garbageObject(o);
-        o->refCount = rc;
-        pplObjCpy(o, &OUTPUT, 0, om, 1);
-    }
+    updateInPlace(st, &OUTPUT);
 }
 
 //! pplmethod_vectorFilter - Implement the filter(f) method of vectors, which takes a pointer to a function of one
@@ -1616,24 +1588,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     // The new element must have the same units as the vector
     if (!ppl_unitsDimEqual(st, &in[1])) {
         // Describe the conflicting units in the error message
-        if (st->dimensionless) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Attempt to append a number to a vector with conflicting dimensions: vector is dimensionless, but number has units of <%s>.",
-                    ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0));
-        } else if (in[1].dimensionless) {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number is dimensionless.",
-                    ppl_printUnit(c, st, NULL, NULL, 0, 1, 0));
-        } else {
-            ppl_snprintfTrunc(
-                    errText, LSTR_LENGTH,
-                    "Attempt to append a number to a vector with conflicting dimensions: vector has units of <%s>, while number has units of <%s>.",
-                    ppl_printUnit(c, st, NULL, NULL, 0, 1, 0), ppl_printUnit(c, &in[1], NULL, NULL, 1, 1, 0));
-        }
-        *errType = ERR_UNIT;
-        *status = 1;
+        vectorUnitError(c, st, &in[1], status, errType, errText);
         return;
     }
     // Make a new vector, one element longer
@@ -1646,16 +1601,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     for (i = 0; i < v->size; i++) gsl_vector_set(vo, i + (i >= p), gsl_vector_get(v, i));
     ppl_unitsDimCpy(&OUTPUT, st);
     // If the vector is a variable, replace its value with the new vector, so that the method changes it in place
-    if (st->self_lval != NULL) {
-        pplObj *o = st->self_lval;
-        const int om = o->amMalloced;
-        const int rc = o->refCount;
-        o->amMalloced = 0;
-        o->refCount = 1;
-        ppl_garbageObject(o);
-        o->refCount = rc;
-        pplObjCpy(o, &OUTPUT, 0, om, 1);
-    }
+    updateInPlace(st, &OUTPUT);
 }
 
 //! pplmethod_vectorLen - Implement the len() method of vectors, which returns the number of dimensions of a vector
@@ -1693,9 +1639,7 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
     list *lo;
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
-        *status = 1;
-        *errType = ERR_MEMORY;
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
     lo = (list *) OUTPUT.auxil;
@@ -3762,10 +3706,8 @@ static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int 
         // Failure to allocate memory: free the buffer, and report an error
         if (new == NULL) {
             // Free the buffer
-            if (out != NULL) {
-                free(out);
-                out = NULL;
-            }
+            free(out);
+            out = NULL;
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
@@ -3823,10 +3765,8 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
             // Failure to allocate memory: free the buffer, and report an error
             if (new == NULL) {
                 // Free the buffer
-                if (out != NULL) {
-                    free(out);
-                    out = NULL;
-                }
+                free(out);
+                out = NULL;
                 ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
                 return;
             }

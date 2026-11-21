@@ -1634,9 +1634,8 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     }
     // The expression must use the whole of the string
     if (explen < strlen(exp)) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Unexpected trailing matter at the end of expression.");
-        *status = 1;
-        *errType = ERR_SYNTAX;
+        ppl_funcError(status, errType, errText, ERR_SYNTAX,
+                "%s", "Unexpected trailing matter at the end of expression.");
         pplExpr_free(e);
         e = NULL;
         return;
@@ -3445,38 +3444,31 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     int inlen = 0;
     // Exactly one argument is needed
     if (nArgs != 1) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function takes exactly one argument; %d supplied.",
-                          FunctionDescription, nArgs);
-        *errType = ERR_TYPE;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The %s function takes exactly one argument; %d supplied.",
+                FunctionDescription, nArgs);
         return;
     }
     // The argument must be a string
     if (in[0].objType != PPLOBJ_STR) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The %s requires a single string argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
-        *errType = ERR_TYPE;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The %s requires a single string argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     outstr = (char *) malloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (outstr == NULL) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
-        *errType = ERR_MEMORY;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     ppl_texify_generic(c, instr, -1, &inlen, outstr, LSTR_LENGTH, NULL, NULL);
     pplObjStr(&OUTPUT, 0, 1, outstr);
     // The whole string must be a valid expression
     if (inlen < strlen(instr)) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "Unexpected trailing matter at the end of texified expression (character position %d).",
-                          inlen);
-        *errType = ERR_SYNTAX;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_SYNTAX,
+                "Unexpected trailing matter at the end of texified expression (character position %d).",
+                inlen);
         return;
     }
     return;
@@ -3498,27 +3490,22 @@ void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int 
     char *outstr;
     // Exactly one argument is needed
     if (nArgs != 1) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "The %s function takes exactly one argument; %d supplied.",
-                          FunctionDescription, nArgs);
-        *errType = ERR_TYPE;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The %s function takes exactly one argument; %d supplied.",
+                FunctionDescription, nArgs);
         return;
     }
     // The argument must be a string
     if (in[0].objType != PPLOBJ_STR) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "The %s requires a single string argument; supplied argument had type <%s>.",
-                          FunctionDescription, pplObjTypeNames[in[0].objType]);
-        *errType = ERR_TYPE;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_TYPE,
+                "The %s requires a single string argument; supplied argument had type <%s>.",
+                FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
     outstr = (char *) malloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (outstr == NULL) {
-        ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
-        *errType = ERR_MEMORY;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
     ppl_texify_string(instr, outstr, -1, LSTR_LENGTH);

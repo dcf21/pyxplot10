@@ -591,9 +591,7 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
         // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Addition produced an overflow error.");
-            *errType = ERR_OVERFLOW;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_OVERFLOW, "Addition produced an overflow error.");
             return;
         } else {
             pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);
@@ -656,9 +654,7 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
         // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Subtraction produced an overflow error.");
-            *errType = ERR_OVERFLOW;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_OVERFLOW, "Subtraction produced an overflow error.");
             return;
         } else {
             pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);
@@ -714,10 +710,8 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             o->flagComplex = 0;
             return;
         }
-        ppl_snprintfTrunc(errText, LSTR_LENGTH,
-                          "Mod operator can only be applied to real operands; complex operands supplied.");
-        *errType = ERR_NUMERICAL;
-        *status = 1;
+        ppl_funcError(status, errType, errText, ERR_NUMERICAL,
+                "Mod operator can only be applied to real operands; complex operands supplied.");
         return;
     }
 
@@ -725,9 +719,7 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
         // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
-            ppl_snprintfTrunc(errText, LSTR_LENGTH, "Modulo operator produced an overflow error.");
-            *errType = ERR_OVERFLOW;
-            *status = 1;
+            ppl_funcError(status, errType, errText, ERR_OVERFLOW, "Modulo operator produced an overflow error.");
             return;
         } else {
             pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);

@@ -201,6 +201,43 @@ void eps_plot_colormap_orientation(pplset_graph *sg, const unsigned char ThreeDi
     if (!gsl_finite(*ThetaY)) *ThetaY = 0.0;
 }
 
+//! graphExtent - Find the extent of a graph on the page. For 3D graphs, this is the box enclosing the projections
+//! of the corners of the cube.
+//! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
+//! \param [in] sg - The graph settings
+//! \param [in] origin_x - The x coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] origin_y - The y coordinate of the bottom-left corner of the graph, in postscript points
+//! \param [in] width - The width of the graph, in postscript points
+//! \param [in] height - The height of the graph, in postscript points
+//! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
+//! \param [out] xmin - The left edge of the graph, in postscript points
+//! \param [out] xmax - The right edge of the graph, in postscript points
+//! \param [out] ymin - The bottom edge of the graph, in postscript points
+//! \param [out] ymax - The top edge of the graph, in postscript points
+
+static void graphExtent(const EPSComm *x, pplset_graph *sg, const double origin_x, const double origin_y,
+                        const double width, const double height, const double zdepth, double *xmin, double *xmax,
+                        double *ymin, double *ymax) {
+    if (!x->current->ThreeDim) {
+        *xmin = origin_x;
+        *xmax = origin_x + width;
+        *ymin = origin_y;
+        *ymax = origin_y + height;
+        return;
+    }
+    *xmin = *xmax = origin_x;
+    *ymin = *ymax = origin_y;
+    for (int k = 0; k < 8; k++) {
+        double x0, y0, z0;
+        eps_plot_ThreeDimProject((k & 1), (k & 2) != 0, (k & 4) != 0, sg, origin_x, origin_y, width, height, zdepth,
+                                 &x0, &y0, &z0);
+        if (x0 < *xmin) *xmin = x0;
+        if (x0 > *xmax) *xmax = x0;
+        if (y0 < *ymin) *ymin = y0;
+        if (y0 > *ymax) *ymax = y0;
+    }
+}
+
 //! eps_plot_colormap_YieldText - Collect the text items which label the color scale of a colormap, so that they can be
 //! typeset
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
@@ -213,7 +250,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     dataBlock *blk;
     const int XSize = pd->GridXSize;
     const int YSize = pd->GridYSize;
-    int k, l, Ncol;
+    int l, Ncol;
     double CMin, CMax, PhysicalLength, PhysicalLengthMajor, PhysicalLengthMinor;
     double origin_x, origin_y, width, height, zdepth;
     double xmin, xmax, ymin, ymax;
@@ -237,25 +274,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     if (!eps_plot_colormap_findCRange(sg, 0, blk, Ncol, XSize, YSize, &CMin, &CMax, &CLog)) return; // No data present
 
     // Estimate length of color key
-    if (!x->current->ThreeDim) {
-        xmin = origin_x;
-        xmax = origin_x + width;
-        ymin = origin_y;
-        ymax = origin_y + height;
-    } else {
-        xmin = xmax = origin_x;
-        ymin = ymax = origin_y;
-        // Find the extent of the graph on the page, from the projections of the corners of the cube
-        for (k = 0; k < 8; k++) {
-            double x0, y0, z0;
-            eps_plot_ThreeDimProject((k & 1), (k & 2) != 0, (k & 4) != 0, sg, origin_x, origin_y, width, height, zdepth,
-                                     &x0, &y0, &z0);
-            if (x0 < xmin) xmin = x0;
-            if (x0 > xmax) xmax = x0;
-            if (y0 < ymin) ymin = y0;
-            if (y0 > ymax) ymax = y0;
-        }
-    }
+    graphExtent(x, sg, origin_x, origin_y, width, height, zdepth, &xmin, &xmax, &ymin, &ymax);
 
     // The color scale runs along the side of the graph it is on, and its ticks are spaced as for an axis of that length
     horizontal = ((sg->ColKeyPos == SW_COLKEYPOS_T) || (sg->ColKeyPos == SW_COLKEYPOS_B));
@@ -834,48 +853,12 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
         return 1;
     }
 
-    // Set color for painting axes
-    ppl_withWordsZero(x->c, &ww);
-    // Draw color scales in the color set with "set axescolor"
-    if (x->current->settings.AxesColor > 0) {
-        ww.color = x->current->settings.AxesColor;
-        ww.USEcolor = 1;
-    } else {
-        ww.Col1234Space = x->current->settings.AxesCol1234Space;
-        ww.color1 = x->current->settings.AxesColor1;
-        ww.color2 = x->current->settings.AxesColor2;
-        ww.color3 = x->current->settings.AxesColor3;
-        ww.color4 = x->current->settings.AxesColor4;
-        ww.USEcolor1234 = 1;
-    }
-    ww.linewidth = EPS_AXES_LINEWIDTH;
-    ww.USElinewidth = 1;
-    ww.linetype = 1;
-    ww.USElinetype = 1;
-    eps_core_SetColor(x, &ww, 1);
-    if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, EPS_AXES_LINEWIDTH * EPS_DEFAULT_LINEWIDTH, 1, 0.0);
-    else return 0;
+    // Set color and line width for painting axes
+    eps_plot_setAxesStyle(x, &ww);
+    if (!eps_core_isVisible(x)) return 0;
 
     // Find extrema of box filled by graph canvas
-    if (!x->current->ThreeDim) {
-        xmin = origin_x;
-        xmax = origin_x + width;
-        ymin = origin_y;
-        ymax = origin_y + height;
-    } else {
-        xmin = xmax = origin_x;
-        ymin = ymax = origin_y;
-        // Find the extent of the graph on the page, from the projections of the corners of the cube
-        for (k = 0; k < 8; k++) {
-            double x0, y0, z0;
-            eps_plot_ThreeDimProject((k & 1), (k & 2) != 0, (k & 4) != 0, sg, origin_x, origin_y, width, height, zdepth,
-                                     &x0, &y0, &z0);
-            if (x0 < xmin) xmin = x0;
-            if (x0 > xmax) xmax = x0;
-            if (y0 < ymin) ymin = y0;
-            if (y0 > ymax) ymax = y0;
-        }
-    }
+    graphExtent(x, sg, origin_x, origin_y, width, height, zdepth, &xmin, &xmax, &ymin, &ymax);
 
     // Loop over all datasets
     pd = x->current->plotitems;

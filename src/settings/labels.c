@@ -134,7 +134,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     if ((*inlist != NULL) && ((*inlist)->id == i)) {
         out = *inlist;
         ppl_withWordsDestroy(context, &out->style);
-        if (out->text != NULL) free(out->text);
+        free(out->text);
         out->text = NULL;
     } else {
         out = (ppllabel_object *) malloc(sizeof(ppllabel_object));
