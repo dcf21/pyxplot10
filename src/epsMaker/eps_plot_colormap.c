@@ -256,7 +256,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     // Check that we have some data
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
     const int Ncol = data->Ncolumns_real;
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
 
     // Calculate positions of the four corners of graph
     const double origin_x = x->current->settings.OriginX.real * M_TO_PS;
@@ -653,10 +653,10 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     if (eps_plot_WithWordsCheckUsingItemsDimLess(x->c, &pd->ww_final, data->firstEntries, Ncol_real, Ncol_obj,
                                                  &NcolsData))
         return 1;
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
 
     // A buffer for error messages
-    char *errtext = ppl_memAlloc(LSTR_LENGTH);
+    const char *errtext = ppl_memAlloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (errtext == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (k).");
@@ -785,7 +785,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                 }
 
             // Color the pixel
-            pplObj *C1Var = CVar[0];
+            const pplObj *C1Var = CVar[0];
             if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) {
                 restoreColorVars(x, CDummy);
                 return 1;
@@ -834,7 +834,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
     withWords ww;
 
     // A buffer for error messages
-    char *errtext = ppl_memAlloc(LSTR_LENGTH);
+    const char *errtext = ppl_memAlloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (errtext == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (n).");
@@ -853,7 +853,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
     int k = 0;
     while (pd != NULL) // loop over all datasets
     {
-        dataTable *data = x->current->plotdata[k];
+        const dataTable *data = x->current->plotdata[k];
         // Draw a color scale for each dataset which has one
         if (pd->CRangeDisplay) {
             const double XSize = 1024, YSize = 1; // Dimensions of bitmap image
@@ -979,7 +979,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                     } else CVar->real = ((double) i) / (XSize - 1);
 
                     // Color the pixel
-                    pplObj *C1Var = CVar;
+                    const pplObj *C1Var = CVar;
                     if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) return 1;
                     p += 3;
                 }

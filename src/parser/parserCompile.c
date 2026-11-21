@@ -270,7 +270,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
 
     // If node is NULL, this means we're putting back together a hierarchy of SEQs that we earlier descended out of to look for more input statements
     if (node == NULL) {
-        parserNode *nodeNext = s->stk[blockDepth][level + 1];
+        const parserNode *nodeNext = s->stk[blockDepth][level + 1];
         node = s->stk[blockDepth][level];
         if (nodeNext != NULL) // We need to descend still further...
         {
@@ -452,7 +452,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                     status = 0;
                 }
             } else {
-                char *cmd =
+                const char *cmd =
                         (char *) s->pl[blockDepth]->firstAtom->literal->auxil; // THIS ASSUMES DIRECTIVE IS FIRST ATOM
                 const int first = (s->blockDepth < blockDepth + 1);
 
@@ -1506,7 +1506,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
             return 0;
         }
     } else {
-        char *lineOriginal = line;
+        const char *lineOriginal = line;
         int l = 0, fail = 0;
         ;
         for (l = 0; (l < 16) && !fail; l++) // Repeatedly test for and substitute macros; nested macros are allowed

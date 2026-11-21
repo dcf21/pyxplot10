@@ -81,7 +81,7 @@ void ppl_withWordsZero(const ppl_context *context, withWords *a) {
 
 void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserLine *pl, const int *ptab,
                            const int stkbase, withWords *out) {
-    pplObj *stk = in->stk + stkbase;
+    const pplObj *stk = in->stk + stkbase;
     int tempint;
     double tempdbl;
     pplExpr *tempexp;
@@ -188,7 +188,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_STR);
     // The plot style, e.g. lines or points
     if (got) {
-        char *tempstr = (char *) stk[pos].auxil;
+        const char *tempstr = (char *) stk[pos].auxil;
         const int i = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_STYLE_INT, SW_STYLE_STR);
         out->linespoints = i;
         out->USElinespoints = 1;

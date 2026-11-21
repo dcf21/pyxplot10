@@ -1141,7 +1141,7 @@ void eps_plot_YieldUpText(EPSComm *x) {
         } else if (pd->ww_final.linespoints == SW_STYLE_CONTOURMAP) {
             eps_plot_contourmap_YieldText(x, x->current->plotdata[k], &x->current->settings, pd);
         } else if (x->current->plotdata[k] != NULL) {
-            dataBlock *blk = x->current->plotdata[k]->first;
+            const dataBlock *blk = x->current->plotdata[k]->first;
             // Collect the label of each data point
             while (blk != NULL) {
                 if (blk->text != NULL)
@@ -1200,7 +1200,7 @@ void eps_plot_YieldUpText(EPSComm *x) {
 
 void eps_plot_RenderEPS(EPSComm *x) {
     // Variables for drawing the graph
-    ppl_context *c = x->c;
+    const ppl_context *c = x->c;
     int i, status, xyzaxis[3];
     double height, zdepth;
     canvas_plotdesc *pd;

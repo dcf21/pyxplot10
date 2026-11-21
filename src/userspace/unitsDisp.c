@@ -526,7 +526,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
     double ExpMax = 0;
     int pos = 0, OutputPos = 0;
     int j = 0, l;
-    PreferredUnit *pu;
+    const PreferredUnit *pu;
 
     // Use the user's display style unless the caller asked for one, and choose which of three static output buffers to
     // use, so that up to three units can be rendered at once

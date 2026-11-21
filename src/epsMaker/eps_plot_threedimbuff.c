@@ -145,7 +145,7 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         ThreeDimBuffer_LineSegmentID = -5;
         // Write each item; line segments continue the previous path if they followed it in the original line
         for (int j = 0; j < i; j++) {
-            ThreeDimBufferItem *item = (ThreeDimBufferItem *) DepthArray[j].item;
+            const ThreeDimBufferItem *item = (ThreeDimBufferItem *) DepthArray[j].item;
             // A line segment, or a fragment of postscript
             if (item->FlagLineSegment) {
                 ThreeDimBuffer_linesegment(x, item->depth, item->linetype, item->linewidth, item->colstr, item->x0,

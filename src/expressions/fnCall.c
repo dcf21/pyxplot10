@@ -383,7 +383,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 if (nArgs < 1) goto cleanup;
                 // Each element of the vector becomes an item of the list
                 if ((nArgs == 1) && (args[0].objType == PPLOBJ_VEC)) {
-                    gsl_vector *vec = ((pplVector *) args[0].auxil)->v;
+                    const gsl_vector *vec = ((pplVector *) args[0].auxil)->v;
                     const int l = vec->size;
                     pplObj v;
                     list *lo = (list *) out->auxil;
@@ -457,7 +457,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         for (long i = 0; i < len; i++) { gsl_vector_set(v, i, 0); }
                         goto cleanup;
                     } else if (args[0].objType == PPLOBJ_LIST) {
-                        list *listin = (list *) args[0].auxil;
+                        const list *listin = (list *) args[0].auxil;
                         listIterator *li = ppl_listIterateInit(listin);
                         const long len = listin->length;
                         // A vector cannot be empty
@@ -629,7 +629,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     }
                     goto cleanup;
                 } else if (args[0].objType == PPLOBJ_LIST) {
-                    list *listin = (list *) args[0].auxil;
+                    const list *listin = (list *) args[0].auxil;
                     listIterator *li = ppl_listIterateInit(listin);
                     const long len = listin->length;
                     // matrix([...], [...], ...): each list becomes a row of the matrix
@@ -665,7 +665,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         ppl_unitsDimCpy(out, item);
                         // Copy each list into a row
                         for (long i = 0; i < s2; i++) {
-                            list *listin = (list *) args[i].auxil;
+                            const list *listin = (list *) args[i].auxil;
                             listIterator *li = ppl_listIterateInit(listin);
                             // All the lists must have the same length
                             if (listin->length != s1) {
@@ -806,7 +806,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
-                            list *listin2 = (list *) item->auxil;
+                            const list *listin2 = (list *) item->auxil;
                             listIterator *li2 = ppl_listIterateInit(listin2);
                             // All the lists must have the same length
                             if (listin2->length != s1) {
@@ -1153,7 +1153,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             }
             case PPL_FUNC_USERDEF: {
                 int checked[FUNC_MAXARGS], j;
-                pplFunc *f = fn;
+                const pplFunc *f = fn;
                 for (j = 0; j < nArgs; j++) checked[j] = 0;
 
                 while (f != NULL) // Check whether supplied arguments are within the range of this definition

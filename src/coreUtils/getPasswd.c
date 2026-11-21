@@ -58,7 +58,7 @@ struct passwd *UnixGetPwEntry(const pplerr_context *context) {
 char *ppl_unixGetHomeDir(pplerr_context *context) {
     char msg[PPL_MSG_LENGTH];
     static char *failover = NULL;
-    struct passwd *ptr = UnixGetPwEntry(context);
+    const struct passwd *ptr = UnixGetPwEntry(context);
     // If the user has no entry, guess that their home directory is /home/<login name>, and warn about it once
     if (ptr == NULL) {
         if (failover != NULL) return failover;
@@ -82,7 +82,7 @@ char *ppl_unixGetHomeDir(pplerr_context *context) {
 //! such user exists
 
 char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username) {
-    struct passwd *ptr;
+    const struct passwd *ptr;
     setpwent(); // Ditto memory leak comment above
     while ((ptr = getpwent()) != NULL)
         if (strcmp(ptr->pw_name, username) == 0) break;
@@ -99,7 +99,7 @@ char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username
 
 char *ppl_unixGetIRLName(pplerr_context *context) {
     static char name[FNAME_LENGTH];
-    struct passwd *ptr = UnixGetPwEntry(context);
+    const struct passwd *ptr = UnixGetPwEntry(context);
     if (ptr == NULL) return getlogin(); // In case of failure, return user's login.
     snprintf(name, FNAME_LENGTH, "%s", ptr->pw_gecos);
     for (int i = 0; name[i] != '\0'; i++)
@@ -118,7 +118,7 @@ char *ppl_unixGetIRLName(pplerr_context *context) {
 
 char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, char *out, const size_t outLen) {
     char userName[1024];
-    char *scanIn;
+    const char *scanIn;
     int i;
     if (in[0] == '/') ppl_snprintfTrunc(out, outLen, "%s", in);
     else if (in[0] != '~') ppl_snprintfTrunc(out, outLen, "%s%s%s", cwd, PATHLINK, in);
@@ -129,7 +129,7 @@ char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, ch
         for (scanIn = in + 1, i = 0; ((*scanIn != '/') && (*scanIn != '\0') && (i < (int) sizeof(userName) - 1));
              userName[i++] = *(scanIn++));
         userName[i] = '\0';
-        char *homeDir = ((*scanIn == '/') || (*scanIn == '\0')) ? ppl_unixGetUserHomeDir(context, userName) : NULL;
+        const char *homeDir = ((*scanIn == '/') || (*scanIn == '\0')) ? ppl_unixGetUserHomeDir(context, userName) : NULL;
         if (homeDir != NULL) ppl_snprintfTrunc(out, outLen, "%s%s", homeDir, scanIn);
         else ppl_snprintfTrunc(out, outLen, "%s", in);
     }

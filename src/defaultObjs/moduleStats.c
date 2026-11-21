@@ -72,7 +72,7 @@
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_binomialPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "binomialPDF(k,p,n)";
+    const char *FunctionDescription = "binomialPDF(k,p,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "k", "function's first argument must be")) return;
     if (ppl_funcCheckInt(&call, &in[2], "n", "function's third argument must be")) return;
@@ -92,7 +92,7 @@ void pplfunc_binomialPDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_binomialCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "binomialCDF(k,p,n)";
+    const char *FunctionDescription = "binomialCDF(k,p,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "k", "function's first argument must be")) return;
     if (ppl_funcCheckInt(&call, &in[2], "n", "function's third argument must be")) return;
@@ -111,7 +111,7 @@ void pplfunc_binomialCDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_chisqPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "chisqPDF(x,nu)";
+    const char *FunctionDescription = "chisqPDF(x,nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_ran_chisq_pdf(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -128,7 +128,7 @@ void pplfunc_chisqPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_chisqCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "chisqCDF(x,nu)";
+    const char *FunctionDescription = "chisqCDF(x,nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_chisq_P(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -145,7 +145,7 @@ void pplfunc_chisqCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "chisqCDFi(P,nu)";
+    const char *FunctionDescription = "chisqCDFi(P,nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_chisq_Pinv(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -162,7 +162,7 @@ void pplfunc_chisqCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "gaussianPDF(x,sigma)";
+    const char *FunctionDescription = "gaussianPDF(x,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = gsl_ran_gaussian_pdf(in[0].real, in[1].real);
@@ -181,7 +181,7 @@ void pplfunc_gaussianPDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gaussianCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "gaussianCDF(x,sigma)";
+    const char *FunctionDescription = "gaussianCDF(x,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = gsl_cdf_gaussian_P(in[0].real, in[1].real);
@@ -199,7 +199,7 @@ void pplfunc_gaussianCDF(ppl_context *c, pplObj *in, const int nArgs, int *statu
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "gaussianCDFi(x,sigma)";
+    const char *FunctionDescription = "gaussianCDFi(x,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckDimensionless(&call, 1)) return;
     OUTPUT.real = gsl_cdf_gaussian_Pinv(in[0].real, in[1].real);
@@ -218,7 +218,7 @@ void pplfunc_gaussianCDFi(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "lognormalPDF(x,zeta,sigma)";
+    const char *FunctionDescription = "lognormalPDF(x,zeta,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     in += 2;
     if (ppl_funcCheckDimensionless(&call, 1)) return;
@@ -240,7 +240,7 @@ void pplfunc_lognormalPDF(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "lognormalCDF(x,zeta,sigma)";
+    const char *FunctionDescription = "lognormalCDF(x,zeta,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     in += 2;
     if (ppl_funcCheckDimensionless(&call, 1)) return;
@@ -261,7 +261,7 @@ void pplfunc_lognormalCDF(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "lognormalCDFi(x,zeta,sigma)";
+    const char *FunctionDescription = "lognormalCDFi(x,zeta,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     in += 2;
     if (ppl_funcCheckDimensionless(&call, 1)) return;
@@ -283,7 +283,7 @@ void pplfunc_lognormalCDFi(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_poissonPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "poissonPDF(x,mu)";
+    const char *FunctionDescription = "poissonPDF(x,mu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_ran_poisson_pdf(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -300,7 +300,7 @@ void pplfunc_poissonPDF(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_poissonCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "poissonCDF(x,mu)";
+    const char *FunctionDescription = "poissonCDF(x,mu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_poisson_P(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -317,7 +317,7 @@ void pplfunc_poissonCDF(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_tdistPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "tdistPDF(x,nu)";
+    const char *FunctionDescription = "tdistPDF(x,nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_ran_tdist_pdf(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -334,7 +334,7 @@ void pplfunc_tdistPDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_tdistCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "tdistCDF(x,nu)";
+    const char *FunctionDescription = "tdistCDF(x,nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_tdist_P(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -351,7 +351,7 @@ void pplfunc_tdistCDF(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_tdistCDFi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "tdistCDFi(P,nu)";
+    const char *FunctionDescription = "tdistCDFi(P,nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_cdf_tdist_Pinv(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;

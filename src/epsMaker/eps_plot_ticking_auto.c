@@ -426,7 +426,7 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
 
                 if (arg->StringArg) // Evaluate argument at midpoint of the interval we know it to be in
                 {
-                    char *DummyStr;
+                    const char *DummyStr;
                     // A string which could not be evaluated is treated as empty
                     if ((o == NULL) || c->errStat.status || (o->objType != PPLOBJ_STR)) {
                         ppl_tbClear(c);
@@ -551,7 +551,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     // Make temporary rough workspace
     const int OutContext = ppl_memAlloc_GetMemContext();
     ContextRough = ppl_memAlloc_DescendIntoNewContext();
-    char *DummyStr = (char *) ppl_memAlloc(LSTR_LENGTH);
+    const char *DummyStr = (char *) ppl_memAlloc(LSTR_LENGTH);
     if (DummyStr == NULL) goto FAIL;
 
     // Work through format string identifying substitution expressions
@@ -698,7 +698,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
             // Record each string value, and count how often it changes
             if (args[i].StringArg) {
-                char *DummyStr;
+                const char *DummyStr;
                 // A string which could not be evaluated is treated as empty
                 if ((o == NULL) || c->errStat.status || (o->objType != PPLOBJ_STR)) {
                     ppl_tbClear(c);

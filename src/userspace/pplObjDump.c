@@ -198,13 +198,13 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
         case PPLOBJ_VEC: {
             int j = 0;
             double real, imag;
-            char *unit;
+            const char *unit;
             o->real = 1;
             o->imag = 0;
             o->flagComplex = 0;
             unit = ppl_printUnit(c, o, &real, &imag, 1, 1, SW_DISPLAY_T);
             if (o->dimensionless) real = 1;
-            gsl_vector *v = ((pplVector *) (o->auxil))->v;
+            const gsl_vector *v = ((pplVector *) (o->auxil))->v;
             fprintf(output, "vector([");
 
             // Write each element, scaled into the display units found above. A vector's units are found by printing the
@@ -223,13 +223,13 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
         case PPLOBJ_MAT: {
             int j = 0, k = 0;
             double real, imag;
-            char *unit;
+            const char *unit;
             o->real = 1;
             o->imag = 0;
             o->flagComplex = 0;
             unit = ppl_printUnit(c, o, &real, &imag, 1, 1, SW_DISPLAY_T);
             if (o->dimensionless) real = 1;
-            gsl_matrix *m = ((pplMatrix *) (o->auxil))->m;
+            const gsl_matrix *m = ((pplMatrix *) (o->auxil))->m;
             {
                 fprintf(output, "matrix([");
 

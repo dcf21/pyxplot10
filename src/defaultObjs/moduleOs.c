@@ -345,7 +345,7 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *mode;
+    const char *mode;
     // The arguments are the command, and optionally the mode ("r" or "w")
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
         ppl_funcError(status, errType, errText, ERR_TYPE, "The open() function requires string arguments.");

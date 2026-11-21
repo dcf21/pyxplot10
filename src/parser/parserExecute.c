@@ -340,7 +340,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                             // into consecutive slots on the output stack
                             if (val->objType == PPLOBJ_VEC) {
                                 double m = 1, x = 0, y = 0, z = 0;
-                                gsl_vector *v = ((pplVector *) val->auxil)->v;
+                                const gsl_vector *v = ((pplVector *) val->auxil)->v;
                                 const int l = v->size;
                                 if ((l < 2) || (l > ((item->options[j] == 'P') ? 3 : 2))) break; // wrong size
                                 if (val->dimensionless) m = 0.01;
@@ -367,14 +367,14 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                                 passed = 1;
                             } else if (val->objType == PPLOBJ_LIST) {
                                 double x[3] = {0, 0, 0};
-                                list *li = (list *) val->auxil;
+                                const list *li = (list *) val->auxil;
                                 int l = li->length, i;
                                 if ((l < 2) || (l > ((item->options[j] == 'P') ? 3 : 2))) break; // wrong size
                                 // A position may also be a list of two (or three) numbers, which are unpacked into
                                 // consecutive slots on the output stack
                                 for (i = 0; i < l; i++) {
                                     double m = 1;
-                                    pplObj *xo = ppl_listGetItem(li, i);
+                                    const pplObj *xo = ppl_listGetItem(li, i);
                                     if (xo->objType != PPLOBJ_NUM) break;
                                     if (xo->flagComplex) break;
                                     if (xo->dimensionless) m = 0.01;

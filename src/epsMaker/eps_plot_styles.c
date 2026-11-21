@@ -664,7 +664,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
 
     // Cycle through data table, ensuring that axis ranges are sufficient to include all data
     const int Ncolumns = data->Ncolumns_real;
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
     int i = 0;
     // Loop over the blocks of the data table
     while (blk != NULL) {
@@ -1180,7 +1180,7 @@ typedef struct boxDrawer {
 //! \return Zero on success, or nonzero if memory ran out
 
 static int boxColourUpdate(boxDrawer *bd) {
-    EPSComm *x = bd->x;
+    const EPSComm *x = bd->x;
     // Keep a copy of the current color for the depth-sorting buffer, if it has changed
     if ((bd->last_colstr == NULL) || (strcmp(bd->last_colstr, x->CurrentColor) != 0)) {
         bd->last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
@@ -2321,7 +2321,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xpos, double ypos, double scale,
                          pplset_axis *a1, pplset_axis *a2, pplset_axis *a3, const int xn, const int yn, const int zn) {
     const int style = pd->ww_final.linespoints;
-    dataTable *data = x->current->plotdata[i];
+    const dataTable *data = x->current->plotdata[i];
     pplset_axis *a[3] = {a1, a2, a3};
 
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present

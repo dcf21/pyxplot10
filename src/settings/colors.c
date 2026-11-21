@@ -69,7 +69,7 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
                       double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
                       unsigned char *USEcol1234) {
     const int pos = ptab[fillColor ? PARSE_INDEX_fillcolor : PARSE_INDEX_color];
-    pplObj *col = &in->stk[stkbase + pos];
+    const pplObj *col = &in->stk[stkbase + pos];
     char msg[PPL_MSG_LENGTH];
     if (pos < 0) return 0;
     const int s = ppl_colorFromObj(c, col, outcol, outcolspace, EXPoutcol, outcol1, outcol2, outcol3, outcol4, USEcol,

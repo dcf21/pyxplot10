@@ -73,7 +73,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
     int i, j, N;
     const double logmin = 1e-10;
     double UnitMultiplier = 1.0;
-    char *UnitString = NULL;
+    const char *UnitString = NULL;
     unsigned char AutoTicks[2] = {0, 0};
 
     // Axes which are not in use have no range or ticks
@@ -283,7 +283,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         for (int MajMin = 0; MajMin < 2; MajMin++) {
             double TickMax, TickMin, TickStep;
             unsigned char TickMaxSet, TickMinSet, TickStepSet;
-            double *TickList;
+            const double *TickList;
             char **TickStrs;
             double **TickListPositions;
             char ***TickListStrings;
@@ -569,7 +569,7 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     VarVal->real = x;
 
     // Generate tick string
-    pplObj *outval = ppl_expEval(X->c, FormatExp, &lOP, 0, X->iterDepth + 1);
+    const pplObj *outval = ppl_expEval(X->c, FormatExp, &lOP, 0, X->iterDepth + 1);
     // If the expression fails, or does not return a string, report an error and label the tick with a question mark
     if (X->c->errStat.status) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst using format string: %s", FormatExp->ascii);

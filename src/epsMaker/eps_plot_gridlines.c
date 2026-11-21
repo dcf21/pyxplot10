@@ -79,8 +79,8 @@ static void setGridColor(EPSComm *x, withWords *ww, const int major) {
 void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double width, double height,
                         const double zdepth) {
     double left, right, adepth, bdepth, cdepth, ddepth, x1, y1, x2, y2, ap_back[3];
-    pplset_axis *axes;
-    unsigned char *GridLines;
+    const pplset_axis *axes;
+    const unsigned char *GridLines;
     withWords ww;
 
     if (x->current->settings.grid != SW_ONOFF_ON) return; // Grid lines are off
@@ -126,7 +126,7 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
             if ((axes[i].FinalActive) && (!axes[i].invisible) && (GridLines[i])) {
                 for (int k = 0; k < 2; k++) // Minor ticks. Then major ticks
                 {
-                    double *TLP;
+                    const double *TLP;
                     char **TLS;
                     // The major or minor ticks, and the style of their grid lines
                     if (k != 0) {

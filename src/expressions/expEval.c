@@ -340,7 +340,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                 free(tmpbuff);
                 tmpbuff = NULL;
             } else {
-                pplObj *o = obj + argP;
+                const pplObj *o = obj + argP;
                 if (ppl_castToNum(context, obj + argP, inExpr, charpos)) goto cast_fail; // Make object into a number
                 if ((!gsl_finite(o->real)) ||
                     ((context->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && (o->flagComplex != 0))) {
@@ -515,7 +515,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             }
             case PPL_BC_LOOKUP: {
                 int got = 0;
-                char *key = inExpr->strings + instruction->operand.string;
+                const char *key = inExpr->strings + instruction->operand.string;
                 *lastOpAssign = 0;
                 for (int i = context->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
@@ -538,7 +538,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_LOOKUP_POINTER: {
-                char *key = inExpr->strings + instruction->operand.string;
+                const char *key = inExpr->strings + instruction->operand.string;
                 *lastOpAssign = 0;
                 for (int i = context->ns_ptr;; i = 1) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
@@ -587,7 +587,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 char *key = inExpr->strings + instruction->operand.string;
                 pplObj *in = stk - 1;
                 pplObj *in_cpy = NULL;
-                pplObj *iter = in;
+                const pplObj *iter = in;
                 int t = iter->objType;
                 int imm = iter->immutable;
                 int found = 0;

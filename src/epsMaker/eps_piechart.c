@@ -201,7 +201,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     // Work out sum of all pie segment sizes
     if (x->current->plotdata[0] == NULL) return;
     const int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
-    dataBlock *blk = x->current->plotdata[0]->first;
+    const dataBlock *blk = x->current->plotdata[0]->first;
     double acc = 0.0;
     // Add up the sizes of all the wedges
     while (blk != NULL) {
@@ -280,7 +280,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
             // Set values of variables [percentage, label, wedgesize] for this wedge
             const int stkLevelOld = c->stackPtr;
             int lOp = 0;
-            char *tmp;
+            const char *tmp;
 
             // Get pointers to the variables [percentage, label, wedgesize]
             ppl_contextGetVarPointer(c, "label", &var_l, &DummyTemp_l);
@@ -295,7 +295,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
             // Warn about a format expression which fails, or which does not return a string
             if (c->errStat.status || (c->dollarStat.warntxt[0] != '\0') || (o == NULL)) {
                 if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
-                    char *errt = NULL;
+                    const char *errt = NULL;
                     if (c->dollarStat.warntxt[0] != '\0') errt = c->dollarStat.warntxt;
                     else if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
                     else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
@@ -368,7 +368,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     ppl_context *c = x->c;
     int lt, l, m;
     double size;
-    canvas_plotdesc *pd;
+    const canvas_plotdesc *pd;
     double lw_scale;
     withWords ww, ww_txt;
 
@@ -392,7 +392,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
 
     // Fill piechart segments
     int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
-    dataBlock *blk = x->current->plotdata[0]->first;
+    const dataBlock *blk = x->current->plotdata[0]->first;
     double angle = 0.0;
     int WedgeNumber = 0;
     // Loop over the blocks of the data table
@@ -505,7 +505,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
         while (blk != NULL) {
             // Measure the typeset label of each wedge
             for (int j = 0; j < blk->blockPosition; j++) {
-                postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages,
+                const postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages,
                                            x->LaTeXpageno + ItemNo);
                 // A label which LaTeX did not typeset is skipped
                 if (dviPage == NULL) {

@@ -86,7 +86,7 @@ int main(const int argc, char **argv) {
     int i, fail = 0, exitStatus;
     int tempdirnumber = 1;
     char tempdirpath[FNAME_LENGTH];
-    char *EnvDisplay;
+    const char *EnvDisplay;
     struct stat statinfo;
 
     // Signals to unblock when exiting after SIGINT, and the wait used while the temporary directory is created

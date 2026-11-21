@@ -72,7 +72,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
     char *buf = msg;
     char *currentFnName = "", *dummyInFunction = NULL;
     pplObj *funcObjPtr = NULL;
-    pplFunc *funcPtr = NULL;
+    const pplFunc *funcPtr = NULL;
 
     // Make temporary rough workspace
     const int outputContext = ppl_memAlloc_GetMemContext();
@@ -167,7 +167,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
 
     // Make custom raster
     if (funcPtr->functionType == PPL_FUNC_HISTOGRAM) {
-        histogramDescriptor *desc = (histogramDescriptor *) funcPtr->functionPtr;
+        const histogramDescriptor *desc = (histogramDescriptor *) funcPtr->functionPtr;
         int rasterCount = 0;
         long NInput = desc->Nbins - 1;
         if (NInput < 1) NInput = 1;
@@ -188,7 +188,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         *raster = outputRaster;
         *rasterLen = rasterCount;
     } else if (funcPtr->functionType == PPL_FUNC_FFT) {
-        FFTDescriptor *desc = (FFTDescriptor *) funcPtr->functionPtr;
+        const FFTDescriptor *desc = (FFTDescriptor *) funcPtr->functionPtr;
         int rasterCount = 0;
 
         // The dummy variable must be one of the transform's arguments

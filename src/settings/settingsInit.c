@@ -66,7 +66,7 @@ void pplset_makedefault(ppl_context *context) {
     double PaperWidth, PaperHeight;
     pplObj tempval;
     char ConfigFname[FNAME_LENGTH], *ConfigFnamePtr = &ConfigFname[0];
-    char *PaperSizePtr;
+    const char *PaperSizePtr;
     ppl_settings *s = context->set;
     pplerr_context *se = &context->errcontext;
 

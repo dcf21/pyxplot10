@@ -501,7 +501,7 @@ int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
 
 int dviInOpPush(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Push the current state on to the stack
-    dviStackState *new = dviCloneInterpState(ec, interp->state);
+    const dviStackState *new = dviCloneInterpState(ec, interp->state);
     if (new == NULL) return DVIE_MEMORY;
     ppl_listAppend(interp->stack, (void *) new);
     return 0;
@@ -906,7 +906,7 @@ int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
 
     // Lop last colour off the end of the colour stack
-    char *item = (char *) ppl_listPop(interp->colStack);
+    const char *item = (char *) ppl_listPop(interp->colStack);
     // Warn about popping from an empty color stack
     if (item == NULL) {
         ppl_warning(ec, ERR_INTERNAL, "dvi colour pop from empty stack");
@@ -1386,10 +1386,10 @@ int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned cha
     int wi, hi, di, ii; // Indices
 
     // Find the character's entry in the font's metrics
-    dviFontDetails *font = (dviFontDetails *) interp->curFnt; // Font information (for tfm and use size)
-    dviTFM *tfm = font->tfm; // Details of this font
+    const dviFontDetails *font = (dviFontDetails *) interp->curFnt; // Font information (for tfm and use size)
+    const dviTFM *tfm = font->tfm; // Details of this font
     const int chnum = s - tfm->bc; // Character number in this font
-    TFMcharInfo *chin = tfm->charInfo + chnum; // Character info for this character
+    const TFMcharInfo *chin = tfm->charInfo + chnum; // Character info for this character
     const double scale = font->useSize * interp->scale; // Font use size * unit scaling
 
     // Look up its width, height, depth and italic correction, scaled to the font's size in postscript points

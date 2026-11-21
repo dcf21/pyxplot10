@@ -80,7 +80,7 @@ static void markThreadUnsafeFuncs(dict *defaults) {
     static const char *const unsafe[] = {"call", "eval", "globals", "locals", "open", "texify", "texifyText", NULL};
     // Modules whose functions all have side effects: os runs processes and touches files; random has a shared state
     static const char *const unsafeModules[] = {"os", "random", NULL};
-    pplObj *item;
+    const pplObj *item;
     // Mark each unsafe built-in function
     for (int i = 0; unsafe[i] != NULL; i++) {
         item = (pplObj *) ppl_dictLookup(defaults, unsafe[i]);
@@ -95,7 +95,7 @@ static void markThreadUnsafeFuncs(dict *defaults) {
     item = (pplObj *) ppl_dictLookup(defaults, "time");
     // The time module's sleep functions must not be run in parallel, since they would not sleep for the intended time
     if ((item != NULL) && (item->objType == PPLOBJ_MOD)) {
-        pplObj *f = (pplObj *) ppl_dictLookup((dict *) item->auxil, "sleep");
+        const pplObj *f = (pplObj *) ppl_dictLookup((dict *) item->auxil, "sleep");
         if ((f != NULL) && (f->objType == PPLOBJ_FUNC)) ((pplFunc *) f->auxil)->threadSafe = 0;
         f = (pplObj *) ppl_dictLookup((dict *) item->auxil, "sleepUntil");
         if ((f != NULL) && (f->objType == PPLOBJ_FUNC)) ((pplFunc *) f->auxil)->threadSafe = 0;

@@ -502,8 +502,8 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsi
     int tmax = (1 << MAXCS) - 1, i;
 
     // The start and end of the output buffer
-    unsigned char *start = out;
-    unsigned char *end = out + len;
+    const unsigned char *start = out;
+    const unsigned char *end = out + len;
 
     // Codes may be no longer than MAXCS bits
     if (cs > MAXCS) {

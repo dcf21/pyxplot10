@@ -187,13 +187,13 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
     // Count how many segments of the outline cross a ray from the point in the chosen direction; an odd number means
     // the point is inside
     const int Npoints = fr->points->length;
-    listItem *li2 = fr->points->first;
-    FilledRegionPoint *p2 = (FilledRegionPoint *) (li2->data);
+    const listItem *li2 = fr->points->first;
+    const FilledRegionPoint *p2 = (FilledRegionPoint *) (li2->data);
 
     // Loop around perimeter of region which we are going to fill
     for (int i = n = 0; i < Npoints; i++) {
-        listItem *li1 = li2;
-        FilledRegionPoint *p1 = p2;
+        const listItem *li1 = li2;
+        const FilledRegionPoint *p1 = p2;
         li2 = li1->next;
         if (li2 == NULL) li2 = fr->points->first;
         p2 = (FilledRegionPoint *) (li2->data); // p1 -> p2 is a line segment of perimeter
@@ -264,7 +264,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
     char msg[PPL_MSG_LENGTH];
     unsigned char first_point = 1, first_subpath = 1, fail = 0;
     int i, inew, j, k, dir_x, dir_y;
-    listItem *lil = NULL;
+    const listItem *lil = NULL;
 
     // Clear used flags
     for (i = 0; i < nac; i++) CrossPointList[i].used = 0;
@@ -364,14 +364,14 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             {
                 psPoint(fr, CrossPointList[i].x, CrossPointList[i].y, &first_subpath, &first_point,
                         linewidth); // Cut point where line enters canvas
-                listItem *li = CrossPointList[i].point;
+                const listItem *li = CrossPointList[i].point;
                 const unsigned char sense = CrossPointList[i].sense;
                 // Follow the outline from the crossing, in the direction which leads inside the graph
                 if (sense == OUTGOING) {
                     li = li->prev;
                     if (li == NULL) li = fr->points->last;
                 }
-                FilledRegionPoint *p = (FilledRegionPoint *) (li->data);
+                const FilledRegionPoint *p = (FilledRegionPoint *) (li->data);
                 // Draw each point inside the graph, flipping the fill side where the outline crosses itself
                 while (p->inside) {
                     psPoint(fr, p->x, p->y, &first_subpath, &first_point, linewidth);
@@ -571,12 +571,12 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
         const double ct_y_c1 = cy1 - ct_y_m1 * cx1;
         const double ct_x_m1 = (cx2 - cx1) / (cy2 - cy1);
         const double ct_x_c1 = cx1 - ct_x_m1 * cy1;
-        listItem *ct_li = fr->points->first;
+        const listItem *ct_li = fr->points->first;
         FilledRegionPoint *ct_pB = (FilledRegionPoint *) (ct_li->data);
         ct_li = ct_li->next;
         // Test each earlier segment for an intersection with this one
         for (k = 1, kn = 0; k < (i - 1); k++) {
-            FilledRegionPoint *ct_pA = ct_pB;
+            const FilledRegionPoint *ct_pA = ct_pB;
             ct_pB = (FilledRegionPoint *) (ct_li->data);
             ct_li = ct_li->next;
             const double ct_y_m2 = (ct_pB->y - ct_pA->y) / (ct_pB->x - ct_pA->x);

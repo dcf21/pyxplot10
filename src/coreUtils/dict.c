@@ -426,7 +426,7 @@ void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
     if (in == NULL) { return NULL; }
 
     // Check hash table
-    dictItem *ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
+    const dictItem *ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
     // Without a clash, the hash tree gives the definitive answer
     if (!clash) {
         if (ptr == NULL) return NULL;
@@ -540,7 +540,7 @@ int ppl_dictContains(dict *in, const char *key) {
 
     // Check hash table
     const int hash = ppl_dictHash(key, -1);
-    dictItem *ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
+    const dictItem *ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
     if (!clash) return (ptr != NULL);
 
     // Hash table clash; need to exhaustively search dictionary
@@ -597,7 +597,7 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
 
 int ppl_dictRemove(dict *in, const void *item) {
     if (in == NULL) return 1;
-    dictItem *ptr = in->first;
+    const dictItem *ptr = in->first;
     // Search for an item with this data pointer, and remove it by its key
     while (ptr != NULL) {
         if (ptr->data == item) { return ppl_dictRemoveKey(in, ptr->key); }

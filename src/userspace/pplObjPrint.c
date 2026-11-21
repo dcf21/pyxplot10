@@ -277,13 +277,13 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
         case PPLOBJ_VEC: {
             int i = 0, j = 0;
             double real, imag;
-            char *unit;
+            const char *unit;
             o->real = 1;
             o->imag = 0;
             o->flagComplex = 0;
             unit = ppl_printUnit(c, o, &real, &imag, 1, 1, SW_DISPLAY_T);
             if (o->dimensionless) real = 1;
-            gsl_vector *v = ((pplVector *) (o->auxil))->v;
+            const gsl_vector *v = ((pplVector *) (o->auxil))->v;
             ppl_strAppendf(out, outlen, &i, "%s", "vector(");
             // Show each element, scaled into the display units. A vector's units are found by printing the units of a
             // value of 1 with the vector's dimensions.
@@ -309,13 +309,13 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
         case PPLOBJ_MAT: {
             int i = 0, j = 0, k = 0;
             double real, imag;
-            char *unit;
+            const char *unit;
             o->real = 1;
             o->imag = 0;
             o->flagComplex = 0;
             unit = ppl_printUnit(c, o, &real, &imag, 1, 1, SW_DISPLAY_T);
             if (o->dimensionless) real = 1;
-            gsl_matrix *m = ((pplMatrix *) (o->auxil))->m;
+            const gsl_matrix *m = ((pplMatrix *) (o->auxil))->m;
             // In typeable form, a matrix is shown as a call to matrix() with a list of rows; otherwise it is laid out
             // one row per line, with the units beside the middle row
             if (internal || (typeable == SW_DISPLAY_T)) {
@@ -447,7 +447,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     case PPL_FUNC_SPLINE:
                     case PPL_FUNC_INTERP2D:
                     case PPL_FUNC_BMPDATA: {
-                        splineDescriptor *s = (splineDescriptor *) f->functionPtr;
+                        const splineDescriptor *s = (splineDescriptor *) f->functionPtr;
                         ppl_strAppendf(out, outlen, &i, "%s(x)= [%s interpolation of data from the %sfile '%s']",
                                        fnname, s->splineType, (f->functionType == PPL_FUNC_BMPDATA) ? "bitmap " : "",
                                        s->filename);

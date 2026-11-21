@@ -161,7 +161,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if (((t1 == PPLOBJ_DATE) && (t2 == PPLOBJ_NUM)) ||
                ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_DATE))) // adding time interval to date
     {
-        pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
+        const pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
         for (int i = 0; i < UNITS_MAX_BASEUNITS; i++)
             // The number added to a date must have units of time
             if (num->exponent[i] != (i == UNIT_TIME)) {
@@ -200,7 +200,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
-        gsl_vector *bv = ((pplVector *) (b->auxil))->v;
+        const gsl_vector *bv = ((pplVector *) (b->auxil))->v;
         // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -224,7 +224,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
-        gsl_vector *av = ((pplVector *) (a->auxil))->v;
+        const gsl_vector *av = ((pplVector *) (a->auxil))->v;
         // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -405,8 +405,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
                ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_COL))) // multiplying colors by numbers
     {
         double r1, g1, b1;
-        pplObj *c = (t1 == PPLOBJ_COL) ? a : b;
-        pplObj *n = (t1 == PPLOBJ_COL) ? b : a;
+        const pplObj *c = (t1 == PPLOBJ_COL) ? a : b;
+        const pplObj *n = (t1 == PPLOBJ_COL) ? b : a;
         const double m = n->real;
         // Colors can only be scaled by plain positive numbers
         if ((!n->dimensionless) || (n->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
@@ -422,8 +422,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObjColor(o, 0, SW_COLSPACE_RGB, r1, g1, b1, 0);
     } else if ((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_VEC)) // multiplying vectors (scalar dot product)
     {
-        gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
-        gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
+        const gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
+        const gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
         double acc = 0;
         // The product of two vectors is their dot product, which needs vectors of the same length
         if (v1->size != v2->size) {
@@ -442,7 +442,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if (((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_NUM)) || // multiplying vector by number
                ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_VEC))) // multiplying number by vector
     {
-        pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
+        const pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
         pplObj *vec = (t1 == PPLOBJ_VEC) ? a : b;
         gsl_vector *v = ((pplVector *) (vec->auxil))->v;
         gsl_vector *vo = NULL;
@@ -467,7 +467,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if (((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_NUM)) || // multiplying matrix by number
                ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_MAT))) // multiplying number by matrix
     {
-        pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
+        const pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
         pplObj *mat = (t1 == PPLOBJ_MAT) ? a : b;
         gsl_matrix *m = ((pplMatrix *) (mat->auxil))->m;
         gsl_matrix *mo = NULL;

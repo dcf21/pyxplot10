@@ -920,7 +920,7 @@ overflow:
 //! \param [in] len - The number of characters in the expression
 
 void ppl_tokenPrint(const ppl_context *context, char *in, const int len) {
-    pplTokenCode *tdat = context->tokenBuff;
+    const pplTokenCode *tdat = context->tokenBuff;
     for (int i = 0; i < len; i++) printf("  %c", in[i]);
     printf("\n");
     for (int i = 0; i < len; i++) printf("  %c", tdat[i].state);

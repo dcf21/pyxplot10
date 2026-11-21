@@ -59,7 +59,7 @@
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timefromUnix(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "fromUnix(t)";
+    const char *FunctionDescription = "fromUnix(t)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -76,7 +76,7 @@ void pplfunc_timefromUnix(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timefromJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "fromJD(t)";
+    const char *FunctionDescription = "fromJD(t)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, 86400.0 * (in[0].real - 2440587.5));
     if (ppl_funcCheckOutput(&call)) return;
@@ -93,7 +93,7 @@ void pplfunc_timefromJD(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timefromMJD(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "fromMJD(t)";
+    const char *FunctionDescription = "fromMJD(t)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, 86400.0 * (in[0].real - 40587.0));
     if (ppl_funcCheckOutput(&call)) return;
@@ -112,7 +112,7 @@ void pplfunc_timefromMJD(ppl_context *c, pplObj *in, const int nArgs, int *statu
 void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // Each component of the date must be a real, dimensionless, finite number, and the hour, minute and second must be
     // integers
-    char *FunctionDescription = "fromCalendar(year,month,day,hour,min,sec)";
+    const char *FunctionDescription = "fromCalendar(year,month,day,hour,min,sec)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double offset;
     if (ppl_funcCheckRealDimensionlessFinite(&call, &in[0], "year")) return;
@@ -157,7 +157,7 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "interval(t2,t1)";
+    const char *FunctionDescription = "interval(t2,t1)";
     // Both arguments must be dates
     if (in[0].objType != PPLOBJ_DATE) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -189,7 +189,7 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // Both arguments must be dates, and the optional format a string
-    char *FunctionDescription = "intervalStr(t2,t1,<s>)";
+    const char *FunctionDescription = "intervalStr(t2,t1,<s>)";
     char *format = NULL, *out = NULL;
     // The first argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {
@@ -278,7 +278,7 @@ static double currentUnixTime() {
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timenow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "now()";
+    const char *FunctionDescription = "now()";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObjDate(&OUTPUT, 0, currentUnixTime());
     if (ppl_funcCheckOutput(&call)) return;
@@ -296,7 +296,7 @@ void pplfunc_timenow(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The first argument must be a date, and the optional format and timezone strings
-    char *FunctionDescription = "string(t,<s>,<timezone>)";
+    const char *FunctionDescription = "string(t,<s>,<timezone>)";
     char *format = NULL, *out = NULL, timezone[FNAME_LENGTH];
     double offset;
     // The first argument must be a date
@@ -355,7 +355,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "sleep(t)";
+    const char *FunctionDescription = "sleep(t)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a time", UNIT_TIME, 1)) return;
@@ -379,7 +379,7 @@ void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 
 void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const double p = in[0].real - currentUnixTime();
-    char *FunctionDescription = "sleepUntil(d)";
+    const char *FunctionDescription = "sleepUntil(d)";
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
     // The argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {

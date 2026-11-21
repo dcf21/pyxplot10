@@ -95,7 +95,7 @@ void pplfunc_frandom(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "binomial(p,n)";
+    const char *FunctionDescription = "binomial(p,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Create the random number generator on first use
     if (rndgen == NULL) {
@@ -118,7 +118,7 @@ void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "chisq(nu)";
+    const char *FunctionDescription = "chisq(nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Create the random number generator on first use
     if (rndgen == NULL) {
@@ -140,7 +140,7 @@ void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "gaussian(sigma)";
+    const char *FunctionDescription = "gaussian(sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Create the random number generator on first use
     if (rndgen == NULL) {
@@ -162,7 +162,7 @@ void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "lognormal(zeta,sigma)";
+    const char *FunctionDescription = "lognormal(zeta,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Create the random number generator on first use
     if (rndgen == NULL) {
@@ -188,7 +188,7 @@ void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "poisson(n)";
+    const char *FunctionDescription = "poisson(n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Create the random number generator on first use
     if (rndgen == NULL) {
@@ -210,7 +210,7 @@ void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandomt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "tdist(nu)";
+    const char *FunctionDescription = "tdist(nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Create the random number generator on first use
     if (rndgen == NULL) {

@@ -185,7 +185,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     double *MaxList = indata + k * (InSize + 1);
 
     // Copy input data table into temporary array
-    dataBlock *blk = in->first;
+    const dataBlock *blk = in->first;
     // Copy the data from each block of the table, transposing it into one array per column
     while (blk != NULL) {
         for (int ct = 0; ct < k; ct++)

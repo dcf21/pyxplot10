@@ -452,7 +452,7 @@ cleanup:
 
 static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive, const int iterDepth,
                      const double sign) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     MMComm commlink;
     pplObj dummyTemp;
 
@@ -464,7 +464,7 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
     commlink.Nexprs = 1;
 
     // Fetch the names of the variables which we are fitting
-    pplObj *pos = &stk[PARSE_minimise_fit_variables];
+    const pplObj *pos = &stk[PARSE_minimise_fit_variables];
     // Walk the linked list of the free variables on the parser stack
     while ((pos->objType == PPLOBJ_NUM) && (pos->real > 0)) {
         pos = &stk[(int) round(pos->real)];
@@ -530,7 +530,7 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
 
 void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     MMComm commlink;
     pplObj dummyTemp;
 

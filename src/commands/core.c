@@ -98,8 +98,8 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
     pplObj *stk = in->stk;
 
     // The optional message, version requirement and expression
-    char *txt = (stk[PARSE_assert_message].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_message].auxil : NULL;
-    char *version = (stk[PARSE_assert_version].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_version].auxil : NULL;
+    const char *txt = (stk[PARSE_assert_message].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_message].auxil : NULL;
+    const char *version = (stk[PARSE_assert_version].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_version].auxil : NULL;
     pplObj *val = &stk[PARSE_assert_expr];
     const int lt = (stk[PARSE_assert_lt].objType == PPLOBJ_STR);
 
@@ -217,7 +217,7 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
 
 void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     // The path is a list of directory names, which are entered in turn
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     int pos = PARSE_cd_path;
     wordexp_t wordExp;
     glob_t globData;
@@ -227,7 +227,7 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
         char dirName[FNAME_LENGTH];
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
-        char *raw = (char *) stk[pos + PARSE_cd_directory_path].auxil;
+        const char *raw = (char *) stk[pos + PARSE_cd_directory_path].auxil;
         // Escape spaces in the name before passing it to wordexp
         ppl_strEscapeSpaces(raw, dirName, FNAME_LENGTH);
 
@@ -269,7 +269,7 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
 
 void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                         const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     char *cmd = (char *) stk[PARSE_exec_command].auxil;
     parserLine *pl2 = NULL;
     parserStatus *ps2 = NULL;
@@ -311,7 +311,7 @@ void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput
 
 void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                           const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
 
     // Global variables can only be declared inside a subroutine or module
     if (c->ns_ptr < 2) {
@@ -328,7 +328,7 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
 
         // Look up the variable in the local namespace
         pos = (int) round(stk[pos].real);
-        char *varname = (char *) stk[pos + PARSE_global_var_name_var_names].auxil;
+        const char *varname = (char *) stk[pos + PARSE_global_var_name_var_names].auxil;
         pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[c->ns_ptr], varname);
         // If it does not exist locally, create it
         if ((obj == NULL) && (!c->namespaces[c->ns_ptr]->immutable)) {
@@ -409,8 +409,8 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
                         const int iterDepth) {
     int i = 0;
     int j = 0;
-    pplObj *stk = in->stk;
-    char *raw = (char *) stk[PARSE_load_filename].auxil;
+    const pplObj *stk = in->stk;
+    const char *raw = (char *) stk[PARSE_load_filename].auxil;
     char fn[FNAME_LENGTH];
     wordexp_t wordExp;
     glob_t globData;
@@ -464,7 +464,7 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
 
 void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
 
     // Local variables can only be declared inside a subroutine or module
     if (c->ns_ptr < 2) {
@@ -560,7 +560,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     const int pos = PARSE_save_filename;
     int start = 0;
     long x;
-    char *outfname = "";
+    const char *outfname = "";
     FILE *outfile = NULL;
     HIST_ENTRY **history_data;
 
@@ -611,8 +611,8 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
-    pplObj *o = &in->stk[PARSE_set_error_set_option];
-    char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
+    const pplObj *o = &in->stk[PARSE_set_error_set_option];
+    const char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
     // Report the unrecognised option; in interactive sessions, list the options which are available
     if (tempstr != NULL) {
         // In scripts, report an error
@@ -644,8 +644,8 @@ void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
-    pplObj *o = &in->stk[PARSE_set_error_set_option];
-    char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
+    const pplObj *o = &in->stk[PARSE_set_error_set_option];
+    const char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
     // Report the unrecognised option; in interactive sessions, list the options which are available
     if (tempstr != NULL) {
         // In scripts, report an error
@@ -706,7 +706,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
                           const int iterDepth) {
     pplObj *stk = in->stk;
     pplObj *val = &stk[PARSE_var_set_value];
-    pplObj *rgx = &stk[PARSE_var_set_regex];
+    const pplObj *rgx = &stk[PARSE_var_set_regex];
     pplObj *obj = NULL;
 
     // Look up the variable to set
@@ -724,7 +724,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         fd_set readable;
         char *re = NULL, *outstr = NULL;
         char *in = (char *) rgx->auxil;
-        char *instr = (char *) obj->auxil;
+        const char *instr = (char *) obj->auxil;
 
         // Check that input is a string
         if (obj->objType != PPLOBJ_STR) {

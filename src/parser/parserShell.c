@@ -88,8 +88,8 @@
 void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     // d is the name of the command, as stored by the parser in the first slot of the output stack
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
-    char *d = (char *) stk[PARSE_arc_directive].auxil;
+    const pplObj *stk = in->stk;
+    const char *d = (char *) stk[PARSE_arc_directive].auxil;
 
     // If directive is an expression, evaluate it and print result, unless it's an assignment
     if (stk[PARSE_arc_directive].objType == PPLOBJ_EXP) {
@@ -184,7 +184,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     // character of the keyword identifies the channel
     else if (strcmp(d, "interpolate2d") == 0) {
         int type = INTERP_2D;
-        char *tempstr = (char *) stk[PARSE_interpolate2d_bmp].auxil;
+        const char *tempstr = (char *) stk[PARSE_interpolate2d_bmp].auxil;
         // Choose the type of interpolation from the keyword, if one was given
         if (stk[PARSE_interpolate2d_bmp].objType == PPLOBJ_STR) switch (tempstr[4]) {
                 case 'r':

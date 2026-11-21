@@ -64,7 +64,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     unsigned char *buff = (unsigned char *) ppl_memAlloc(chunk);
     unsigned char *header = (unsigned char *) malloc(HEADLEN);
     unsigned char *headp = header;
-    unsigned char *headendp = header + HEADLEN - 8;
+    const unsigned char *headendp = header + HEADLEN - 8;
 
     // Log progress in debugging mode
     if (DEBUG) ppl_log(ec, "Beginning to decode JPEG image file");

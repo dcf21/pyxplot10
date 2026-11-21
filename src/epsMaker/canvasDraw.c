@@ -406,7 +406,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     if ((termtype == SW_TERMTYPE_X11S) || (termtype == SW_TERMTYPE_X11M) ||
         (termtype == SW_TERMTYPE_X11P)) // X11 terminals
     {
-        char *EnvDisplay = getenv("DISPLAY"); // Check whether the environment variable DISPLAY is set
+        const char *EnvDisplay = getenv("DISPLAY"); // Check whether the environment variable DISPLAY is set
         // Report missing viewers or displays; otherwise send the file to the viewer, through the child-process helper
         if (c->set->term_current.viewer == SW_VIEWER_NULL) {
             ppl_error(
@@ -960,7 +960,7 @@ void canvas_EPSWrite(EPSComm *x) {
     // Embed each font file in the output
     while (ListIter != NULL) {
         const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
-        char *PFAfilename = font->pfaPath;
+        const char *PFAfilename = font->pfaPath;
         // PFAfilename==NULL indicates that this is a built-in font that doesn't require a fontdef. Several TeX fonts
         // may be derived from the same type 1 font (e.g. ecrm1000 and tcrm1000), which only needs including once.
         if ((PFAfilename != NULL) && !fontListedEarlier(x->dvi->fonts, font)) {
@@ -1125,7 +1125,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     }
 
     // Fetch requested page of postscript
-    postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
+    const postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
     // Report text which LaTeX did not typeset
     if (dviPage == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Not all text items were rendered by LaTeX");

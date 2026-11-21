@@ -79,9 +79,9 @@
 
 void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     const int named = (stk[PARSE_break_loopname].objType == PPLOBJ_STR);
-    char *name = (char *) stk[PARSE_break_loopname].auxil;
+    const char *name = (char *) stk[PARSE_break_loopname].auxil;
 
     // If a loop name was given, check that we are inside a loop with that name, and aim the break at it
     if (named) {
@@ -121,9 +121,9 @@ void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutpu
 
 void ppl_directive_continue(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                             const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     const int named = (stk[PARSE_continue_loopname].objType == PPLOBJ_STR);
-    char *name = (char *) stk[PARSE_continue_loopname].auxil;
+    const char *name = (char *) stk[PARSE_continue_loopname].auxil;
 
     // If a loop name was given, check that we are inside a loop with that name, and aim the continue at it
     if (named) {
@@ -193,7 +193,7 @@ void ppl_directive_return(ppl_context *c, const parserLine *pl, const parserOutp
 void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                       const int iterDepth) {
     int criterion = 1;
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     parserLine *plc = (parserLine *) stk[PARSE_do_code].auxil;
     pplExpr *cond = (pplExpr *) stk[PARSE_do_condition].auxil;
     char *name = (char *) stk[PARSE_do_loopname].auxil;
@@ -261,8 +261,8 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
     pplObj *stk = in->stk;
     const int BASICstyle = (stk[PARSE_for_var_name].objType == PPLOBJ_STR);
     char *varname = (char *) stk[PARSE_for_var_name].auxil;
-    pplObj *beginVal = &stk[PARSE_for_start_value];
-    pplObj *endVal = &stk[PARSE_for_final_value];
+    const pplObj *beginVal = &stk[PARSE_for_start_value];
+    const pplObj *endVal = &stk[PARSE_for_final_value];
     pplObj *stepVal = &stk[PARSE_for_step_size], stepTmp;
     const int stepGot = (stk[PARSE_for_step_size].objType == PPLOBJ_NUM);
     parserLine *plc = (parserLine *) stk[PARSE_for_code].auxil;
@@ -436,8 +436,8 @@ static int foreachStop(const ppl_context *c) {
 
 void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                            const int iterDepth) {
-    pplObj *stk = in->stk;
-    pplObj *iter = &stk[PARSE_foreach_item_list];
+    const pplObj *stk = in->stk;
+    const pplObj *iter = &stk[PARSE_foreach_item_list];
     parserLine *plc = (parserLine *) stk[PARSE_foreach_code].auxil;
     char *varname = (char *) stk[PARSE_foreach_var_name].auxil;
     char *name = (char *) stk[PARSE_foreach_loopname].auxil;
@@ -486,7 +486,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         wordfree(&w);
     } else if (iter->objType == PPLOBJ_VEC) // Iterate over vector
     {
-        gsl_vector *vin = ((pplVector *) iter->auxil)->v;
+        const gsl_vector *vin = ((pplVector *) iter->auxil)->v;
         const int vinl = vin->size;
         // Run the body of the loop once for each element of the vector
         for (int i = 0; i < vinl && !foreachStop(c); i++) {
@@ -512,7 +512,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         }
     } else if (iter->objType == PPLOBJ_LIST) // Iterate over list
     {
-        list *lin = (list *) iter->auxil;
+        const list *lin = (list *) iter->auxil;
         listIterator *li = ppl_listIterateInit(lin);
         pplObj *obj;
         // Run the body of the loop once for each item of the list
@@ -539,7 +539,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
     } else if ((iter->objType == PPLOBJ_DICT) || (iter->objType == PPLOBJ_MOD) ||
                (iter->objType == PPLOBJ_USER)) // Iterate over dictionary
     {
-        dict *din = (dict *) iter->auxil;
+        const dict *din = (dict *) iter->auxil;
         dictIterator *di = ppl_dictIterateInit(din);
         pplObj *obj;
         char *key;
@@ -600,7 +600,7 @@ cleanup:
 void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                            const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     parserLine *plc = (parserLine *) stk[PARSE_foreachdatum_code].auxil;
     int Nvars = 0, i, status = 0, errCount = 5;
     char *varname[USING_ITEMS_MAX];
@@ -613,7 +613,7 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
     int minSet[USING_ITEMS_MAX], maxSet[USING_ITEMS_MAX];
     double min[USING_ITEMS_MAX], max[USING_ITEMS_MAX];
     dataTable *data = NULL;
-    dataBlock *blk = NULL;
+    const dataBlock *blk = NULL;
     parserLine *spool = NULL, **dataSpool = &spool;
 
     // Record the loop's name, if any, for named break and continue statements, and allow break and continue inside it
@@ -778,7 +778,7 @@ cleanup:
 
 void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                       const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     parserLine *pl_if = (parserLine *) stk[PARSE_if_code].auxil;
     parserLine *pl_else = (parserLine *) stk[PARSE_if_code_else].auxil;
     const int gotelse = (stk[PARSE_if_code_else].objType == PPLOBJ_BYT);
@@ -868,7 +868,7 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
 
 void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     parserLine *plsub = (parserLine *) stk[PARSE_subroutine_code].auxil;
     int nArgs = 0, argListLen = 0;
     pplFunc *f = NULL;
@@ -878,7 +878,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     // Walk the linked list of argument names on the parser stack, counting them
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);
-        char *name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
+        const char *name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
         nArgs++;
         argListLen += strlen(name) + 1;
     }
@@ -929,7 +929,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     // Store the argument names one after another, each followed by a zero byte
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);
-        char *name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
+        const char *name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
         strcpy(f->argList + i, name);
         i += strlen(name) + 1;
     }
@@ -973,7 +973,7 @@ fail:
 void ppl_directive_while(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
     int criterion = 1;
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     parserLine *plc = (parserLine *) stk[PARSE_while_code].auxil;
     pplExpr *cond = (pplExpr *) stk[PARSE_while_criterion].auxil;
     char *name = (char *) stk[PARSE_while_loopname].auxil;
@@ -1040,9 +1040,9 @@ cleanup:
 
 void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                         const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     parserLine *pl2 = (parserLine *) stk[PARSE_with_code].auxil;
-    pplObj *obj = &stk[PARSE_with_namespace];
+    const pplObj *obj = &stk[PARSE_with_namespace];
     const int stkLevelOld = c->stackPtr;
 
     // Check that there's enough space on the stack

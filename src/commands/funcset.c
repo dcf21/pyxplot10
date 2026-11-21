@@ -74,7 +74,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     // Walk the linked list of argument names on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);
-        char *name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
+        const char *name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
         nArgs++;
         argListLen += strlen(name) + 1;
     }
@@ -131,7 +131,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     // For each argument, store its name, and the range over which this definition applies, if any
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);
-        char *name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
+        const char *name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
         strcpy(f->argList + i, name);
         i += strlen(name) + 1;
         // This argument has a range specified

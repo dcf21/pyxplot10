@@ -463,7 +463,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     // Show the c1format setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c1format", 1) >= 0)) {
         pplExpr *c1format_current = (pplExpr *) sg->c1format;
-        pplExpr *c1format_default = (pplExpr *) c->set->graph_default.c1format;
+        const pplExpr *c1format_default = (pplExpr *) c->set->graph_default.c1format;
         if (sg->c1formatset) ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s ", c1format_current->ascii);
         else buf[0] = '\0';
         m = strlen(buf);
@@ -585,9 +585,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "colmap", 1) >= 0) ||
         (ppl_strAutocomplete(word, "colourmap", 1) >= 0) || (ppl_strAutocomplete(word, "colormap", 1) >= 0)) {
-        pplExpr *exp_default = (pplExpr *) c->set->graph_default.ColMapExpr;
+        const pplExpr *exp_default = (pplExpr *) c->set->graph_default.ColMapExpr;
         pplExpr *exp_current = (pplExpr *) sg->ColMapExpr;
-        pplExpr *maskdefault = (pplExpr *) c->set->graph_default.MaskExpr;
+        const pplExpr *maskdefault = (pplExpr *) c->set->graph_default.MaskExpr;
         pplExpr *maskcurrent = (pplExpr *) sg->MaskExpr;
         const int unchanged = ((exp_default == NULL) == (exp_current == NULL)) &&
                 ((exp_default == NULL) || (strcmp(exp_default->ascii, exp_current->ascii) == 0)) &&
@@ -2019,7 +2019,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
 void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive) {
     // Variables pointing to the settings to show, which belong to a multiplot item or to the current settings
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     char itemSet[32];
     pplset_graph *sg;
     pplarrow_object **al;
@@ -2039,7 +2039,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         za = c->set->ZAxes;
         itemSet[0] = '\0';
     } else {
-        canvas_itemlist *canvas_items = c->canvas_items;
+        const canvas_itemlist *canvas_items = c->canvas_items;
         const int editNo = (int) round(stk[PARSE_show_editno].real);
         // The multiplot item number must be valid
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {

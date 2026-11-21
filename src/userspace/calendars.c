@@ -969,7 +969,7 @@ void ppl_calendarTimezoneUnset(const ppl_context *ct) {
 //! \param [out] offset - Set to the offset of local time from UTC, in seconds (optional)
 
 void ppl_calendarTimezoneOffset(const ppl_context *ct, double unixTime, char *tzNameOut, double *offset) {
-    struct tm *t;
+    const struct tm *t;
     int out = 0;
     // Find the offset of the timezone from UTC at the given local time; this is iterated, since the offset depends on
     // the time, e.g. across a change to daylight saving time

@@ -50,7 +50,7 @@ int main(const int argc, char **argv) {
     // Buffers for the help and version text, and a warning shown if FITS support is missing
     char help_string[LSTR_LENGTH], version_string[FNAME_LENGTH], version_string_underline[FNAME_LENGTH],
             warntext[FNAME_LENGTH];
-    char *filename = NULL;
+    const char *filename = NULL;
     int HaveFilename = 0;
 #ifdef HAVE_FITSIO
     fitsfile *fptr = NULL;

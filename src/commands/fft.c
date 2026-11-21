@@ -274,7 +274,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // The variables used to read the data, transform it and store the result
     pplObj *stk = in->stk;
     dataTable *data;
-    dataBlock *blk;
+    const dataBlock *blk;
     long int i = 0, k;
     int contextLocalVec, contextDataTab, errCount = DATAFILE_NERRS;
     int Ndims = 0, inverse, Nsamples, Nsteps[USING_ITEMS_MAX];
@@ -394,7 +394,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Work out what type of window we're going to use
     {
         const int gotWindow = (stk[PARSE_ifft_window].objType == PPLOBJ_STR);
-        char *cptr = (char *) stk[PARSE_ifft_window].auxil;
+        const char *cptr = (char *) stk[PARSE_ifft_window].auxil;
         WindowType = fftwindow_rectangular;
         // Select the window function named in the command
         if (gotWindow) {

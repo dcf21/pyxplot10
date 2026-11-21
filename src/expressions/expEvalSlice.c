@@ -56,7 +56,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
     // to the object while it is being sliced.
     const int nArgs = 1;
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];
-    pplObj *args = context->stack + context->stackPtr - nArgs;
+    const pplObj *args = context->stack + context->stackPtr - nArgs;
     pplObj called;
     int i;
     const int t = out->objType;
@@ -317,7 +317,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             break;
         }
         case PPLOBJ_LIST: {
-            list *lin = (list *) called.auxil;
+            const list *lin = (list *) called.auxil;
             const int inl = lin->length;
             pplObj obj, *objptr;
             if (!minset) min = 0;

@@ -274,9 +274,9 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         int gotIncr =
                 ((ptab[PARSE_INDEX_increment] > 0) && (command[ptab[PARSE_INDEX_increment]].objType == PPLOBJ_NUM));
         int gotEnd = ((ptab[PARSE_INDEX_end] > 0) && (command[ptab[PARSE_INDEX_end]].objType == PPLOBJ_NUM));
-        pplObj *objstart = &command[ptab[PARSE_INDEX_start]];
-        pplObj *objincr = &command[ptab[PARSE_INDEX_increment]];
-        pplObj *objend = &command[ptab[PARSE_INDEX_end]];
+        const pplObj *objstart = &command[ptab[PARSE_INDEX_start]];
+        const pplObj *objincr = &command[ptab[PARSE_INDEX_increment]];
+        const pplObj *objend = &command[ptab[PARSE_INDEX_end]];
         const double start = objstart->real;
         double incr = objincr->real;
         const double end = objend->real;
@@ -335,7 +335,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         }
         // Check that the tick positions have the same units as the axis
         if ((!amLog) || (gotStart)) {
-            pplObj *o = amLog ? objstart : objincr;
+            const pplObj *o = amLog ? objstart : objincr;
             // If the axis has a fixed range, the ticks must have the same units as it
             if ((unitSet) && (!ppl_unitsDimEqual(o, unit))) {
                 ppl_snprintfTrunc(
@@ -361,17 +361,17 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         const int x = ptab[PARSE_INDEX_x];
         const int lab = ptab[PARSE_INDEX_label];
         int i = 0;
-        pplObj *first = NULL;
+        const pplObj *first = NULL;
 
         // Check every item in a list of tick positions, each optionally with a label
         while (command[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(command[pos].real);
             if (pos <= 0) break;
-            pplObj *ox = &command[pos + x];
-            pplObj *ol = &command[pos + lab];
+            const pplObj *ox = &command[pos + x];
+            const pplObj *ol = &command[pos + lab];
             if ((ox->objType == PPLOBJ_STR) &&
                 ((ol->objType == PPLOBJ_NUM) || (ol->objType == PPLOBJ_BOOL) || (ol->objType == PPLOBJ_DATE))) {
-                pplObj *tmp = ol;
+                const pplObj *tmp = ol;
                 ol = ox;
                 ox = tmp;
             }
@@ -447,16 +447,16 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         while (command[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(command[pos].real);
             if (pos <= 0) break;
-            pplObj *ox = &command[pos + x];
-            pplObj *ol = &command[pos + lab];
+            const pplObj *ox = &command[pos + x];
+            const pplObj *ol = &command[pos + lab];
             // The parser may return the position and label in either order
             if (ox->objType == PPLOBJ_STR) {
-                pplObj *tmp = ol;
+                const pplObj *tmp = ol;
                 ol = ox;
                 ox = tmp;
             }
             t->tickList[i] = ox->real;
-            char *label = (ol->objType == PPLOBJ_STR) ? ((char *) ol->auxil) : ("\xFF");
+            const char *label = (ol->objType == PPLOBJ_STR) ? ((char *) ol->auxil) : ("\xFF");
             t->tickStrs[i] = (char *) malloc(strlen(label) + 1);
             // Failure to allocate memory is reported as an error
             if (t->tickStrs[i] == NULL) {
@@ -499,7 +499,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ya = c->set->YAxes;
         za = c->set->ZAxes;
     } else {
-        canvas_itemlist *canvas_items = (canvas_itemlist *) c->canvas_items;
+        const canvas_itemlist *canvas_items = (canvas_itemlist *) c->canvas_items;
         const int editNo = (int) round(command[PARSE_arc_editno].real);
 
         // The multiplot item number must be valid
@@ -532,8 +532,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     }
 
     // The command (set or unset), and the setting to change; each setting is handled in turn below
-    char *directive = (char *) command[PARSE_arc_directive].auxil;
-    char *setoption = (char *) command[PARSE_arc_set_option].auxil;
+    const char *directive = (char *) command[PARSE_arc_directive].auxil;
+    const char *setoption = (char *) command[PARSE_arc_set_option].auxil;
     const int strcmp_set = (strcmp(directive, "set") == 0);
     const int strcmp_unset = (strcmp(directive, "unset") == 0);
 
@@ -910,7 +910,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             tics_cp(&sg->ticsCM, &c->set->graph_default.ticsCM);
     } else if (strcmp_set && (strcmp(setoption, "calendar") == 0)) /* set calendar */
     {
-        char *tempstr = (char *) command[PARSE_set_calendar_calendar].auxil;
+        const char *tempstr = (char *) command[PARSE_set_calendar_calendar].auxil;
         int got = (command[PARSE_set_calendar_calendar].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.CalendarIn = c->set->term_current.CalendarOut =
@@ -1086,7 +1086,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->ContoursLabel = c->set->graph_default.ContoursLabel;
     } else if (strcmp_set && (strcmp(setoption, "crange") == 0)) /* set crange */
     {
-        char *cstr = (char *) command[PARSE_set_crange_c_number].auxil;
+        const char *cstr = (char *) command[PARSE_set_crange_c_number].auxil;
         const int C = (int) (cstr[0] - '1');
         pplObj *min = &command[PARSE_set_crange_min];
         pplObj *max = &command[PARSE_set_crange_max];
@@ -1140,7 +1140,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_unset && (strcmp(setoption, "crange") == 0)) /* unset crange */
     {
-        char *cstr = (char *) command[PARSE_set_crange_c_number].auxil;
+        const char *cstr = (char *) command[PARSE_set_crange_c_number].auxil;
         const int C = (int) (cstr[0] - '1');
         sg->Cmin[C] = c->set->graph_default.Cmin[C];
         sg->Cminauto[C] = c->set->graph_default.Cminauto[C];
@@ -1166,7 +1166,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         c->set->term_current.display = c->set->term_default.display;
     } else if (strcmp_set && (strcmp(setoption, "filter") == 0)) /* set filter */
     {
-        char *tempstr = (char *) command[PARSE_set_filter_filename].auxil;
+        const char *tempstr = (char *) command[PARSE_set_filter_filename].auxil;
         char *tempstr2 = (char *) command[PARSE_set_filter_filter].auxil;
         char *tempstr3 = (char *) malloc(strlen(tempstr2) + 1);
         pplObj val;
@@ -1181,7 +1181,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_dictAppendCpy(c->set->filters, tempstr, &val, sizeof(pplObj));
     } else if (strcmp_unset && (strcmp(setoption, "filter") == 0)) /* unset filter */
     {
-        char *tempstr = (char *) command[PARSE_set_filter_filename].auxil;
+        const char *tempstr = (char *) command[PARSE_set_filter_filename].auxil;
         pplObj *tempobj = (pplObj *) ppl_dictLookup(c->set->filters, tempstr);
         // Warn about a filter which does not exist
         if (tempobj == NULL) {
@@ -1342,7 +1342,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
         // Move the key horizontally, keeping its vertical position
         if (command[PARSE_set_key_xpos].objType == PPLOBJ_STR) {
-            char *tempstr = command[PARSE_set_key_xpos].auxil;
+            const char *tempstr = command[PARSE_set_key_xpos].auxil;
             // A horizontal position was given
             if (tempstr != NULL) {
                 // Move the key to the left, keeping its vertical position
@@ -1376,7 +1376,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
         // Move the key vertically, keeping its horizontal position
         if (command[PARSE_set_key_ypos].objType == PPLOBJ_STR) {
-            char *tempstr = command[PARSE_set_key_ypos].auxil;
+            const char *tempstr = command[PARSE_set_key_ypos].auxil;
             // A vertical position was given
             if (tempstr != NULL) {
                 // Move the key to the top, keeping its horizontal position
@@ -1877,7 +1877,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_set && (strcmp(setoption, "numerics") == 0)) /* set numerics */
     {
-        char *tempstr = (char *) command[PARSE_set_numerics_complex].auxil;
+        const char *tempstr = (char *) command[PARSE_set_numerics_complex].auxil;
         int got = (command[PARSE_set_numerics_complex].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.ComplexNumbers =
@@ -1947,7 +1947,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->OriginY = c->set->graph_default.OriginY;
     } else if (strcmp_set && (strcmp(setoption, "output") == 0)) /* set output */
     {
-        char *tempstr = (char *) command[PARSE_set_output_filename].auxil;
+        const char *tempstr = (char *) command[PARSE_set_output_filename].auxil;
         strncpy(c->set->term_current.output, tempstr, FNAME_LENGTH - 1);
         c->set->term_current.output[FNAME_LENGTH - 1] = '\0';
     } else if (strcmp_unset && (strcmp(setoption, "output") == 0)) /* unset output */
@@ -1970,7 +1970,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             "The 'set palette' command has been passed a palette which is too long; truncating it.");
                     break;
                 }
-                pplObj *co = &command[pos + PARSE_set_palette_color_palette];
+                const pplObj *co = &command[pos + PARSE_set_palette_color_palette];
                 c->set->palette_current[count] = -1;
                 ppl_colorFromObj(c, co, &c->set->palette_current[count], &c->set->paletteS_current[count], NULL,
                                  &c->set->palette1_current[count], &c->set->palette2_current[count],
@@ -1979,7 +1979,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             c->set->palette_current[count] = -1;
         } else {
-            pplObj *lo = &command[PARSE_set_palette_list];
+            const pplObj *lo = &command[PARSE_set_palette_list];
             list *l = (list *) lo->auxil;
             int i;
             // The expression must evaluate to a list
@@ -2000,7 +2000,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             // Every item in the list must be a color, or a number indexing the default colors
             for (i = 0; i < ll; i++) {
-                pplObj *o = ppl_listGetItem(l, i);
+                const pplObj *o = ppl_listGetItem(l, i);
                 // Report an item which is not a color
                 if ((o->objType != PPLOBJ_NUM) && (o->objType != PPLOBJ_COL)) {
                     ppl_snprintfTrunc(
@@ -2014,7 +2014,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             // Store each color in the list
             for (i = 0; i < ll; i++) {
                 unsigned char d1, d2;
-                pplObj *o = ppl_listGetItem(l, i);
+                const pplObj *o = ppl_listGetItem(l, i);
                 // There is a fixed limit on the length of the palette
                 if (i >= PALETTE_LENGTH - 1) {
                     ppl_warning(
@@ -2042,7 +2042,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         // A named paper size, or a width and height
         if (command[PARSE_set_papersize_paper_name].objType == PPLOBJ_STR) {
             double d1, d2;
-            char *paperName = (char *) command[PARSE_set_papersize_paper_name].auxil;
+            const char *paperName = (char *) command[PARSE_set_papersize_paper_name].auxil;
             ppl_PaperSizeByName(paperName, &d1, &d2);
             // Look up the named paper size, whose dimensions are in millimetres, and store them in metres
             if (d1 > 0) {
@@ -2116,7 +2116,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->PointSize = c->set->graph_default.PointSize;
     } else if (strcmp_set && (strcmp(setoption, "preamble") == 0)) /* set preamble */
     {
-        char *tempstr = (char *) command[PARSE_set_preamble_preamble].auxil;
+        const char *tempstr = (char *) command[PARSE_set_preamble_preamble].auxil;
         strncpy(c->set->term_current.LatexPreamble, tempstr, FNAME_LENGTH - 1);
         c->set->term_current.LatexPreamble[FNAME_LENGTH - 1] = '\0';
     } else if (strcmp_unset && (strcmp(setoption, "preamble") == 0)) /* unset preamble */
@@ -2280,7 +2280,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->AutoZAspect = c->set->graph_default.AutoZAspect;
     } else if (strcmp_set && (strcmp(setoption, "style") == 0)) /* set style data / function */
     {
-        char *type = (char *) command[PARSE_set_style_numbered_dataset_type].auxil;
+        const char *type = (char *) command[PARSE_set_style_numbered_dataset_type].auxil;
         withWords *outstyle = (type[0] == 'd') ? &sg->dataStyle : &sg->funcStyle;
         withWords ww_tmp, ww_tmp2;
         ppl_withWordsFromDict(c, in, pl, PARSE_TABLE_set_style_numbered_, 0, &ww_tmp); // this is correct!
@@ -2313,7 +2313,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
         // "unset style data" and "unset style function" restore the default styles for data and functions
         if (command[dataset_type].objType == PPLOBJ_STR) {
-            char *type = (char *) command[dataset_type].auxil;
+            const char *type = (char *) command[dataset_type].auxil;
             withWords *instyle = (type[0] == 'd') ? &c->set->graph_default.dataStyle : &c->set->graph_default.funcStyle;
             withWords *outstyle = (type[0] == 'd') ? &sg->dataStyle : &sg->funcStyle;
             ppl_withWordsDestroy(c, outstyle);
@@ -2341,7 +2341,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_set && (strcmp(setoption, "terminal") == 0)) /* set terminal */
     {
-        char *tempstr = (char *) command[PARSE_set_terminal_term].auxil;
+        const char *tempstr = (char *) command[PARSE_set_terminal_term].auxil;
         int got = (command[PARSE_set_terminal_term].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.TermType =
@@ -2573,7 +2573,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_set && (strcmp(setoption, "timezone") == 0)) /* set timezone */
     {
-        char *tempstr = (char *) command[PARSE_set_timezone_timezone].auxil;
+        const char *tempstr = (char *) command[PARSE_set_timezone_timezone].auxil;
         snprintf(c->set->term_current.timezone, FNAME_LENGTH, "%s", tempstr);
         c->set->term_current.timezone[FNAME_LENGTH - 1] = '\0';
     } else if (strcmp_unset && (strcmp(setoption, "timezone") == 0)) /* unset timezone */
@@ -2714,7 +2714,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             didWork = 0;
                             // Look through the list of preferred units
                             while (listiter != NULL) {
-                                PreferredUnit *pui = (PreferredUnit *) listiter->data;
+                                const PreferredUnit *pui = (PreferredUnit *) listiter->data;
                                 if (ppl_unitsDimEqual(&pui->value, &pu->value) &&
                                     (pui->value.tempType == pu->value.tempType)) {
                                     ppl_listRemove(c->unit_PreferredUnits, (void *) pui);
@@ -2743,10 +2743,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 int i = 0, j = 0, k = 0, l = 0, m = 0;
                 int p = 0;
                 int pp = 0;
-                char *unit;
+                const char *unit;
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                char *quantity = (char *) command[pos + PARSE_set_unit_quantity_preferred_units].auxil;
+                const char *quantity = (char *) command[pos + PARSE_set_unit_quantity_preferred_units].auxil;
                 unit = (char *) command[pos + PARSE_set_unit_unit_preferred_units].auxil;
                 // Search the unit database for a unit of the requested quantity with the requested name, with any SI
                 // prefix it may take
@@ -3031,7 +3031,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             else c->set->term_current.viewer = SW_VIEWER_NULL;
             changedViewer = (viewerOld != c->set->term_current.viewer);
         } else {
-            char *nv = (char *) command[PARSE_set_viewer_viewer].auxil;
+            const char *nv = (char *) command[PARSE_set_viewer_viewer].auxil;
             // Switching to a custom viewer
             if (c->set->term_current.viewer != SW_VIEWER_CUSTOM) {
                 changedViewer = 1;
@@ -3273,7 +3273,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
 
             // Check whether ticks need removing, if units of axis have changed
-            pplObj *unitNew = &a->unit;
+            const pplObj *unitNew = &a->unit;
             // If the units of the axis have changed, its ticks no longer apply
             if (!ppl_unitsDimEqual(unitNew, &unitOld)) {
                 tics_rm(&a->tics);

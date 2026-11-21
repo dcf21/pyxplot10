@@ -84,7 +84,7 @@ static int interpolateSorter(const void *x, const void *y) {
 void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
                                const int iterDepth, const int mode) {
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     dataTable *data;
     bitmap_data bmpdata;
     long int i = 0, j, k, sizeX = 0, sizeY = 0;
@@ -734,7 +734,7 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     } else // Stepwise interpolation
     {
         long i, pos, len = desc->sizeX, xystep = desc->sizeY, Nsteps = (long) ceil(log(desc->sizeX) / log(2));
-        double *data = (double *) desc->splineObj;
+        const double *data = (double *) desc->splineObj;
         // Binary search for the last data point at or below the argument
         for (pos = i = 0; i < Nsteps; i++) {
             long ss = 1 << (Nsteps - 1 - i);

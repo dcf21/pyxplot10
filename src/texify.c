@@ -498,7 +498,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         if (stkpos[i] >= 0) {
             double real = 0, imag = 0;
             pplObj *o = &c->stack[stkpos[i]];
-            char *u = NULL;
+            const char *u = NULL;
             if (lastOpMultDiv) u = ppl_printUnit(c, o, &real, &imag, 0, 1, SW_DISPLAY_L);
             // Values of one after a multiplication or division are written as their unit alone
             if ((real != 1) || (imag != 0)) {
@@ -585,14 +585,14 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 if ((tokenBuff[ei].state == 'P') && (in[ei] != '(')) goto variableName;
                 ppl_dictLookupWithWildcard(c->namespaces[0], in + i, dummyVar, FNAME_LENGTH, &dptr);
                 if (dptr == NULL) goto variableName; // function was not in the default namespace
-                char *fname = dptr->key;
-                void *ldptr = ppl_dictLookup(c->namespaces[c->ns_ptr], fname);
+                const char *fname = dptr->key;
+                const void *ldptr = ppl_dictLookup(c->namespaces[c->ns_ptr], fname);
                 if (ldptr != NULL) goto variableName; // function redefined locally
                 ldptr = ppl_dictLookup(c->namespaces[1], fname);
                 if (ldptr != NULL) goto variableName; // function redefined globally
-                pplFunc *fnobj = (pplFunc *) ((pplObj *) dptr->data)->auxil;
+                const pplFunc *fnobj = (pplFunc *) ((pplObj *) dptr->data)->auxil;
                 if (fnobj == NULL) goto variableName;
-                char *latex = fnobj->LaTeX;
+                const char *latex = fnobj->LaTeX;
                 if (latex == NULL) goto variableName; // no latex model supplied
 
                 // Find ( at beginning of function arguments

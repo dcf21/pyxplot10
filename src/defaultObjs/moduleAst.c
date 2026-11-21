@@ -65,7 +65,7 @@ double __Lcdm_DA_integrand(const double z, void *params) {
     // Distance Measured in Cosmology
     // David W. Hogg
     // http://arxiv.org/abs/astro-ph/9905116
-    Lcdm_comm *p = (Lcdm_comm *) params;
+    const Lcdm_comm *p = (Lcdm_comm *) params;
     return 1.0 /
             sqrt(p->OmegaM * pow(1 + z, 3) +
                  p->OmegaL); // Eq (14), as substituted into eq (15) and (16). Assume omega_k is zero
@@ -82,7 +82,7 @@ double __Lcdm_t_integrand(const double z, void *params) {
     // THE COSMOLOGICAL CONSTANT
     // Sean M. Carroll and William H. Press
     // http://nedwww.ipac.caltech.edu/level5/Carroll/frames.html
-    Lcdm_comm *p = (Lcdm_comm *) params;
+    const Lcdm_comm *p = (Lcdm_comm *) params;
     return pow(1 + z, -1) * pow(pow(1 + z, 2) * (1 + p->OmegaM * z) - z * (2 + z) * p->OmegaL, -0.5); // Equation (16)
 }
 
@@ -165,7 +165,7 @@ double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const 
 //! \return The absolute difference between the age at the trial redshift and the target age, in seconds
 
 double __Lcdm_z_from_t_slave(const double z, void *params) {
-    Lcdm_comm *p = (Lcdm_comm *) params;
+    const Lcdm_comm *p = (Lcdm_comm *) params;
     return fabs(Lcdm_t_from_z(pow(10.0, z), p->H, p->OmegaM, p->OmegaL) - p->t);
 }
 
@@ -270,7 +270,7 @@ static int checkRedshift(pplFuncCall *f) {
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Lcdm_age(H0,w_m,w_l)";
+    const char *FunctionDescription = "Lcdm_age(H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (checkLcdmInputs(&call, 0, "first")) return;
     OUTPUT.real = Lcdm_age(in[0].real, in[1].real, in[2].real);
@@ -289,7 +289,7 @@ void pplfunc_Lcdm_age(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Lcdm_age(z,H0,w_m,w_l)";
+    const char *FunctionDescription = "Lcdm_age(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (checkLcdmInputs(&call, 1, "second")) return;
     if (checkRedshift(&call)) return;
@@ -310,7 +310,7 @@ void pplfunc_Lcdm_angscale(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Lcdm_DA(z,H0,w_m,w_l)";
+    const char *FunctionDescription = "Lcdm_DA(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (checkLcdmInputs(&call, 1, "second")) return;
     if (checkRedshift(&call)) return;
@@ -330,7 +330,7 @@ void pplfunc_Lcdm_DA(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Lcdm_DL(z,H0,w_m,w_l)";
+    const char *FunctionDescription = "Lcdm_DL(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (checkLcdmInputs(&call, 1, "second")) return;
     if (checkRedshift(&call)) return;
@@ -350,7 +350,7 @@ void pplfunc_Lcdm_DL(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Lcdm_DM(z,H0,w_m,w_l)";
+    const char *FunctionDescription = "Lcdm_DM(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (checkLcdmInputs(&call, 1, "second")) return;
     if (checkRedshift(&call)) return;
@@ -370,7 +370,7 @@ void pplfunc_Lcdm_DM(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Lcdm_t(z,H0,w_m,w_l)";
+    const char *FunctionDescription = "Lcdm_t(z,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (checkLcdmInputs(&call, 1, "second")) return;
     if (checkRedshift(&call)) return;
@@ -390,7 +390,7 @@ void pplfunc_Lcdm_t(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Lcdm_z(t,H0,w_m,w_l)";
+    const char *FunctionDescription = "Lcdm_z(t,H0,w_m,w_l)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (checkLcdmInputs(&call, 1, "second")) return;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a time", UNIT_TIME, 1)) return;
@@ -410,7 +410,7 @@ void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The argument must be a date, or a unix time given as a number
-    char *FunctionDescription = "siderealTime(d)";
+    const char *FunctionDescription = "siderealTime(d)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Check the type of the argument
     if ((nArgs != 1) || ((in[0].objType != PPLOBJ_NUM) && (in[0].objType != PPLOBJ_DATE))) {
@@ -453,7 +453,7 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
 
 void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The argument must be a date, or a unix time given as a number
-    char *FunctionDescription = "moonPhase(d)";
+    const char *FunctionDescription = "moonPhase(d)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Check the type of the argument
     if ((nArgs != 1) || ((in[0].objType != PPLOBJ_NUM) && (in[0].objType != PPLOBJ_DATE))) {

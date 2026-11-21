@@ -231,7 +231,7 @@ void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
     }
     printf("Table size: %d x %ld\n", i->Ncolumns_real, i->Nrows);
     printf("Memory context: %d\n", i->memContext);
-    dataBlock *blk = i->first;
+    const dataBlock *blk = i->first;
     const int Ncolumns = i->Ncolumns_real;
     // Print each block of the table
     while (blk != NULL) {
@@ -486,7 +486,7 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
     // Report a failure to evaluate the expression
     if ((c->errStat.status) || (c->dollarStat.warntxt[0] != '\0')) {
         int errp = c->errStat.errPosExpr, prefix = 0;
-        char *errt = NULL;
+        const char *errt = NULL;
         if (errp < 0) errp = 0;
         // Warnings from the $ operator take precedence
         if (c->dollarStat.warntxt[0] != '\0') {
@@ -616,7 +616,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
     // label
     if (labelExpr != NULL) {
         int fail = 0;
-        char *labIn = NULL;
+        const char *labIn = NULL;
         pplExpr *ex = labelExpr;
         ppldata_UsingConvert(c, ex, columns_str, columns_val, Ncols, filename, file_linenumber, file_linenumbers,
                              linenumber_count, block_count, index_number, usingRowCol, colHeads, NcolHeads, colUnits,
@@ -789,7 +789,7 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
     // Make a row of data from the next word of each line read, until the lines run out
     while (!cancellationFlag) {
         int gotData = 0, Ncols = 0;
-        rawDataBlock *blk = (*in)->first;
+        const rawDataBlock *blk = (*in)->first;
         char *rowData[MAX_DATACOLS];
         long file_linenumber[MAX_DATACOLS];
 
@@ -798,7 +798,7 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
             file_linenumber[0] = -1;
             // Each stored line
             for (int i = 0; ((i < blk->blockPosition) && (Ncols < MAX_DATACOLS)); i++) {
-                char *s = blk->text[i];
+                const char *s = blk->text[i];
                 // A line which has run out supplies a blank value
                 if (s == NULL) {
                     rowData[Ncols] = " ";
@@ -876,8 +876,8 @@ static int ppldata_sort_sortCol;
 //! \return -1, 0 or 1 if the first row's sort value is less than, equal to or greater than the second's
 
 static int ppldata_sort_cmp(const void *xv, const void *yv) {
-    ppldata_sorter *x = (ppldata_sorter *) xv;
-    ppldata_sorter *y = (ppldata_sorter *) yv;
+    const ppldata_sorter *x = (ppldata_sorter *) xv;
+    const ppldata_sorter *y = (ppldata_sorter *) yv;
     return pplObjCmpQuiet((void *) &x->data_obj[ppldata_sort_sortCol], (void *) &y->data_obj[ppldata_sort_sortCol]);
 }
 
@@ -2014,7 +2014,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                         // Report a failure to evaluate the function, and skip this sample
                         if (c->errStat.status) {
                             int errp = c->errStat.errPosExpr;
-                            char *errt = NULL;
+                            const char *errt = NULL;
                             if (errp < 0) errp = 0;
                             if (c->errStat.errMsgExpr[0] != '\0') errt = c->errStat.errMsgExpr;
                             else if (c->errStat.errMsgCmd[0] != '\0') errt = c->errStat.errMsgCmd;
@@ -2209,8 +2209,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                      const double *max, const int *maxSet, pplObj *unitRange, const int persistent, int *status,
                      char *errtext, int *errCount, const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
-    pplObj *stko = stk + stkbase;
+    const pplObj *stk = in->stk;
+    const pplObj *stko = stk + stkbase;
     pplExpr *usingExprs[USING_ITEMS_MAX], *selectExpr = NULL, *labelExpr = NULL, *sortBy = NULL;
     long everyList[6] = {1, 1, -1, -1, -1, -1};
     int Nusing = 0, autoUsingList = 0, continuity = DATAFILE_CONTINUOUS, usingRowCol = DATAFILE_COL, indexNo = -1;
@@ -2249,7 +2249,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         // The raster of x values is taken from the plot command's range, or from the x1 axis, or from defaults;
         // parametric plots use the range of t, or of u and v
         if (!parametric) {
-            pplset_axis *X = &c->set->XAxes[1];
+            const pplset_axis *X = &c->set->XAxes[1];
             rasterXlog = (X->log == SW_BOOL_TRUE); // Read from axis x1
             // The lower limit from the command, or from the axis; otherwise a default relative to the upper limit
             if (minSet[0]) {
@@ -2407,15 +2407,15 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
 
         // See if spacing has been specified
         if ((poss > 0) && (stko[poss].objType != PPLOBJ_ZOM)) {
-            pplObj *spacing = &stko[poss];
+            const pplObj *spacing = &stko[poss];
             spacingSet = 1;
             // Work out the number of samples from the spacing, for each raster
             for (int i = 0; i <= sampleGrid; i++) {
                 double SpacingDbl, NumberOfSamplesDbl;
-                int *rast_log = i ? &rasterYlog : &rasterXlog;
+                const int *rast_log = i ? &rasterYlog : &rasterXlog;
                 double *rast_min = i ? &rasterYmin : &rasterXmin;
                 double *rast_max = i ? &rasterYmax : &rasterXmax;
-                pplObj *rast_unit = i ? &rasterYunits : &rasterXunits;
+                const pplObj *rast_unit = i ? &rasterYunits : &rasterXunits;
                 int *out = i ? &rasterYlen : &rasterXlen;
                 // On logarithmic rasters, the spacing is a factor
                 if (*rast_log) {
@@ -2748,7 +2748,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
 
             // A single expression which evaluates to a string is a filename; expressions which evaluate to vectors
             // supply vectors of data; others are functions to sample
-            pplObj *first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
+            const pplObj *first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
             if ((!c->errStat.status) && (first->objType == PPLOBJ_STR) && (Nexprs == 1) &&
                 (rasterY == NULL)) // If we have a single expression that evaluates to a string, it's a filename
             {
@@ -2759,7 +2759,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
             } else if ((!c->errStat.status) && (first->objType == PPLOBJ_VEC) && (rasterY != NULL)) {
                 const int stkLevelOld = c->stackPtr;
-                gsl_vector *v = ((pplVector *) first->auxil)->v;
+                const gsl_vector *v = ((pplVector *) first->auxil)->v;
                 const int l = v->size;
                 int j;
                 pplObj *vecs = (pplObj *) ppl_memAlloc(Nexprs * sizeof(pplObj));

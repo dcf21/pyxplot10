@@ -121,7 +121,7 @@ void ppl_garbageObject(pplObj *o) {
             }
             break;
         case PPLOBJ_EXP: {
-            void *old = o->auxil;
+            const void *old = o->auxil;
             o->auxil = NULL;
             // Free the compiled expression
             if ((old != NULL) && o->auxilMalloced) {
@@ -131,7 +131,7 @@ void ppl_garbageObject(pplObj *o) {
             break;
         }
         case PPLOBJ_BYT: {
-            void *old = o->auxil;
+            const void *old = o->auxil;
             o->auxil = NULL;
             if ((old != NULL) && (o->auxilMalloced)) ppl_parserLineFree((parserLine *) old);
             break;

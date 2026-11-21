@@ -67,7 +67,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
     sigset_t sigs;
-    pplerr_context *ec = &c->errcontext;
+    const pplerr_context *ec = &c->errcontext;
 
     // SIGCHLD is unblocked again after each kpsewhich process has been read
     sigemptyset(&sigs);
@@ -175,8 +175,8 @@ void ppl_kpse_wrap_init(ppl_context *c) {
 char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned char recurse) {
     // The result is returned in a static buffer, shared by the recursive calls
     char msg[PPL_MSG_LENGTH];
-    DIR *dp;
-    struct dirent *dirp;
+    const DIR *dp;
+    const struct dirent *dirp;
     struct stat statbuf;
     static char buffer[FNAME_LENGTH], next[FNAME_LENGTH];
     static unsigned char found;
@@ -232,7 +232,7 @@ char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigne
     }
     // Search each directory in turn
     for (int i = 0; paths[i] != NULL; i++) {
-        char *output = ppl_kpse_wrap_test_path(ec, s, paths[i], RecurseList[i]);
+        const char *output = ppl_kpse_wrap_test_path(ec, s, paths[i], RecurseList[i]);
         if (output != NULL) return output;
     }
     return NULL;

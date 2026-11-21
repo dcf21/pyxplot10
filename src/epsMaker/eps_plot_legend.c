@@ -350,7 +350,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                 pageno++;
                 continue;
             }
-            postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
+            const postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
             // If LaTeX did not typeset the title, give it zero size
             if (dviPage == NULL) {
                 pd->TitleFinal_width = 0;
@@ -618,7 +618,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
              pd = titledDataset(pd->next, &iDataSet)) {
             int xyzaxis[3];
             pplset_axis *axissets[3];
-            dataTable *data = x->current->plotdata[iDataSet];
+            const dataTable *data = x->current->plotdata[iDataSet];
             // Datasets with no data have no icon
             if ((data == NULL) || (data->Nrows < 1)) {
                 x->LaTeXpageno++;

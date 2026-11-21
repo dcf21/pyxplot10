@@ -375,7 +375,7 @@ static int dviLookupFontMap(pplerr_context *ec, const char *texName, dviFontMapE
     int found = 0;
 
     // Find the font map
-    char *mapPath = ppl_kpse_wrap_find_map(ec, "psfonts.map");
+    const char *mapPath = ppl_kpse_wrap_find_map(ec, "psfonts.map");
     // Without a font map, no fonts can be found in it
     if (mapPath == NULL) {
         if (DEBUG) ppl_log(ec, "Could not find TeX font map psfonts.map");
@@ -418,7 +418,7 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
 
     // Find and open the encoding file
     snprintf(name, sizeof(name), "%s", encFile);
-    char *path = ppl_kpse_wrap_find_enc(ec, name);
+    const char *path = ppl_kpse_wrap_find_enc(ec, name);
     // Report an encoding file which cannot be found
     if ((path == NULL) || ((fp = fopen(path, "r")) == NULL)) {
         ppl_snprintfTrunc(errStr, SSTR_LENGTH, "Could not find font encoding file '%s'.", encFile);
@@ -479,7 +479,7 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
 static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font) {
     // Variables for finding the font
     dviFontMapEntry entry;
-    char *encoding = NULL;
+    const char *encoding = NULL;
     int err;
 
     // Find the font in the font map
@@ -930,7 +930,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     char msg[PPL_MSG_LENGTH];
     int hi, di; // Indices
     int chnum; // Character number in this font
-    TFMcharInfo *chin; // Character info for this character
+    const TFMcharInfo *chin; // Character info for this character
     double height, depth;
 
     // There must be a font
@@ -938,7 +938,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Internal font failure!");
         return DVIE_INTERNAL;
     }
-    dviTFM *tfm = font->tfm; // Details of this font
+    const dviTFM *tfm = font->tfm; // Details of this font
     font->maxHeight = 0.0;
     font->maxDepth = 0.0;
 

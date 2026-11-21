@@ -276,7 +276,7 @@ int ppl_listRemoveAll(list *in, void *item) {
 
 void *ppl_listGetItem(const list *in, const int N) {
     if (in == NULL) return NULL;
-    listItem *ptr = in->first;
+    const listItem *ptr = in->first;
     // Walk along the list to the Nth item
     for (int i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
     if (ptr == NULL) return NULL;

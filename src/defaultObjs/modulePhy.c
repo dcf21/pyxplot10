@@ -60,7 +60,7 @@
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Bv(nu,T)";
+    const char *FunctionDescription = "Bv(nu,T)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj kelvin;
 
@@ -92,7 +92,7 @@ void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Bvmax(T)";
+    const char *FunctionDescription = "Bvmax(T)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj kelvin;
 

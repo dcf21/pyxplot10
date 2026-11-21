@@ -273,7 +273,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
-            pplObj *val = &stk[pos + PARSE_histogram_x_bin_list];
+            const pplObj *val = &stk[pos + PARSE_histogram_x_bin_list];
             // Warn about bin boundaries with the wrong units, and skip them
             if (!ppl_unitsDimEqual(&firstEntry, val)) {
                 ppl_snprintfTrunc(

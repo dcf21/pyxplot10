@@ -382,7 +382,7 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
     {
         // Pick out filename of eps file to display, which is last command-line argument
         int state = 0;
-        char *filename = in + 1;
+        const char *filename = in + 1;
         for (int i = 1; in[i] != '\0'; i++)
             // A new word
             if ((((unsigned char) in[i] > ' ') || (in[i] < '\0')) || ((i > 1) && (in[i - 1] == '\\'))) {

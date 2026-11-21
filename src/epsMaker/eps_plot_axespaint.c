@@ -602,10 +602,10 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                     // Axes at zero are drawn through the zero of each monotonic section of the perpendicular axes;
                     // others along the edges of the graph
                     if (axes[i].atzero) {
-                        pplset_axis *PerpAxisX =
+                        const pplset_axis *PerpAxisX =
                                 &(x->current->XAxes[1]); // Put axis at zero of perpendicular x1-, y1- and z1-axes
-                        pplset_axis *PerpAxisY = &(x->current->YAxes[1]);
-                        pplset_axis *PerpAxisZ = &(x->current->ZAxes[1]);
+                        const pplset_axis *PerpAxisY = &(x->current->YAxes[1]);
+                        const pplset_axis *PerpAxisZ = &(x->current->ZAxes[1]);
                         unsigned char LastX, LastY, LastZ, DoneX, DoneY, DoneZ;
                         int xrn, yrn, zrn;
                         double pos[3], xpos1, ypos1, zpos1, xpos2, ypos2, zpos2, dummy;

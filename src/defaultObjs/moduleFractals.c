@@ -59,7 +59,7 @@
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "julia(z,cz,MaxIter)";
+    const char *FunctionDescription = "julia(z,cz,MaxIter)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckLong(&call, &in[2], "MaxIter", "function's third argument must be")) return;
     {
@@ -89,7 +89,7 @@ void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_mandelbrot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "mandelbrot(z,MaxIter)";
+    const char *FunctionDescription = "mandelbrot(z,MaxIter)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckLong(&call, &in[1], "MaxIter", "function's second argument must be")) return;
     {

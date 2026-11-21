@@ -102,7 +102,7 @@ static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *st
 
 static void listMembers(pplFuncCall *call, const int functions) {
     pplObj *in = call->in;
-    pplObj *iter = in[-1].self_this;
+    const pplObj *iter = in[-1].self_this;
     dict *const builtIn = pplObjMethods[iter->objType];
     char *keys[4096], *key;
     int count = 0;
@@ -355,7 +355,7 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
         int l = 0;
         // Test each separator against the string at position i
         for (int k = 0; ((k < nArgs) && (!breaking)); k++) {
-            char *cmp = (char *) in[k].auxil;
+            const char *cmp = (char *) in[k].auxil;
             // Compare the separator with the string, character by character
             for (l = 0; cmp[l] != '\0'; l++) {
                 if (instr[i + l] == '\0') break;
@@ -622,7 +622,7 @@ static void pplmethod_strBeginsWith(ppl_context *c, pplObj *in, const int nArgs,
         ppl_funcError(status, errType, errText, ERR_TYPE, "The beginsWith() method requires a single string argument.");
         return;
     }
-    char *cmpstr = (char *) in[0].auxil;
+    const char *cmpstr = (char *) in[0].auxil;
     pplObjBool(&OUTPUT, 0, strncmp(instr, cmpstr, strlen(cmpstr)) == 0);
 }
 
@@ -646,7 +646,7 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
         ppl_funcError(status, errType, errText, ERR_TYPE, "The endsWith() method requires a single string argument.");
         return;
     }
-    char *cmpstr = (char *) in[0].auxil;
+    const char *cmpstr = (char *) in[0].auxil;
     const int il = strlen(instr);
     const int cl = strlen(cmpstr);
     instr += il - cl;
@@ -677,7 +677,7 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
         ppl_funcError(status, errType, errText, ERR_TYPE, "The find() method requires a single string argument.");
         return;
     }
-    char *cmpstr = (char *) in[0].auxil;
+    const char *cmpstr = (char *) in[0].auxil;
     const int il = strlen(instr);
     const int cl = strlen(cmpstr);
     const int pmax = il - cl;
@@ -718,7 +718,7 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     }
     v.refCount = 1;
     list *l = (list *) OUTPUT.auxil;
-    char *cmpstr = (char *) in[0].auxil;
+    const char *cmpstr = (char *) in[0].auxil;
     const int il = strlen(instr);
     const int cl = strlen(cmpstr);
     const int pmax = il - cl;
@@ -786,7 +786,7 @@ static int methodTimezoneOffset(pplFuncCall *f, const int nArgs, const pplObj *t
 
 static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
-    char *FunctionDescription = "toDayOfMonth(<timezone>)";
+    const char *FunctionDescription = "toDayOfMonth(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
@@ -815,7 +815,7 @@ static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nAr
 
 static void pplmethod_dateToDayWeekName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
-    char *FunctionDescription = "toDayWeekName(<timezone>)";
+    const char *FunctionDescription = "toDayWeekName(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj *t = in[-1].self_this;
     char *tmp;
@@ -840,7 +840,7 @@ static void pplmethod_dateToDayWeekName(ppl_context *c, pplObj *in, const int nA
 
 static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
-    char *FunctionDescription = "toDayWeekNum(<timezone>)";
+    const char *FunctionDescription = "toDayWeekNum(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj *t = in[-1].self_this;
     double offset;
@@ -866,7 +866,7 @@ static void pplmethod_dateToDayWeekNum(ppl_context *c, pplObj *in, const int nAr
 
 static void pplmethod_dateToHour(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
-    char *FunctionDescription = "toHour(<timezone>)";
+    const char *FunctionDescription = "toHour(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
@@ -910,7 +910,7 @@ static void pplmethod_dateToJD(ppl_context *c, pplObj *in, const int nArgs, int 
 
 static void pplmethod_dateToMinute(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
-    char *FunctionDescription = "toMinute(<timezone>)";
+    const char *FunctionDescription = "toMinute(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
@@ -954,7 +954,7 @@ static void pplmethod_dateToMJD(ppl_context *c, pplObj *in, const int nArgs, int
 
 static void pplmethod_dateToMonthName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                       char *errText) {
-    char *FunctionDescription = "toMonthName(<timezone>)";
+    const char *FunctionDescription = "toMonthName(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
@@ -985,7 +985,7 @@ static void pplmethod_dateToMonthName(ppl_context *c, pplObj *in, const int nArg
 
 static void pplmethod_dateToMonthNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                      char *errText) {
-    char *FunctionDescription = "toMonthNum(<timezone>)";
+    const char *FunctionDescription = "toMonthNum(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
@@ -1014,7 +1014,7 @@ static void pplmethod_dateToMonthNum(ppl_context *c, pplObj *in, const int nArgs
 
 static void pplmethod_dateToSecond(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
-    char *FunctionDescription = "toSecond(<timezone>)";
+    const char *FunctionDescription = "toSecond(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
@@ -1043,7 +1043,7 @@ static void pplmethod_dateToSecond(ppl_context *c, pplObj *in, const int nArgs, 
 
 static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // t is the date on which the method was called
-    char *FunctionDescription = "str(<s>,<timezone>)";
+    const char *FunctionDescription = "str(<s>,<timezone>)";
     pplObj *t = in[-1].self_this;
     char *format = NULL, *out = NULL, timezone[FNAME_LENGTH];
     double offset;
@@ -1112,7 +1112,7 @@ static void pplmethod_dateToUnix(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_dateToYear(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
-    char *FunctionDescription = "toYear(<timezone>)";
+    const char *FunctionDescription = "toYear(<timezone>)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int year, month, day, hour, minute;
     double second;
@@ -1143,7 +1143,7 @@ static void pplmethod_dateToYear(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
-    pplObj *a = in[-1].self_this;
+    const pplObj *a = in[-1].self_this;
     double r, g, b;
     // A color's color space is stored in exponent[0], and its components in exponent[8] to exponent[11]; convert them
     // to RGB
@@ -1168,7 +1168,7 @@ static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
-    pplObj *a = in[-1].self_this;
+    const pplObj *a = in[-1].self_this;
     double c, m, y, k;
     // Convert the components to CMYK, if they are not already
     pplcol_toCMYK(a, &c, &m, &y, &k);
@@ -1193,7 +1193,7 @@ static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArg
 
 static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
-    pplObj *a = in[-1].self_this;
+    const pplObj *a = in[-1].self_this;
     double h, s, b;
     // Convert the components to HSB, if they are not already
     pplcol_toHSB(a, &h, &s, &b);
@@ -1215,7 +1215,7 @@ static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    pplObj *a = in[-1].self_this;
+    const pplObj *a = in[-1].self_this;
     double r, g, b;
     // Convert the components to RGB, if they are not already
     pplcol_toRGB(a, &r, &g, &b);
@@ -1234,7 +1234,7 @@ static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int 
 
 static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs, int *status, int *errType,
                                 char *errText) {
-    pplObj *a = in[-1].self_this;
+    const pplObj *a = in[-1].self_this;
     double c, m, y, k;
     // Convert the components to CMYK, if they are not already
     pplcol_toCMYK(a, &c, &m, &y, &k);
@@ -1252,7 +1252,7 @@ static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_colToHSB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    pplObj *a = in[-1].self_this;
+    const pplObj *a = in[-1].self_this;
     double h, s, b;
     // Convert the components to HSB, if they are not already
     pplcol_toHSB(a, &h, &s, &b);
@@ -1378,7 +1378,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
         gsl_vector *vi = ((pplVector *) in[0].auxil)->v;
         for (int j = 0; j < vi->size; j++, i++) gsl_vector_set(vo, i, gsl_vector_get(vi, j));
     } else if (t == PPLOBJ_LIST) {
-        list *listin = (list *) in[0].auxil;
+        const list *listin = (list *) in[0].auxil;
         listIterator *li = ppl_listIterateInit(listin);
         pplObj *item;
         // Each item in the list must be a real number with the same units as the vector
@@ -1423,7 +1423,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
 
 static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
-    char *FunctionDescription = "filter(f)";
+    const char *FunctionDescription = "filter(f)";
     pplObj *st = in[-1].self_this;
     gsl_vector *va = ((pplVector *) st->auxil)->v;
     int ovlen = 0, i = 0;
@@ -1445,7 +1445,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1605,7 +1605,7 @@ static void pplmethod_vectorLen(ppl_context *c, pplObj *in, const int nArgs, int
 static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
     pplObj *st = in[-1].self_this;
-    gsl_vector *vec = ((pplVector *) st->auxil)->v;
+    const gsl_vector *vec = ((pplVector *) st->auxil)->v;
     const int l = vec->size;
     pplObj v;
     // The output is a new list
@@ -1637,9 +1637,9 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // st is the vector on which the method was called
-    char *FunctionDescription = "map(f)";
+    const char *FunctionDescription = "map(f)";
     pplObj *st = in[-1].self_this;
-    gsl_vector *vec = ((pplVector *) st->auxil)->v;
+    const gsl_vector *vec = ((pplVector *) st->auxil)->v;
     pplObj v, val2;
     pplExpr dummy;
 
@@ -1658,7 +1658,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1776,7 +1776,7 @@ static void pplmethod_vectorNorm(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
-    char *FunctionDescription = "reduce(f)";
+    const char *FunctionDescription = "reduce(f)";
     const int stkLevelOld = c->stackPtr;
     pplExpr dummy;
     pplObj *st = in[-1].self_this;
@@ -1798,7 +1798,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1951,7 +1951,7 @@ static void pplmethod_listCount(ppl_context *c, pplObj *in, const int nArgs, int
     pplObj *item;
     // Count the items equal to the argument
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
-        pplObj *a = item;
+        const pplObj *a = item;
         pplObj *b = &in[0];
         if (pplObjCmpQuiet(&a, &b) == 0) count++;
     }
@@ -1989,7 +1989,7 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
             ppl_listAppendCpy(l, &v, sizeof(pplObj));
         }
     } else if (t == PPLOBJ_LIST) {
-        list *listin = (list *) in[0].auxil;
+        const list *listin = (list *) in[0].auxil;
         listIterator *li = ppl_listIterateInit(listin);
         pplObj *item;
         // Append a copy of each item of the list
@@ -2021,7 +2021,7 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
-    char *FunctionDescription = "filter(f)";
+    const char *FunctionDescription = "filter(f)";
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     pplObj *item;
@@ -2043,7 +2043,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -2121,7 +2121,7 @@ static void pplmethod_listIndex(ppl_context *c, pplObj *in, const int nArgs, int
     pplObj *item;
     // Find the first item equal to the argument, counting from zero
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
-        pplObj *a = item;
+        const pplObj *a = item;
         pplObj *b = &in[0];
         // Return the position of the first match
         if (pplObjCmpQuiet(&a, &b) == 0) {
@@ -2210,7 +2210,7 @@ static void pplmethod_listLen(ppl_context *c, pplObj *in, const int nArgs, int *
 
 static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // st is the list on which the method was called
-    char *FunctionDescription = "map(f)";
+    const char *FunctionDescription = "map(f)";
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     pplObj *item;
@@ -2232,7 +2232,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -2399,7 +2399,7 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
 
 static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                  char *errText) {
-    char *FunctionDescription = "reduce(f)";
+    const char *FunctionDescription = "reduce(f)";
     const int stkLevelOld = c->stackPtr;
     pplExpr dummy;
     pplObj *st = in[-1].self_this;
@@ -2422,7 +2422,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -2641,7 +2641,7 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
 
 static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                        char *errText) {
-    char *FunctionDescription = "sortOn(f)";
+    const char *FunctionDescription = "sortOn(f)";
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     long n = l->length;
@@ -2662,7 +2662,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -2729,7 +2729,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     long i = 0;
     // Every item of the list must itself be a list
     while (li != NULL) {
-        pplObj *o = (pplObj *) li->data;
+        const pplObj *o = (pplObj *) li->data;
         ppl_listIterate(&li);
         i++;
         // Report an item which is not a list
@@ -2744,7 +2744,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     i = 0;
     // Every sublist must have the element to sort on; negative indices count from the end
     while (li != NULL) {
-        list *o = (list *) ((pplObj *) li->data)->auxil;
+        const list *o = (list *) ((pplObj *) li->data)->auxil;
         ppl_listIterate(&li);
         i++;
         // Report a sublist which is too short
@@ -2768,7 +2768,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     // Fill the array with pairs of pointers: the element to sort on, followed by the sublist. qsort() then sorts the
     // pairs on their first members.
     while (li != NULL) {
-        pplObj *o = (pplObj *) li->data;
+        const pplObj *o = (pplObj *) li->data;
         list *l = (list *) o->auxil;
         items[i++] = ppl_listGetItem(l, (eNum >= 0) ? eNum : (l->length + eNum));
         items[i++] = (pplObj *) li->data;
@@ -2802,7 +2802,7 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     long i = 0;
     pplObj *st = in[-1].self_this;
-    list *listin = (list *) st->auxil;
+    const list *listin = (list *) st->auxil;
     listIterator *li = ppl_listIterateInit(listin);
     const long len = listin->length;
     // A vector cannot be empty

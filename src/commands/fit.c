@@ -386,7 +386,7 @@ static double GetHessian_diff2(const double x, void *p_void) {
 static double GetHessian_diff1(const double x, void *p_void) {
     double output, output_error;
     gsl_function fn;
-    fitComm *p = (fitComm *) p_void;
+    const fitComm *p = (fitComm *) p_void;
 
     // Differentiate the residual with respect to the second parameter, with the first set to x
     fn.function = &GetHessian_diff2;
@@ -501,7 +501,7 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
 
 static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vector *, void *),
                               const unsigned char FittingsigmaData) {
-    ppl_context *c = commlink->c;
+    const ppl_context *c = commlink->c;
     size_t iter = 0, iter2 = 0;
     int status = 0, NParams;
     double size = 0, sizelast = 0, sizelast2 = 0;
@@ -625,7 +625,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
 void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     // Variables for reading the data, fitting it and reporting the results
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     int status = 0, Nvars, NExpect, Nusing;
     char *scratchPad;
     long int i, j, k;
@@ -802,7 +802,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Work out how many data points we have within the specified ranges
     long int NDataPoints = 0;
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
     // Count the data points which fall within the ranges
     while (blk != NULL) {
         // Loop over the rows in each block
@@ -1087,7 +1087,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Print each variable in the form (value +/- uncertainty) unit
     for (i = 0; i < dataComm.NFitVars; i++) {
         pplObj dummyTemp;
-        char *cptr = ppl_printUnit(c, varObj[i], &tmp1, &tmp2, 0, 1,
+        const char *cptr = ppl_printUnit(c, varObj[i], &tmp1, &tmp2, 0, 1,
                                    0); // Work out what unit the best-fit value is best displayed in
         if (fabs(varObj[i]->real) > 1e-200)
             tmp3 = tmp1 /

@@ -395,8 +395,8 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         return 0;
     } else if (t1o == 6) // 6 - vector
     {
-        gsl_vector *av = ((pplVector *) a->auxil)->v;
-        gsl_vector *bv = ((pplVector *) b->auxil)->v;
+        const gsl_vector *av = ((pplVector *) a->auxil)->v;
+        const gsl_vector *bv = ((pplVector *) b->auxil)->v;
         if (av->size < bv->size) return -1;
         if (av->size > bv->size) return 1;
         // Vectors are compared by length, then units, then element by element
@@ -413,8 +413,8 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     } else if (t1o == 7) // 7 - list
     {
         pplObj *oba, *obb;
-        list *la = (list *) a->auxil;
-        list *lb = (list *) b->auxil;
+        const list *la = (list *) a->auxil;
+        const list *lb = (list *) b->auxil;
         if (la->length < lb->length) return -1;
         if (la->length > lb->length) return 1;
         listIterator *lia = ppl_listIterateInit(la);
@@ -425,8 +425,8 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         return out;
     } else if (t1o == 8) // 8 - matrix
     {
-        gsl_matrix *am = ((pplMatrix *) a->auxil)->m;
-        gsl_matrix *bm = ((pplMatrix *) b->auxil)->m;
+        const gsl_matrix *am = ((pplMatrix *) a->auxil)->m;
+        const gsl_matrix *bm = ((pplMatrix *) b->auxil)->m;
         if (am->size1 * am->size2 < bm->size1 * bm->size2) return -1;
         if (am->size1 * am->size2 > bm->size1 * bm->size2) return 1;
         // Matrices are compared by number of elements, then units, then element by element
@@ -445,8 +445,8 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     {
         pplObj *oba, *obb;
         char *keya, *keyb;
-        dict *da = (dict *) a->auxil;
-        dict *db = (dict *) b->auxil;
+        const dict *da = (dict *) a->auxil;
+        const dict *db = (dict *) b->auxil;
         if (da->length < db->length) return -1;
         if (da->length > db->length) return 1;
         dictIterator *dia = ppl_dictIterateInit(da);

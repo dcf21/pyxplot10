@@ -342,7 +342,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
         // Intel byte ordering afflicts the above,
         // and the entries are stored as dwords,
         // not words.
-        unsigned char *palette = header + 40;
+        const unsigned char *palette = header + 40;
         // Check the bit masks
         if ((palette[0] != 0) || (palette[4] != 0xe0) || (palette[8] != 0x1f) || (palette[9] != 0)) {
             ppl_error(ec, ERR_FILE, -1, -1, "This 16-bit bitmap file appears to be corrupted");
@@ -468,7 +468,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
     // Pointers into the input and output
     unsigned char *c_in = in;
     unsigned char *c_out = out;
-    unsigned char *inEnd = in + len;
+    const unsigned char *inEnd = in + len;
 
     // Decode each row, from the bottom of the image up. Rows are stored from the top down, so row i starts at
     // out + (height - i) * width.

@@ -105,7 +105,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
             data->firstEntries[j].real = 1.0;
             data->firstEntries[j].imag = 0.0;
             data->firstEntries[j].flagComplex = 0;
-            char *cptr = ppl_printUnit(c, data->firstEntries + j, multiplier + j, &tmpdbl, 0, 1, SW_DISPLAY_T);
+            const char *cptr = ppl_printUnit(c, data->firstEntries + j, multiplier + j, &tmpdbl, 0, 1, SW_DISPLAY_T);
             for (i = 0; ((cptr[i] != '\0') && (cptr[i] != '(')); i++);
             i++; // Fastforward over opening bracket
             for (; ((cptr[i] != '\0') && (cptr[i] != ')')); i++) fprintf(output, "%c", cptr[i]);
@@ -116,7 +116,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
 
     // Iterate over columns of data in this data grid, working out which columns of data are all ints, and which are all %f-able data
     for (int j = 0; j < Ncolumns; j++) { allInts[j] = allSmall[j] = 1; }
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Loop over the rows in each block
@@ -275,7 +275,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
     char msg[PPL_MSG_LENGTH];
     wordexp_t wordExp;
     int pos;
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     FILE *output = NULL;
     char filenameTemp[FNAME_LENGTH];
     parserLine *spool = NULL, **dataSpool = &spool;
@@ -306,7 +306,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
     }
 
     // Work out filename for output file
-    char *filename = c->set->term_current.output;
+    const char *filename = c->set->term_current.output;
     if ((filename == NULL) || (filename[0] == '\0')) filename = "pyxplot.txt";
 
     // Perform expansion of shell filename shortcuts such as ~

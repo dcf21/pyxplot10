@@ -119,7 +119,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     // Check that we have some data
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
     const int Ncol = data->Ncolumns_real;
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
 
     // Work out normalisation of variable c1
     if (!eps_plot_colormap_findCRange(sg, 0, blk, Ncol, XSize, YSize, &CMin, &CMax, &CLog)) return; // No data present
@@ -266,7 +266,7 @@ static int IsBetween(const double x, const double a, const double b, double *f) 
 static int GetStartPoint(const double c1, const dataTable *data, unsigned char **flags, int XSize, const int YSize,
                          int x0, int y0, const int EntryFace, int *ExitFace, int *xcell, int *ycell, double *Xout,
                          double *Yout) {
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
     const int Ncol = data->Ncolumns_real;
     const int pass = 0;
     double f;
@@ -343,7 +343,7 @@ static int GetStartPoint(const double c1, const dataTable *data, unsigned char *
 static int GetNextPoint(const double c1, const dataTable *data, const int pass, const int XSize, const int YSize,
                         const int x0, const int y0, const int EntryFace, int *ExitFace, int *xcell, int *ycell,
                         double *Xout, double *Yout) {
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
     const int Ncol = data->Ncolumns_real;
     double f;
 
@@ -551,11 +551,11 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     // Ncol_real = data->Ncolumns_real;
     // Ncol_obj  = data->Ncolumns_obj;
     // if (eps_plot_WithWordsCheckUsingItemsDimLess(&pd->ww_final, data->firstEntries, Ncol_real, NULL, Ncol_obj)) return 1;
-    dataBlock *blk = data->first;
+    const dataBlock *blk = data->first;
 
     // A list of the contours traced, and a buffer for error messages
     ContourDesc *clist = (ContourDesc *) ppl_memAlloc(MAX_CONTOUR_PATHS * sizeof(ContourDesc));
-    char *errtext = ppl_memAlloc(LSTR_LENGTH);
+    const char *errtext = ppl_memAlloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if ((clist == NULL) || (errtext == NULL)) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (p).");
@@ -840,7 +840,7 @@ GOT_CONTOURS:
                     if (expr[i] == NULL) continue;
 
                     // Evaluate the expression
-                    pplObj *outval = ppl_expEval(x->c, expr[i], &lOP, 1, x->iterDepth + 1);
+                    const pplObj *outval = ppl_expEval(x->c, expr[i], &lOP, 1, x->iterDepth + 1);
 
                     // Report an expression which could not be evaluated, followed by the traceback of the error
                     if (x->c->errStat.status) {
@@ -1010,7 +1010,7 @@ GOT_CONTOURS:
                     // Find where the label goes on the page, and how big it is
                     contourToPostscript(&proj, xlab0, ylab0, &xlab, &ylab);
                     if (x->dvi == NULL) { continue; }
-                    postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, page + 1);
+                    const postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, page + 1);
                     if (dviPage == NULL) { continue; }
                     //bb_left   = dviPage->boundingBox[0];
                     const double bb_bottom = dviPage->boundingBox[1];

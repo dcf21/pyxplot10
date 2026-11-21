@@ -258,7 +258,7 @@ static void xyzToColor(double x, double y, double z, const double norm, pplObj *
 void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // p0 is the position of the wavelength within the table of CIE color-matching functions; i and j are the table
     // entries either side of it, with weights wi and wj
-    char *FunctionDescription = "wavelength(lambda,norm)";
+    const char *FunctionDescription = "wavelength(lambda,norm)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
 
     // The wavelength must have units of length, and the normalisation must be dimensionless
@@ -311,7 +311,7 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
 
 void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // x, y and z accumulate the XYZ coordinates of the spectrum
-    char *FunctionDescription = "spectrum(spec,norm)";
+    const char *FunctionDescription = "spectrum(spec,norm)";
     const int stkLevelOld = c->stackPtr;
     double x = 0, y = 0, z = 0;
 
@@ -322,7 +322,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,

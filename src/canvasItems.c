@@ -517,7 +517,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         // A piechart command, followed by the description of its data
         ppl_snprintfTrunc(output, outLen, "piechart item %d", ptr->id);
         i = strlen(output);
-        canvas_plotdesc *pd = ptr->plotitems;
+        const canvas_plotdesc *pd = ptr->plotitems;
         // Describe the dataset, if there is one
         if (pd != NULL) {
             // Data from a file or vectors, or from functions
@@ -580,7 +580,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         i = strlen(output);
         if (ptr->ThreeDim) ppl_strAppendf(output, outLen, &i, "%s", " 3d");
         i += strlen(output + i);
-        canvas_plotrange *pr = ptr->plotranges; // Print out plot ranges
+        const canvas_plotrange *pr = ptr->plotranges; // Print out plot ranges
         // Write each range
         while (pr != NULL) {
             // Separate the ranges with spaces
@@ -761,7 +761,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
 
 int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     char msg[LSTR_LENGTH];
-    canvas_itemlist *canvas_items = c->canvas_items;
+    const canvas_itemlist *canvas_items = c->canvas_items;
 
     // There is nothing to list if the canvas has never been used
     ppl_report(&c->errcontext, "# ID   Command");
@@ -786,7 +786,7 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
 
 static int canvas_delete(ppl_context *c, const int id) {
     char msg[PPL_MSG_LENGTH];
-    canvas_itemlist *canvas_items = c->canvas_items;
+    const canvas_itemlist *canvas_items = c->canvas_items;
     canvas_item *ptr = canvas_items->first;
     while ((ptr != NULL) && (ptr->id != id)) ptr = ptr->next;
     // Report an item which does not exist
@@ -839,8 +839,8 @@ static int canvas_redisplay(ppl_context *c, const int iterDepth, const int id, c
 
 int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
-    pplObj *stk = in->stk;
-    canvas_itemlist *canvas_items = c->canvas_items;
+    const pplObj *stk = in->stk;
+    const canvas_itemlist *canvas_items = c->canvas_items;
 
     // Report a canvas which has never been used
     if (canvas_items == NULL) {
@@ -875,8 +875,8 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
 int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                            const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
-    canvas_itemlist *canvas_items = c->canvas_items;
+    const pplObj *stk = in->stk;
+    const canvas_itemlist *canvas_items = c->canvas_items;
 
     // Report a canvas which has never been used
     if (canvas_items == NULL) {
@@ -920,8 +920,8 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
 int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                        const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    pplObj *stk = in->stk;
-    canvas_itemlist *canvas_items = c->canvas_items;
+    const pplObj *stk = in->stk;
+    const canvas_itemlist *canvas_items = c->canvas_items;
 
     // Report a canvas which has never been used
     if (canvas_items == NULL) {
@@ -1007,7 +1007,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
 
 int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                        const int iterDepth) {
-    pplObj *stk = in->stk;
+    const pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
 
     // Report a canvas which has never been used
@@ -1183,7 +1183,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
     int id;
 
     // Look up the position of the centre of the circle and its radius
-    char *tempstr = (char *) stk[PARSE_circle_directive].auxil;
+    const char *tempstr = (char *) stk[PARSE_circle_directive].auxil;
     const int amArc = (strcmp(tempstr, "arc") == 0);
     const double x = stk[PARSE_circle_p].real;
     const double y = stk[PARSE_circle_p + 1].real;
@@ -1662,10 +1662,10 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     // centimetres)
     for (int i = 0; i < Npts; i++) {
         double x, y;
-        pplObj *item = (pplObj *) ppl_listGetItem(ptListObj, i);
+        const pplObj *item = (pplObj *) ppl_listGetItem(ptListObj, i);
         // A point given as a vector
         if (item->objType == PPLOBJ_VEC) {
-            pplVector *v = (pplVector *) item->auxil;
+            const pplVector *v = (pplVector *) item->auxil;
             const int l = v->v->size;
             double m = 1;
             if (item->dimensionless) m = 0.01;
@@ -2025,7 +2025,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
 
             // A single expression which evaluates to a string is a filename; expressions which evaluate to vectors
             // supply vectors of data; others are functions to sample
-            pplObj *first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
+            const pplObj *first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
             if ((!c->errStat.status) && (first->objType == PPLOBJ_STR) &&
                 (Nexprs == 1)) // If we have a single expression that evaluates to a string, it's a filename
             {
@@ -2035,7 +2035,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 if (status) return 1;
             } else if ((!c->errStat.status) && (first->objType == PPLOBJ_VEC)) {
                 const int stkLevelOld = c->stackPtr;
-                gsl_vector *v = ((pplVector *) first->auxil)->v;
+                const gsl_vector *v = ((pplVector *) first->auxil)->v;
                 const int l = v->size;
                 int j;
                 pplObj *vecs = (pplObj *) ppl_memAlloc(Nexprs * sizeof(pplObj));
@@ -2333,7 +2333,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     new->title = NULL;
     // The title of the dataset, or notitle
     if (ptab[PARSE_INDEX_title] > 0) {
-        pplObj *o1 = &stk[stkbase + ptab[PARSE_INDEX_notitle]];
+        const pplObj *o1 = &stk[stkbase + ptab[PARSE_INDEX_notitle]];
         pplObj *o2 = &stk[stkbase + ptab[PARSE_INDEX_title]];
         // notitle suppresses the dataset's entry in the legend
         if (o1->objType == PPLOBJ_STR) {
@@ -2545,7 +2545,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     pplObj *stk = in->stk;
     canvas_item *ptr = NULL;
     parserLine *spool = NULL, **dataSpool = &spool;
-    canvas_itemlist *canvas_items = c->canvas_items;
+    const canvas_itemlist *canvas_items = c->canvas_items;
     int id;
 
     // If replotting, find a plot item to append plot items onto
@@ -2669,10 +2669,10 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 (*rangePtr)->next = NULL;
             }
             {
-                pplObj *min = &stk[pos + o1];
+                const pplObj *min = &stk[pos + o1];
                 const int gotMin =
                         (min->objType == PPLOBJ_NUM) || (min->objType == PPLOBJ_DATE) || (min->objType == PPLOBJ_BOOL);
-                pplObj *max = &stk[pos + o2];
+                const pplObj *max = &stk[pos + o2];
                 const int gotMax =
                         (max->objType == PPLOBJ_NUM) || (max->objType == PPLOBJ_DATE) || (max->objType == PPLOBJ_BOOL);
                 const int minAuto = (stk[pos + o3].objType == PPLOBJ_STR);

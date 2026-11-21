@@ -86,7 +86,7 @@ void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
                           source->axis_n, source->canvas_id);
         ppl_log(&x->c->errcontext, msg);
     }
-    canvas_item *item = x->current;
+    const canvas_item *item = x->current;
 
     // Propagating MinUsed and MaxUsed variables along links between axes
     int IterDepth = 0;
@@ -205,7 +205,7 @@ void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode
     // Propagate MinUsed and MaxUsed variables along links
     int IterDepth = 0;
     pplset_axis *target = axis;
-    canvas_item *item = x->current;
+    const canvas_item *item = x->current;
 
     while (1) // loop over as many iterations of linkage as may be necessary to find MinFinal and MaxFinal at the bottom
     {
@@ -480,7 +480,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
 // On failure, tidy up and leave the axis without a tabulated mapping
 FAIL:
     {
-        EPSComm *x = X;
+        const EPSComm *x = X;
         ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
     }
     ppl_contextRestoreVarPointer(X->c, VarName, &DummyTemp);
@@ -543,7 +543,7 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
             data->VarValue->dimensionless = 0;
             break;
         }
-    pplObj *outVal = ppl_expEval(data->x->c, data->expr, &lOP, 0, data->x->iterDepth + 1);
+    const pplObj *outVal = ppl_expEval(data->x->c, data->expr, &lOP, 0, data->x->iterDepth + 1);
 
     // If a numerical error happened; ignore it for now, but return NAN
     if (data->x->c->errStat.status) {
@@ -581,7 +581,7 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
 // Discard anything left on the stack
 end:
     {
-        EPSComm *x = data->x;
+        const EPSComm *x = data->x;
         ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack before giving up
     }
     return output;

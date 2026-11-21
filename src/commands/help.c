@@ -61,7 +61,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     char textBuffer[LSTR_LENGTH];
     char textBuffer2[LSTR_LENGTH];
     char defaultpagerName[] = "less";
-    char *pagerName;
+    const char *pagerName;
     int Ncolumns;
     FILE *pagerHandle;
 
@@ -121,7 +121,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     // If interactive, tell user how to quit, and also work out column width of display
     if (interactive != 0) {
         sprintf(textBuffer + i, "Press the 'Q' key to exit this help page.\\\\");
-        char *Ncolumns_text = getenv("COLUMNS");
+        const char *Ncolumns_text = getenv("COLUMNS");
         if (!((Ncolumns_text != NULL) && (Ncolumns = ppl_getFloat(Ncolumns_text, &i), i == strlen(Ncolumns_text))))
             Ncolumns = 80;
         pagerName = getenv("PAGER");
@@ -192,7 +192,7 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
             *matchTextPos = 0;
             *matchNode = node; // This is the first match we've found
         } else {
-            list *prevMatchPosition = ppl_strSplit(helpTexts[*matchTextPos]);
+            const list *prevMatchPosition = ppl_strSplit(helpTexts[*matchTextPos]);
 
             int abbreviation = 1; // If previous match is an autocomplete shortening of current match, let it stand
             for (int i = 0; i <= ppl_listLen(topicWords); i++)

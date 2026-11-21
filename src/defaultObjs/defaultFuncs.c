@@ -472,7 +472,7 @@ void ppl_addSystemMethod(dict *n, char *name, const int minArgs, const int maxAr
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_abs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "abs(z)";
+    const char *FunctionDescription = "abs(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Complex arguments use GSL's complex functions; real ones the real functions
     if ((in[0].flagComplex)) {
@@ -494,7 +494,7 @@ void pplfunc_abs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "acos(z)";
+    const char *FunctionDescription = "acos(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
@@ -522,7 +522,7 @@ void pplfunc_acos(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "acosh(z)";
+    const char *FunctionDescription = "acosh(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
@@ -548,7 +548,7 @@ void pplfunc_acosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "acot(z)";
+    const char *FunctionDescription = "acot(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -569,7 +569,7 @@ void pplfunc_acot(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acoth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "acoth(z)";
+    const char *FunctionDescription = "acoth(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -588,7 +588,7 @@ void pplfunc_acoth(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acsc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "acsc(z)";
+    const char *FunctionDescription = "acsc(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
@@ -616,7 +616,7 @@ void pplfunc_acsc(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_acsch(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "acsch(z)";
+    const char *FunctionDescription = "acsch(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -636,7 +636,7 @@ void pplfunc_acsch(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_airy_ai(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "airy_ai(z)";
+    const char *FunctionDescription = "airy_ai(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -661,7 +661,7 @@ void pplfunc_airy_ai(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "airy_ai_diff(z)";
+    const char *FunctionDescription = "airy_ai_diff(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -686,7 +686,7 @@ void pplfunc_airy_ai_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_airy_bi(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "airy_bi(z)";
+    const char *FunctionDescription = "airy_bi(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -711,7 +711,7 @@ void pplfunc_airy_bi(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "airy_bi_diff(z)";
+    const char *FunctionDescription = "airy_bi_diff(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     GSL_SET_COMPLEX(&zi, in[0].real, in[0].imag);
@@ -736,7 +736,7 @@ void pplfunc_airy_bi_diff(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_arg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "arg(z)";
+    const char *FunctionDescription = "arg(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -755,7 +755,7 @@ void pplfunc_arg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_asec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "asec(z)";
+    const char *FunctionDescription = "asec(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
@@ -783,7 +783,7 @@ void pplfunc_asec(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_asech(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "asech(z)";
+    const char *FunctionDescription = "asech(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -802,7 +802,7 @@ void pplfunc_asech(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_asin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "asin(z)";
+    const char *FunctionDescription = "asin(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
@@ -829,7 +829,7 @@ void pplfunc_asin(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_asinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "asinh(z)";
+    const char *FunctionDescription = "asinh(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -848,7 +848,7 @@ void pplfunc_asinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_atan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "atan(z)";
+    const char *FunctionDescription = "atan(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -869,7 +869,7 @@ void pplfunc_atan(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_atanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "atanh(z)";
+    const char *FunctionDescription = "atanh(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
@@ -897,7 +897,7 @@ void pplfunc_atanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_atan2(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "atan2(x,y)";
+    const char *FunctionDescription = "atan2(x,y)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckDimensionsMatch(&call)) return;
     OUTPUT.real = atan2(in[0].real, in[1].real);
@@ -916,7 +916,7 @@ void pplfunc_atan2(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besseli(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "besseli(l,x)";
+    const char *FunctionDescription = "besseli(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     // GSL only provides the scaled function exp(-|x|) i_l(x), so the scaling is removed
@@ -935,7 +935,7 @@ void pplfunc_besseli(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselI(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "besselI(l,x)";
+    const char *FunctionDescription = "besselI(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_In((int) in[0].real, in[1].real);
@@ -953,7 +953,7 @@ void pplfunc_besselI(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselj(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "besselj(l,x)";
+    const char *FunctionDescription = "besselj(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_jl((int) in[0].real, in[1].real);
@@ -971,7 +971,7 @@ void pplfunc_besselj(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselJ(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "besselJ(l,x)";
+    const char *FunctionDescription = "besselJ(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_Jn((int) in[0].real, in[1].real);
@@ -989,7 +989,7 @@ void pplfunc_besselJ(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselk(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "besselk(l,x)";
+    const char *FunctionDescription = "besselk(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     // GSL only provides the scaled function exp(x) k_l(x), so the scaling is removed
@@ -1008,7 +1008,7 @@ void pplfunc_besselk(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselK(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "besselK(l,x)";
+    const char *FunctionDescription = "besselK(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_Kn((int) in[0].real, in[1].real);
@@ -1026,7 +1026,7 @@ void pplfunc_besselK(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_bessely(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "bessely(l,x)";
+    const char *FunctionDescription = "bessely(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_yl((int) in[0].real, in[1].real);
@@ -1044,7 +1044,7 @@ void pplfunc_bessely(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_besselY(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "besselY(l,x)";
+    const char *FunctionDescription = "besselY(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function can only evaluate integer-order Bessel functions")) return;
     OUTPUT.real = gsl_sf_bessel_Yn((int) in[0].real, in[1].real);
@@ -1061,7 +1061,7 @@ void pplfunc_besselY(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_beta(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "beta(a,b)";
+    const char *FunctionDescription = "beta(a,b)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_beta(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1079,7 +1079,7 @@ void pplfunc_beta(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // call(f, a) calls the function f with the arguments in the list a
-    char *FunctionDescription = "call(f,a)";
+    const char *FunctionDescription = "call(f,a)";
     const int stkLevelOld = c->stackPtr;
     pplExpr dummy;
     pplObj *item;
@@ -1091,7 +1091,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    pplFunc *fi = (pplFunc *) in[0].auxil;
+    const pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1107,7 +1107,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                 FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
-    list *argList = (list *) in[1].auxil;
+    const list *argList = (list *) in[1].auxil;
     listIterator *li = ppl_listIterateInit(argList);
 
     // Calling the function needs room on the stack for its arguments
@@ -1161,7 +1161,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ceil(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "ceil(x)";
+    const char *FunctionDescription = "ceil(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = ceil(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1177,7 +1177,7 @@ void pplfunc_ceil(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_chr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "chr(x)";
+    const char *FunctionDescription = "chr(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "s", "function can only evaluate integer ASCII codes")) return;
     char *out = (char *) malloc(2);
@@ -1217,8 +1217,8 @@ void pplfunc_classOf(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_cmp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    void *a = &in[0];
-    void *b = &in[1];
+    const void *a = &in[0];
+    const void *b = &in[1];
     OUTPUT.real = pplObjCmpQuiet(&a, &b);
 }
 
@@ -1247,7 +1247,7 @@ void pplfunc_cmyk(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_conjugate(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "conjugate(z)";
+    const char *FunctionDescription = "conjugate(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Copy only the value and physical units of the argument; copying the whole object would also copy its
     // memory-management fields, and it would then be freed twice
@@ -1283,7 +1283,7 @@ void pplfunc_copy(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_cos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "cos(x)";
+    const char *FunctionDescription = "cos(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -1311,7 +1311,7 @@ void pplfunc_cos(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_cosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "cosh(x)";
+    const char *FunctionDescription = "cosh(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -1339,7 +1339,7 @@ void pplfunc_cosh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_cot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "cot(x)";
+    const char *FunctionDescription = "cot(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -1360,7 +1360,7 @@ void pplfunc_cot(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_coth(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "coth(x)";
+    const char *FunctionDescription = "coth(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -1382,7 +1382,7 @@ void pplfunc_coth(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // Both arguments must be vectors of three elements
-    char *FunctionDescription = "cross(a,b)";
+    const char *FunctionDescription = "cross(a,b)";
     const int t1 = in[0].objType;
     const int t2 = in[1].objType;
     // The first argument must be a vector
@@ -1399,8 +1399,8 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
                 FunctionDescription, pplObjTypeNames[t2]);
         return;
     }
-    gsl_vector *va = ((pplVector *) in[0].auxil)->v;
-    gsl_vector *vb = ((pplVector *) in[1].auxil)->v;
+    const gsl_vector *va = ((pplVector *) in[0].auxil)->v;
+    const gsl_vector *vb = ((pplVector *) in[1].auxil)->v;
     // The first vector must have three elements
     if (va->size != 3) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1444,7 +1444,7 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_csc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "csc(x)";
+    const char *FunctionDescription = "csc(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -1465,7 +1465,7 @@ void pplfunc_csc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_csch(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "csch(x)";
+    const char *FunctionDescription = "csch(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -1500,7 +1500,7 @@ void pplfunc_deepcopy(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_degrees(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "degrees(x)";
+    const char *FunctionDescription = "degrees(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     OUTPUT.real = ppl_degs(in[0].real);
@@ -1518,7 +1518,7 @@ void pplfunc_degrees(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ellK(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "ellipticintK(k)";
+    const char *FunctionDescription = "ellipticintK(k)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_ellint_Kcomp(in[0].real, GSL_PREC_DOUBLE);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1535,7 +1535,7 @@ void pplfunc_ellK(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ellE(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "ellipticintE(k)";
+    const char *FunctionDescription = "ellipticintE(k)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_ellint_Ecomp(in[0].real, GSL_PREC_DOUBLE);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1552,7 +1552,7 @@ void pplfunc_ellE(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ellP(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "ellipticintP(k,n)";
+    const char *FunctionDescription = "ellipticintP(k,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_ellint_Pcomp(in[0].real, in[1].real, GSL_PREC_DOUBLE);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1568,7 +1568,7 @@ void pplfunc_ellP(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_erf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "erf(x)";
+    const char *FunctionDescription = "erf(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_erf(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1585,7 +1585,7 @@ void pplfunc_erf(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_erfc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "erfc(x)";
+    const char *FunctionDescription = "erfc(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_erfc(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1655,7 +1655,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_exp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "exp(z)";
+    const char *FunctionDescription = "exp(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "dimensionless or an angle", UNIT_ANGLE, 1)) return;
@@ -1682,7 +1682,7 @@ void pplfunc_exp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_expm1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "expm1(x)";
+    const char *FunctionDescription = "expm1(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckUnit(&call, &in[0], "first", "dimensionless or an angle", UNIT_ANGLE, 1)) return;
     OUTPUT.real = expm1(in[0].real);
@@ -1700,7 +1700,7 @@ void pplfunc_expm1(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_expint(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "expint(n,x)";
+    const char *FunctionDescription = "expint(n,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckSignedInt(&call, &in[0], "n", "function's first argument must be")) return;
     OUTPUT.real = gsl_sf_expint_En((int) in[0].real, in[1].real);
@@ -1720,7 +1720,7 @@ void pplfunc_expint(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
     const int n = (int) in[0].real;
-    char *FunctionDescription = "factors(x)";
+    const char *FunctionDescription = "factors(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
     // The output is a list of the factors
@@ -1769,7 +1769,7 @@ void pplfunc_finite(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_floor(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "floor(x)";
+    const char *FunctionDescription = "floor(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = floor(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1785,7 +1785,7 @@ void pplfunc_floor(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gamma(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "gamma(x)";
+    const char *FunctionDescription = "gamma(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_gamma(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1802,7 +1802,7 @@ void pplfunc_gamma(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_gcd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "gcd(x,...)";
+    const char *FunctionDescription = "gcd(x,...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // Every argument must be a positive integer; non-positive ones are set to -1 so that the check reports them
     for (int i = 0; i < nArgs; i++) {
@@ -1855,7 +1855,7 @@ void pplfunc_gray(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_heaviside(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "heaviside(x)";
+    const char *FunctionDescription = "heaviside(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (in[0].real >= 0) OUTPUT.real = 1.0;
     if (ppl_funcCheckOutput(&call)) return;
@@ -1886,7 +1886,7 @@ void pplfunc_hsb(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "hyperg_0F1(c,x)";
+    const char *FunctionDescription = "hyperg_0F1(c,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_0F1(in[0].real, in[1].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1903,7 +1903,7 @@ void pplfunc_hyperg_0F1(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hyperg_1F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "hyperg_1F1(a,b,x)";
+    const char *FunctionDescription = "hyperg_1F1(a,b,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_1F1(in[0].real, in[1].real, in[2].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1920,7 +1920,7 @@ void pplfunc_hyperg_1F1(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "hyperg_2F0(a,b,x)";
+    const char *FunctionDescription = "hyperg_2F0(a,b,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_2F0(in[0].real, in[1].real, in[2].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1937,7 +1937,7 @@ void pplfunc_hyperg_2F0(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hyperg_2F1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "hyperg_2F1(a,b,c,x)";
+    const char *FunctionDescription = "hyperg_2F1(a,b,c,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_2F1(in[0].real, in[1].real, in[2].real, in[3].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1954,7 +1954,7 @@ void pplfunc_hyperg_2F1(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_hyperg_U(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "hyperg_U(a,b,x)";
+    const char *FunctionDescription = "hyperg_U(a,b,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_hyperg_U(in[0].real, in[1].real, in[2].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -1972,7 +1972,7 @@ void pplfunc_hyperg_U(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     // The arguments are copied into a buffer of doubles for gsl_hypot
-    char *FunctionDescription = "hypot(...)";
+    const char *FunctionDescription = "hypot(...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double acc = 0;
     // With no arguments, the result is zero
@@ -2016,7 +2016,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Im(z)";
+    const char *FunctionDescription = "Im(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // With complex arithmetic off, there is no imaginary part to return
     if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
@@ -2049,7 +2049,7 @@ void pplfunc_imag(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "jacobi_cn(u,m)";
+    const char *FunctionDescription = "jacobi_cn(u,m)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     {
         double t1, t2, t3;
@@ -2070,7 +2070,7 @@ void pplfunc_jacobi_cn(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "jacobi_dn(u,m)";
+    const char *FunctionDescription = "jacobi_dn(u,m)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     {
         double t1, t2, t3;
@@ -2091,7 +2091,7 @@ void pplfunc_jacobi_dn(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "jacobi_sn(u,m)";
+    const char *FunctionDescription = "jacobi_sn(u,m)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     {
         double t1, t2, t3;
@@ -2112,7 +2112,7 @@ void pplfunc_jacobi_sn(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lambert_W0(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "lambert_W0(x)";
+    const char *FunctionDescription = "lambert_W0(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_lambert_W0(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -2129,7 +2129,7 @@ void pplfunc_lambert_W0(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_lambert_W1(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "lambert_W1(x)";
+    const char *FunctionDescription = "lambert_W1(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = gsl_sf_lambert_Wm1(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -2148,7 +2148,7 @@ void pplfunc_lambert_W1(ppl_context *c, pplObj *in, const int nArgs, int *status
 void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The lowest common multiple is built up one argument at a time, as lcm(a,b) = a*b/gcd(a,b), and must not overflow
     // an int
-    char *FunctionDescription = "lcm(x,...)";
+    const char *FunctionDescription = "lcm(x,...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int zero = 0;
     // Every argument must be an integer; if any is zero or negative, the result is zero
@@ -2213,7 +2213,7 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ldexp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "ldexp(x,y)";
+    const char *FunctionDescription = "ldexp(x,y)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckSignedInt(&call, &in[1], "y", "function's second argument must be")) return;
     OUTPUT.real = ldexp(in[0].real, (int) in[1].real);
@@ -2231,7 +2231,7 @@ void pplfunc_ldexp(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_legendreP(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "legendreP(l,x)";
+    const char *FunctionDescription = "legendreP(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function's first argument must be")) return;
     OUTPUT.real = gsl_sf_legendre_Pl((int) in[0].real, in[1].real);
@@ -2249,7 +2249,7 @@ void pplfunc_legendreP(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_legendreQ(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "legendreQ(l,x)";
+    const char *FunctionDescription = "legendreQ(l,x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "l", "function's first argument must be")) return;
     OUTPUT.real = gsl_sf_legendre_Ql((int) in[0].real, in[1].real);
@@ -2309,7 +2309,7 @@ void pplfunc_locals(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_log(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "log(z)";
+    const char *FunctionDescription = "log(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -2329,7 +2329,7 @@ void pplfunc_log(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_log10(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "log10(z)";
+    const char *FunctionDescription = "log10(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
@@ -2348,7 +2348,7 @@ void pplfunc_log10(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "logn(z,n)";
+    const char *FunctionDescription = "logn(z,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     GSL_SET_COMPLEX(&z, in[1].real, in[1].imag);
@@ -2375,7 +2375,7 @@ void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // lrange() makes a vector of values in geometric progression; start, end and step are the first value, the limit
     // and the factor between values, and n the number of values
-    char *FunctionDescription = "lrange([f],l,[s])";
+    const char *FunctionDescription = "lrange([f],l,[s])";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double start, end, step;
     if (nArgs > 1) {
@@ -2475,7 +2475,7 @@ void pplfunc_max(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         pplObj *best = in;
         // Find the greatest argument
         for (int i = 1; i < nArgs; i++) {
-            pplObj *x = &in[i];
+            const pplObj *x = &in[i];
             if (pplObjCmpQuiet((void *) &x, (void *) &best) == 1) best = &in[i];
         }
         if (best == NULL) pplObjNull(&OUTPUT, 0);
@@ -2538,7 +2538,7 @@ void pplfunc_min(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         pplObj *best = in;
         // Find the least argument
         for (int i = 1; i < nArgs; i++) {
-            pplObj *x = &in[i];
+            const pplObj *x = &in[i];
             if (pplObjCmpQuiet((void *) &x, (void *) &best) == -1) best = &in[i];
         }
         if (best == NULL) pplObjNull(&OUTPUT, 0);
@@ -2556,7 +2556,7 @@ void pplfunc_min(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "mod(x,y)";
+    const char *FunctionDescription = "mod(x,y)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     // If x is so much larger than y that x/y cannot be represented exactly, the remainder would be meaningless
     if (in[0].real * ppl_machineEpsilon * 10 > in[1].real) {
@@ -2589,7 +2589,7 @@ void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *mode;
+    const char *mode;
     // The arguments are the filename, and optionally the mode, e.g. "w"
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
         ppl_funcError(status, errType, errText, ERR_TYPE, "The open() function requires string arguments.");
@@ -2622,7 +2622,7 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "ord(s)";
+    const char *FunctionDescription = "ord(s)";
     const int t = in[0].objType;
     // The argument must be a string
     if (t != PPLOBJ_STR) {
@@ -2645,7 +2645,7 @@ void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_ordinal(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "ordinal(n)";
+    const char *FunctionDescription = "ordinal(n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int n = (int) ceil(fabs(log10(in[0].real)));
     int i = (int) in[0].real;
@@ -2691,7 +2691,7 @@ void pplfunc_pow(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_prime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "prime(x)";
+    const char *FunctionDescription = "prime(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be an integer in the range")) return;
     pplObjBool(&OUTPUT, 0, 0);
@@ -2732,7 +2732,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
     // primeFactors(x) lists the prime factors of x, with repeats
     pplObj v;
     int n = (int) in[0].real;
-    char *FunctionDescription = "primeFactors(x)";
+    const char *FunctionDescription = "primeFactors(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
     // The argument must be a positive integer
@@ -2801,7 +2801,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_radians(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "radians(x)";
+    const char *FunctionDescription = "radians(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
     // Dimensionless angles are taken to be in degrees; angles with units are already in radians
@@ -2820,7 +2820,7 @@ void pplfunc_radians(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "raise(e,s)";
+    const char *FunctionDescription = "raise(e,s)";
     // raise(e, s) raises the exception e with the message s
     if (nArgs != 2) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -2861,7 +2861,7 @@ void pplfunc_raise(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // range() makes a vector of values in arithmetic progression; start, end and step are the first value, the limit
     // and the step, and n the number of values
-    char *FunctionDescription = "range([f],l,[s])";
+    const char *FunctionDescription = "range([f],l,[s])";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double start, end, step;
     if (nArgs > 1) {
@@ -2915,7 +2915,7 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_real(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "Re(z)";
+    const char *FunctionDescription = "Re(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = in[0].real;
     if (ppl_funcCheckOutput(&call)) return;
@@ -2948,7 +2948,7 @@ void pplfunc_rgb(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 
 void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The Roman numerals for the hundreds, tens and units digits
-    char *FunctionDescription = "romanNumeral(n)";
+    const char *FunctionDescription = "romanNumeral(n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     char *h[] = {"", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"};
     char *t[] = {"", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"};
@@ -2997,7 +2997,7 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // root(z, n) is the nth root of z; negative real numbers have real odd roots
     pplObj x2;
-    char *FunctionDescription = "root(z,n)";
+    const char *FunctionDescription = "root(z,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     unsigned char negated = 0;
     in++;
@@ -3065,7 +3065,7 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_round(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "round(x)";
+    const char *FunctionDescription = "round(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     OUTPUT.real = round(in[0].real);
     if (ppl_funcCheckOutput(&call)) return;
@@ -3082,7 +3082,7 @@ void pplfunc_round(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "sec(z)";
+    const char *FunctionDescription = "sec(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -3103,7 +3103,7 @@ void pplfunc_sec(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sech(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "sech(z)";
+    const char *FunctionDescription = "sech(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -3138,7 +3138,7 @@ void pplfunc_sgn(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "sin(z)";
+    const char *FunctionDescription = "sin(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -3166,7 +3166,7 @@ void pplfunc_sin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sinc(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "sinc(z)";
+    const char *FunctionDescription = "sinc(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -3200,7 +3200,7 @@ void pplfunc_sinc(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "sinh(z)";
+    const char *FunctionDescription = "sinh(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -3227,7 +3227,7 @@ void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sqrt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "sqrt(z)";
+    const char *FunctionDescription = "sqrt(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
@@ -3312,12 +3312,12 @@ void pplfunc_sum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         else memcpy(&OUTPUT, &acc, sizeof(pplObj));
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_VEC)) {
         double acc = 0;
-        gsl_vector *v = ((pplVector *) (in[0].auxil))->v;
+        const gsl_vector *v = ((pplVector *) (in[0].auxil))->v;
         for (int i = 0; i < v->size; i++) acc += gsl_vector_get(v, i);
         pplObjNum(&OUTPUT, 0, acc, 0);
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_MAT)) {
         double acc = 0;
-        gsl_matrix *m = ((pplMatrix *) (in[0].auxil))->m;
+        const gsl_matrix *m = ((pplMatrix *) (in[0].auxil))->m;
         for (int i = 0; i < m->size1; i++)
             for (int j = 0; j < m->size2; j++) acc += gsl_matrix_get(m, i, j);
         pplObjNum(&OUTPUT, 0, acc, 0);
@@ -3350,7 +3350,7 @@ void pplfunc_sum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_tan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "tan(z)";
+    const char *FunctionDescription = "tan(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -3378,7 +3378,7 @@ void pplfunc_tan(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_tanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "tanh(z)";
+    const char *FunctionDescription = "tanh(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "an angle", UNIT_ANGLE, 1)) return;
@@ -3407,7 +3407,7 @@ void pplfunc_tanh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 
 void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     // texify(e) converts the expression in the string e into LaTeX
-    char *FunctionDescription = "texify(e)";
+    const char *FunctionDescription = "texify(e)";
     char *instr = (char *) in[0].auxil;
     int inlen = 0;
     // Exactly one argument is needed
@@ -3453,7 +3453,7 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "texifyText(s)";
+    const char *FunctionDescription = "texifyText(s)";
     char *instr = (char *) in[0].auxil;
     // Exactly one argument is needed
     if (nArgs != 1) {
@@ -3491,7 +3491,7 @@ void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_tophat(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "tophat(x,sigma)";
+    const char *FunctionDescription = "tophat(x,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckDimensionsMatch(&call)) return;
     if (fabs(in[0].real) <= fabs(in[1].real)) OUTPUT.real = 1.0;
@@ -3559,7 +3559,7 @@ static void zernike(pplFuncCall *call, const int angular) {
 
 void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // zernike(n,m,r,phi) evaluates the Zernike polynomial Z_n^m at the polar position (r,phi) in the unit disk
-    char *FunctionDescription = "zernike(n,m,r,phi)";
+    const char *FunctionDescription = "zernike(n,m,r,phi)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckDimensionless(&call, 3)) return;
     if (ppl_funcCheckInt(&call, &in[0], "n", "function can only evaluate Zernike polynomials")) return;
@@ -3580,7 +3580,7 @@ void pplfunc_zernike(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 
 void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // zernikeR(n,m,r) evaluates the radial Zernike polynomial R_n^m(r)
-    char *FunctionDescription = "zernikeR(n,m,r)";
+    const char *FunctionDescription = "zernikeR(n,m,r)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "n", "function can only evaluate Zernike polynomials")) return;
     if (ppl_funcCheckSignedInt(&call, &in[1], "m", "function can only evaluate Zernike polynomials")) return;
@@ -3598,7 +3598,7 @@ void pplfunc_zernikeR(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_zeta(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *FunctionDescription = "zeta(z)";
+    const char *FunctionDescription = "zeta(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex zi, z;
     // Complex arguments use GSL's complex functions; real ones the real functions
