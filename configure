@@ -49,17 +49,23 @@ else
  echo "NO" ; echo "ERROR: Required program latex could not be found." >&2 ; exit
 fi
 
-# 3. CHECK FOR CONVERT
+# 3. CHECK FOR IMAGEMAGICK. ImageMagick 7 provides the magick command, in which convert is deprecated, so look for
+# magick first, and then for the convert command of earlier versions. Both accept the same arguments.
 
-echo $ECHO_N "Checking for ImageMagick convert............ $ECHO_C"
-whichout=`which convert 2> conf.stderr`
+echo $ECHO_N "Checking for ImageMagick       ............. $ECHO_C"
+whichout=`which magick 2> conf.stderr`
 rm -f conf.*
 if test "`echo $whichout | sed 's/\([a-z]*\).*/\1/'`" = "no" ; then whichout="" ; fi
+if test "$whichout" = "" ; then
+ whichout=`which convert 2> conf.stderr`
+ rm -f conf.*
+ if test "`echo $whichout | sed 's/\([a-z]*\).*/\1/'`" = "no" ; then whichout="" ; fi
+fi
 if test "$whichout" != "" ; then
  echo "YES"
  echo "CONVERT_COMMAND=${whichout}" >> Makefile
 else 
- echo "NO" ; echo "ERROR: Required program convert could not be found." >&2 ; exit
+ echo "NO" ; echo "ERROR: Required program magick (or convert) from ImageMagick could not be found." >&2 ; exit
 fi
 
 # 4. CHECK FOR SED

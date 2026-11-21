@@ -480,10 +480,11 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ghostscript", "jpeg", 1);
     } else if (termtype == SW_TERMTYPE_GIF) // GIF terminal
     {
+        // ImageMagick settings, such as the resolution, precede the input file, and operators follow it
         ppl_snprintfTrunc(
                 msg, sizeof(msg), "%s -density %d %s %s %s %s", CONVERT_COMMAND, (int) floor(c->set->term_current.dpi),
-                (c->set->term_current.TermTransparent == SW_ONOFF_ON) ? "-alpha activate" : "-alpha deactivate",
                 (c->set->term_current.TermAntiAlias == SW_ONOFF_ON) ? "-antialias" : "+antialias", comm.EPSFilename,
+                (c->set->term_current.TermTransparent == SW_ONOFF_ON) ? "-alpha activate" : "-alpha deactivate",
                 GSOutputTemp);
         convertToFinalFormat(c, &comm, msg, GSOutputTemp, GSOutputTemp2, "ImageMagick", "gif", 1);
     } else if (termtype == SW_TERMTYPE_BMP) // BMP terminal
