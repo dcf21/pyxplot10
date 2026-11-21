@@ -1,0 +1,11 @@
+piped input:19: File error: Bitmap image file ended unexpectedly whilst decoding RLE
+
+Error:
+
+In piped input, line 19, position 0 below:
+
+ interpolate 2d bmp_r red() "rle8_truncated.bmp"
+/|\
+ |
+Reading of bitmap image data failed
+

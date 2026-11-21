@@ -1,0 +1,19 @@
+# test: mode=stdin
+# Before Pyxplot 0.10.0, run-length encoded BMP images whose rows were padded (as ImageMagick writes them), or which
+# used delta codes, were rejected or decoded wrongly, and palettes with an odd number of colours overran their buffer
+# Print each row of a bitmap image, from the top, with each pixel as 0 (black), 1 (red) or 2 (blue)
+subroutine showImage(filename, w, h) {
+ interpolate 2d bmp_r red() filename
+ interpolate 2d bmp_b blue() filename
+ for y=0 to h-1 {
+  s = ""
+  for x=0 to w-1 {
+   s = s + "%d"%(red(x+0.5,y+0.5) + 2*blue(x+0.5,y+0.5))
+  }
+  print s
+ }
+}
+call showImage("rle8_padded.bmp", 3, 2)
+call showImage("rle8_delta.bmp", 6, 4)
+call showImage("palette_odd.bmp", 5, 3)
+interpolate 2d bmp_r red() "rle8_truncated.bmp"

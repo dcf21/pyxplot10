@@ -481,10 +481,18 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
         c_out = out + (height - i) * width;
         end = c_out + width - 1;
         eol = 0;
-        // Decode codes until the row is full or ends
-        while ((c_out <= end) && (eol == 0)) {
-            // Each code is at least two bytes long
-            if (c_in + 2 > inEnd) goto truncated;
+        // Decode codes until an end-of-line or end-of-data code. Pixels beyond the end of the row, such as the padding
+        // which some encoders add to make rows a multiple of four pixels long, are discarded, and pixels which are not
+        // written, because the row ends early, are left as colour zero.
+        while (eol == 0) {
+            // Each code is at least two bytes long; data which simply stops after the last row is complete is accepted
+            if (c_in + 2 > inEnd) {
+                if ((i >= height) && (c_out > end)) {
+                    eol = 2;
+                    break;
+                }
+                goto truncated;
+            }
             code = *c_in++;
             if (code) // a run
             {
@@ -542,33 +550,8 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
                 }
             }
         }
-        // A row which ends before it is full is an error
-        if (eol) {
-            ppl_snprintfTrunc(msg, sizeof(msg),
-                              "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
-                              i);
-            ppl_error(ec, ERR_FILE, -1, -1, msg);
-            return 1;
-        }
-
-        // Should now have an EOL or EOD code
-        if (c_in + 2 > inEnd) goto truncated;
-        if (*(c_in++) != 0) {
-            ppl_snprintfTrunc(msg, sizeof(msg),
-                              "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
-                              i);
-            ppl_error(ec, ERR_FILE, -1, -1, msg);
-            return 1;
-        }
-        // Check the end-of-line or end-of-data code
-        if ((*c_in != 0) && (*c_in != 1)) {
-            ppl_snprintfTrunc(msg, sizeof(msg),
-                              "Whilst decoding bitmap image file, encountered bad line length in RLE decode line=%ld\n",
-                              i);
-            ppl_error(ec, ERR_FILE, -1, -1, msg);
-            return 1;
-        }
-        c_in++;
+        // An end-of-data code leaves the remaining rows as colour zero
+        if (eol == 2) break;
     }
 
     // Return the decoded image

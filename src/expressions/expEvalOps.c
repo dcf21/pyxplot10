@@ -178,6 +178,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         listIterator *li;
         pplObj *item, buff;
+        buff.refCount = 1; // Each copy appended to the list holds one reference
         list *l;
         // Adding lists concatenates them into a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
@@ -204,6 +205,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         int i;
         listIterator *li;
         pplObj *item, buff;
+        buff.refCount = 1; // Each copy appended to the list holds one reference
         gsl_vector *bv = ((pplVector *) (b->auxil))->v;
         list *l;
         // The output is a new list
@@ -232,6 +234,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         int i;
         listIterator *li;
         pplObj *item, buff;
+        buff.refCount = 1; // Each copy appended to the list holds one reference
         gsl_vector *av = ((pplVector *) (a->auxil))->v;
         list *l;
         // The output is a new list
@@ -260,6 +263,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         dictIterator *di;
         pplObj *item, buff;
+        buff.refCount = 1; // Each copy appended to the list holds one reference
         dict *d;
         char *key;
         // Adding dictionaries or modules merges them; items of the second override those of the first

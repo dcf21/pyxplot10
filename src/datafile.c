@@ -1882,8 +1882,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     // Initialise the values of the functions
     for (a = 0; a < USING_ITEMS_MAX + 2; a++) {
         colData[a].refCount = 1;
-        colData[a].objType = PPLOBJ_ZOM;
-        colData[a].amMalloced = 0;
+        pplObjZom(&colData[a], 0); // Also clears the pointers which the garbage collector follows
     }
 
     // If sortBy is not null, add it to using list

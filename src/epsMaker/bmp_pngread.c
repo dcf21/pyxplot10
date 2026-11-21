@@ -29,6 +29,7 @@
 #define _PPL_BMP_PNGREAD_C 1
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <png.h>
 
@@ -181,6 +182,9 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return;
     }
+    // libpng does not write the unused bits at the end of each row of images with less than eight bits per pixel, so
+    // zero them, to make the compressed output reproducible
+    memset(image->data, 0, row_bytes * height);
 
     // libpng requires a separate pointer to each row of image
     row_ptrs = (png_bytep *) ppl_memAlloc(height * sizeof(png_bytep));

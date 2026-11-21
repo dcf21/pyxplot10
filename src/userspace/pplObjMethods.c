@@ -2343,6 +2343,7 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
     if (t == PPLOBJ_VEC) {
         int i;
         gsl_vector *vi = ((pplVector *) in[0].auxil)->v;
+        v.refCount = 1; // Each copy appended to the list holds one reference
         pplObjNum(&v, 1, 0, 0);
         ppl_unitsDimCpy(&v, &in[0]);
         // Append each element of the vector
