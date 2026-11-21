@@ -610,7 +610,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
-void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
+void ppl_directive_seterror(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     const pplObj *o = &in->stk[PARSE_set_error_set_option];
     const char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
     // Report the unrecognised option; in interactive sessions, list the options which are available
@@ -643,7 +643,7 @@ void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
-void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
+void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     const pplObj *o = &in->stk[PARSE_set_error_set_option];
     const char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
     // Report the unrecognised option; in interactive sessions, list the options which are available

@@ -26,12 +26,12 @@
 #include "epsMaker/dvi_read.h"
 
 // Postscript functions
-int dviPostscriptLineto(pplerr_context *ec, dviInterpreterState *interp);
-int dviPostscriptClosepathFill(pplerr_context *ec, dviInterpreterState *interp);
+int dviPostscriptLineto(pplerr_context *ec, const dviInterpreterState *interp);
+int dviPostscriptClosepathFill(pplerr_context *ec, const dviInterpreterState *interp);
 int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, int fn);
-int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, char *command);
-int dviSpecialColourStackPush(pplerr_context *ec, dviInterpreterState *interp, char *psText);
-int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp);
+int dviSpecialColourCommand(pplerr_context *ec, const dviInterpreterState *interp, const char *command);
+int dviSpecialColourStackPush(pplerr_context *ec, const dviInterpreterState *interp, const char *psText);
+int dviSpecialColourStackPop(pplerr_context *ec, const dviInterpreterState *interp);
 
 // Interpreter functions for various types of dvi operators
 int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op);
@@ -63,7 +63,7 @@ int dviInOpPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
 int dviInOpPostPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op);
 
 // Functions called by operator interpreter functions
-int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, DVIOperator *op);
+int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, const DVIOperator *op);
 int dviSpecialImplement(pplerr_context *ec, dviInterpreterState *interp);
 int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, char move);
 int dviUpdateBoundingBox(pplerr_context *ec, dviInterpreterState *interp, double width, double height, double depth);

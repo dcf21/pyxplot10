@@ -104,7 +104,7 @@ void ppl_parserStatInit(parserStatus **in, parserLine **pl);
 void ppl_parserStatReInit(parserStatus *in);
 void ppl_parserStatAdd(parserStatus *in, int level, parserLine *pl);
 void ppl_parserStatFree(parserStatus **in);
-void ppl_parserLineInit(parserLine **in, int srcLineN, long srcId, char *srcFname, char *line);
+void ppl_parserLineInit(parserLine **in, int srcLineN, long srcId, const char *srcFname, const char *line);
 int ppl_parserCompile(ppl_context *c, parserStatus *s, int srcLineN, long srcId, char *srcFname, char *line,
                       int expandMacros, int blockDepth);
 void ppl_parserLinePrint(ppl_context *c, parserLine *in);

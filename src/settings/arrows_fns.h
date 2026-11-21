@@ -29,19 +29,19 @@
 #include "userspace/unitsDisp.h"
 
 void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
-void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutput *in, const parserLine *pl,
+void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, const parserOutput *in, const parserLine *pl,
                      const int *ptab, int quiet);
-void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab);
-unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarrow_object *b);
+void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, const parserOutput *in, const parserLine *pl, const int *ptab);
+unsigned char pplarrow_compare(const ppl_context *context, const pplarrow_object *a, const pplarrow_object *b);
 void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_object **in);
-void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist);
+void pplarrow_list_destroy(const ppl_context *context, pplarrow_object **inlist);
 void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, size_t outLen);
 
-int pplarrow_getSystem(ppl_context *context, const parserOutput *in, const int *ptab, int index);
+int pplarrow_getSystem(const ppl_context *context, const parserOutput *in, const int *ptab, int index);
 int pplarrow_getAxis(const parserOutput *in, const int *ptab, int index);
 int pplarrow_checkAxis(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab, int index);
 void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab,
                               int index, int system);
-void pplarrow_copyCoordinate(parserOutput *in, const int *ptab, int index, int system, pplObj *out);
+void pplarrow_copyCoordinate(const parserOutput *in, const int *ptab, int index, int system, pplObj *out);
 
 #endif

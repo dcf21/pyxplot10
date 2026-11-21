@@ -230,7 +230,7 @@ int ppl_withWordsCmp_zero(const ppl_context *context, const withWords *a) {
 //! \param [in] b - The second set of modifiers
 //! \return One if the modifiers are identical, zero otherwise
 
-int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *b) {
+int ppl_withWordsCmp(const ppl_context *context, const withWords *a, const withWords *b) {
     // Check that the range of items which are defined in both structures are the same
     if ((a->EXPcolor == NULL) != (b->EXPcolor == NULL)) return 0;
     if ((a->EXPfillcolor == NULL) != (b->EXPfillcolor == NULL)) return 0;

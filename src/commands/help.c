@@ -56,7 +56,7 @@
 //! \param [in] node - The XML node containing the help text
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
-static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *node, const int interactive) {
+static void help_PagerDisplay(pplerr_context *c, const char *PageName, const xmlNode *node, const int interactive) {
     // The page is built up in textBuffer, using the "\\" line-break markers understood by ppl_strWordWrap
     char textBuffer[LSTR_LENGTH];
     char textBuffer2[LSTR_LENGTH];
@@ -176,7 +176,7 @@ static void help_TopicPrint(char *out, char **words, const int Nwords) {
 //! \param [in] helpPosition - The names of the nodes on the path from the root of the XML document to <node>
 //! \param [in|out] helpTexts - Array of the names of all the topics which have matched
 
-static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *topicWords, int *matchTextPos,
+static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNode, const list *topicWords, int *matchTextPos,
                             int *Nmatches, int *ambiguous, char **helpPosition, char **helpTexts) {
 
     // There is a fixed limit on the number of matches which can be recorded
@@ -279,7 +279,7 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
-void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
+void ppl_directive_help(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     // The variables used to search the help document
     char msg[PPL_MSG_LENGTH];
     pplerr_context *e = &c->errcontext;

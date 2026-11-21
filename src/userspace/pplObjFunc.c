@@ -177,7 +177,7 @@ void pplObjFuncDestroy(pplFunc *f) {
 //! \param [in] f - The function descriptor to copy
 //! \return The copy, or NULL if <f> is not a user-defined function, or if memory allocation failed
 
-pplFunc *pplObjFuncCpy(pplFunc *f) {
+pplFunc *pplObjFuncCpy(const pplFunc *f) {
     // Only user-defined functions can be copied
     pplFunc *o;
     int i, j;

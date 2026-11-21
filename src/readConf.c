@@ -89,7 +89,7 @@ static void _ReadConfig_FetchValue(const char *line, char *out) {
 //! \param [out] out - The setting to set
 //! \return Zero on success, or -1 if the value was illegal
 
-static int readConfigCrangeFlag(ppl_context *c, const char *setvalue, int *out) {
+static int readConfigCrangeFlag(const ppl_context *c, const char *setvalue, int *out) {
     const int i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_BOOL_INT, SW_BOOL_STR);
     if (i <= 0) return -1;
     *out = i;
@@ -279,7 +279,7 @@ static void readConf_execLine(ppl_context *c, const char *linebuffer, const int 
 //! \param [in] c - The Pyxplot context
 //! \param [in] ConfigFname - The filename of the configuration file
 
-static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
+static void ppl_readConfigFile(ppl_context *c, const char *ConfigFname) {
     // Variables for reading the file
     char msg[PPL_MSG_LENGTH];
     char linebuffer[LSTR_LENGTH], setkey[LSTR_LENGTH], setvalue[LSTR_LENGTH], ColorName[SSTR_LENGTH];

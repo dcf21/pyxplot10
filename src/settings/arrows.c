@@ -67,7 +67,7 @@ static int sameValue(const pplObj *a, const pplObj *b) {
 //! \param [in] index - The index of the parameter giving the coordinate system, e.g. PARSE_INDEX_x0_system
 //! \return The coordinate system, one of the SW_SYSTEM_* constants
 
-int pplarrow_getSystem(ppl_context *context, const parserOutput *in, const int *ptab, const int index) {
+int pplarrow_getSystem(const ppl_context *context, const parserOutput *in, const int *ptab, const int index) {
     const pplObj *o = &in->stk[ptab[index]];
     if (o->objType != PPLOBJ_STR) return SW_SYSTEM_FIRST;
     return ppl_fetchSettingByName(&context->errcontext, (char *) o->auxil, SW_SYSTEM_INT, SW_SYSTEM_STR);
@@ -152,7 +152,7 @@ void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, cons
 //! \param [in] system - The coordinate system of the coordinate, one of the SW_SYSTEM_* constants
 //! \param [out] out - The coordinate, which is zero if none was given
 
-void pplarrow_copyCoordinate(parserOutput *in, const int *ptab, const int index, const int system, pplObj *out) {
+void pplarrow_copyCoordinate(const parserOutput *in, const int *ptab, const int index, const int system, pplObj *out) {
     pplObj tempobj;
     pplObj *o = &in->stk[ptab[index]];
     // Coordinates which were not given are zero
@@ -268,7 +268,7 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 //! \param [in] quiet - If true, do not warn about arrow IDs which are not defined
 
-void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutput *in, const parserLine *pl,
+void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, const parserOutput *in, const parserLine *pl,
                      const int *ptab, const int quiet) {
     char msg[PPL_MSG_LENGTH];
 
@@ -312,7 +312,7 @@ void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutpu
 //! \param [in] pl - The parsed command line
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
-void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
+void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, const parserOutput *in, const parserLine *pl, const int *ptab) {
     pplarrow_remove(context, inlist, in, pl, ptab, 1); // First of all, remove any arrows which we are unsetting
     pplarrow_object **first = inlist;
     // pos is the position in the parser's output stack of the list of arrow IDs
@@ -362,7 +362,7 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
 //! \param [in] b - The second arrow
 //! \return One if the arrows are identical, zero otherwise
 
-unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarrow_object *b) {
+unsigned char pplarrow_compare(const ppl_context *context, const pplarrow_object *a, const pplarrow_object *b) {
     if (a->id != b->id) return 0;
     if ((!sameValue(&a->x0, &b->x0)) || (!sameValue(&a->y0, &b->y0)) || (!sameValue(&a->z0, &b->z0))) return 0;
     if ((!sameValue(&a->x1, &b->x1)) || (!sameValue(&a->y1, &b->y1)) || (!sameValue(&a->z1, &b->z1))) return 0;
@@ -402,7 +402,7 @@ void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_ob
 //! \param [in] context - The Pyxplot context
 //! \param [in|out] inlist - Pointer to the head of the list to free, which is set to NULL
 
-void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist) {
+void pplarrow_list_destroy(const ppl_context *context, pplarrow_object **inlist) {
 
     // Free each arrow in turn, with its style
     pplarrow_object **first = inlist;

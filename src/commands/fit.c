@@ -622,7 +622,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
-void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+void ppl_directive_fit(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive, const int iterDepth) {
     // Variables for reading the data, fitting it and reporting the results
     char msg[PPL_MSG_LENGTH];
     const pplObj *stk = in->stk;

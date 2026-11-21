@@ -26,9 +26,9 @@
 #include "userspace/pplObj.h"
 
 void ppl_contextVarHierLookup(ppl_context *c, int srcLineN, int srcId, const char *srcFname, const char *linetxt,
-                              pplObj *stk, const int *stkPos, pplObj **out, int base, int offset);
-void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, int returnGlobObjs);
+                              const pplObj *stk, const int *stkPos, pplObj **out, int base, int offset);
+void ppl_contextVarLookup(const ppl_context *c, const char *name, pplObj **output, int returnGlobObjs);
 void ppl_contextGetVarPointer(const ppl_context *c, char *name, pplObj **output, pplObj *temp);
-void ppl_contextRestoreVarPointer(const ppl_context *c, char *name, pplObj *temp);
+void ppl_contextRestoreVarPointer(const ppl_context *c, const char *name, pplObj *temp);
 
 #endif

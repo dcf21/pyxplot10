@@ -61,7 +61,7 @@
 //! chosen; otherwise left unchanged
 //! \param [out] rasterLen - Set to the number of points in the special raster, if one is chosen
 
-void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, const int fnlist_len, const char *dummyVar,
+void ppldata_fromFuncs_checkSpecialRaster(const ppl_context *C, pplExpr **fnlist, const int fnlist_len, const char *dummyVar,
                                           const double *min, const double *max, const pplObj *unit, double **raster,
                                           int *rasterLen) {
     char msg[LSTR_LENGTH];

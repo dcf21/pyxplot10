@@ -28,7 +28,7 @@
 #include "userspace/pplObjFunc.h"
 
 void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplObj *in, pplObj *out, int *status,
+void ppl_fft_evaluate(ppl_context *c, const char *FuncName, FFTDescriptor *desc, const pplObj *in, pplObj *out, int *status,
                       char *errout);
 
 #endif

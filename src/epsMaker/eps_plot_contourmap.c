@@ -427,7 +427,7 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
 //! \param [in] Ly - The height of the graph, used to compute the area enclosed by the contour
 //! \param [in] ThetaY - The direction of the y axis on the page
 
-static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, const pplObj *v, unsigned char *flags,
+static void FollowContour(const EPSComm *x, const dataTable *data, ContourDesc *cd, const pplObj *v, unsigned char *flags,
                           const int XSize, const int YSize, int xcell, int ycell, int face, double xpos, double ypos,
                           const double Lx, const double ThetaX, const double Ly, const double ThetaY) {
     long i, i_flatest = 0;

@@ -919,7 +919,7 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
 //! non-negative on entry, the function returns immediately.
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
-void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, const int OutputContext, int *errpos,
+void ppl_newPreferredUnit(const ppl_context *c, PreferredUnit **output, const char *instr, const int OutputContext, int *errpos,
                           char *errText) {
     int i, k, m;
     double power = 1.0, powerneg = 1.0;

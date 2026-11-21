@@ -75,7 +75,7 @@
 //! \param [in] out - The path to copy it to
 //! \return Zero on success, or one on failure
 
-static int filecopy(EPSComm *x, const char *in, const char *out) {
+static int filecopy(const EPSComm *x, const char *in, const char *out) {
     char msg[PPL_MSG_LENGTH];
     int status = 0, n;
     ppl_createBackupIfRequired(x->c, out);
@@ -101,7 +101,7 @@ static int filecopy(EPSComm *x, const char *in, const char *out) {
 //! \param [in] canInvert - True if the output format is a bitmap whose colours can be inverted by "set terminal
 //! invert"
 
-static void convertToFinalFormat(ppl_context *c, EPSComm *comm, const char *command, const char *tempOut,
+static void convertToFinalFormat(ppl_context *c, const EPSComm *comm, const char *command, const char *tempOut,
                                  const char *tempNegated, const char *tool, const char *format, const int canInvert) {
     char msg[LSTR_LENGTH];
 
@@ -844,7 +844,7 @@ void canvas_MakeEPSBuffer(EPSComm *x) {
 //! \param [in] font - A font in the list
 //! \return True if an earlier font in the list has the same <basePsName>
 
-static int fontListedEarlier(list *fonts, const dviFontDetails *font) {
+static int fontListedEarlier(const list *fonts, const dviFontDetails *font) {
     listIterator *iter = ppl_listIterateInit(fonts);
     // Look through the fonts which come before this one in the list
     while ((iter != NULL) && (iter->data != font)) {
@@ -1100,7 +1100,7 @@ void canvas_EPSWrite(EPSComm *x) {
 //! \param [out] height - Set to the height of the text item, in postscript points (optional)
 
 void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, const int halign,
-                              const int valign, char *colstr, double fontsize, double rotate, double *width,
+                              const int valign, const char *colstr, double fontsize, double rotate, double *width,
                               double *height) {
     static char *buffer = NULL;
     const long BUFLEN = 131072;

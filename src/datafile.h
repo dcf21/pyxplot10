@@ -95,7 +95,7 @@ rawDataBlock *ppldata_NewRawDataBlock(const int memContext);
 rawDataTable *ppldata_NewRawDataTable(const int memContext);
 int ppldata_DataTable_AddRow(dataTable *i);
 int ppldata_RawDataTable_AddRow(rawDataTable *i);
-void ppldata_DataTable_List(ppl_context *c, dataTable *i);
+void ppldata_DataTable_List(ppl_context *c, const dataTable *i);
 FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchNumber, char *filenameOut, char *errout);
 void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pplObj *columns_val, int Ncols,
                           char *filename, long file_linenumber, long *file_linenumbers, long linenumber_count,
@@ -125,7 +125,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, int fn
                        pplObj *unitY, pplExpr **usingExprs, int autoUsingExprs, int Ncols, int NusingObjs,
                        pplExpr *labelExpr, pplExpr *selectExpr, pplExpr *sortBy, int continuity, int *status,
                        char *errtext, int *errCount, int iterDepth);
-void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, int objListLen, pplExpr **usingExprs,
+void ppldata_fromVectors(ppl_context *c, dataTable **out, const pplObj *objList, int objListLen, pplExpr **usingExprs,
                          int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr,
                          pplExpr *sortBy, int continuity, int *status, char *errtext, int *errCount, int iterDepth);
 void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, const parserOutput *in,

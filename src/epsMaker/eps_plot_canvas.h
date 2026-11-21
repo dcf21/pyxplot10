@@ -31,7 +31,7 @@
 
 #include "settings/settings.h"
 
-int eps_plot_axis_InRange(pplset_axis *xa, double xin);
+int eps_plot_axis_InRange(const pplset_axis *xa, double xin);
 void eps_plot_ThreeDimProject(double xap, double yap, double zap, pplset_graph *sg, double origin_x, double origin_y,
                               double width, double height, double zdepth, double *xpos, double *ypos, double *depth);
 void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap, double *yap, double *zap,

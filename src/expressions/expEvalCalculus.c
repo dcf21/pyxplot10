@@ -143,7 +143,7 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
 //! \param [in] dollarAllowed - If true, the integrand may use the $ operator
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
-void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, char *expr, const int exprPos,
+void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, const char *expr, const int exprPos,
                       char *dummy, const pplObj *min, const pplObj *max, pplObj *out, const int dollarAllowed,
                       const int iterDepth) {
     calculusComm commlink;
@@ -292,7 +292,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
 //! \param [in] dollarAllowed - If true, the expression may use the $ operator
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
-void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, char *expr, const int exprPos,
+void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, const char *expr, const int exprPos,
                           char *dummy, pplObj *point, const pplObj *step, pplObj *out, const int dollarAllowed,
                           const int iterDepth) {
     calculusComm commlink;

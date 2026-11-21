@@ -53,7 +53,7 @@ void LineDraw_FindCrossingPoints(const EPSComm *x, double x1, double y1, double 
 LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn, int zrn,
                               pplset_graph *sg, unsigned char ThreeDim, double origin_x, double origin_y, double width,
                               double height, double zdepth);
-void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, double x, double y, double z, double x_offset, double y_offset,
+void LineDraw_Point(const EPSComm *X, LineDrawHandle *ld, double x, double y, double z, double x_offset, double y_offset,
                     double z_offset, double x_perpoffset, double y_perpoffset, double z_perpoffset, int linetype,
                     double linewidth, char *colstr);
 void LineDraw_PenUp(const EPSComm *x, LineDrawHandle *ld);

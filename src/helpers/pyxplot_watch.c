@@ -48,7 +48,7 @@ int cancellationFlag = 0;
 //! \param [in] context - The error-reporting context
 //! \param [in] fname - The filename of the script
 
-void RunPyxplotOnFile(pplerr_context *context, char *fname) {
+void RunPyxplotOnFile(const pplerr_context *context, const char *fname) {
     char msg[PPL_MSG_LENGTH];
     char LineBuffer[LSTR_LENGTH];
 

@@ -798,7 +798,7 @@ int dviInOpPostPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator
 //! \param [in] op - The DVI operator containing the character
 //! \return Zero on success, or a DVIE_* error code
 
-int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, DVIOperator *op) {
+int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, const DVIOperator *op) {
     char *s = interp->spString + strlen(interp->spString);
     snprintf(s, SSTR_LENGTH, "%c", op->op);
     return 0;
@@ -851,7 +851,7 @@ int dviSpecialImplement(pplerr_context *ec, dviInterpreterState *interp) {
 //! \param [in] command - The text of the special command, after the word "color"
 //! \return Zero on success, or a DVIE_* error code
 
-int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, char *command) {
+int dviSpecialColourCommand(pplerr_context *ec, const dviInterpreterState *interp, const char *command) {
     // Variables for the postscript command which sets the color
     char msg[PPL_MSG_LENGTH];
     char psText[SSTR_LENGTH];
@@ -902,7 +902,7 @@ int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, cha
 //! \param [in] interp - The state of the DVI interpreter
 //! \return Zero on success, or a DVIE_* error code
 
-int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp) {
+int dviSpecialColourStackPop(pplerr_context *ec, const dviInterpreterState *interp) {
     int err = 0;
 
     // Lop last colour off the end of the colour stack
@@ -932,7 +932,7 @@ int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp) {
 //! \param [in] psText - The postscript command which sets the color
 //! \return Zero on success, or a DVIE_* error code
 
-int dviSpecialColourStackPush(pplerr_context *ec, dviInterpreterState *interp, char *psText) {
+int dviSpecialColourStackPush(pplerr_context *ec, const dviInterpreterState *interp, const char *psText) {
     int err = 0;
 
     // Stick the string onto the stack
@@ -1072,7 +1072,7 @@ int dviDeleteInterpreter(pplerr_context *ec, dviInterpreterState *interp) {
 //! \param [in] orig - The DVI stack state to copy
 //! \return The copy, or NULL if memory allocation failed
 
-dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *orig) {
+dviStackState *dviCloneInterpState(const pplerr_context *ec, const dviStackState *orig) {
     void *clone = ppl_memAlloc(sizeof(dviStackState));
     if (clone != NULL) memcpy(clone, (void *) orig, sizeof(dviStackState));
     return (dviStackState *) clone;
@@ -1194,7 +1194,7 @@ int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp) {
 //! \param [in] interp - The state of the DVI interpreter
 //! \return Zero on success, or a DVIE_* error code
 
-int dviPostscriptLineto(pplerr_context *ec, dviInterpreterState *interp) {
+int dviPostscriptLineto(pplerr_context *ec, const dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
     const double x = interp->state->h * interp->scale;
@@ -1218,7 +1218,7 @@ int dviPostscriptLineto(pplerr_context *ec, dviInterpreterState *interp) {
 //! \param [in] interp - The state of the DVI interpreter
 //! \return Zero on success, or a DVIE_* error code
 
-int dviPostscriptClosepathFill(pplerr_context *ec, dviInterpreterState *interp) {
+int dviPostscriptClosepathFill(pplerr_context *ec, const dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
     //double x, y;
@@ -1380,7 +1380,7 @@ int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
 //! DVI units
 //! \return Zero on success, or a DVIE_* error code
 
-int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned char s, double *size) {
+int dviGetCharSize(pplerr_context *ec, const dviInterpreterState *interp, unsigned char s, double *size) {
     // Variables for looking up the character in the font metrics
     char msg[PPL_MSG_LENGTH];
     int wi, hi, di, ii; // Indices

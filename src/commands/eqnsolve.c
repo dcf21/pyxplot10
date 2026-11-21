@@ -450,7 +450,7 @@ cleanup:
 //! \param [in] sign - The factor by which to multiply the expression before minimising it: 1 to minimise it, or -1
 //! to maximise it
 
-static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive, const int iterDepth,
+static void minOrMax(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive, const int iterDepth,
                      const double sign) {
     const pplObj *stk = in->stk;
     MMComm commlink;
@@ -528,7 +528,7 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
-void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive,
+void ppl_directive_solve(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
     const pplObj *stk = in->stk;
     MMComm commlink;

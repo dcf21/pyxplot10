@@ -139,7 +139,7 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
 //! \param [out] YSizeOut - Set to the number of grid points in the y direction
 
 void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, const dataTable *in,
-                       pplset_axis *axis_x, pplset_axis *axis_y, const unsigned char SampleToEdge, int *XSizeOut,
+                       const pplset_axis *axis_x, const pplset_axis *axis_y, const unsigned char SampleToEdge, int *XSizeOut,
                        int *YSizeOut) {
     int j;
     double *d[USING_ITEMS_MAX + 4];

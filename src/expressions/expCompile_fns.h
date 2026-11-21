@@ -25,11 +25,11 @@
 #include "expressions/expCompile.h"
 #include "userspace/context.h"
 
-void ppl_expTokenise(ppl_context *context, char *in, int *end, int dollarAllowed, int equalsAllowed,
+void ppl_expTokenise(ppl_context *context, const char *in, int *end, int dollarAllowed, int equalsAllowed,
                      int allowCommaOperator, int collectCommas, int isDict, int outOffset, int *outlen, int *errPos,
                      int *errType, char *errText);
-void ppl_tokenPrint(const ppl_context *context, char *in, int len);
-void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, char *srcFname, char *in, int *end,
+void ppl_tokenPrint(const ppl_context *context, const char *in, int len);
+void ppl_expCompile(ppl_context *context, int srcLineN, long srcId, const char *srcFname, const char *in, int *end,
                     int dollarAllowed, int equalsAllowed, int allowCommaOperator, pplExpr **outexpr, int *errPos,
                     int *errType, char *errText);
 void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn);

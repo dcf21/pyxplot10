@@ -159,7 +159,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, int writeOut, int srcL
 //! Other parameters, and the return value, are as for parse_descend()
 
 static int parse_repeat(ppl_context *c, parserStatus *s, const int writeOut, const int srcLineN, const long srcId,
-                        char *srcFname, char *line, int *linepos, parserNode *node, int *tabCompNo,
+                        char *srcFname, char *line, int *linepos, const parserNode *node, int *tabCompNo,
                         const int tabCompStart, char *tabCompTxt, const int level, int blockDepth, int *match, int first,
                         const int oldStackOffset) {
     int status = 0, separator = 1;
@@ -1307,7 +1307,7 @@ void ppl_parserStatFree(parserStatus **in) {
 //! \param [in] srcFname - The filename of the source of the command, used to report errors
 //! \param [in] line - The text of the command, which is copied
 
-void ppl_parserLineInit(parserLine **in, const int srcLineN, const long srcId, char *srcFname, char *line) {
+void ppl_parserLineInit(parserLine **in, const int srcLineN, const long srcId, const char *srcFname, const char *line) {
     // The output is only returned once it has been fully initialised
     parserLine *output = NULL;
     *in = NULL;

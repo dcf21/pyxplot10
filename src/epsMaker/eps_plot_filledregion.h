@@ -59,7 +59,7 @@ typedef struct FilledRegionHandle {
 FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, int xrn, int yrn,
                                       int zrn, pplset_graph *sg, unsigned char ThreeDim, double origin_x,
                                       double origin_y, double width, double height, double zdepth);
-void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, double x, double y);
+void FilledRegion_Point(const EPSComm *X, FilledRegionHandle *fr, double x, double y);
 void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, int linetype, double linewidth,
                          unsigned char StrokeOutline);
 

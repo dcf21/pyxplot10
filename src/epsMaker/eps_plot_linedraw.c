@@ -63,7 +63,7 @@ typedef struct lineClip {
 //! \param [in] sgn - 1 if the inside of the graph lies in the direction of increasing <a> from the face, or -1
 //! \param [in] face - The FACE_* constant to record for the face
 
-static void clipAgainstFace(lineClip *lc, const double a1, const double a2, const double b1, const double b2,
+static void clipAgainstFace(const lineClip *lc, const double a1, const double a2, const double b1, const double b2,
                             const double c1, const double c2, const double pos, const double sgn,
                             const unsigned char face) {
     if (a2 == a1) return; // The segment is parallel to the face
@@ -203,7 +203,7 @@ LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, ppls
 //! \param [in] linewidth - The line width, as a multiple of the default line width
 //! \param [in] colstr - The postscript command to set the color of the line
 
-void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double y, const double z,
+void LineDraw_Point(const EPSComm *X, LineDrawHandle *ld, const double x, const double y, const double z,
                     const double x_offset, const double y_offset, const double z_offset, const double x_perpoffset,
                     const double y_perpoffset, const double z_perpoffset, const int linetype, const double linewidth,
                     char *colstr) {

@@ -95,7 +95,7 @@ FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *
 //! \param [in] x - The x coordinate of the point, in data coordinates
 //! \param [in] y - The y coordinate of the point, in data coordinates
 
-void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, const double x, const double y) {
+void FilledRegion_Point(const EPSComm *X, FilledRegionHandle *fr, const double x, const double y) {
     // Variables for placing the point and finding where the outline crosses the edges of the graph
     FilledRegionPoint p;
     double xpos, ypos, depth, xap, yap, zap, ap1, ap2;
@@ -229,7 +229,7 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
 //! \param [in,out] first_point - Flag indicating whether this is the first point in its subpath; set to false
 //! \param [in] linewidth - The line width with which the path is to be stroked, used to compute its bounding box
 
-static void psPoint(FilledRegionHandle *fr, const double X, const double Y, unsigned char *first_subpath,
+static void psPoint(const FilledRegionHandle *fr, const double X, const double Y, unsigned char *first_subpath,
                     unsigned char *first_point, const double linewidth) {
     // Log progress in debugging mode
     if (DEBUG) {
@@ -259,7 +259,7 @@ static void psPoint(FilledRegionHandle *fr, const double X, const double Y, unsi
 //! \param [in] EndText - The postscript command with which to end the path, e.g. "fill" or "stroke"
 //! \param [in] linewidth - The line width with which to stroke the path
 
-static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPointList, const int nac, char *EndText,
+static void OutputPath(const FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPointList, const int nac, const char *EndText,
                        const double linewidth) {
     char msg[PPL_MSG_LENGTH];
     unsigned char first_point = 1, first_subpath = 1, fail = 0;

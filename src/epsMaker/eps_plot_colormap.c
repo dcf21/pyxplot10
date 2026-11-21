@@ -572,7 +572,7 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 //! \param [in] img - The bitmap image
 
-static void writePostscriptImage(EPSComm *x, const bitmap_data *img) {
+static void writePostscriptImage(const EPSComm *x, const bitmap_data *img) {
     if (img->colour == BMP_COLOUR_RGB) fprintf(x->epsbuffer, "/DeviceRGB setcolorspace\n"); // RGB palette
     else if (img->colour == BMP_COLOUR_GREY) fprintf(x->epsbuffer, "/DeviceGray setcolorspace\n"); // Greyscale
     // A paletted image's palette is written as part of the color space

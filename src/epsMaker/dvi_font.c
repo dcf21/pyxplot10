@@ -47,7 +47,7 @@ char builtinFontNames[N_BUILTIN_FONTS][L_BUILTIN_FPSNAME] = {"Times-Bold", "Time
                                                              "Courier"};
 
 
-int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename);
+int dviGetPfa(pplerr_context *ec, dviFontDetails *font, const char *filename);
 static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font);
 
 //! dviGetTFM - Locate and read the TeX font metric (TFM) file for a font
@@ -194,7 +194,7 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
 //! \param [out] filename - Character buffer into which to write the path of the PFA file
 //! \return Zero on success, or a DVIE_* error code
 
-int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
+int dviGetPfa(pplerr_context *ec, dviFontDetails *font, const char *filename) {
     // Variables for finding the font file
     char errStr[SSTR_LENGTH];
     int err;

@@ -316,7 +316,7 @@ static void usageUpdateBoxFrom(const usageRange *r, pplset_axis *axis, const ppl
 //! \param [in] value - A value from the column of data, whose units are checked
 //! \return Zero on success, or one if the units conflict (in which case an error is reported)
 
-static int usageUnitsCheck(EPSComm *x, const int id, const int xyz, const int xyzn, pplset_axis *axis,
+static int usageUnitsCheck(const EPSComm *x, const int id, const int xyz, const int xyzn, pplset_axis *axis,
                            const pplObj *value) {
     char msg[PPL_MSG_LENGTH];
     // The data must have the same units as any range set for the axis
@@ -435,7 +435,7 @@ static void finishFactoringBoxes(usageRange *r, const int style, const pplset_gr
 //! \return Zero on success, or one if the data had physical units which conflict with the axes
 
 int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, unsigned char ThreeDim, pplset_axis *a1,
-                                pplset_axis *a2, pplset_axis *a3, pplset_graph *sg, int xyz1, int xyz2, int xyz3,
+                                pplset_axis *a2, pplset_axis *a3, const pplset_graph *sg, int xyz1, int xyz2, int xyz3,
                                 int n1, int n2, int n3, int id) {
     double ptBx = 0, ptCx = 0, lasty = 0;
     unsigned char ptAset = 0, ptBset = 0, ptCset = 0;

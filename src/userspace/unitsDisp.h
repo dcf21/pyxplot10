@@ -42,7 +42,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
                     int DivAllowed, int typeable);
 int ppl_unitNameCmp(const char *in, const char *unit, const unsigned char caseSensitive);
 void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, int *end, int *errpos, char *errText);
-void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, int OutputContext, int *errpos,
+void ppl_newPreferredUnit(const ppl_context *c, PreferredUnit **output, const char *instr, int OutputContext, int *errpos,
                           char *errText);
 
 #endif

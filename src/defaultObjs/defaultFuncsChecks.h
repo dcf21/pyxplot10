@@ -58,7 +58,7 @@ typedef struct pplFuncCall {
     const char *description; // A description of the function, e.g. "sin(x)", used in error messages
 } pplFuncCall;
 
-void ppl_funcNullOutput(pplFuncCall *f);
+void ppl_funcNullOutput(const pplFuncCall *f);
 void ppl_funcUndefined(pplFuncCall *f);
 void ppl_funcNeedsRealArguments(pplFuncCall *f);
 int ppl_funcCheckOutput(pplFuncCall *f);
@@ -73,7 +73,7 @@ int ppl_funcCheckUnit(pplFuncCall *f, const pplObj *x, const char *description, 
                       int power);
 void ppl_funcError(int *status, int *errType, char *errText, int type, const char *format, ...)
         __attribute__((format(printf, 5, 6)));
-char *ppl_funcStrdup(pplFuncCall *f, const char *str);
+char *ppl_funcStrdup(const pplFuncCall *f, const char *str);
 void ppl_funcSetComplexOutput(pplObj *out, gsl_complex z);
 void ppl_funcSetOutputUnit(ppl_context *c, pplObj *out, int unit);
 

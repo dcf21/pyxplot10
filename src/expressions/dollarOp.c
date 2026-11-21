@@ -182,7 +182,7 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
 //! \param [in] inExprCharPos - The position of the $ operator within the expression
 //! \param [in] colName - The name of the column to fetch, as given in the file's header
 
-void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, const int inExprCharPos, char *colName) {
+void ppl_dollarOp_fetchColByName(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, const char *colName) {
     for (int i = 0; i < c->dollarStat.NcolHeads; i++)
         // Found the column with this heading; fetch it by number
         if (strcmp(colName, c->dollarStat.colHeads[i]) == 0) {

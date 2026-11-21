@@ -60,7 +60,7 @@
 //! several threads at once
 //! \param [in] d - The dictionary of the module's contents
 
-static void markModuleThreadUnsafe(dict *d) {
+static void markModuleThreadUnsafe(const dict *d) {
     dictIterator *di = ppl_dictIterateInit(d);
     char *key;
     pplObj *item;

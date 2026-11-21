@@ -26,7 +26,7 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, int fnlist_len, char *dummyVar, double *min,
+void ppldata_fromFuncs_checkSpecialRaster(const ppl_context *C, pplExpr **fnlist, int fnlist_len, char *dummyVar, double *min,
                                           double *max, pplObj *unit, double **raster, int *rasterLen);
 
 #endif

@@ -34,7 +34,7 @@
 //! \return A list of the words in <in>, each stored as a null-terminated string. The list is allocated in the
 //! current ppl_memAlloc context.
 
-list *ppl_strSplit(char *in) {
+list *ppl_strSplit(const char *in) {
     list *out = ppl_listInit(0);
     int pos = 0;
     char *text_buffer = (char *) malloc(strlen(in) + 1);

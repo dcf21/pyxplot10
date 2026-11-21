@@ -133,7 +133,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
 int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
-int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+int ppl_directive_ellipse(ppl_context *c, const parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);

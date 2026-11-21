@@ -57,7 +57,7 @@ unsigned char ppl_kpse_PathRecursive[N_FILE_TYPES][MAX_PATHS];
 //! looking up fonts
 //! \param [in] c - The Pyxplot context
 
-void ppl_kpse_wrap_init(ppl_context *c) {
+void ppl_kpse_wrap_init(const ppl_context *c) {
 #ifdef HAVE_KPATHSEA
     kpse_set_program_name("dvips", "dvips");
 #else
@@ -172,7 +172,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
 //! \param [in] recurse - If true, also search subdirectories
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned char recurse) {
+char *ppl_kpse_wrap_test_path(const pplerr_context *ec, const char *s, const char *path, unsigned char recurse) {
     // The result is returned in a static buffer, shared by the recursive calls
     char msg[PPL_MSG_LENGTH];
     const DIR *dp;
@@ -223,7 +223,7 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
 //! \param [in] RecurseList - Array of flags indicating whether each directory should be searched recursively
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigned char *RecurseList) {
+char *ppl_kpse_wrap_find_file(const pplerr_context *ec, const char *s, char **paths, const unsigned char *RecurseList) {
     char msg[PPL_MSG_LENGTH];
     // Log the search
     if (DEBUG) {
@@ -244,7 +244,7 @@ char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigne
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_pfa(const pplerr_context *ec, const char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
 #else
@@ -257,7 +257,7 @@ char *ppl_kpse_wrap_find_pfa(pplerr_context *ec, char *s) {
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_pfb(const pplerr_context *ec, const char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_type1_format, true);
 #else
@@ -270,7 +270,7 @@ char *ppl_kpse_wrap_find_pfb(pplerr_context *ec, char *s) {
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_tfm(const pplerr_context *ec, const char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_tfm(s);
 #else
@@ -283,7 +283,7 @@ char *ppl_kpse_wrap_find_tfm(pplerr_context *ec, char *s) {
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_map(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_map(const pplerr_context *ec, const char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_fontmap_format, true);
 #else
@@ -296,7 +296,7 @@ char *ppl_kpse_wrap_find_map(pplerr_context *ec, char *s) {
 //! \param [in] s - The filename to search for
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
-char *ppl_kpse_wrap_find_enc(pplerr_context *ec, char *s) {
+char *ppl_kpse_wrap_find_enc(const pplerr_context *ec, const char *s) {
 #ifdef HAVE_KPATHSEA
     return (char *) kpse_find_file(s, kpse_enc_format, true);
 #else

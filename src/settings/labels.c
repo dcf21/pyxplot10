@@ -190,7 +190,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 //! \param [in] quiet - If true, do not warn about label IDs which are not defined
 
-void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, const parserLine *pl,
+void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, const parserOutput *in, const parserLine *pl,
                      const int *ptab, const int quiet) {
     char msg[PPL_MSG_LENGTH];
 
@@ -236,7 +236,7 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
 //! \param [in] pl - The parsed command line
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
-void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
+void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, const parserOutput *in, const parserLine *pl, const int *ptab) {
     ppllabel_remove(context, inlist, in, pl, ptab, 1); // First of all, remove any labels which we are unsetting
     ppllabel_object **first = inlist;
     // pos is the position in the parser's output stack of the list of label IDs
@@ -295,7 +295,7 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
 //! \param [in] b - The second label
 //! \return One if the labels are identical, zero otherwise
 
-unsigned char ppllabel_compare(ppl_context *context, ppllabel_object *a, ppllabel_object *b) {
+unsigned char ppllabel_compare(const ppl_context *context, const ppllabel_object *a, const ppllabel_object *b) {
     if (a->id != b->id) return 0;
     if ((!sameValue(&a->x, &b->x)) || (!sameValue(&a->y, &b->y)) || (!sameValue(&a->z, &b->z))) return 0;
     if ((a->system_x != b->system_x) || (a->system_y != b->system_y) || (a->system_z != b->system_z)) return 0;
@@ -341,7 +341,7 @@ void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_ob
 //! \param [in] context - The Pyxplot context
 //! \param [in|out] inlist - Pointer to the head of the list to free, which is set to NULL
 
-void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
+void ppllabel_list_destroy(const ppl_context *context, ppllabel_object **inlist) {
 
     // Free each label in turn, with its style and text
     ppllabel_object **first = inlist;

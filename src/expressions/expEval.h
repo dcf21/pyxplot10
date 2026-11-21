@@ -30,7 +30,7 @@
 int ppl_castToNumber(ppl_context *context, pplObj *x, char *errText, size_t errLen);
 int ppl_castToNum(ppl_context *context, pplObj *x, const pplExpr *expr, int charpos);
 int ppl_castToInt(ppl_context *context, pplObj *x, const char *op, const pplExpr *expr, int charpos);
-void ppl_castToBool(ppl_context *context, pplObj *x);
+void ppl_castToBool(const ppl_context *context, pplObj *x);
 pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, int dollarAllowed, int iterDepth);
 
 #endif

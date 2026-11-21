@@ -28,6 +28,6 @@
 
 void pplObjFuncDestroyChain(pplFunc *f);
 void pplObjFuncDestroy(pplFunc *f);
-pplFunc *pplObjFuncCpy(pplFunc *f);
+pplFunc *pplObjFuncCpy(const pplFunc *f);
 
 #endif

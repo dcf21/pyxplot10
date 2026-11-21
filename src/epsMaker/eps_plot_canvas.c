@@ -41,7 +41,7 @@
 //! \param [in] xin - The value to test
 //! \return One if the value lies within the range of the axis, zero otherwise
 
-int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
+int eps_plot_axis_InRange(const pplset_axis *xa, const double xin) {
     // Variables for the range of the axis
     int xminset = 0, xmaxset = 0;
     double xmin = 0, xmax = 0;

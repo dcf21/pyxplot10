@@ -75,7 +75,7 @@ void eps_plot_labelsarrows_YieldUpText(EPSComm *x) {
 //! \param [out] out - Set to the value of the coordinate, or to a default position if there is no usable axis
 //! \return Zero on success, or one if the coordinate's units were incompatible with the axis (an error is reported)
 
-static int fetchAxis(EPSComm *x, const int system, pplset_axis *axes, const int axisN, const pplObj *in,
+static int fetchAxis(const EPSComm *x, const int system, pplset_axis *axes, const int axisN, const pplObj *in,
                      const char *ItemName, pplset_axis **axisOut, double *out) {
     char msg[PPL_MSG_LENGTH];
     pplset_axis *a;

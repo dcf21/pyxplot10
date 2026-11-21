@@ -139,7 +139,7 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
 //! \param [in] set - True for set autoscale; false for unset autoscale
 //! \param [in] setAll - True if the command applies to all axes, in which case disabled axes are not enabled
 
-static void setAutoscaleAxis(ppl_context *c, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int direction,
+static void setAutoscaleAxis(const ppl_context *c, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int direction,
                              const int n, const int set, const int setAll) {
     pplset_axis *a, *ad;
     // Point to the axis, and to its default settings
@@ -178,7 +178,7 @@ static void setAutoscaleAxis(ppl_context *c, pplset_axis *xa, pplset_axis *ya, p
 //! \param [in] za - The z axes of the graph
 //! \return Pointer to the setting which determines whether the axis is logarithmic
 
-static int *getAxisLog(ppl_context *c, pplset_axis *axis, const int useDefaults, pplset_axis *xa, pplset_axis *ya,
+static int *getAxisLog(const ppl_context *c, pplset_axis *axis, const int useDefaults, pplset_axis *xa, pplset_axis *ya,
                        pplset_axis *za) {
     pplset_axis *ai = axis;
     int count = 0, *out = &ai->log;

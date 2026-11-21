@@ -43,8 +43,8 @@ typedef listItem listIterator;
 
 list *ppl_listInit(int useMalloc);
 int ppl_listFree(list *in);
-int ppl_listLen(list *in);
-list *ppl_listCpy(list *in, int useMalloc, int itemSize);
+int ppl_listLen(const list *in);
+list *ppl_listCpy(const list *in, int useMalloc, int itemSize);
 int ppl_listAppend(list *in, void *item);
 int ppl_listAppendCpy(list *in, const void *item, int size);
 int ppl_listInsertCpy(list *in, int N, const void *item, int size);

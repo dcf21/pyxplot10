@@ -106,7 +106,7 @@ static void funcFail(pplFuncCall *f, const int errType, const int alwaysError, c
 //! ppl_funcNullOutput - Set the result of a built-in function to NaN
 //! \param [in] f - The call to the built-in function
 
-void ppl_funcNullOutput(pplFuncCall *f) {
+void ppl_funcNullOutput(const pplFuncCall *f) {
     pplObj *out = &f->in[-1];
     out->real = GSL_NAN;
     out->imag = 0;
@@ -323,7 +323,7 @@ void ppl_funcError(int *status, int *errType, char *errText, const int type, con
 //! \param [in] str - The string to copy
 //! \return The copy, or NULL if memory ran out (which has been reported)
 
-char *ppl_funcStrdup(pplFuncCall *f, const char *str) {
+char *ppl_funcStrdup(const pplFuncCall *f, const char *str) {
     char *out = (char *) malloc(strlen(str) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {

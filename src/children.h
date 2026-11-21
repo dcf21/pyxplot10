@@ -44,8 +44,8 @@ void pplcsp_killLatestSinglewindow(ppl_context *context);
 
 void pplcsp_checkForHelperExits(int signo);
 void pplcsp_killAllHelpers(const ppl_context *context);
-void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout);
-void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fstdin, int *fstdout);
+void pplcsp_forkSed(ppl_context *context, const char *cmd, int *fstdin, int *fstdout);
+void pplcsp_forkLaTeX(ppl_context *context, const char *filename, int *PidOut, int *fstdin, int *fstdout);
 void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout);
 void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout);
 

@@ -26,12 +26,12 @@
 
 void ppl_switchOverCalDate(ppl_context *ct, double *LastJulian, double *FirstGregorian);
 double ppl_switchOverJD(ppl_context *ct);
-char *ppl_getMonthName(ppl_context *ct, int i);
-char *ppl_getWeekDayName(ppl_context *ct, int i);
+char *ppl_getMonthName(const ppl_context *ct, int i);
+char *ppl_getWeekDayName(const ppl_context *ct, int i);
 void ppl_getHebrewNewYears(const ppl_context *ct, int GregYear, int *YearNumbers, double *JDs, int *YearTypes);
-double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, int day, int hour, int min, int sec, int *status,
+double ppl_hebrewToUnixTime(const ppl_context *ct, int year, int month, int day, int hour, int min, int sec, int *status,
                             char *errText);
-void ppl_hebrewFromUnixTime(ppl_context *ct, double UT, int *year, int *month, int *day, int *status,
+void ppl_hebrewFromUnixTime(const ppl_context *ct, double UT, int *year, int *month, int *day, int *status,
                             char *errText);
 double ppl_islamicToUnixTime(const ppl_context *ct, int year, int month, int day, int hour, int min, int sec,
                              int *status, char *errText);

@@ -64,7 +64,7 @@
 //! \param [out] USEcol1234 - Set to true if the color components <outcol1>...<outcol4> were set
 //! \return Zero on success, or one if the color was invalid
 
-int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, const int *ptab, int stkbase,
+int ppl_colorFromDict(ppl_context *c, const parserOutput *in, const parserLine *pl, const int *ptab, int stkbase,
                       const int fillColor, int *outcol, int *outcolspace, pplExpr **EXPoutcol, double *outcol1,
                       double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
                       unsigned char *USEcol1234) {

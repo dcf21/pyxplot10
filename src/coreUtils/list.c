@@ -76,7 +76,7 @@ int ppl_listFree(list *in) {
 //! \param [in] in - The list to query (may be NULL)
 //! \return The number of items in the list, or zero if <in> is NULL
 
-int ppl_listLen(list *in) {
+int ppl_listLen(const list *in) {
     if (in == NULL) return 0;
     return in->length;
 }
@@ -97,7 +97,7 @@ static void *listAlloc(const list *in, const int size) {
 //! \param [in] itemSize - The number of bytes of data to copy from each list item
 //! \return The new list, or NULL if memory allocation failed
 
-list *ppl_listCpy(list *in, const int useMalloc, const int itemSize) {
+list *ppl_listCpy(const list *in, const int useMalloc, const int itemSize) {
     if (in == NULL) return NULL;
     list *out = ppl_listInit(useMalloc);
     if (out == NULL) return NULL;

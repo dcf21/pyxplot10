@@ -327,7 +327,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 //! \param [in] header - The bitmap file's header, from which the bit masks are read
 //! \param [in] image - The image structure into which the image is read
 
-void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitmap_data *image) {
+void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, const unsigned char *header, bitmap_data *image) {
     // Variables for decoding each pixel
 
     // Assume 5 bits per component unless the bit masks say otherwise

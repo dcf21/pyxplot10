@@ -124,7 +124,7 @@ static pplTokenCode *tokenOut(const tokeniserState *t) {
 //! \param [in] n - The number of further tokens to make room for
 //! \return Zero on success, or nonzero if memory ran out
 
-static int tokenBuffEnsure(tokeniserState *t, const int n) {
+static int tokenBuffEnsure(const tokeniserState *t, const int n) {
     ppl_context *context = t->context;
     // Double the size of the buffer until there is room for n more tokens
     while (t->outOffset + t->outpos + n >= context->tokenBuffLen) {
@@ -216,7 +216,7 @@ static void appendOr(char *errText, int *i, int *j) {
 //! \param [out] errType - Set to the type of error, if an error occurred
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
-void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarAllowed, const int equalsAllowed,
+void ppl_expTokenise(ppl_context *context, const char *in, int *end, const int dollarAllowed, const int equalsAllowed,
                      const int allowCommaOperator, const int collectCommas, const int isDict, const int outOffset,
                      int *outlen, int *errPos, int *errType, char *errText) {
     const char *allowed[] = {"BEHILMNOG", "CJKQRU",    "BDHILMNOG", "JKQU",     "FJKQRU", "JKU",   "SFJKPQRU", "EG",
@@ -919,7 +919,7 @@ overflow:
 //! \param [in] in - The expression which was tokenised
 //! \param [in] len - The number of characters in the expression
 
-void ppl_tokenPrint(const ppl_context *context, char *in, const int len) {
+void ppl_tokenPrint(const ppl_context *context, const char *in, const int len) {
     const pplTokenCode *tdat = context->tokenBuff;
     for (int i = 0; i < len; i++) printf("  %c", in[i]);
     printf("\n");
@@ -991,7 +991,7 @@ typedef struct pplExprCompiler {
 //! \param [in] type - The type of the error, e.g. ERR_SYNTAX
 //! \param [in] text - The error message
 
-static void compileError(pplExprCompiler *c, const int pos, const int type, const char *text) {
+static void compileError(const pplExprCompiler *c, const int pos, const int type, const char *text) {
     *c->errPos = pos;
     *c->errType = type;
     strcpy(c->errText, text);
@@ -1056,7 +1056,7 @@ static char *reserveString(pplExprCompiler *c, const int maxLen) {
 //! \param [in] len - The length of the string which was written (excluding any null terminator)
 //! \return The offset of the string within the string table
 
-static int commitString(pplExprCompiler *c, const int len) {
+static int commitString(const pplExprCompiler *c, const int len) {
     pplExpr *const expr = c->expr;
     const int offset = expr->stringsLen;
     expr->strings[offset + len] = '\0';
@@ -1221,7 +1221,7 @@ static int popBracket(pplExprCompiler *c, const pplExprStackItemType type, const
 //! \param [in] tpos - The position of the assignment operator in the source text
 //! \return Zero on success, or nonzero on error
 
-static int convertToPointer(pplExprCompiler *c, const int tpos) {
+static int convertToPointer(const pplExprCompiler *c, const int tpos) {
     // The instruction just written, which fetched the value being assigned to, is changed to fetch a pointer to it
     // instead
     // There must be such an instruction
@@ -1519,7 +1519,7 @@ static int compileBracket(pplExprCompiler *c, const char tokenState, const pplTo
 //! jump straight to the end of the expression.
 //! \param [in] expr - The compiled expression to optimise
 
-static void optimiseBranches(pplExpr *expr) {
+static void optimiseBranches(const pplExpr *expr) {
     pplExprInstruction *const bytecode = expr->bytecode;
     int changed;
     // Make branches which jump to another branch jump straight to its destination, where that is equivalent, repeating
@@ -1559,7 +1559,7 @@ static void optimiseBranches(pplExpr *expr) {
 //! \param [out] errType - Set to the type of error, if an error occurred
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
-void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, char *srcFname, char *in, int *end,
+void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, const char *srcFname, const char *in, int *end,
                     const int dollarAllowed, const int equalsAllowed, const int allowCommaOperator, pplExpr **outExpr,
                     int *errPos, int *errType, char *errText) {
     pplExprCompiler c;

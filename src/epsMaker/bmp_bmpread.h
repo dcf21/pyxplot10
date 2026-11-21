@@ -33,7 +33,7 @@
 #include "epsMaker/bmp_image.h"
 
 void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image);
-void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitmap_data *image);
+void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, const unsigned char *header, bitmap_data *image);
 int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, unsigned long len);
 
 #endif

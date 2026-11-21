@@ -65,7 +65,7 @@
 //! \param [in] offset - The offset from each list item to the name component it contains
 
 void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcId, const char *srcFname,
-                              const char *linetxt, pplObj *stk, const int *stkPos, pplObj **out, const int base,
+                              const char *linetxt, const pplObj *stk, const int *stkPos, pplObj **out, const int base,
                               int offset) {
     int first = 1;
     int pos = base;
@@ -176,7 +176,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
 //! \param [in] returnGlobObjs - If true, return placeholder objects which mark variables as global or deleted;
 //! otherwise skip over them
 
-void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, const int returnGlobObjs) {
+void ppl_contextVarLookup(const ppl_context *c, const char *name, pplObj **output, const int returnGlobObjs) {
     // Search the current namespace, then the global namespace (1), and then the built-in namespace (0); the namespaces
     // of any subroutines which called the current one are not searched
     for (int i = c->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
@@ -221,7 +221,7 @@ void ppl_contextGetVarPointer(const ppl_context *c, char *name, pplObj **output,
 //! \param [in] name - The name of the variable
 //! \param [in] temp - The value to store in the variable
 
-void ppl_contextRestoreVarPointer(const ppl_context *c, char *name, pplObj *temp) {
+void ppl_contextRestoreVarPointer(const ppl_context *c, const char *name, pplObj *temp) {
     dict *d = c->namespaces[c->ns_ptr];
     pplObj *obj = (pplObj *) ppl_dictLookup(d, name);
     // Free the placeholder value, and move the new value into the variable, keeping the variable's own allocation flag

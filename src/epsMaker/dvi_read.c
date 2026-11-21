@@ -346,7 +346,7 @@ int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int 
 //! \param [in] op - The operator
 //! \return Zero
 
-int DisplayDVIOperator(pplerr_context *ec, DVIOperator *op) {
+int DisplayDVIOperator(pplerr_context *ec, const DVIOperator *op) {
     // The message to log
     char s2[128];
     char *s = NULL;

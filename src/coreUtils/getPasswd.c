@@ -97,7 +97,7 @@ char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username
 //! \return The user's real name, stored in a static buffer which is overwritten by subsequent calls, or their login
 //! name if it could not be found
 
-char *ppl_unixGetIRLName(pplerr_context *context) {
+char *ppl_unixGetIRLName(const pplerr_context *context) {
     static char name[FNAME_LENGTH];
     const struct passwd *ptr = UnixGetPwEntry(context);
     if (ptr == NULL) return getlogin(); // In case of failure, return user's login.

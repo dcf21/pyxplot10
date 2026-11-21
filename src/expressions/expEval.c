@@ -165,7 +165,7 @@ int ppl_castToInt(ppl_context *context, pplObj *x, const char *op, const pplExpr
 //! \param [in] context - The Pyxplot context
 //! \param [in,out] x - The object to convert, which is overwritten with the boolean
 
-void ppl_castToBool(ppl_context *context, pplObj *x) {
+void ppl_castToBool(const ppl_context *context, pplObj *x) {
     // Numbers are true unless zero, strings unless empty, and so on
     const int t = x->objType;
     const int rc = x->refCount; // The reference count is kept, since the object stays on the stack

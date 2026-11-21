@@ -100,7 +100,7 @@ static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *st
 //! \param [in] call - The details of the method call, including its arguments and where to report errors
 //! \param [in] functions - 1 to list only functions (methods); 0 to list only other members; -1 to list all members
 
-static void listMembers(pplFuncCall *call, const int functions) {
+static void listMembers(const pplFuncCall *call, const int functions) {
     pplObj *in = call->in;
     const pplObj *iter = in[-1].self_this;
     dict *const builtIn = pplObjMethods[iter->objType];

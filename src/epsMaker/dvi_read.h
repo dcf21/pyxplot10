@@ -85,7 +85,7 @@ int dviInterpretOperator(pplerr_context *ec, dviInterpreterState *interp, DVIOpe
 int dviDeleteInterpreter(pplerr_context *ec, dviInterpreterState *interp);
 int dviTypeset(pplerr_context *ec, dviInterpreterState *interp);
 
-dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *state);
+dviStackState *dviCloneInterpState(const pplerr_context *ec, const dviStackState *state);
 
 postscriptPage *dviNewPostscriptPage(pplerr_context *ec);
 int dviDeletePostscriptPage(const pplerr_context *ec, postscriptPage *page);
@@ -94,7 +94,7 @@ int dviDeletePostscriptState(const pplerr_context *ec, postscriptState *state);
 int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp);
 int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, const char *s);
 
-int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned char s, double *size);
+int dviGetCharSize(pplerr_context *ec, const dviInterpreterState *interp, unsigned char s, double *size);
 
 // Routines for reading from files
 int ReadUChar(pplerr_context *ec, FILE *fp, int *uc);
@@ -102,7 +102,7 @@ int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, int n);
 int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, int n);
 double ReadFixWord(pplerr_context *ec, FILE *fp, int *err);
 
-int DisplayDVIOperator(pplerr_context *ec, DVIOperator *op);
+int DisplayDVIOperator(pplerr_context *ec, const DVIOperator *op);
 int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp);
 
 // The following definitions are taken from PyX

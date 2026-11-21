@@ -26,6 +26,6 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
+void ppl_directive_fit(ppl_context *c, parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
 
 #endif

@@ -25,9 +25,9 @@
 #include "userspace/context.h"
 #include "userspace/pplObj.h"
 
-void ppl_expIntegrate(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *expr, int exprPos, char *dummy,
+void ppl_expIntegrate(ppl_context *c, pplExpr *inExpr, int inExprCharPos, const char *expr, int exprPos, char *dummy,
                       pplObj *min, pplObj *max, pplObj *out, int dollarAllowed, int recursionDepth);
-void ppl_expDifferentiate(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *expr, int exprPos, char *dummy,
+void ppl_expDifferentiate(ppl_context *c, pplExpr *inExpr, int inExprCharPos, const char *expr, int exprPos, char *dummy,
                           pplObj *point, pplObj *step, pplObj *out, int dollarAllowed, int recursionDepth);
 
 #endif

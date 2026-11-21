@@ -36,8 +36,8 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
 void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
 void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutput *in);
 void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput *in);
-void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *in, int interactive);
-void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput *in, int interactive);
+void ppl_directive_seterror(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive);
+void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive);
 void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
 
 #endif

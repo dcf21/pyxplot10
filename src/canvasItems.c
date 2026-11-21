@@ -195,7 +195,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
 //! \param [in] includeAxes - If true, also copy the user's current axes, arrows and labels into the new item
 //! \return Zero on success, or one on failure
 
-static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, canvas_item **output, int *id,
+static int canvas_itemlist_add(ppl_context *c, const pplObj *command, const int type, canvas_item **output, int *id,
                                const unsigned char includeAxes) {
     canvas_item *next, *prev, **insertpointA, **insertpointB;
     int editNo;
@@ -1223,7 +1223,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 //! \return Zero on success, or one on failure
 
-int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive,
+int ppl_directive_ellipse(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive,
                           const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_item *ptr;

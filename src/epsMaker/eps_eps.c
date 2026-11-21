@@ -49,7 +49,7 @@
 //! \param [out] filename - Buffer of FNAME_LENGTH bytes, into which the first matching filename is written
 //! \return Zero on success, or one if an error was reported
 
-int eps_eps_expandFilename(EPSComm *x, char *filename) {
+int eps_eps_expandFilename(const EPSComm *x, char *filename) {
     char msg[PPL_MSG_LENGTH], fName[FNAME_LENGTH];
     wordexp_t wordExp;
     glob_t globData;

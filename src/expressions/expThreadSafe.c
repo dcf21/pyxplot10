@@ -270,7 +270,7 @@ int ppl_expThreadSafe(ppl_context *c, const pplExpr *e, const char *const *local
 //! \param [in] parent - The context whose settings and variables the worker shares
 //! \return The worker context, or NULL if memory ran out. Free with ppl_contextWorkerFree().
 
-ppl_context *ppl_contextWorkerNew(ppl_context *parent) {
+ppl_context *ppl_contextWorkerNew(const ppl_context *parent) {
     // Create the worker's context
     ppl_context *w = (ppl_context *) malloc(sizeof(ppl_context));
     if (w == NULL) return NULL;

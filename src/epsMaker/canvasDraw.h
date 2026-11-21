@@ -30,7 +30,7 @@ void canvas_CallLaTeX(EPSComm *x);
 void canvas_MakeEPSBuffer(EPSComm *x);
 void canvas_EPSWrite(EPSComm *x);
 void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, int halign, int valign,
-                              char *colstr, double fontsize, double rotate, double *width, double *height);
+                              const char *colstr, double fontsize, double rotate, double *width, double *height);
 void canvas_EPSLandscapify(EPSComm *x, char *transform);
 void canvas_EPSEnlarge(EPSComm *x, char *transform);
 

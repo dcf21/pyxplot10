@@ -26,6 +26,6 @@
 
 #include "list.h"
 
-list *ppl_strSplit(char *in);
+list *ppl_strSplit(const char *in);
 
 #endif

@@ -34,7 +34,7 @@ void eps_withwords_default_counterinc(const EPSComm *x, int *Ccounter, int *LTco
                                       unsigned char colour, const withWords *ww_final, const pplset_graph *sg);
 int eps_plot_styles_NDataColumns(pplerr_context *ec, int style, unsigned char ThreeDim);
 int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, int style, unsigned char ThreeDim, pplset_axis *a1,
-                                pplset_axis *a2, pplset_axis *a3, pplset_graph *sg, int xyz1, int xyz2, int xyz3,
+                                pplset_axis *a2, pplset_axis *a3, const pplset_graph *sg, int xyz1, int xyz2, int xyz3,
                                 int n1, int n2, int n3, int id);
 int eps_plot_dataset(EPSComm *x, const dataTable *data, int style, unsigned char ThreeDim, pplset_axis *a1,
                      pplset_axis *a2, pplset_axis *a3, int xn, int yn, int zn, pplset_graph *sg, canvas_plotdesc *pd,

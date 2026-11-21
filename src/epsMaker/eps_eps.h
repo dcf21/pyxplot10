@@ -24,7 +24,7 @@
 
 #include "epsMaker/eps_comm.h"
 
-int eps_eps_expandFilename(EPSComm *x, char *filename);
+int eps_eps_expandFilename(const EPSComm *x, char *filename);
 void eps_eps_RenderEPS(EPSComm *x);
 void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, double *br, double *bt,
                          unsigned char *GotBox);

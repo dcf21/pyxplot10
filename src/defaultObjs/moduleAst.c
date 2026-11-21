@@ -250,7 +250,7 @@ static int checkLcdmInputs(pplFuncCall *f, const int h0Index, const char *h0Posi
 //! \param [in] f - The call to the built-in function
 //! \return Zero if the argument is acceptable, or nonzero if not (and this has been reported)
 
-static int checkRedshift(pplFuncCall *f) {
+static int checkRedshift(const pplFuncCall *f) {
     if (f->in[0].dimensionless) return 0;
     ppl_funcError(f->status, f->errType, f->errText, ERR_UNIT,
             "The %s function can only act upon dimensionless values for redshift. Supplied value has "

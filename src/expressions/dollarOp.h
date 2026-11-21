@@ -34,6 +34,6 @@ void ppl_dollarOp_deconfig(ppl_context *c);
 
 void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, int inExprCharPos, int colNum);
 
-void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, int inExprCharPos, char *colName);
+void ppl_dollarOp_fetchColByName(ppl_context *c, const pplExpr *inExpr, int inExprCharPos, const char *colName);
 
 #endif

@@ -180,7 +180,7 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
 //! \return Zero on success, or one if memory allocation failed
 
 int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const double linewidth, const double offset,
-                           double pointsize, char *colstr, char *psfrag) {
+                           double pointsize, char *colstr, const char *psfrag) {
 
     // When the buffer is inactive, write the fragment now with its style; otherwise store a copy of it
     if (!ThreeDimBuffer_ACTIVE) {

@@ -493,7 +493,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 //! \param [in] log_base - The base of the logarithmic axis on which the tick lies, or 1 for a linear axis
 //! \param [in] OutContext - The ppl_memAlloc context in which to allocate the label
 
-void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int OutContext) {
+void TickLabelAutoGen(const EPSComm *X, char **output, double x, double log_base, int OutContext) {
     // Variables for formatting the label
     char msg[PPL_MSG_LENGTH];
     const int SF = X->c->set->term_current.SignificantFigures;

@@ -357,7 +357,7 @@ void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode
 //! \param [in] in - The axis it is linked to
 //! \return Zero on success, or one on failure
 
-int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) {
+int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, const pplset_axis *in) {
     // Variables for sampling the linking expression
     char msg[PPL_MSG_LENGTH];
     const int stkLevelOld = X->c->stackPtr;

@@ -41,7 +41,7 @@ void ThreeDimBuffer_Reset(const EPSComm *x);
 int ThreeDimBuffer_Activate(EPSComm *x);
 int ThreeDimBuffer_Deactivate(EPSComm *x);
 int ThreeDimBuffer_writeps(EPSComm *x, double z, int linetype, double linewidth, double offset, double pointsize,
-                           char *colstr, char *psfrag);
+                           char *colstr, const char *psfrag);
 int ThreeDimBuffer_linesegment(EPSComm *x, double z, int linetype, double linewidth, char *colstr, double x0, double y0,
                                double x1, double y1, double x2, double y2, unsigned char FirstSegment,
                                unsigned char broken, double LengthOffset);

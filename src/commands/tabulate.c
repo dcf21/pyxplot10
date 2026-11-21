@@ -67,7 +67,7 @@
 //! \return Zero on success, or one if an error occurred
 
 static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data, const int *minSet, const double *min,
-                                   const int *maxSet, const double *max, pplObj *unit, char *format) {
+                                   const int *maxSet, const double *max, const pplObj *unit, char *format) {
     char msg[PPL_MSG_LENGTH];
     char tmpchr = '\0';
     double tmpdbl, multiplier[USING_ITEMS_MAX];

@@ -491,7 +491,7 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
 //! \param [in] cs - The initial LZW code size, in bits
 //! \return The number of bytes of decompressed data, or zero on failure
 
-unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsigned long buffLen, unsigned char *out,
+unsigned long ppl_bmp_de_lzw(pplerr_context *ec, const unsigned char *buff, const unsigned long buffLen, unsigned char *out,
                              const unsigned long len, int cs) {
     char msg[PPL_MSG_LENGTH];
     unsigned char store[256];
@@ -603,7 +603,7 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsi
 //! \param [in] len - The length of the code, in bits
 //! \return The code
 
-unsigned int ppl_bmp_de_lzw_bits(const pplerr_context *ec, unsigned char *c, const int st, const int len) {
+unsigned int ppl_bmp_de_lzw_bits(const pplerr_context *ec, const unsigned char *c, const int st, const int len) {
 
     // Read three bytes, which contain the code, and extract it
     unsigned tmp = ((unsigned) (*(c + 2)) << 16) + ((unsigned) (*(c + 1)) << 8) + *(c);

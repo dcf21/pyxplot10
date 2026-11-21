@@ -282,7 +282,7 @@ void eps_plot_WithWordsFromUsingItems(ppl_context *c, withWords *ww, const doubl
 //! \param [in] name - The name of the plot style modifier, used in error messages, e.g. "point size"
 //! \return Zero if the column is dimensionless, or one if an error was reported
 
-static int checkColumnDimensionless(ppl_context *c, pplObj *firstValues, int *i, const char *name) {
+static int checkColumnDimensionless(ppl_context *c, const pplObj *firstValues, int *i, const char *name) {
     // Report a style expression which is not dimensionless
     if (!firstValues[*i].dimensionless) {
         char msg[PPL_MSG_LENGTH];
@@ -391,7 +391,7 @@ static void TriSwap(double *a, double *b) {
 //! \param [in] zdepth - The depth of the graph, in postscript points
 //! \param [out] data - Array of 3x8 numbers, into which the x, y and depth of each corner are written
 
-void eps_plot_projectCubeCorners(EPSComm *x, const double origin_x, const double origin_y, const double width,
+void eps_plot_projectCubeCorners(const EPSComm *x, const double origin_x, const double origin_y, const double width,
                                  const double height, const double zdepth, double *data) {
     for (int i = 0; i < 8; i++)
         eps_plot_ThreeDimProject((i & 1) != 0, (i & 2) != 0, (i & 4) != 0, &x->current->settings, origin_x, origin_y,

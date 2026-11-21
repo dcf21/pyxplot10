@@ -132,7 +132,7 @@ double ppl_switchOverJD(ppl_context *ct) {
 //! \param [in] i - The month number, where 1 is the first month of the year
 //! \return The name of the month, or "???" if the month number is out of range
 
-char *ppl_getMonthName(ppl_context *ct, const int i) {
+char *ppl_getMonthName(const ppl_context *ct, const int i) {
     // The Hebrew and Islamic calendars have their own months; the others use the months of the Julian and Gregorian
     // calendars
     switch (ct->set->term_current.CalendarOut) {
@@ -237,7 +237,7 @@ char *ppl_getMonthName(ppl_context *ct, const int i) {
 //! \param [in] i - The day number, where 0 is Monday and 6 is Sunday. Negative values count back from Sunday.
 //! \return The name of the day, or "???" if the day number is out of range
 
-char *ppl_getWeekDayName(ppl_context *ct, int i) {
+char *ppl_getWeekDayName(const ppl_context *ct, int i) {
     if (i < 0) i += 7;
     // Days of the week are numbered from Monday
     switch (i) {
@@ -385,7 +385,7 @@ void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearN
 //! \param [out] errText - Character buffer into which to write an error message if the date is invalid
 //! \return The unix time of the date
 
-double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day, const int hour, const int min,
+double ppl_hebrewToUnixTime(const ppl_context *ct, int year, int month, const int day, const int hour, const int min,
                             const int sec, int *status, char *errText) {
     int i;
     int YearNumbers[3], YearTypes[3];
@@ -433,7 +433,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
 //! \param [in] status - Unused
 //! \param [in] errText - Unused
 
-void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
+void ppl_hebrewFromUnixTime(const ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
                             char *errText) {
     int j;
     int JulMon, JulYr;

@@ -625,7 +625,7 @@ void pplcsp_killAllHelpers(const ppl_context *context) {
 //! \param [out] fstdin - Set to the file descriptor of a pipe to sed's standard input
 //! \param [out] fstdout - Set to the file descriptor of a pipe from sed's standard output
 
-void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) {
+void pplcsp_forkSed(ppl_context *context, const char *cmd, int *fstdin, int *fstdout) {
     // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];
@@ -712,7 +712,7 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
 //! \param [out] fstdin - Set to the file descriptor of a pipe to LaTeX's standard input
 //! \param [out] fstdout - Set to the file descriptor of a pipe from LaTeX's standard output
 
-void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fstdin, int *fstdout) {
+void pplcsp_forkLaTeX(ppl_context *context, const char *filename, int *PidOut, int *fstdin, int *fstdout) {
     // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];

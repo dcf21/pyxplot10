@@ -29,7 +29,7 @@
 double ppl_optimise_RealToLog(double in, int iter, double *norm);
 double ppl_optimise_LogToReal(double in, int iter, const double *norm);
 
-void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
+void ppl_directive_solve(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive, int iterDepth);
 void ppl_directive_maximise(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 void ppl_directive_minimise(ppl_context *c, parserLine *pl, parserOutput *in, int interactive, int iterDepth);
 

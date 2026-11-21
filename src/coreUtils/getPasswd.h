@@ -29,7 +29,7 @@
 /* Functions defined in ppl_passwd.c */
 char *ppl_unixGetHomeDir(pplerr_context *context);
 char *ppl_unixGetUserHomeDir(pplerr_context *context, char *username);
-char *ppl_unixGetIRLName(pplerr_context *context);
+char *ppl_unixGetIRLName(const pplerr_context *context);
 char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, char *out, size_t outLen);
 
 #endif

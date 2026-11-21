@@ -221,7 +221,7 @@ int ppldata_RawDataTable_AddRow(rawDataTable *i) {
 //! \param [in] c - The Pyxplot context
 //! \param [in] i - The data table to print
 
-void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
+void ppldata_DataTable_List(ppl_context *c, const dataTable *i) {
     // Variables for printing the table
 
     // Report an empty table
@@ -535,7 +535,7 @@ static void applyUsingFail(ppl_context *c, const char *errtext, int *errCount, c
 //! \param [in] c - The Pyxplot context
 //! \return Pointer to the top object on the stack
 
-static pplObj *stackTop(ppl_context *c) { return &c->stack[c->stackPtr - 1]; }
+static pplObj *stackTop(const ppl_context *c) { return &c->stack[c->stackPtr - 1]; }
 
 //! ppldata_ApplyUsingList - Evaluate all of the "using" expressions, the label expression and the select expression for
 //! the current row of data, and append the result as a new row of the output data table
@@ -1687,7 +1687,7 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
 //! \param [in] q - The number of the sample within the current block
 //! \param [in] nEvaluated - The number of functions which were evaluated at the sample
 
-static void discardSample(parallelSampler *s, const long q, const int nEvaluated) {
+static void discardSample(const parallelSampler *s, const long q, const int nEvaluated) {
     // Free the values of the functions already evaluated
     for (int g = 0; g < nEvaluated; g++) {
         pplObj *r = &s->results[q * s->fnlist_len + g];
@@ -2104,7 +2104,7 @@ CANCEL:
 //! suppressed
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
-void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const int objListLen, pplExpr **usingExprs,
+void ppldata_fromVectors(ppl_context *c, dataTable **out, const pplObj *objList, const int objListLen, pplExpr **usingExprs,
                          int autoUsingExprs, int Ncols, int NusingObjs, pplExpr *labelExpr, pplExpr *selectExpr,
                          pplExpr *sortBy, const int continuity, int *status, char *errtext, int *errCount,
                          const int iterDepth) {

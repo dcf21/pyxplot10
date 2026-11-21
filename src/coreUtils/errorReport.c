@@ -95,7 +95,7 @@ void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, cons
 
 //! errorUnlocked - The body of ppl_error(), which is called with the lock held that lets only one thread report at a time
 
-static void errorUnlocked(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
+static void errorUnlocked(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, const char *msg) {
     // ApplyHighlighting is set if the terminal supports colour; reverse counts down the characters still to be shown in
     // reverse video; i is the length of the message assembled so far
     unsigned char reverse = 0;
@@ -281,7 +281,7 @@ void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
 
 //! warningUnlocked - The body of ppl_warning(), which is called with the lock held that lets only one thread report at a time
 
-static void warningUnlocked(pplerr_context *context, const int ErrType, char *msg) {
+static void warningUnlocked(pplerr_context *context, const int ErrType, const char *msg) {
     // i is the length of the message assembled so far
     int i = 0;
 
@@ -393,7 +393,7 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
 
 //! reportUnlocked - The body of ppl_report(), which is called with the lock held that lets only one thread report at a time
 
-static void reportUnlocked(pplerr_context *context, char *msg) {
+static void reportUnlocked(pplerr_context *context, const char *msg) {
     if (msg == NULL) msg = "";
     // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringA) {
@@ -432,7 +432,7 @@ void ppl_report(pplerr_context *context, char *msg) {
 
 //! logUnlocked - The body of ppl_log(), which is called with the lock held that lets only one thread report at a time
 
-static void logUnlocked(pplerr_context *context, char *msg) {
+static void logUnlocked(pplerr_context *context, const char *msg) {
     // The log file, opened on the first call, and a latch which stops this function from calling itself
     static FILE *logfile = NULL;
     static int latch = 0;
