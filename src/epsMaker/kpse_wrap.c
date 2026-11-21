@@ -63,7 +63,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
 #else
     char msg[PPL_MSG_LENGTH];
     const char *FileTypes[N_FILE_TYPES] = {"tfm", "pfa", "pfb", "map", "enc"};
-    int i, j, k, l, s, TrialNumber, fstdout;
+    int i, k, s, fstdout;
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
     sigset_t sigs;
@@ -74,17 +74,17 @@ void ppl_kpse_wrap_init(ppl_context *c) {
     sigaddset(&sigs, SIGCHLD);
 
     // Start with empty lists of paths
-    for (j = 0; j < N_FILE_TYPES; j++) {
+    for (int j = 0; j < N_FILE_TYPES; j++) {
         ppl_kpse_PathList[j][0] = NULL;
         for (i = 0; i < MAX_PATHS; i++) ppl_kpse_PathRecursive[j][i] = 0;
     }
 
     // Ask kpsewhich for the search path of each type of file
-    for (j = 0; j < N_FILE_TYPES; j++) {
+    for (int j = 0; j < N_FILE_TYPES; j++) {
         pplcsp_forkKpseWhich(c, FileTypes[j], &fstdout);
 
         // Wait for kpsewhich process's stdout to become readable. Get bored if this takes more than a second.
-        TrialNumber = 1;
+        int TrialNumber = 1;
         // Retry the wait up to three times if it is interrupted by a signal
         while (1) {
             waitperiod.tv_sec = 1;
@@ -130,7 +130,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
             }
             // A colon or newline ends a path; strip any trailing slashes, and terminate it
             if ((ppl_kpse_FilePaths[j][i] == ':') || (ppl_kpse_FilePaths[j][i] == '\n')) {
-                for (l = i - 1; ((l >= 0) && (ppl_kpse_FilePaths[j][l] == PATHLINK[0])); l--)
+                for (int l = i - 1; ((l >= 0) && (ppl_kpse_FilePaths[j][l] == PATHLINK[0])); l--)
                     ppl_kpse_FilePaths[j][l] = '\0';
                 s = 0;
                 ppl_kpse_FilePaths[j][i] = '\0';
@@ -175,7 +175,6 @@ void ppl_kpse_wrap_init(ppl_context *c) {
 char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned char recurse) {
     // The result is returned in a static buffer, shared by the recursive calls
     char msg[PPL_MSG_LENGTH];
-    int pos;
     DIR *dp;
     struct dirent *dirp;
     struct stat statbuf;
@@ -200,7 +199,7 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
     if (recurse) {
         snprintf(buffer, FNAME_LENGTH, "%s%s", path, PATHLINK);
         buffer[FNAME_LENGTH - 1] = '\0';
-        pos = strlen(buffer);
+        int pos = strlen(buffer);
         if ((dp = opendir(buffer)) == NULL) return NULL;
         // Search each subdirectory
         while (((dirp = readdir(dp)) != NULL) && (!found)) {
@@ -226,16 +225,14 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
 
 char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigned char *RecurseList) {
     char msg[PPL_MSG_LENGTH];
-    int i;
-    char *output;
     // Log the search
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Searching for file <%s>", s);
         ppl_log(ec, msg);
     }
     // Search each directory in turn
-    for (i = 0; paths[i] != NULL; i++) {
-        output = ppl_kpse_wrap_test_path(ec, s, paths[i], RecurseList[i]);
+    for (int i = 0; paths[i] != NULL; i++) {
+        char *output = ppl_kpse_wrap_test_path(ec, s, paths[i], RecurseList[i]);
         if (output != NULL) return output;
     }
     return NULL;

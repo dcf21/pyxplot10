@@ -199,7 +199,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
         }
         case PPLOBJ_USER:
         case PPLOBJ_MOD: {
-            int i = 0, k;
+            int i = 0;
             const int expand = (modIterDepth == 0);
             dictIterator *iter = ppl_dictIterateInit((dict *) o->auxil);
             char *key;
@@ -216,7 +216,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                         continue; // Hide globals and zombies
                     // Indent the member by its depth
-                    for (k = 0; k <= modIterDepth; k++) {
+                    for (int k = 0; k <= modIterDepth; k++) {
                         ppl_strAppendChar(out, outlen, &i, ' ');
                         ppl_strAppendChar(out, outlen, &i, ' ');
                     }
@@ -235,7 +235,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 }
                 if (i < outlen) ppl_strAppendChar(out, outlen, &i, ' ');
                 // Indent the closing brace to match
-                for (k = 0; ((k < modIterDepth) && (i < outlen - 2)); k++) {
+                for (int k = 0; ((k < modIterDepth) && (i < outlen - 2)); k++) {
                     ppl_strAppendChar(out, outlen, &i, ' ');
                     ppl_strAppendChar(out, outlen, &i, ' ');
                 }
@@ -401,9 +401,8 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 const int t = f->functionType;
                 // Start each definition after the first on a new line, indented to line up with the first
                 if (!first) {
-                    int j;
                     ppl_strAppendChar(out, outlen, &i, '\n');
-                    for (j = 0; j < indent; j++) ppl_strAppendChar(out, outlen, &i, ' ');
+                    for (int j = 0; j < indent; j++) ppl_strAppendChar(out, outlen, &i, ' ');
                 }
                 // Describe each type of function
                 switch (t) {
@@ -413,8 +412,8 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                         i += strlen(out + i);
                         break;
                     case PPL_FUNC_USERDEF: {
-                        int j = -1, k, l, m;
-                        for (k = 0; k < f->maxArgs; k++)
+                        int j = -1, l, m;
+                        for (int k = 0; k < f->maxArgs; k++)
                             if (f->minActive[k] || f->maxActive[k]) j = k;
                         ppl_strAppendf(out, outlen, &i, "%s(", fnname);
                         // The argument names are stored one after another, each null-terminated; list them separated by
@@ -427,7 +426,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                         ppl_strAppendChar(out, outlen, &i, ')');
                         // Show the range of values of each argument over which this definition applies, e.g.
                         // f(x)[0:1]=...; j is the last argument which has a limit
-                        for (k = 0; k <= j; k++) {
+                        for (int k = 0; k <= j; k++) {
                             ppl_strAppendChar(out, outlen, &i, '[');
                             // The lower limit, if there is one
                             if (f->minActive[k]) {

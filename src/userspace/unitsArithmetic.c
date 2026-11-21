@@ -52,10 +52,9 @@
 //! \param [in] i - The object whose dimensions are to be copied
 
 void ppl_unitsDimCpy(pplObj *o, const pplObj *i) {
-    int j;
     o->dimensionless = i->dimensionless;
     o->tempType = i->tempType;
-    for (j = 0; j < UNITS_MAX_BASEUNITS; j++) o->exponent[j] = i->exponent[j];
+    for (int j = 0; j < UNITS_MAX_BASEUNITS; j++) o->exponent[j] = i->exponent[j];
     return;
 }
 
@@ -64,9 +63,8 @@ void ppl_unitsDimCpy(pplObj *o, const pplObj *i) {
 //! \param [in] i - The object whose dimensions are to be inverted
 
 void ppl_unitsDimInverse(pplObj *o, const pplObj *i) {
-    int j;
     o->dimensionless = i->dimensionless;
-    for (j = 0; j < UNITS_MAX_BASEUNITS; j++) o->exponent[j] = -i->exponent[j];
+    for (int j = 0; j < UNITS_MAX_BASEUNITS; j++) o->exponent[j] = -i->exponent[j];
     o->tempType = 0; // Either input was per temperature, or we are now per temperature.
     return;
 }
@@ -77,9 +75,8 @@ void ppl_unitsDimInverse(pplObj *o, const pplObj *i) {
 //! \return One if the objects have the same dimensions, zero otherwise
 
 int ppl_unitsDimEqual(const pplObj *a, const pplObj *b) {
-    int j;
     if (a->dimensionless && b->dimensionless) return 1;
-    for (j = 0; j < UNITS_MAX_BASEUNITS; j++)
+    for (int j = 0; j < UNITS_MAX_BASEUNITS; j++)
         if (ppl_dblEqual(a->exponent[j], b->exponent[j]) == 0) return 0;
     return 1;
 }
@@ -90,8 +87,7 @@ int ppl_unitsDimEqual(const pplObj *a, const pplObj *b) {
 //! \return One if the dimensions are the same, zero otherwise
 
 int ppl_unitsDimEqual2(const pplObj *a, const unit *b) {
-    int j;
-    for (j = 0; j < UNITS_MAX_BASEUNITS; j++)
+    for (int j = 0; j < UNITS_MAX_BASEUNITS; j++)
         if (ppl_dblEqual(a->exponent[j], b->exponent[j]) == 0) return 0;
     return 1;
 }
@@ -102,8 +98,7 @@ int ppl_unitsDimEqual2(const pplObj *a, const unit *b) {
 //! \return One if the dimensions are the same, zero otherwise
 
 int ppl_unitsDimEqual3(const unit *a, const unit *b) {
-    int j;
-    for (j = 0; j < UNITS_MAX_BASEUNITS; j++)
+    for (int j = 0; j < UNITS_MAX_BASEUNITS; j++)
         if (ppl_dblEqual(a->exponent[j], b->exponent[j]) == 0) return 0;
     return 1;
 }
@@ -135,7 +130,6 @@ unsigned char ppl_tempTypeMatch(const unsigned char a, const unsigned char b) {
 
 void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     // exponent is the power to which a is raised; DimLess is cleared if the result has any units
-    int i;
     gsl_complex ac, bc;
     unsigned char DimLess = 1;
 
@@ -231,7 +225,7 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     }
 
     // Otherwise multiply the exponent of each base unit by the power, checking for absurdly large exponents
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) {
         o->exponent[i] = a->exponent[i] * exponent;
         if (ppl_dblEqual(o->exponent[i], 0) == 0) DimLess = 0;
         // Exponents this large are an overflow
@@ -264,8 +258,6 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
 void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     // tmp is workspace for complex multiplication; DimLess is cleared if the result has any units
-    int i;
-    double tmp;
     unsigned char DimLess = 1;
 
     // Copy the operands, since o may be the same object as a or b
@@ -316,7 +308,7 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             o->imag = 0;
             o->flagComplex = 0;
         } else {
-            tmp = (areal * breal - aimag * bimag);
+            double tmp = (areal * breal - aimag * bimag);
             o->imag = (aimag * breal + areal * bimag);
             o->real = tmp;
             o->flagComplex = !ppl_dblEqual(o->imag, 0);
@@ -345,7 +337,7 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     }
 
     // Otherwise add the exponents of each base unit, checking for absurdly large exponents
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) {
         o->exponent[i] = a->exponent[i] + b->exponent[i];
         if (ppl_dblEqual(o->exponent[i], 0) == 0) DimLess = 0;
         // Exponents this large are an overflow
@@ -378,8 +370,7 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
 void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     // mag and tmp are workspace for complex division; DimLess is cleared if the result has any units
-    int i;
-    double mag, tmp;
+    double mag;
     unsigned char DimLess = 1;
 
     // Copy the operands, since o may be the same object as a or b
@@ -462,7 +453,7 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
                 return;
             }
         } else {
-            tmp = (areal * breal + aimag * bimag) / mag;
+            double tmp = (areal * breal + aimag * bimag) / mag;
             o->imag = (aimag * breal - areal * bimag) / mag;
             o->real = tmp;
             o->flagComplex = !ppl_dblEqual(o->imag, 0);
@@ -491,7 +482,7 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     }
 
     // Otherwise subtract the exponents of each base unit, checking for absurdly large exponents
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) {
         o->exponent[i] = a->exponent[i] - b->exponent[i];
         if (ppl_dblEqual(o->exponent[i], 0) == 0) DimLess = 0;
         // Exponents this large are an overflow

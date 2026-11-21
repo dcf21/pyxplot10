@@ -421,8 +421,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
     // Variables for reading the datasets
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int i, j, Ccounter = 0, LTcounter = 0, PTcounter = 0;
-    pplset_axis *axis, *axissets[3];
+    int i, Ccounter = 0, LTcounter = 0, PTcounter = 0;
+    pplset_axis *axissets[3];
     withWords ww_default;
     double *ordinate_raster, *ordinate2_raster, size[3], ScreenSize[3], ScreenBearing[3];
 
@@ -446,7 +446,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
         ScreenBearing[2] = 0.0;
     } else
         // In three dimensions, project each axis onto the page to find its length and direction
-        for (j = 0; j < 3; j++) {
+        for (int j = 0; j < 3; j++) {
             double x1, y1, z1, x2, y2, z2;
             eps_plot_ThreeDimProject((j == 0) ? 0 : 0.5, (j == 1) ? 0 : 0.5, (j == 2) ? 0 : 0.5, &x->current->settings,
                                      0, 0, size[0], size[1], size[2], &x1, &y1, &z1);
@@ -460,7 +460,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
 
     // First clear all range information from all axes.
     // Also, transfer range information from [Min,Max,unit] to [HardMin,HardMax,HardUnit].
-    for (j = 0; j < 3; j++) {
+    for (int j = 0; j < 3; j++) {
         pplset_axis *axes = axissets[j];
         const double PhysicalLengthMajor = ScreenSize[j] / (0.015 + 0.01 * fabs(sin(ScreenBearing[j])));
         const double PhysicalLengthMinor = ScreenSize[j] / 0.004;
@@ -512,7 +512,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
         int xyz = (k % Ndirs);
         int axis_n = 1 + k / Ndirs;
         if (axis_n > MAX_AXES) axis_n = 0;
-        axis = &axissets[xyz][axis_n];
+        pplset_axis *axis = &axissets[xyz][axis_n];
 
         // Check if we have partial range which conflicts with units of range of axis
         if ((pr->MinSet && (!pr->MaxSet)) && axis->HardMaxSet && (!pr->AutoMaxSet) &&
@@ -577,7 +577,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
     }
 
     // Proprogate range information to linked axes
-    for (j = 0; j < 3; j++) {
+    for (int j = 0; j < 3; j++) {
         pplset_axis *axes = axissets[j];
         for (i = 0; i < MAX_AXES; i++) eps_plot_LinkedAxisForwardPropagate(x, axes + i, 0);
     }
@@ -593,7 +593,6 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
 
     // Malloc pointers to data tables where data to be plotted will be stored
     if (Ndatasets > 0) {
-        int i;
         x->current->plotdata = (dataTable **) ppl_memAlloc(Ndatasets * sizeof(dataTable *));
         x->current->DatasetTextID = (int *) ppl_memAlloc(Ndatasets * sizeof(int));
         // Failure to allocate memory is reported as an error
@@ -602,8 +601,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
             *(x->status) = 1;
             return;
         }
-        for (i = 0; i < Ndatasets; i++) x->current->plotdata[i] = NULL;
-        for (i = 0; i < Ndatasets; i++) x->current->DatasetTextID[i] = 0;
+        for (int i = 0; i < Ndatasets; i++) x->current->plotdata[i] = NULL;
+        for (int i = 0; i < Ndatasets; i++) x->current->DatasetTextID[i] = 0;
     } else {
         x->current->plotdata = NULL;
         x->current->DatasetTextID = NULL;
@@ -898,13 +897,10 @@ void eps_plot_SampleFunctions(EPSComm *x) {
     // Variables for sampling functions
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int a, j, OrdinateRasterLen, Nsamples, OrdinateRasterLen2;
-    pplset_axis *OrdinateAxis, *OrdinateAxis2, *axissets[3];
-    unsigned char prev_RangeFinalised, prev_TickListFinalised;
+    int OrdinateRasterLen;
+    pplset_axis *axissets[3];
     char errbuffer[LSTR_LENGTH];
-    unsigned char SampleGrid;
-    double *OrdinateRaster, *OrdinateRaster2;
-    double *SpecialRaster;
+    double *OrdinateRaster;
 
     // The x, y and z axes of the graph
     axissets[0] = x->current->XAxes;
@@ -927,9 +923,9 @@ void eps_plot_SampleFunctions(EPSComm *x) {
 
             // The function is sampled along its first axis; remember whether its range was already decided, so this can
             // be undone afterwards
-            OrdinateAxis = &axissets[pd->axis1xyz][pd->axis1];
-            prev_RangeFinalised = axissets[pd->axis1xyz][pd->axis1].RangeFinalised;
-            prev_TickListFinalised = axissets[pd->axis1xyz][pd->axis1].TickListFinalised;
+            pplset_axis *OrdinateAxis = &axissets[pd->axis1xyz][pd->axis1];
+            unsigned char prev_RangeFinalised = axissets[pd->axis1xyz][pd->axis1].RangeFinalised;
+            unsigned char prev_TickListFinalised = axissets[pd->axis1xyz][pd->axis1].TickListFinalised;
 
             // Space for the using items, including the extra items needed for style expressions
             pplExpr **UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
@@ -969,15 +965,15 @@ void eps_plot_SampleFunctions(EPSComm *x) {
 
 
             // Check whether we're sampling along one axis, or sampling a grid
-            SampleGrid = (pd->ww_final.linespoints == SW_STYLE_SURFACE) ||
+            unsigned char SampleGrid = (pd->ww_final.linespoints == SW_STYLE_SURFACE) ||
                     (pd->ww_final.linespoints == SW_STYLE_COLORMAP) ||
                     (pd->ww_final.linespoints == SW_STYLE_CONTOURMAP);
-            OrdinateAxis2 = SampleGrid ? (&axissets[pd->axis2xyz][pd->axis2]) : NULL;
-            OrdinateRasterLen2 = 0;
-            OrdinateRaster2 = NULL;
+            pplset_axis *OrdinateAxis2 = SampleGrid ? (&axissets[pd->axis2xyz][pd->axis2]) : NULL;
+            int OrdinateRasterLen2 = 0;
+            double *OrdinateRaster2 = NULL;
 
             // Loop over one (or two) ordinate axes
-            for (a = 0; a <= SampleGrid; a++) {
+            for (int a = 0; a <= SampleGrid; a++) {
                 int *_OrdinateRasterLen;
                 double **_OrdinateRaster;
                 pplset_axis **_OrdinateAxis;
@@ -1000,7 +996,6 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                 // Fetch ordinate raster to plot function along
                 if ((pd->ww_final.linespoints == SW_STYLE_BOXES) || (pd->ww_final.linespoints == SW_STYLE_HISTEPS)) {
                     // boxes and histeps plot styles have their own special rasters
-                    int k;
                     double left2 = GSL_NAN, right2 = GSL_NAN, width;
                     double left = pplaxis_InvGetPosition(0.0, *_OrdinateAxis);
                     double right = pplaxis_InvGetPosition(1.0, *_OrdinateAxis);
@@ -1009,12 +1004,12 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                     left += width / 2 * ((right > left) ? 1.0 : -1.0);
                     right += width / 2 * ((left > right) ? 1.0 : -1.0);
                     // Find the position of the left end of the raster on the axis
-                    for (k = 0; k <= (*_OrdinateAxis)->AxisValueTurnings; k++) {
+                    for (int k = 0; k <= (*_OrdinateAxis)->AxisValueTurnings; k++) {
                         left2 = pplaxis_GetPosition(left, *_OrdinateAxis, k, 0);
                         if (gsl_finite(left2)) break;
                     }
                     // Find the position of the right end of the raster on the axis
-                    for (k = (*_OrdinateAxis)->AxisValueTurnings; k >= 0; k--) {
+                    for (int k = (*_OrdinateAxis)->AxisValueTurnings; k >= 0; k--) {
                         right2 = pplaxis_GetPosition(right, *_OrdinateAxis, k, 0);
                         if (gsl_finite(right2)) break;
                     }
@@ -1030,7 +1025,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                         *(x->status) = 1;
                         return;
                     }
-                    for (j = 0; j < x->current->settings.samples; j++)
+                    for (int j = 0; j < x->current->settings.samples; j++)
                         (*_OrdinateRaster)[j] = pplaxis_InvGetPosition(
                                 left2 + (right2 - left2) * ((double) j) / (x->current->settings.samples - 1),
                                 *_OrdinateAxis);
@@ -1053,7 +1048,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                             *(x->status) = 1;
                             return;
                         }
-                        for (j = 0; j < Nsamp; j++)
+                        for (int j = 0; j < Nsamp; j++)
                             (*_OrdinateRaster)[j] =
                                     pplaxis_InvGetPosition(((double) j) / (Nsamp - 1), *_OrdinateAxis);
                         *_OrdinateRasterLen = Nsamp;
@@ -1076,8 +1071,8 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             }
 
             // Get data from functions
-            SpecialRaster = OrdinateRaster;
-            Nsamples = OrdinateRasterLen;
+            double *SpecialRaster = OrdinateRaster;
+            int Nsamples = OrdinateRasterLen;
             // Functions sampled along one axis may need extra samples near special points
             if (!SampleGrid) {
                 ppldata_fromFuncs_checkSpecialRaster(c, pd->functions, pd->NFunctions, pd->parametric ? "t" : "x", NULL,
@@ -1128,8 +1123,6 @@ void eps_plot_SampleFunctions(EPSComm *x) {
 
 void eps_plot_YieldUpText(EPSComm *x) {
     // Variables for collecting text
-    int j, l;
-    dataBlock *blk;
     pplset_axis *axes;
 
     // This item's text starts here in the list of text items
@@ -1148,11 +1141,11 @@ void eps_plot_YieldUpText(EPSComm *x) {
         } else if (pd->ww_final.linespoints == SW_STYLE_CONTOURMAP) {
             eps_plot_contourmap_YieldText(x, x->current->plotdata[k], &x->current->settings, pd);
         } else if (x->current->plotdata[k] != NULL) {
-            blk = x->current->plotdata[k]->first;
+            dataBlock *blk = x->current->plotdata[k]->first;
             // Collect the label of each data point
             while (blk != NULL) {
                 if (blk->text != NULL)
-                    for (j = 0; j < blk->blockPosition; j++) {
+                    for (int j = 0; j < blk->blockPosition; j++) {
                         if (eps_yieldTextItem(x, blk->text[j])) return;
                     }
                 blk = blk->next;
@@ -1170,7 +1163,7 @@ void eps_plot_YieldUpText(EPSComm *x) {
     GraphLegend_YieldUpText(x);
 
     // Axis labels and titles
-    for (j = 0; j < 2 + (x->current->ThreeDim); j++) {
+    for (int j = 0; j < 2 + (x->current->ThreeDim); j++) {
         if (j == 0) axes = x->current->XAxes;
         else if (j == 1) axes = x->current->YAxes;
         else axes = x->current->ZAxes;
@@ -1181,11 +1174,11 @@ void eps_plot_YieldUpText(EPSComm *x) {
             if ((axes[k].FinalActive) && (!axes[k].invisible)) {
                 axes[k].FirstTextID = x->NTextItems;
                 if (axes[k].TickListPositions != NULL)
-                    for (l = 0; axes[k].TickListStrings[l] != NULL; l++) {
+                    for (int l = 0; axes[k].TickListStrings[l] != NULL; l++) {
                         if (eps_yieldTextItem(x, axes[k].TickListStrings[l])) return;
                     } // Major tick labels
                 if (axes[k].MTickListPositions != NULL)
-                    for (l = 0; axes[k].MTickListStrings[l] != NULL; l++) {
+                    for (int l = 0; axes[k].MTickListStrings[l] != NULL; l++) {
                         if (eps_yieldTextItem(x, axes[k].MTickListStrings[l])) return;
                     } // Minor tick labels
                 if (eps_yieldTextItem(x, axes[k].FinalAxisLabel)) return;
@@ -1208,7 +1201,7 @@ void eps_plot_YieldUpText(EPSComm *x) {
 void eps_plot_RenderEPS(EPSComm *x) {
     // Variables for drawing the graph
     ppl_context *c = x->c;
-    int i, j, status, xyzaxis[3];
+    int i, status, xyzaxis[3];
     double height, zdepth;
     canvas_plotdesc *pd;
     pplset_axis *a1, *a2, *a3, *axissets[3];
@@ -1237,7 +1230,6 @@ void eps_plot_RenderEPS(EPSComm *x) {
     if (x->current->settings.clip == SW_ONOFF_ON) {
         if (x->current->ThreeDim) // 3D clip region is the edge of a cuboidal box
         {
-            int i;
             double data[3 * 8];
             // Project each corner of the cube onto the page, in order of depth
             eps_plot_projectCubeCorners(x, origin_x, origin_y, width, height, zdepth, data);
@@ -1245,7 +1237,7 @@ void eps_plot_RenderEPS(EPSComm *x) {
             SortByAzimuthYCentre = origin_y;
             qsort((void *) (data + 3), 6, 3 * sizeof(double), SortByAzimuth);
             fprintf(x->epsbuffer, "gsave\nnewpath\n");
-            for (i = 1; i < 7; i++)
+            for (int i = 1; i < 7; i++)
                 fprintf(x->epsbuffer, "%.2f %.2f %sto\n", data[3 * i], data[3 * i + 1], (i == 1) ? "move" : "line");
             fprintf(x->epsbuffer, "closepath\nclip newpath\n");
         } else // 2D clip region is a simple rectangular box
@@ -1258,7 +1250,7 @@ void eps_plot_RenderEPS(EPSComm *x) {
     }
 
     // Render colormaps and then contourmaps
-    for (j = 0; j < 2; j++) {
+    for (int j = 0; j < 2; j++) {
         const int style = j ? SW_STYLE_CONTOURMAP : SW_STYLE_COLORMAP;
         for (pd = x->current->plotitems, i = 0; pd != NULL; pd = pd->next, i++) // loop over all datasets
             // Draw each dataset of this style

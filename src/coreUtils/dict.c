@@ -77,12 +77,11 @@ void ppl_dictFreeTree(dictHash *i) {
 //! \return Zero
 
 int ppl_dictFree(dict *in) {
-    dictItem *ptrnext;
     if ((in == NULL) || (!in->useMalloc)) return 0;
     dictItem *ptr = in->first;
     // Free each item in turn, with its key and data
     while (ptr != NULL) {
-        ptrnext = ptr->next;
+        dictItem *ptrnext = ptr->next;
         free(ptr->key);
         ptr->key = NULL;
         free(ptr->data);
@@ -275,7 +274,7 @@ int ppl_dictLen(const dict *in) {
 int ppl_dictAppend(dict *in, const char *key, void *item) {
     // ptr scans through the list; prev is the item before it; cmp records the comparison of keys
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
-    int cmp = -1, hash;
+    int cmp = -1;
 
     // Find the position in the alphabetically-sorted list where the key belongs, or an existing item with this key.
     // Keys are sorted case-insensitively, with an exact comparison to find matching keys.
@@ -319,7 +318,7 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
         in->length++;
 
         // Add the new key to the tree of hashes
-        hash = ppl_dictHash(key, -1);
+        int hash = ppl_dictHash(key, -1);
         ppl_dictHashAdd(in, key, hash, ptrnew);
     }
     return 0;
@@ -336,7 +335,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
     // ptr scans through the list; prev is the item before it; cpy is the copy of the data; cmp records the comparison
     // of keys
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
-    int cmp = -1, hash;
+    int cmp = -1;
 
     // Copy the data
     if (key == NULL) return 1;
@@ -396,7 +395,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         in->length++;
 
         // Add the new key to the tree of hashes
-        hash = ppl_dictHash(key, -1);
+        int hash = ppl_dictHash(key, -1);
         ppl_dictHashAdd(in, key, hash, ptrnew);
     }
     return 0;
@@ -457,7 +456,7 @@ void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
 
 void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int SubsMaxLen, dictItem **ptrout) {
     // The names of functions which may be followed by the name of a dummy variable, e.g. int_dx
-    int clash, i, k;
+    int clash, k;
     char *magicFns[] = {"diff_d", "int_d", NULL};
 
     // Nothing can be found under a missing key, or in a missing dictionary
@@ -498,7 +497,7 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
     }
 
     // Need to search "int_d?"-like wildcards
-    for (i = 0; magicFns[i] != NULL; i++) {
+    for (int i = 0; magicFns[i] != NULL; i++) {
         for (k = 0; (((unsigned char) magicFns[i][k] > ' ') && (magicFns[i][k] == key[k])); k++);
         if (magicFns[i][k] == '\0') // each magic function name can be followed by a variable name
         {

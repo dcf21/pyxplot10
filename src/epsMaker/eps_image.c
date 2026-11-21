@@ -61,7 +61,7 @@ void eps_image_RenderEPS(EPSComm *x) {
     // Variables for the image and its placement
     char msg[PPL_MSG_LENGTH];
     bitmap_data data;
-    int ImageType, i, j;
+    int ImageType, j;
     double xscale, yscale, r;
     double xanchor = 0, yanchor = 0, xbotleft, ybotleft;
     unsigned char buff[10], *imagez;
@@ -92,7 +92,7 @@ void eps_image_RenderEPS(EPSComm *x) {
     }
 
     // Use magic to determine file type
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
         j = fgetc(infile);
         // Report a file which is too short to identify
         if (j == EOF) {
@@ -165,7 +165,7 @@ void eps_image_RenderEPS(EPSComm *x) {
         // In a paletted image, the transparent color is a palette entry; in an RGB image it is a color; in a greyscale
         // image, it is a grey level
         if (data.colour == BMP_COLOUR_PALETTE) {
-            for (i = 0; i < data.pal_len; i++)
+            for (int i = 0; i < data.pal_len; i++)
                 if (((unsigned char) x->current->TransColR == data.palette[3 * i]) &&
                     ((unsigned char) x->current->TransColG == data.palette[3 * i + 1]) &&
                     ((unsigned char) x->current->TransColB == data.palette[3 * i + 2])) {

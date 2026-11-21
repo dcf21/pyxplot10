@@ -70,7 +70,7 @@
 void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pplset_axis *linkedto) {
     // Variables for finding the range and units of the axis
     char msg[PPL_MSG_LENGTH];
-    int i, j, MajMin, N, xrn;
+    int i, j, N;
     const double logmin = 1e-10;
     double UnitMultiplier = 1.0;
     char *UnitString = NULL;
@@ -280,7 +280,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         }
 
         // Minor ticks. Then major ticks.
-        for (MajMin = 0; MajMin < 2; MajMin++) {
+        for (int MajMin = 0; MajMin < 2; MajMin++) {
             double TickMax, TickMin, TickStep;
             unsigned char TickMaxSet, TickMinSet, TickStepSet;
             double *TickList;
@@ -326,7 +326,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                 }
                 for (i = j = 0; i < N; i++)
                     // Place each tick on each monotonic section of the axis, skipping those beyond its ends
-                    for (xrn = 0; xrn <= axis->AxisValueTurnings; xrn++) {
+                    for (int xrn = 0; xrn <= axis->AxisValueTurnings; xrn++) {
                         (*TickListPositions)[j] = pplaxis_GetPosition(TickList[i], axis, xrn, 0);
                         if ((!gsl_finite((*TickListPositions)[j])) || ((*TickListPositions)[j] < 0.0) ||
                             ((*TickListPositions)[j] > 1.0))
@@ -369,7 +369,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                 }
 
                 // Place ticks on each monotonic section of the axis
-                for (xrn = j = 0; xrn <= axis->AxisValueTurnings; xrn++) {
+                for (int xrn = j = 0; xrn <= axis->AxisValueTurnings; xrn++) {
                     // On an axis whose mapping is tabulated, the ticks run over the section's range of values
                     if (axis->AxisLinearInterpolation != NULL) {
                         double first = axis->AxisLinearInterpolation[axis->AxisTurnings[0]];

@@ -51,7 +51,6 @@ const char *dviops[58] = {"set1",    "set2",    "set3",    "set4",    "setrule",
 dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *status) {
     // Variables for reading the file
     DVIOperator op;
-    int i;
     int POST = 0;
     int err;
 
@@ -98,7 +97,7 @@ dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *
             }
         }
         // Forget the operator's string arguments, which are freed with the memory context
-        for (i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             // Each string argument
             if (op.s[i] != NULL) {
                 //free(op.s[i]);
@@ -218,13 +217,12 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
         if ((err = ReadLongInt(ec, fp, op->ul, Ndata)) != 0) return err;
         return 0;
     } else if (v <= DVI_FNTDEF1234) {
-        int i;
         int Ndata = v - DVI_FNTDEF1234 + 1;
         if ((err = ReadLongInt(ec, fp, op->ul, Ndata)) != 0) return err;
-        for (i = 1; i < 4; i++) {
+        for (int i = 1; i < 4; i++) {
             if ((err = ReadLongInt(ec, fp, op->ul + i, 4)) != 0) return err;
         }
-        for (i = 4; i < 6; i++) {
+        for (int i = 4; i < 6; i++) {
             if ((err = ReadLongInt(ec, fp, op->ul + i, 1)) != 0) return err;
         }
         Ndata = op->ul[4] + op->ul[5];
@@ -236,23 +234,23 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
         }
         op->s[0][Ndata] = '\0';
         // Read the string, byte by byte
-        for (i = 0; i < Ndata; i++) {
+        for (int i = 0; i < Ndata; i++) {
             int j;
             if ((err = ReadUChar(ec, fp, &j)) != 0) return err;
             op->s[0][i] = (char) j;
         }
         return 0;
     } else if (v == DVI_PRE) {
-        int i, v1;
+        int v1;
         if ((err = ReadUChar(ec, fp, &v1)) != 0) return err;
         op->ul[0] = v1;
-        for (i = 1; i < 4; i++) {
+        for (int i = 1; i < 4; i++) {
             if ((err = ReadLongInt(ec, fp, op->ul + i, 4)) != 0) return err;
         }
         if ((err = ReadUChar(ec, fp, &v1)) != 0) return err;
 
         // Throw away the DVI comment
-        for (i = v1; i > 0; i--) {
+        for (int i = v1; i > 0; i--) {
             if ((err = ReadUChar(ec, fp, &v1)) != 0) return err;
         }
         return 0;
@@ -311,11 +309,11 @@ int ReadUChar(pplerr_context *ec, FILE *fp, int *uc) {
 //! \return Zero on success, or a DVIE_* error code
 
 int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, const int n) {
-    int err, v, i;
+    int err, v;
     if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
     unsigned long int fv = v;
     // Read each further byte, most significant first
-    for (i = 0; i < n - 1; i++) {
+    for (int i = 0; i < n - 1; i++) {
         if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
         fv = (fv << 8) | v;
     }
@@ -331,11 +329,11 @@ int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, const int 
 //! \return Zero on success, or a DVIE_* error code
 
 int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int n) {
-    int err, v, i;
+    int err, v;
     if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
     signed long int fv = v < 128 ? v : v - 256;
     // Read each further byte, most significant first
-    for (i = 0; i < n - 1; i++) {
+    for (int i = 0; i < n - 1; i++) {
         if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
         fv = (fv * 256) + v; // Not (fv << 8), since left-shifting a negative value is undefined behaviour
     }

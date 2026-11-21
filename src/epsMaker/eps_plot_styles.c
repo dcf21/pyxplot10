@@ -71,7 +71,7 @@
 
 void eps_withwords_default(const EPSComm *x, withWords *output, const pplset_graph *sg, const unsigned char functions,
                            const int Ccounter, const int LTcounter, const int PTcounter, const unsigned char color) {
-    int i, j;
+    int j;
 
     // Start from blank style modifiers
     ppl_withWordsZero(x->c, output);
@@ -82,7 +82,7 @@ void eps_withwords_default(const EPSComm *x, withWords *output, const pplset_gra
     } else {
         for (j = 0; j < PALETTE_LENGTH; j++)
             if (x->c->set->palette_current[j] == -1) break; // j now contains length of palette
-        i = Ccounter % j; // i is now the palette color number to use
+        int i = Ccounter % j; // i is now the palette color number to use
         while (i < 0) i += j;
         // A named color, or one given by its components
         if (x->c->set->palette_current[i] > 0) {
@@ -437,8 +437,7 @@ static void finishFactoringBoxes(usageRange *r, const int style, const pplset_gr
 int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, unsigned char ThreeDim, pplset_axis *a1,
                                 pplset_axis *a2, pplset_axis *a3, pplset_graph *sg, int xyz1, int xyz2, int xyz3,
                                 int n1, int n2, int n3, int id) {
-    int j;
-    double ptAx, ptBx = 0, ptCx = 0, lasty = 0;
+    double ptBx = 0, ptCx = 0, lasty = 0;
     unsigned char ptAset = 0, ptBset = 0, ptCset = 0;
     usageRange r;
 
@@ -671,7 +670,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
     while (blk != NULL) {
         // For each data point, check whether it lies within the axes' fixed ranges, and if so, widen the automatic
         // ranges to include it
-        for (j = 0; j < blk->blockPosition; j++) {
+        for (int j = 0; j < blk->blockPosition; j++) {
             const double *row = blk->data_real + Ncolumns * j; // The data in this row
             usageReset(&r);
             // Each style has its own columns to test; error bars and boxes extend either side of the point
@@ -1036,7 +1035,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
                 const unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE);
                 if (blk->split[j]) { finishFactoringBoxes(&r, style, sg, a1, a2, ptBset, ptCset, ptBx, ptCx, lasty); }
                 usageCheck(&r, a2, row[1]); // y-coordinates are easy
-                ptAx = ptBx;
+                double ptAx = ptBx;
                 ptAset = ptBset;
                 ptBx = ptCx;
                 ptBset = ptCset;
@@ -1359,12 +1358,11 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                      canvas_plotdesc *pd, const double origin_x, const double origin_y, const double width,
                      const double height, const double zdepth) {
     char msg[LSTR_LENGTH];
-    int i, j, pt = 0, xrn, yrn, zrn;
+    int i, j, pt = 0;
     double xpos, ypos, depth, xap, yap, zap, scale_x, scale_y, scale_z;
     char epsbuff[FNAME_LENGTH], *last_colstr = NULL;
     LineDrawHandle *ld;
     pplset_axis *a[3] = {a1, a2, a3};
-    dataBlock *blk;
 
     // Warn about datasets with no data, describing them by their filename or functions
     if ((data == NULL) || (data->Nrows < 1)) {
@@ -1415,11 +1413,11 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     }
 
     // If axes have value-turning points, loop over all monotonic regions of axis space
-    for (xrn = 0; xrn <= a[xn]->AxisValueTurnings; xrn++)
-        for (yrn = 0; yrn <= a[yn]->AxisValueTurnings; yrn++)
+    for (int xrn = 0; xrn <= a[xn]->AxisValueTurnings; xrn++)
+        for (int yrn = 0; yrn <= a[yn]->AxisValueTurnings; yrn++)
             // Each monotonic section of the z axis
-            for (zrn = 0; zrn <= (ThreeDim ? a[zn]->AxisValueTurnings : 0); zrn++) {
-                blk = data->first;
+            for (int zrn = 0; zrn <= (ThreeDim ? a[zn]->AxisValueTurnings : 0); zrn++) {
+                dataBlock *blk = data->first;
 
                 if ((style == SW_STYLE_LINES) || (style == SW_STYLE_LINESPOINTS)) // LINES
                 {
@@ -1855,8 +1853,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                 else if ((style == SW_STYLE_LOWERLIMITS) || (style == SW_STYLE_UPPERLIMITS)) // LOWERLIMITS, UPPERLIMITS
                 {
                     int an;
-                    double theta[3], x2, y2;
-                    double offset_barx, offset_bary, offset_arrx, offset_arry;
+                    double theta[3];
                     double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS / M_TO_PS;
                     double sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
                     double lw = pd->ww_final.pointlinewidth;
@@ -1901,10 +1898,10 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 }
 
                                 // The offsets of the ends of the bar, and of the tip of the arrow
-                                offset_barx = ps * sin(theta[an] + M_PI / 2);
-                                offset_bary = ps * cos(theta[an] + M_PI / 2);
-                                offset_arrx = sgn * 2 * ps * sin(theta[an]);
-                                offset_arry = sgn * 2 * ps * cos(theta[an]);
+                                double offset_barx = ps * sin(theta[an] + M_PI / 2);
+                                double offset_bary = ps * cos(theta[an] + M_PI / 2);
+                                double offset_arrx = sgn * 2 * ps * sin(theta[an]);
+                                double offset_arry = sgn * 2 * ps * cos(theta[an]);
 
                                 // Draw the bar across the point
                                 LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, -offset_barx,
@@ -1917,8 +1914,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, offset_arrx,
                                                offset_arry, 0, 0, 0, 0, pd->ww_final.linetype, lw, last_colstr);
                                 LineDraw_PenUp(x, ld);
-                                x2 = xpos + sgn * 2 * ps * M_TO_PS * sin(theta[an]);
-                                y2 = ypos + sgn * 2 * ps * M_TO_PS * cos(theta[an]);
+                                double x2 = xpos + sgn * 2 * ps * M_TO_PS * sin(theta[an]);
+                                double y2 = ypos + sgn * 2 * ps * M_TO_PS * cos(theta[an]);
                                 if (sgn < 0.0) theta[an] += M_PI;
                                 eps_arrowHead(x2, y2, theta[an], EPS_ARROW_HEADSIZE / 2 * lw, epsbuff, sizeof(epsbuff),
                                               NULL);
@@ -1950,7 +1947,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                          (style == SW_STYLE_FSTEPS) ||
                          (style == SW_STYLE_HISTEPS)) // BOXES, WBOXES, STEPS, FSTEPS, HISTEPS
                 {
-                    double ptAx, ptBx = 0, ptBy = 0, ptCx = 0, ptCy = 0;
+                    double ptBx = 0, ptBy = 0, ptCx = 0, ptCy = 0;
                     unsigned char ptAset = 0, ptBset = 0, ptCset = 0;
 
                     // Draw the outlines of the boxes and steps with line segments
@@ -1999,7 +1996,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     if (finishRowOfBoxes(&bd, style, &ptAset, &ptBset, &ptCset, ptBx, ptCx, ptCy))
                                         break;
                                 }
-                                ptAx = ptBx;
+                                double ptAx = ptBx;
                                 ptAset = ptBset;
                                 ptBx = ptCx;
                                 ptBy = ptCy;
@@ -2060,7 +2057,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                 else if ((style == SW_STYLE_ARROWS_HEAD) || (style == SW_STYLE_ARROWS_NOHEAD) ||
                          (style == SW_STYLE_ARROWS_TWOHEAD)) // ARROWS_HEAD, ARROWS_NOHEAD, ARROWS_TWOHEAD
                 {
-                    double xpos2, ypos2, depth2, xap2, yap2, zap2, theta;
+                    double xpos2, ypos2, depth2, xap2, yap2, zap2;
                     double lw = pd->ww_final.linewidth;
 
                     // Draw the shafts of the arrows with line segments
@@ -2108,7 +2105,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     if ((blk->text[j] != NULL) && (blk->text[j][0] != '\0')) x->LaTeXpageno++;
                                     continue;
                                 }
-                                theta = atan2(xpos2 - xpos, ypos2 - ypos);
+                                double theta = atan2(xpos2 - xpos, ypos2 - ypos);
                                 if (!gsl_finite(theta)) theta = 0.0;
 
                                 // Draw an arrowhead at the start, if it is within the graph
@@ -2220,12 +2217,8 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
 
                 else if ((style == SW_STYLE_SURFACE) && (xrn == 0) && (yrn == 0) && (zrn == 0)) // SURFACE
                 {
-                    int fill;
                     int XSize = pd->GridXSize;
                     const int YSize = pd->GridYSize;
-                    long X, Y;
-                    long j;
-                    double depth;
                     const graphProjection proj = {a[xn],    a[yn],    a[zn],    xrn,     yrn,     zrn,    sg,
                                                   ThreeDim, origin_x, origin_y, scale_x, scale_y, scale_z};
                     double x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4;
@@ -2236,12 +2229,12 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                   "Surface plot yielded data grid of the wrong size.");
                     } else {
                         last_colstr = NULL;
-                        for (fill = 1; fill >= 0; fill--)
-                            for (Y = 0; Y < YSize - 1; Y++)
+                        for (int fill = 1; fill >= 0; fill--)
+                            for (long Y = 0; Y < YSize - 1; Y++)
                                 // Draw each cell of the grid as a quadrilateral, filling all the cells first and then
                                 // stroking them
-                                for (X = 0; X < XSize - 1; X++) {
-                                    j = X + Y * ((long) XSize);
+                                for (long X = 0; X < XSize - 1; X++) {
+                                    long j = X + Y * ((long) XSize);
                                     eps_plot_WithWordsFromUsingItems(
                                             x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                             &blk->data_obj[Ncol_obj * j], Ncolumns,
@@ -2277,7 +2270,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                         if (surfacePoint(&proj, blk->data_real + Ncolumns * j, xn, yn, zn, &x4, &y4,
                                                          &z4))
                                             continue; // Draw a square
-                                        depth = (z1 + z2 + z3 + z4) / 4.0;
+                                        double depth = (z1 + z2 + z3 + z4) / 4.0;
                                         if (fill) depth += 1e-6 * fabs(depth);
                                         ppl_snprintfTrunc(
                                                 epsbuff, sizeof(epsbuff),

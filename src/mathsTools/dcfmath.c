@@ -105,9 +105,8 @@ int ppl_sgn(const double x) {
 //! \param [in] Nsteps - The number of values to generate. Values below 2 are treated as 2.
 
 void ppl_linRaster(double *out, const double min, const double max, int Nsteps) {
-    int i;
     if (Nsteps < 2) Nsteps = 2; // Avoid division by zero
-    for (i = 0; i < Nsteps; i++) out[i] = min + (max - min) * ((double) i / (double) (Nsteps - 1));
+    for (int i = 0; i < Nsteps; i++) out[i] = min + (max - min) * ((double) i / (double) (Nsteps - 1));
     return;
 }
 
@@ -118,11 +117,10 @@ void ppl_linRaster(double *out, const double min, const double max, int Nsteps) 
 //! \param [in] Nsteps - The number of values to generate. Values below 2 are treated as 2.
 
 void ppl_logRaster(double *out, double min, double max, int Nsteps) {
-    int i;
     if (min < 1e-200) min = 1e-200; // Avoid log of negative numbers or zero
     if (max < 1e-200) max = 1e-200;
     if (Nsteps < 2) Nsteps = 2; // Avoid division by zero
-    for (i = 0; i < Nsteps; i++) out[i] = min * pow(max / min, (double) i / (double) (Nsteps - 1));
+    for (int i = 0; i < Nsteps; i++) out[i] = min * pow(max / min, (double) i / (double) (Nsteps - 1));
     return;
 }
 

@@ -65,11 +65,10 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
                                           const double *min, const double *max, const pplObj *unit, double **raster,
                                           int *rasterLen) {
     char msg[LSTR_LENGTH];
-    int i, j, pos, commaPos = 0, bracketLevel = 0, containsOperator = 0, containsDummy = 0, NWords = 0,
+    int pos, commaPos = 0, bracketLevel = 0, containsOperator = 0, containsDummy = 0, NWords = 0,
                    contextRough = -1;
     int dummyArgNo = 0;
     char newWord = 1, fail = 0;
-    char c;
     char *buf = msg;
     char *currentFnName = "", *dummyInFunction = NULL;
     pplObj *funcObjPtr = NULL;
@@ -82,11 +81,11 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
     list *bracketCommaPos = ppl_listInit(0);
 
     // Parse each expression, to check that the dummy variable appears only as a bare argument of a single function
-    for (i = 0; i < fnlist_len; i++) {
-        j = pos = 0;
+    for (int i = 0; i < fnlist_len; i++) {
+        int j = pos = 0;
         // Step through each character of the expression
         while (1) {
-            c = fnlist[i]->ascii[j++];
+            char c = fnlist[i]->ascii[j++];
             // Accumulate the characters of a word
             if ((isalnum(c)) || (c == '_')) {
                 newWord = 0;
@@ -178,7 +177,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         if (outputRaster == NULL) goto CLEANUP;
 
         // Sample at the centre of each bin within the plot range, using geometric centres for logarithmic bins
-        for (i = 0; i < (desc->Nbins - 1); i++) {
+        for (int i = 0; i < (desc->Nbins - 1); i++) {
             const double midpoint =
                     desc->log ? sqrt(desc->bins[i] * desc->bins[i + 1]) : ((desc->bins[i] + desc->bins[i + 1]) / 2);
             if (((min == NULL) || (*min <= midpoint)) && ((max == NULL) || (*max >= midpoint))) {
@@ -199,7 +198,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         if (outputRaster == NULL) goto CLEANUP;
 
         // Sample at each grid point within the plot range
-        for (i = 0; i < desc->XSize[dummyArgNo]; i++) {
+        for (int i = 0; i < desc->XSize[dummyArgNo]; i++) {
             const double x = (i - desc->XSize[dummyArgNo] / 2.0) / desc->range[dummyArgNo].real;
             if (((min == NULL) || (*min <= x)) && ((max == NULL) || (*max >= x))) { outputRaster[rasterCount++] = x; }
         }

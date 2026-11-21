@@ -40,7 +40,6 @@
 
 void ppl_createBackupIfRequired(const ppl_context *c, const char *filename) {
     char newname[FNAME_LENGTH];
-    int j;
 
     if (c->set->term_current.backup == SW_ONOFF_OFF) return; // Backup is switched off
     if (access(filename, F_OK) != 0) return; // File we're about to write to does not already exist
@@ -49,7 +48,7 @@ void ppl_createBackupIfRequired(const ppl_context *c, const char *filename) {
     ppl_snprintfTrunc(newname, sizeof(newname), "%s", filename);
     int i = strlen(filename);
     // Try each backup number in turn
-    for (j = 0; j < 65536; j++) {
+    for (int j = 0; j < 65536; j++) {
         sprintf(newname + i, "~%d", j);
         if (access(newname, F_OK) != 0) break; // We've found a backup file which does not already exist
     }

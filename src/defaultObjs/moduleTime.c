@@ -355,14 +355,13 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    int i;
     char *FunctionDescription = "sleep(t)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a time", UNIT_TIME, 1)) return;
     waitperiod.tv_sec = floor(in[0].real);
     waitperiod.tv_nsec = fmod(in[0].real * 1e9, 1e9);
-    for (i = 0; i < 1e6; i++)
+    for (int i = 0; i < 1e6; i++)
         if (!nanosleep(&waitperiod, &waitperiod2)) break;
         else waitperiod = waitperiod2;
     pplObjNum(&OUTPUT, 0, 0, 0);
@@ -379,7 +378,6 @@ void pplfunc_sleep(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    int i;
     const double p = in[0].real - currentUnixTime();
     char *FunctionDescription = "sleepUntil(d)";
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
@@ -394,7 +392,7 @@ void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (p > 0) {
         waitperiod.tv_sec = floor(p);
         waitperiod.tv_nsec = fmod(p * 1e9, 1e9);
-        for (i = 0; i < 1e6; i++)
+        for (int i = 0; i < 1e6; i++)
             if (!nanosleep(&waitperiod, &waitperiod2)) break;
             else waitperiod = waitperiod2;
     }

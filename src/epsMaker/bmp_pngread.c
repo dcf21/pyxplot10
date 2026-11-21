@@ -49,7 +49,7 @@
 void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     // Variables describing the image
     char msg[PPL_MSG_LENGTH];
-    int ncols, ntrans, i, j;
+    int ncols, ntrans, i;
     static unsigned char index[3];
     png_bytep trans_colours;
     png_color_16p trans_val;
@@ -213,7 +213,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         // In a paletted image, count the fully transparent entries; partially transparent ones count as many
         if (png_colour_type == PNG_COLOR_TYPE_PALETTE) {
             // We can cope with just one, fully transparent, entry in palette
-            j = 0;
+            int j = 0;
             for (i = 0; i < ntrans; i++)
                 if (trans_colours[i] == 0) j++;
                 else if (trans_colours[i] != 255) j += 10;

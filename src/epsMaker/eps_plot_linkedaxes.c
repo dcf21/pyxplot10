@@ -159,17 +159,16 @@ void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_plot_DecideAxisRanges(EPSComm *x) {
-    int i, j;
     pplset_axis *axes = NULL;
 
     // Decide the range of each axis in turn
-    for (j = 0; j < 3; j++) {
+    for (int j = 0; j < 3; j++) {
         if (j == 0) axes = x->current->XAxes;
         else if (j == 1) axes = x->current->YAxes;
         else if (j == 2) axes = x->current->ZAxes;
         else ppl_fatal(&x->c->errcontext, __FILE__, __LINE__, "Internal fail.");
         // Decide the range of each axis, following any links, and then its ticks
-        for (i = 0; i < MAX_AXES; i++) {
+        for (int i = 0; i < MAX_AXES; i++) {
             // Decide the range, if this has not already been done
             if (!axes[i].RangeFinalised) {
                 eps_plot_LinkedAxisForwardPropagate(x, &axes[i], 1);
@@ -274,10 +273,9 @@ void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode
     pplset_axis *source = target;
     for (; IterDepth >= 0; IterDepth--) // loop over as many iterations of linkage as may be necessary
     {
-        int k;
         target = axis;
         // Follow the chain of links from the starting axis to the axis this many links along it
-        for (k = 0; k < IterDepth; k++) {
+        for (int k = 0; k < IterDepth; k++) {
             if (target->LinkedAxisCanvasID <= 0) {
                 item = x->current;
             } // Linked to an axis on the same graph
@@ -363,11 +361,11 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
     // Variables for sampling the linking expression
     char msg[PPL_MSG_LENGTH];
     const int stkLevelOld = X->c->stackPtr;
-    int l, xrn = 0, lOP;
-    int oldsgn = -10, newsgn;
-    double p, x;
+    int xrn = 0, lOP;
+    int oldsgn = -10;
+    double x;
     char *VarName;
-    pplObj DummyTemp, *outVal, *VarVal;
+    pplObj DummyTemp, *VarVal;
     if (in->xyz == 0) VarName = "x";
     else if (in->xyz == 1) VarName = "y";
     else if (in->xyz == 2) VarName = "z";
@@ -386,10 +384,10 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
     out->AxisTurnings[xrn++] = 0;
 
     // Evaluate the linking expression at evenly spaced points along the source axis
-    for (l = 0; l < AXISLINEARINTERPOLATION_NPOINTS;
+    for (int l = 0; l < AXISLINEARINTERPOLATION_NPOINTS;
          l++) // Loop over samples we are going to take from axis linkage function
     {
-        p = ((double) l) / (AXISLINEARINTERPOLATION_NPOINTS - 1);
+        double p = ((double) l) / (AXISLINEARINTERPOLATION_NPOINTS - 1);
         x = pplaxis_InvGetPosition(p, in);
         pplExpr *olu = (pplExpr *) out->linkusing;
 
@@ -408,7 +406,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
         }
 
         // Generate a sample from the axis linkage function
-        outVal = ppl_expEval(X->c, olu, &lOP, 0, X->iterDepth + 1);
+        pplObj *outVal = ppl_expEval(X->c, olu, &lOP, 0, X->iterDepth + 1);
         // Report a failure to evaluate the expression
         if (X->c->errStat.status) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst evaluating axis linkage expression: %s",
@@ -466,7 +464,7 @@ int eps_plot_LinkedAxisLinkUsing(EPSComm *X, pplset_axis *out, pplset_axis *in) 
         ppl_stackClean(X->c, stkLevelOld); // Discard anything left on the stack
         // Check for turning points; flat steps are ignored
         if (l > 0) {
-            newsgn = ppl_sgn(out->AxisLinearInterpolation[l] - out->AxisLinearInterpolation[l - 1]);
+            int newsgn = ppl_sgn(out->AxisLinearInterpolation[l] - out->AxisLinearInterpolation[l - 1]);
             if (newsgn == 0) continue;
             if ((newsgn != oldsgn) && (oldsgn > -10)) out->AxisTurnings[xrn++] = l - 1;
             oldsgn = newsgn;
@@ -526,7 +524,7 @@ static double twinLog(const double x) {
 double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
     // Variables for evaluating the expression
     char msg[PPL_MSG_LENGTH];
-    int i, lOP;
+    int lOP;
     double output;
     LAUComm *data = (LAUComm *) params;
     const int stkLevelOld = data->x->c->stackPtr;
@@ -539,7 +537,7 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
 
     // Set the units of the trial value
     data->VarValue->dimensionless = 1;
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++)
         // The value is dimensionless only if all of its unit's exponents are zero
         if (ppl_dblEqual(data->VarValue->exponent[i], 0) == 0) {
             data->VarValue->dimensionless = 0;
@@ -596,11 +594,10 @@ end:
 void eps_plot_LAUFitter(LAUComm *commlink) {
     // Variables for driving the GSL minimiser
     size_t iter = 0, iter2 = 0;
-    int i, status = 0;
-    double size = 0, sizelast = 0, sizelast2 = 0, testval;
+    int status = 0;
+    double size = 0, sizelast = 0, sizelast2 = 0;
     const gsl_multimin_fminimizer_type *T =
             gsl_multimin_fminimizer_nmsimplex; // We don't use nmsimplex2 here because it was new in gsl 1.12
-    gsl_multimin_fminimizer *s;
     gsl_multimin_function fn;
 
     // Describe the function to minimise to GSL
@@ -625,13 +622,13 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
                 x, 0,
                 ppl_optimise_RealToLog((commlink->mode == 0) ? commlink->VarValue->real : 1.0, iter2, &commlink->norm));
         gsl_vector_set(ss, 0, (fabs(gsl_vector_get(x, 0)) > 1e-6) ? 0.1 * (gsl_vector_get(x, 0)) : 0.1);
-        s = gsl_multimin_fminimizer_alloc(T, fn.n);
+        gsl_multimin_fminimizer *s = gsl_multimin_fminimizer_alloc(T, fn.n);
         gsl_multimin_fminimizer_set(s, &fn, x, ss);
 
         // If initial value we are giving the minimiser produces an algebraic error, it's not worth continuing
         commlink->GoneNaN = 0;
         commlink->WorstScore = WORSTSCORE_INIT;
-        testval = eps_plot_LAUSlave(x, (void *) commlink);
+        double testval = eps_plot_LAUSlave(x, (void *) commlink);
         // Give up if the expression cannot be evaluated at the starting point
         if (!gsl_finite(testval)) {
             commlink->fail = 1;
@@ -650,7 +647,7 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
         do {
             iter++;
             // Four iterations at a time
-            for (i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++) {
                 status = gsl_multimin_fminimizer_iterate(s);
                 if (status) break;
             } // Run optimiser four times for good luck
@@ -743,11 +740,10 @@ void eps_plot_LinkUsingBackPropagate(EPSComm *x, const double val, pplset_axis *
                 target->canvas_id, commlink.expr->ascii, "xyzc"[target->xyz], target->axis_n, target->canvas_id);
         ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
     } else {
-        int i;
         VarVal->dimensionless =
                 1; // Cycle through powers of final value of xyz dummy value making things which are nearly ints into ints.
         // Round exponents which are very close to integers
-        for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
+        for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) {
             if (fabs(floor(VarVal->exponent[i]) - VarVal->exponent[i]) < 1e-12)
                 VarVal->exponent[i] = floor(VarVal->exponent[i]);
             else if (fabs(ceil(VarVal->exponent[i]) - VarVal->exponent[i]) < 1e-12)

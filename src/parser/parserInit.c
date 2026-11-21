@@ -197,11 +197,10 @@ int ppl_parserInit(ppl_context *c) {
     // inPos is the position reached in the text of the command list
     char msg[PPL_MSG_LENGTH];
     pplerr_context *e = &c->errcontext;
-    int i;
     int inPos = 0;
 
     // Create an empty list of commands for each initial letter
-    for (i = 0; i < 27; i++) {
+    for (int i = 0; i < 27; i++) {
         pplParserCmdList[i] = ppl_listInit(1);
         // Failure to allocate memory is fatal
         if (pplParserCmdList[i] == NULL) {

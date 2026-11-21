@@ -200,9 +200,9 @@ void eps_plot_ticking_factorise(const int in, int *out, const int MaxFactors, co
 
 static void CountTicks(const unsigned char *TicksAcceptedIn, const int NPotTicks, int *NTicksOutMajor,
                        int *NTicksOutMinor) {
-    int i, NMajor = 0, NMinor = 0;
+    int NMajor = 0, NMinor = 0;
     // Count the major and minor ticks
-    for (i = 0; i < NPotTicks; i++) {
+    for (int i = 0; i < NPotTicks; i++) {
         if (TicksAcceptedIn[i] == 1) NMajor++;
         else if (TicksAcceptedIn[i] == 2) NMinor++;
     }
@@ -262,24 +262,24 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
                           const int DivOfOoM, const unsigned char *TicksAcceptedIn, unsigned char *TicksAcceptedOut,
                           const unsigned char MAJORminor, const double AxisLength, unsigned char *FLAGacceptable,
                           int *NTicksOutMajor, int *NTicksOutMinor) {
-    int i, j, id, IntNum, abort, imin = -1, imax = -1;
+    int id, imin = -1, imax = -1;
     *NTicksOutMajor = 0;
     *NTicksOutMinor = 0;
     *FLAGacceptable = 1;
 
     // Initialise output data array
-    for (i = 0; i < NPotTicks; i++) { TicksAcceptedOut[i] = (TicksAcceptedIn == NULL) ? 0 : TicksAcceptedIn[i]; }
+    for (int i = 0; i < NPotTicks; i++) { TicksAcceptedOut[i] = (TicksAcceptedIn == NULL) ? 0 : TicksAcceptedIn[i]; }
 
     // Loop over all potential ticks to check whether they are to be added
-    for (i = 0; i < NPotTicks; i++) {
+    for (int i = 0; i < NPotTicks; i++) {
         id = TickOrder[i].id;
         if ((PotTickList[id].ArgNo == ArgNo) // Test whether potential tick is in newly accepted scheme
             && (PotTickList[id].DivOfThrow == DivOfThrow) && (PotTickList[id].OoM == OoM) &&
             (PotTickList[id].DivOfOoM == DivOfOoM) && (MAJORminor || (TicksAcceptedOut[i] == 0))) {
             // Check for ticks accepted immediately to the left of this tick to make sure this point isn't already ticked
-            IntNum = PotTickList[id].IntervalNum;
-            abort = 0;
-            for (j = i - 1; ((j >= 0) && (PotTickList[TickOrder[j].id].IntervalNum >= IntNum - 1) &&
+            int IntNum = PotTickList[id].IntervalNum;
+            int abort = 0;
+            for (int j = i - 1; ((j >= 0) && (PotTickList[TickOrder[j].id].IntervalNum >= IntNum - 1) &&
                              (PotTickList[TickOrder[j].id].IntervalNum <= IntNum + 1));
                  j--)
                 if ((TicksAcceptedOut[j] > 0) &&
@@ -289,7 +289,7 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
                     else if (TicksAcceptedOut[j] == 2) TicksAcceptedOut[j] = 0; // Minor ticks overwrite minor ticks
                 }
             // Apply same tests to ticks accepted immediately to the right of this tick
-            for (j = i + 1; ((j < NPotTicks) && (PotTickList[TickOrder[j].id].IntervalNum >= IntNum - 1) &&
+            for (int j = i + 1; ((j < NPotTicks) && (PotTickList[TickOrder[j].id].IntervalNum >= IntNum - 1) &&
                              (PotTickList[TickOrder[j].id].IntervalNum <= IntNum + 1));
                  j++)
                 if ((TicksAcceptedOut[j] > 0) &&
@@ -311,7 +311,7 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
         if (TicksAcceptedOut[i] == 2) (*NTicksOutMinor)++;
         if (MAJORminor && (TicksAcceptedOut[i] == 1)) // Check that no two major ticks are too close together
         {
-            for (j = i - 1; j >= 0; j--) // Scan left for nearest accepted tick
+            for (int j = i - 1; j >= 0; j--) // Scan left for nearest accepted tick
                 // Find the nearest major tick to the left, which must be at least a minimum distance away
                 if (TicksAcceptedOut[j] == 1) {
                     const double gap = fabs(PotTickList[id].IntervalNum - PotTickList[TickOrder[j].id].IntervalNum) *
@@ -325,7 +325,7 @@ static void AddTickScheme(const PotentialTick *PotTickList, const int NPotTicks,
     {
         int Nnewticks = 0;
         // Count the ticks within the span of the new scheme
-        for (i = 0; i < NPotTicks; i++) {
+        for (int i = 0; i < NPotTicks; i++) {
             id = PotTickList[TickOrder[i].id].IntervalNum;
             if ((TicksAcceptedOut[i] != 0) && (id >= imin) && (id <= imax)) Nnewticks++;
         }
@@ -363,11 +363,11 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
                                 const ArgLeagueTableEntry *TickOrder, const unsigned char *TicksAccepted,
                                 int OutContext) {
     ppl_context *c = X->c;
-    int i, jMAJ, jMIN, Nmajor = 0, Nminor = 0;
-    double axispos, x, x1, x2;
+    int jMAJ, jMIN, Nmajor = 0, Nminor = 0;
+    double x;
 
     // Count number of accepted ticks
-    for (i = 0; i < NPotTicks; i++) {
+    for (int i = 0; i < NPotTicks; i++) {
         if (TicksAccepted[i] == 1) Nmajor++;
         else if (TicksAccepted[i] == 2) Nminor++;
     }
@@ -391,13 +391,12 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
     if (AutoTicks[0]) axis->MTickListStrings[Nminor] = NULL;
 
     // Make ticks
-    for (i = jMAJ = jMIN = 0; i < NPotTicks; i++)
+    for (int i = jMAJ = jMIN = 0; i < NPotTicks; i++)
         // Place each accepted tick
         if (TicksAccepted[i] > 0) {
             const PotentialTick *tick;
             const ArgumentInfo *arg;
             int count_steps = 0;
-            double axispos_mid;
             unsigned char DiscreteMoveMin;
 
             // If we're not doing automatic major/minor ticks, don't finalise these ticks
@@ -419,7 +418,7 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
                 pplObj *o = NULL;
 
                 // Evaluate the argument at the middle of the interval
-                axispos_mid = (axispos_min + axispos_max) / 2;
+                double axispos_mid = (axispos_min + axispos_max) / 2;
                 VarVal->real = pplaxis_InvGetPosition(axispos_mid, axis) * UnitMultiplier;
 
                 // Evaluate the argument
@@ -459,10 +458,10 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
                 if (axispos_max == axispos_min) break;
                 count_steps++;
             }
-            axispos = (axispos_min + axispos_max) / 2;
+            double axispos = (axispos_min + axispos_max) / 2;
             x = pplaxis_InvGetPosition(axispos, axis);
-            x1 = pplaxis_InvGetPosition(axispos - 1e-14, axis);
-            x2 = pplaxis_InvGetPosition(axispos + 1e-14, axis);
+            double x1 = pplaxis_InvGetPosition(axispos - 1e-14, axis);
+            double x2 = pplaxis_InvGetPosition(axispos + 1e-14, axis);
             if (((x1 <= 0.0) && (x2 >= 0.0)) || ((x1 >= 0.0) && (x2 <= 0.0)))
                 x = 0.0; // When tick is very close to a zero, enforce that it is at zero
 
@@ -538,7 +537,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                            pplset_axis *linkedto) {
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int i, j, k, NArgs, ContextRough = -1, CommaPositions[MAX_ARGS + 2], NFactorsLogBase;
+    int i, j, NArgs, ContextRough = -1, CommaPositions[MAX_ARGS + 2], NFactorsLogBase;
     int FactorsLogBase[MAX_FACTORS];
     int tripleQuote = 0, rawString = 0;
     char *format, VarName[2] = "\0\0", FormatTemp[32];
@@ -809,16 +808,16 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                     const double OoM_n = log(fabs(args[i].NumericValues[j - 1])) / log(LogBase);
                     const double OoM_m = log(fabs(args[i].NumericValues[j])) / log(LogBase);
                     const int Nsteps = fabs(log(1e-15) / log(LogBase));
-                    double OoM, nd;
+                    double OoM;
                     int n = 0, m, ZeroInInterval = 0;
                     if (!gsl_finite(OoM_n)) OoM = floor(OoM_m);
                     else if (!gsl_finite(OoM_m)) OoM = floor(OoM_n);
                     else OoM = floor(ppl_max(OoM_n, OoM_m));
 
                     // Ticks which mark factors of throw
-                    for (k = 0; k < args[i].NFactorsThrow; k++) {
-                        nd = (args[i].NumericValues[j - 1] - args[i].MinValue) * pow(LogBase, FACTOR_MULTIPLY - 1) /
-                                args[i].FactorsThrow[k];
+                    for (int k = 0; k < args[i].NFactorsThrow; k++) {
+                        double nd = (args[i].NumericValues[j - 1] - args[i].MinValue) * pow(LogBase,
+                                     FACTOR_MULTIPLY - 1) / args[i].FactorsThrow[k];
                         n = floor(nd + 0.5);
                         if ((j == 1) && (fabs(nd - n) < 1e-12)) // A tick should go on the left extreme of the axis
                         {
@@ -914,10 +913,9 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                         // Mark the passing of fractions of each digit, at several finer orders of magnitude
                         for (m = n; m >= n - ((ZeroInInterval || (j == 1)) ? Nsteps : 3); m--) {
                             const double divisor = pow(LogBase, OoM - m);
-                            int o;
                             if (gsl_finite(divisor))
                                 // Each factor of the base
-                                for (o = 0; o < NFactorsLogBase; o++) {
+                                for (int o = 0; o < NFactorsLogBase; o++) {
                                     const double xnfd =
                                             xn / divisor * pow(LogBase, FACTOR_MULTIPLY) / FactorsLogBase[o];
                                     const double ynfd =
@@ -1053,15 +1051,13 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
             {
                 int ThrowFactors_Nticks = -1, ThrowFactors_Nticks_minor, ThrowFactors_FactNum = -1;
                 int Divide_LogBase_Nticks = -1, Divide_LogBase_Nticks_minor = -1;
-                int Nticks_new, Nticks_new_minor, Nticks_new_accepted, Nticks_new_accepted_minor;
-                int Nticks_new_prev, Nticks_new_prev_minor, Nticks_2B, Nticks_2B_minor;
+                int Nticks_new, Nticks_new_minor;
                 int Nticks_2B_best = -1, Nticks_2B_minor_best = -1;
-                int l, l2, l3, l4, l_final = 0;
+                int l_final = 0;
                 int NMajorTicksIn, NMinorTicksIn;
-                unsigned char MAJORminor;
 
                 // Option 1: Divide throw
-                for (k = 0; k < args[i].NFactorsThrow; k++) {
+                for (int k = 0; k < args[i].NFactorsThrow; k++) {
                     acceptable = 1;
                     AddTickScheme(PotTickList, NPotTicks, TickOrder, N_STEPS, i, k, 0, 0, TicksAccepted,
                                   TicksAcceptedNewTF, 1, axis->PhysicalLengthMajor, &acceptable, &ThrowFactors_Nticks,
@@ -1085,7 +1081,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                 }
 
                 // Minor ticks: Try other factors of throw
-                for (k = 0; k < ThrowFactors_FactNum; k++) {
+                for (int k = 0; k < ThrowFactors_FactNum; k++) {
                     // Minor ticks must divide the major ticks' interval exactly
                     if ((args[i].FactorsThrow[ThrowFactors_FactNum] % args[i].FactorsThrow[k]) == 0) {
                         acceptable = 1;
@@ -1125,17 +1121,17 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                 // Option 2: try ticks at fractions of each order of magnitude, from coarsest to finest
                 if (args[i].OoM_RangeSet) {
                     memcpy(TicksAcceptedNew, TicksAccepted, NPotTicks);
-                    Nticks_new_prev = -1;
-                    Nticks_new_prev_minor = -1;
+                    int Nticks_new_prev = -1;
+                    int Nticks_new_prev_minor = -1;
                     // Each order of magnitude
-                    for (k = args[i].OoM_max + 1; k >= args[i].OoM_min; k--) {
+                    for (int k = args[i].OoM_max + 1; k >= args[i].OoM_min; k--) {
                         // Option 2B: Divide 10 into factor intervals
-                        Nticks_2B = -1;
-                        Nticks_2B_minor = -1;
+                        int Nticks_2B = -1;
+                        int Nticks_2B_minor = -1;
                         CountTicks(TicksAcceptedNew, NPotTicks, &NMajorTicksIn, &NMinorTicksIn);
-                        for (l2 = 0; l2 < 2; l2++)
+                        for (int l2 = 0; l2 < 2; l2++)
                             // Try each factor of the base as the interval between major ticks
-                            for (l = 0; l < NFactorsLogBase; l++) {
+                            for (int l = 0; l < NFactorsLogBase; l++) {
                                 if (Nticks_2B >= 0) break;
                                 l_final = l;
                                 acceptable = 1;
@@ -1170,9 +1166,9 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                             memcpy(TicksAcceptedRough, TicksAcceptedNew, NPotTicks);
                         }
                         Nticks_2B_minor = NMinorTicksIn;
-                        for (l4 = 0; l4 < 2; l4++)
+                        for (int l4 = 0; l4 < 2; l4++)
                             // Try each factor of the base as the interval between minor ticks
-                            for (l3 = 0; l3 < NFactorsLogBase; l3++) {
+                            for (int l3 = 0; l3 < NFactorsLogBase; l3++) {
                                 if (Nticks_2B_minor > NMinorTicksIn) break;
                                 // Minor ticks must divide the interval between major ticks
                                 if ((l_final >= 0) && (FactorsLogBase[l_final] % FactorsLogBase[l3] != 0)) {
@@ -1221,9 +1217,9 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
 
                         // Option 2A: Add 1, 1-2-5, or 1-2-3-4...
                         acceptable = 1;
-                        Nticks_new_accepted = Nticks_new_prev;
-                        Nticks_new_accepted_minor = Nticks_new_prev_minor;
-                        MAJORminor = 1;
+                        int Nticks_new_accepted = Nticks_new_prev;
+                        int Nticks_new_accepted_minor = Nticks_new_prev_minor;
+                        unsigned char MAJORminor = 1;
 
                         // On first pass, add zero with highest order-of-magnitude
                         if (k == args[i].OoM_max + 1) {
@@ -1239,7 +1235,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                         acceptable = 1;
                         // Add ticks in order of priority, as major ticks until they become too crowded, then as minor
                         // ticks
-                        for (l = -3; l <= 0; l++) {
+                        for (int l = -3; l <= 0; l++) {
                             AddTickScheme(PotTickList, NPotTicks, TickOrder, N_STEPS, i, NOT_THROW, k, l,
                                           TicksAcceptedNew, TicksAcceptedRough, MAJORminor,
                                           MAJORminor ? axis->PhysicalLengthMajor : axis->PhysicalLengthMinor,

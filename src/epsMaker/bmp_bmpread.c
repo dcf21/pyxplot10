@@ -49,10 +49,10 @@
 void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     // Variables describing the image; off2 counts the bytes read so far
     char msg[PPL_MSG_LENGTH];
-    unsigned char buff[60], encode, *p, c;
-    unsigned width, height, depth, excess;
+    unsigned char buff[60], encode, *p;
+    unsigned width, height, depth;
     unsigned long size;
-    int i, j, ncols, os2;
+    int os2;
 
     // Log progress in debugging mode
     if (DEBUG) ppl_log(ec, "Beginning to decode BMP image file");
@@ -106,7 +106,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             ppl_error(ec, ERR_FILE, -1, -1, "This Windows bitmap file appears to be corrupted");
             return;
         }
-        excess = buff[0] - 40;
+        unsigned excess = buff[0] - 40;
 
         // Read the rest of the 40-byte header
         if (fread(buff + 12, 40 - 12, 1, in) != 1) {
@@ -173,7 +173,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 
     if (depth <= 8) // We have a palette to read
     {
-        ncols = 0;
+        int ncols = 0;
         if (!os2) ncols = buff[32] + (buff[33] << 8) + (buff[34] << 16) + (buff[35] << 24);
         if (!ncols) ncols = 1 << depth;
 
@@ -198,7 +198,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         }
         p = image->palette;
         // Read the palette one entry at a time, converting BGR to RGB
-        for (i = 0; i < image->pal_len; i++) {
+        for (int i = 0; i < image->pal_len; i++) {
             // MS Windows uses BGR0, OS/2 uses BGR
             if (fread(buff, 4 - os2, 1, in) != 1) {
                 ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
@@ -262,7 +262,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
             return;
         }
         // Read each row, from the bottom of the image up
-        for (i = 1; i <= height; i++) {
+        for (int i = 1; i <= height; i++) {
             // Read the row
             if (fread(image->data + (height - i) * dw, dw, 1, in) != 1) {
                 ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
@@ -282,10 +282,10 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         {
             p = image->data;
             // Swap the red and blue components of each pixel
-            for (i = 0; i < height; i++) {
+            for (int i = 0; i < height; i++) {
                 // Each pixel in the row
-                for (j = 0; j < width; j++) {
-                    c = *p;
+                for (int j = 0; j < width; j++) {
+                    unsigned char c = *p;
                     *p = *(p + 2);
                     *(p + 2) = c;
                     p += 3;
@@ -329,10 +329,6 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 
 void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitmap_data *image) {
     // Variables for decoding each pixel
-    unsigned char *palette;
-    unsigned char *ptr;
-    unsigned int colour;
-    int i, j;
 
     // Assume 5 bits per component unless the bit masks say otherwise
     int is15 = 1;
@@ -346,7 +342,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
         // Intel byte ordering afflicts the above,
         // and the entries are stored as dwords,
         // not words.
-        palette = header + 40;
+        unsigned char *palette = header + 40;
         // Check the bit masks
         if ((palette[0] != 0) || (palette[4] != 0xe0) || (palette[8] != 0x1f) || (palette[9] != 0)) {
             ppl_error(ec, ERR_FILE, -1, -1, "This 16-bit bitmap file appears to be corrupted");
@@ -386,7 +382,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
     }
 
     // Read each row, from the bottom of the image up
-    for (i = 1; i <= height; i++) {
+    for (int i = 1; i <= height; i++) {
         // Read the row
         if (fread(rowptr, 2 * width, 1, in) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file appears to be corrupted");
@@ -394,10 +390,10 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
             rowptr = NULL;
             return;
         }
-        ptr = image->data + (height - i) * 3 * width;
+        unsigned char *ptr = image->data + (height - i) * 3 * width;
         // Expand each pixel's components to 8 bits
-        for (j = 0; j < width; j++) {
-            colour = rowptr[2 * j] + (rowptr[2 * j + 1] << 8);
+        for (int j = 0; j < width; j++) {
+            unsigned int colour = rowptr[2 * j] + (rowptr[2 * j + 1] << 8);
             *(ptr + 2) = (colour & 0x1f) << 3; // blue
             if (is15) // green
             {
@@ -436,7 +432,6 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
     // Variables for decoding
     char msg[PPL_MSG_LENGTH];
     unsigned char code, *end, odd, even;
-    unsigned long i, j, delta;
     int eol;
 
     // The decoded image has one byte per pixel
@@ -477,7 +472,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
 
     // Decode each row, from the bottom of the image up. Rows are stored from the top down, so row i starts at
     // out + (height - i) * width.
-    for (i = 1; i <= height; i++) {
+    for (unsigned long i = 1; i <= height; i++) {
         c_out = out + (height - i) * width;
         end = c_out + width - 1;
         eol = 0;
@@ -504,7 +499,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
                     c_in++;
                 }
                 // Write the run, without passing the end of the row
-                for (j = 0; (j < code) && (c_out <= end); j++) *c_out++ = (j & 1) ? odd : even;
+                for (unsigned long j = 0; (j < code) && (c_out <= end); j++) *c_out++ = (j & 1) ? odd : even;
             } else {
                 code = *c_in++;
                 // A zero byte is followed by an escape code: end of line, end of data, a jump, or a run of literal
@@ -521,7 +516,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
                         // Jump dx pixels right and dy rows up the image, i.e. towards the start of the output buffer
                         unsigned long column = c_out - (out + (height - i) * width);
                         if (c_in + 2 > inEnd) goto truncated;
-                        delta = *c_in++; // dx
+                        unsigned long delta = *c_in++; // dx
                         column += delta;
                         delta = *c_in++; // dy
                         // The jump must stay within the image
@@ -541,7 +536,7 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
                         const unsigned long nbytes = (rle == 8) ? code : ((code + 1) / 2);
                         if (c_in + nbytes + (nbytes & 1) > inEnd) goto truncated;
                         // Copy the literal pixels, without passing the end of the row
-                        for (j = 0; (j < code) && (c_out <= end); j++) {
+                        for (unsigned long j = 0; (j < code) && (c_out <= end); j++) {
                             if (rle == 8) *c_out++ = c_in[j];
                             else *c_out++ = (j & 1) ? (c_in[j / 2] & 0xf) : ((c_in[j / 2] & 0xf0) >> 4);
                         }

@@ -211,13 +211,13 @@ char *ppl_numericDisplay(const double in, char *output, const int SigFig, const 
     // A printf format string, built to show the required number of decimal places
     char format[16];
     double x, AccLevel;
-    int decimal_level, dp_max, i, j, k, l;
+    int decimal_level, i, j, k, l;
     // Moderately-sized numbers are shown in %f format, with the fewest decimal places which display the value to SigFig
     // significant figures
     if ((fabs(in) < 1e10) && (fabs(in) > 1e-3)) {
         x = fabs(in);
         AccLevel = x * (1.0 + pow(10, -SigFig));
-        dp_max = (int) (SigFig - log10(x));
+        int dp_max = (int) (SigFig - log10(x));
         for (decimal_level = 0; decimal_level < dp_max; decimal_level++)
             if ((x - ((floor(x * pow(10, decimal_level)) / pow(10, decimal_level)) - x)) < AccLevel) break;
         snprintf(format, 16, "%%.%df", decimal_level);
@@ -522,7 +522,7 @@ char *ppl_strCommaSeparatedListScan(char **inscan, char *out) {
 
 int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin) {
     // i counts through <test>, and j through <candidate>
-    int i, j;
+    int j;
 
     // Missing strings never match
     if ((candidate == NULL) || (test == NULL)) return -1;
@@ -532,7 +532,7 @@ int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin)
          j++); // Fast-forward over whitespace at beginning
 
     // Compare the two strings character by character, case-insensitively, until the candidate stops matching
-    for (i = 0; 1; i++, j++)
+    for (int i = 0; 1; i++, j++)
         // Within the test string, a mismatch ends the comparison: the match is valid if enough characters matched and
         // the candidate's word has ended
         if (test[i] != '\0') {
@@ -694,7 +694,6 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
     char QuoteType = '\0';
     const int idx = (open == '{') ? 2 : ((open == '[') ? 1 : 0);
     int done = 0;
-    int btype;
 
     // Scan through the string, keeping count of how deeply nested we are in each type of bracket
     for (; in[inpos] != '\0'; inpos++) {
@@ -706,7 +705,7 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
 
         // Check whether this character opens or closes any of the three types of bracket. BracketLevel[idx] counts the
         // type we are matching; the other two must be at level zero for a match to count.
-        for (btype = 0; btype < 3; btype++) {
+        for (int btype = 0; btype < 3; btype++) {
             if (in[inpos] == bopen[btype]) // Entering a nested level of brackets
             {
                 BracketLevel[btype]++;
@@ -932,8 +931,8 @@ static int utf8IsContinuation(const char byte) {
 //! \return The number of characters in <in>
 
 int ppl_utf8Length(const char *in) {
-    int i, n = 0;
-    for (i = 0; in[i] != '\0'; i++)
+    int n = 0;
+    for (int i = 0; in[i] != '\0'; i++)
         if (!utf8IsContinuation(in[i])) n++;
     return n;
 }
@@ -961,8 +960,8 @@ int ppl_utf8ByteOffset(const char *in, const int charIndex) {
 //! \return The number of characters which start before <byteOffset>
 
 int ppl_utf8CharIndex(const char *in, const int byteOffset) {
-    int i, n = 0;
-    for (i = 0; (i < byteOffset) && (in[i] != '\0'); i++)
+    int n = 0;
+    for (int i = 0; (i < byteOffset) && (in[i] != '\0'); i++)
         if (!utf8IsContinuation(in[i])) n++;
     return n;
 }
@@ -978,7 +977,7 @@ long ppl_utf8NextChar(const char *in, int *pos) {
     // byte
     const unsigned char *s = (const unsigned char *) in + *pos;
     long codePoint;
-    int nBytes, i;
+    int nBytes;
     // The first byte gives the length of the character: 0xxxxxxx is ASCII, 110xxxxx starts two bytes, 1110xxxx three,
     // and 11110xxx four. Its remaining bits are the most significant bits of the code point.
     if (s[0] < 0x80) {
@@ -998,7 +997,7 @@ long ppl_utf8NextChar(const char *in, int *pos) {
         return -1;
     }
     // Each continuation byte contributes six more bits of the code point
-    for (i = 1; i < nBytes; i++) {
+    for (int i = 1; i < nBytes; i++) {
         // Every byte after the first must be a continuation byte, 10xxxxxx
         if ((s[i] & 0xC0) != 0x80) {
             (*pos)++; // A multi-byte character which is cut short
@@ -1056,7 +1055,7 @@ int ppl_utf8IsDigit(const long codePoint) {
 int ppl_strWildcardTest(const char *test, const char *wildcard) {
     // i is the position reached in both strings; j is the end of the run of wildcard characters; mineat and maxeat are
     // the fewest and most characters which that run may match
-    int i = 0, k, mineat = 0, maxeat = 0;
+    int i = 0, mineat = 0, maxeat = 0;
 
     // Match the literal characters before the first wildcard character
     while ((wildcard[i] != '\0') && (wildcard[i] != '?') && (wildcard[i] != '*')) {
@@ -1081,11 +1080,11 @@ int ppl_strWildcardTest(const char *test, const char *wildcard) {
     }
 
     // Consume the characters which the run must match
-    for (k = 0; k < mineat; k++)
+    for (int k = 0; k < mineat; k++)
         if (test[i++] == '\0') return 0;
 
     // Try matching the rest of the pattern after each possible number of further characters, recursively
-    for (k = 0; k < maxeat - mineat; k++) {
+    for (int k = 0; k < maxeat - mineat; k++) {
         if (ppl_strWildcardTest(test + i, wildcard + j)) return 1;
         if (test[i++] == '\0') return 0;
     }

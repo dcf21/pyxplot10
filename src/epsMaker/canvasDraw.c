@@ -201,15 +201,13 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     // Variables for the rendering process; a lock prevents recursive calls while a canvas is being drawn
     char msg[PPL_MSG_LENGTH];
     static int lock = 0;
-    int i, j, termtype, status = 0, CSPCommand = 0;
+    int termtype, status = 0, CSPCommand = 0;
     static long TempFile_counter = 0, TeXFile_counter = 0;
     char EPSFilenameTemp[FNAME_LENGTH], TeXFilenameTemp[FNAME_LENGTH], TitleTemp[FNAME_LENGTH],
             FinalFilenameTemp[FNAME_LENGTH];
     char GSOutputTemp[FNAME_LENGTH], GSOutputTemp2[FNAME_LENGTH];
     wordexp_t WordExp;
-    char *EnvDisplay;
     EPSComm comm;
-    canvas_item *item;
     void (*ArrowHandler)(EPSComm *);
     void (*BoxHandler)(EPSComm *);
     void (*CircHandler)(EPSComm *);
@@ -235,7 +233,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     ThreeDimBuffer_Reset(&comm);
 
     // By default, we record all operations as having been successful
-    for (i = 0; i < MULTIPLOT_MAXINDEX; i++) unsuccessful_ops[i] = 0;
+    for (int i = 0; i < MULTIPLOT_MAXINDEX; i++) unsuccessful_ops[i] = 0;
 
     // Work out filename to save output postscript to
     comm.termtype = termtype = c->set->term_current.TermType;
@@ -280,7 +278,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                 comm.FinalFilename; // eps or ps is actually what we're aiming to make, so save straight to user's chosen target
         ppl_createBackupIfRequired(c, comm.EPSFilename);
         comm.title = comm.EPSFilename; // Filename 'foo/bar/myplot.eps' --> title 'myplot.eps'
-        for (i = 0; comm.title[i] != '\0'; i++)
+        for (int i = 0; comm.title[i] != '\0'; i++)
             // Strip the directory from the filename to make the document title
             if ((comm.title[i] == PATHLINK[0]) && ((i == 0) || (comm.title[i - 1] != '\\'))) {
                 comm.title += i + 1;
@@ -300,7 +298,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         } else {
             comm.title =
                     comm.FinalFilename; // In other terminals, we give eps files filename titles, with path cut off front
-            for (i = 0; comm.title[i] != '\0'; i++)
+            for (int i = 0; comm.title[i] != '\0'; i++)
                 // Strip the directory from the filename to make the document title
                 if ((comm.title[i] == PATHLINK[0]) && ((i == 0) || (comm.title[i - 1] != '\\'))) {
                     comm.title += i + 1;
@@ -331,15 +329,15 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     comm.LastLinetype = 0;
     comm.LaTeXpageno = 0; // Used to count items off as we render them to postscript
     comm.dvi = NULL;
-    for (i = 0; i < N_POINTTYPES; i++)
+    for (int i = 0; i < N_POINTTYPES; i++)
         comm.PointTypesUsed[i] =
                 0; // Record which point and star macros we've used and need to include in postscript prolog
-    for (i = 0; i < N_STARTYPES; i++) comm.StarTypesUsed[i] = 0;
+    for (int i = 0; i < N_STARTYPES; i++) comm.StarTypesUsed[i] = 0;
 
     // Loop over all of the items on the canvas zeroing the plot bounding boxes
     if (comm.itemlist != NULL)
         // Loop over the items, zeroing their margins
-        for (item = comm.itemlist->first; item != NULL; item = item->next) {
+        for (canvas_item *item = comm.itemlist->first; item != NULL; item = item->next) {
             item->PlotLeftMargin = 0.0;
             item->PlotRightMargin = 0.0;
             item->PlotTopMargin = 0.0;
@@ -347,7 +345,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         }
 
     // Rendering of EPS occurs in a series of phases which we now loop over
-    for (j = 0;; j++) {
+    for (int j = 0;; j++) {
         ArrowHandler = ArrowHandlers[j]; // Each object type has a handler for each phase of postscript generation
         BoxHandler = BoxHandlers[j];
         CircHandler = CircHandlers[j];
@@ -368,7 +366,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         // Loop over all of the items on the canvas
         if (comm.itemlist != NULL)
             // Call each item's handler for this phase
-            for (item = comm.itemlist->first; item != NULL; item = item->next) {
+            for (canvas_item *item = comm.itemlist->first; item != NULL; item = item->next) {
                 if (item->deleted) continue; // ... except those which have been deleted
                 if (unsuccessful_ops[item->id]) continue; // ... or which have already failed
                 comm.LastPSColor[0] = '\0'; // Make each item produce free-standing postscript for easy editing
@@ -408,7 +406,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     if ((termtype == SW_TERMTYPE_X11S) || (termtype == SW_TERMTYPE_X11M) ||
         (termtype == SW_TERMTYPE_X11P)) // X11 terminals
     {
-        EnvDisplay = getenv("DISPLAY"); // Check whether the environment variable DISPLAY is set
+        char *EnvDisplay = getenv("DISPLAY"); // Check whether the environment variable DISPLAY is set
         // Report missing viewers or displays; otherwise send the file to the viewer, through the child-process helper
         if (c->set->term_current.viewer == SW_VIEWER_NULL) {
             ppl_error(
@@ -448,7 +446,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
             pplcsp_sendCommand(c, msg);
 
             // Pause after launching an X11 ghostview viewer to give stderr error messages a moment to come back to us
-            for (i = 0; i < 7; i++) {
+            for (int i = 0; i < 7; i++) {
                 struct timespec waitperiod, waitedperiod;
                 waitperiod.tv_sec = 0;
                 waitperiod.tv_nsec = 40000000;
@@ -527,9 +525,8 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
 //! \param [in,out] linecount - The line counter, which is advanced by the number of newlines in <text>
 
 static void fprintfLineCount(FILE *output, const char *text, int *linecount) {
-    int i;
     fprintf(output, "%s", text);
-    for (i = 0; text[i] != '\0'; i++)
+    for (int i = 0; text[i] != '\0'; i++)
         if (text[i] == '\n') (*linecount)++;
 }
 
@@ -540,7 +537,7 @@ static void fprintfLineCount(FILE *output, const char *text, int *linecount) {
 void canvas_CallLaTeX(EPSComm *x) {
     // Variables for running LaTeX and reading its output, which is parsed to find any error messages
     char msg[LSTR_LENGTH];
-    int linecount = 1, i, j, pid, LatexStdIn, LatexOut;
+    int linecount = 1, pid, LatexStdIn, LatexOut;
     char filename[FNAME_LENGTH];
     CanvasTextItem *TempTextItem, *SuspectTextItem = NULL;
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
@@ -548,7 +545,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     sigset_t sigs;
 
     // Variables for parsing LaTeX's error messages, which take the form filename:line:message
-    int ErrLineNo = 0, ErrReadState = 0, ErrReadPos = 0, NCharsRead = 0, ReadErrorState = 0, TrialNumber;
+    int ErrLineNo = 0, ErrReadState = 0, ErrReadPos = 0, NCharsRead = 0, ReadErrorState = 0;
     char ErrFilename[FNAME_LENGTH] = "", ErrMsg[FNAME_LENGTH] = "";
     char TempErrFilename[FNAME_LENGTH], TempErrLineNo[FNAME_LENGTH], TempErrMsg[FNAME_LENGTH];
 
@@ -624,7 +621,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     // Read LaTeX's output until it finishes, or stops responding, which happens when it waits for input after an error
     while (1) {
         // Wait for output, retrying up to three times if interrupted by a signal
-        for (TrialNumber = 1;;) {
+        for (int TrialNumber = 1;;) {
             waitperiod.tv_sec = FirstIter ? 15 : 4; // Wait 15 seconds first time around; otherwise wait 4 seconds
             waitperiod.tv_nsec = 0;
             // Once an error has been seen, wait only half a second for more output
@@ -674,7 +671,7 @@ void canvas_CallLaTeX(EPSComm *x) {
             // Read the output, and parse it for error messages
             if ((NCharsRead = read(LatexOut, str_buffer, LSTR_LENGTH)) > 0) {
                 // Parse each character
-                for (j = 0; j < NCharsRead; j++) {
+                for (int j = 0; j < NCharsRead; j++) {
                     // The end of a line ends any error message
                     if (str_buffer[j] == '\n') {
                         // Record the error message which has just ended
@@ -784,7 +781,7 @@ void canvas_CallLaTeX(EPSComm *x) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
                             "\nInput Pyxplot command was:\n\n"); // Now tell the user what Pyxplot command produced the culprit
-                    i = strlen(msg);
+                    int i = strlen(msg);
                     ppl_canvas_item_textify(x->c, ptr, msg + i, sizeof(msg) - i);
                     i += strlen(msg + i);
                     ppl_strAppendf(msg, sizeof(msg), &i, "\n");
@@ -864,9 +861,8 @@ static int fontListedEarlier(list *fonts, const dviFontDetails *font) {
 void canvas_EPSWrite(EPSComm *x) {
     // Variables for writing the output file
     char msg[PPL_MSG_LENGTH];
-    int i;
-    FILE *epsout, *PFAfile;
-    char LandscapifyText[FNAME_LENGTH], EnlargementText[FNAME_LENGTH], *PFAfilename;
+    FILE *epsout;
+    char LandscapifyText[FNAME_LENGTH], EnlargementText[FNAME_LENGTH];
     listIterator *ListIter;
 
     // Check that we have a bounding box
@@ -964,12 +960,12 @@ void canvas_EPSWrite(EPSComm *x) {
     // Embed each font file in the output
     while (ListIter != NULL) {
         const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
-        PFAfilename = font->pfaPath;
+        char *PFAfilename = font->pfaPath;
         // PFAfilename==NULL indicates that this is a built-in font that doesn't require a fontdef. Several TeX fonts
         // may be derived from the same type 1 font (e.g. ecrm1000 and tcrm1000), which only needs including once.
         if ((PFAfilename != NULL) && !fontListedEarlier(x->dvi->fonts, font)) {
             fprintf(epsout, "%%%%BeginFont: %s\n", font->basePsName);
-            PFAfile = fopen(PFAfilename, "r");
+            FILE *PFAfile = fopen(PFAfilename, "r");
             // Report a font file which cannot be opened
             if (PFAfile == NULL) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Could not open pfa file '%s'", PFAfilename);
@@ -1028,15 +1024,15 @@ void canvas_EPSWrite(EPSComm *x) {
     if (x->PointTypesUsed[41]) { x->PointTypesUsed[27] = x->PointTypesUsed[13] = 1; } // pt6 depends upon pt4 and pt5
 
     if (x->StarTypesUsed[6]) { x->StarTypesUsed[5] = 1; } // st7 depends upon st6
-    for (i = 0; i < N_POINTTYPES; i++)
+    for (int i = 0; i < N_POINTTYPES; i++)
         if (x->PointTypesUsed[i]) fprintf(epsout, "%s\n", eps_PointTypes[i]);
-    for (i = 0; i < N_STARTYPES; i++)
+    for (int i = 0; i < N_STARTYPES; i++)
         // Define the star symbols, if any are used
         if (x->StarTypesUsed[i]) {
             fprintf(epsout, "%s\n", eps_StarCore);
             break;
         }
-    for (i = 0; i < N_STARTYPES; i++)
+    for (int i = 0; i < N_STARTYPES; i++)
         if (x->StarTypesUsed[i]) fprintf(epsout, "%s\n", eps_StarTypes[i]);
     fprintf(epsout, "%%%%EndProlog\n\n");
 
@@ -1106,7 +1102,6 @@ void canvas_EPSWrite(EPSComm *x) {
 void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, const int halign,
                               const int valign, char *colstr, double fontsize, double rotate, double *width,
                               double *height) {
-    char *cptr;
     static char *buffer = NULL;
     const long BUFLEN = 131072;
     long bufpos = 0;
@@ -1213,7 +1208,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     listIterator *ListIter = ppl_listIterateInit(dviPage->text);
     // Copy each fragment of postscript
     while (ListIter != NULL) {
-        cptr = (char *) ListIter->data;
+        char *cptr = (char *) ListIter->data;
         // Copy each character, replacing the marker byte 0x01 with the text's color
         while (*cptr != '\0') {
             if (*cptr != '\x01') snprintf(out + bufpos, BUFLEN - bufpos, "%c", *cptr);

@@ -285,7 +285,6 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
     // BASIC-style loops step a numeric variable from one value to another; C-style loops evaluate an initialiser, a
     // condition and an increment
     if (BASICstyle) {
-        double iter;
         const int forwards = stepGot ? (stepVal->real > 0) : (endVal->real > beginVal->real);
 
         if (!stepGot) // If no step is specified, make it equal to one SI unit
@@ -322,7 +321,7 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
         }
 
         // Run the body of the loop for each value of the variable, unless the user presses control-C
-        for (iter = beginVal->real; (forwards ? (iter <= endVal->real) : (iter >= endVal->real)) && !cancellationFlag;
+        for (double iter = beginVal->real; (forwards ? (iter <= endVal->real) : (iter >= endVal->real)) && !cancellationFlag;
              iter += stepVal->real) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
@@ -453,7 +452,6 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
 
     if (iter->objType == PPLOBJ_STR) // Iterate over string: treat this as a filename to glob
     {
-        int i, j;
         wordexp_t w;
         glob_t g;
         char *raw = (char *) iter->auxil, fName[FNAME_LENGTH];
@@ -461,10 +459,10 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         ppl_strEscapeSpaces(raw, fName, FNAME_LENGTH);
         if (wordexp(fName, &w, 0) != 0) goto cleanup; // No matches
         // Run the loop once for each file matching each word of the expanded pattern
-        for (i = 0; i < w.we_wordc && !foreachStop(c); i++) {
+        for (int i = 0; i < w.we_wordc && !foreachStop(c); i++) {
             if (glob(w.we_wordv[i], 0, NULL, &g) != 0) continue;
             // Run the body of the loop once for each matching file, with the variable set to its filename
-            for (j = 0; j < g.gl_pathc && !foreachStop(c); j++) {
+            for (int j = 0; j < g.gl_pathc && !foreachStop(c); j++) {
                 pplObj *varObj, vartmp;
                 ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
                 pplObjStr(varObj, varObj->amMalloced, 0, g.gl_pathv[j]);
@@ -490,9 +488,8 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
     {
         gsl_vector *vin = ((pplVector *) iter->auxil)->v;
         const int vinl = vin->size;
-        int i;
         // Run the body of the loop once for each element of the vector
-        for (i = 0; i < vinl && !foreachStop(c); i++) {
+        for (int i = 0; i < vinl && !foreachStop(c); i++) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
             pplObjNum(varObj, varObj->amMalloced, gsl_vector_get(vin, i), 0);
@@ -545,12 +542,12 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         dict *din = (dict *) iter->auxil;
         dictIterator *di = ppl_dictIterateInit(din);
         pplObj *obj;
-        char *key, *cpy;
+        char *key;
         // Run the body of the loop once for each key of the dictionary
         while (((obj = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) && !foreachStop(c)) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
-            cpy = (char *) malloc(strlen(key) + 1);
+            char *cpy = (char *) malloc(strlen(key) + 1);
             // Stop if memory cannot be allocated for the key
             if (cpy == NULL) {
                 ppl_contextRestoreVarPointer(c, varname, &vartmp);
@@ -641,10 +638,10 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
 
     // Fetch ordinate ranges
     {
-        int i, pos = PARSE_foreachdatum_0range_list, nr = 0;
+        int pos = PARSE_foreachdatum_0range_list, nr = 0;
         const int o1 = PARSE_foreachdatum_min_0range_list;
         const int o2 = PARSE_foreachdatum_max_0range_list;
-        for (i = 0; i < Nvars; i++) minSet[i] = maxSet[i] = 0;
+        for (int i = 0; i < Nvars; i++) minSet[i] = maxSet[i] = 0;
         // Walk the linked list of ranges on the parser stack; there may be one for each variable
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
@@ -674,14 +671,13 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
     blk = data->first;
     // Loop over the blocks of the data table
     while ((blk != NULL) && !foreachStop(c)) {
-        int j;
         // Run the body of the loop once for each row of data, with the variables set to its columns
-        for (j = 0; ((j < blk->blockPosition) && !foreachStop(c)); j++) {
+        for (int j = 0; ((j < blk->blockPosition) && !foreachStop(c)); j++) {
             const int stkLevelOld = c->stackPtr;
-            int k, inRange = 1;
+            int inRange = 1;
 
             // Set each variable to the value in its column, skipping rows with any value outside its range
-            for (k = 0; ((k < Nvars) && inRange); k++) {
+            for (int k = 0; ((k < Nvars) && inRange); k++) {
                 pplObj *obj = &blk->data_obj[k + j * Nvars];
                 const int numeric = obj->objType == unit[k].objType;
 
@@ -754,11 +750,9 @@ freeData:
     blk = data->first;
     // Free the objects held in the data table
     while (blk != NULL) {
-        int j;
         // Free each object in each row
-        for (j = 0; j < blk->blockPosition; j++) {
-            int k;
-            for (k = 0; k < Nvars; k++) ppl_garbageObject(&blk->data_obj[k + j * Nvars]);
+        for (int j = 0; j < blk->blockPosition; j++) {
+            for (int k = 0; k < Nvars; k++) ppl_garbageObject(&blk->data_obj[k + j * Nvars]);
         }
         blk = blk->next;
     }

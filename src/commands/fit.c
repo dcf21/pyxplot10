@@ -119,14 +119,13 @@ typedef struct fitComm {
 //! \return Pointer to <out>
 
 static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size, char *out, const size_t outLen) {
-    size_t i, j;
     int p = 0;
     out[0] = '\0';
     ppl_strAppendf(out, outLen, &p, "[ [");
     // Write each row in square brackets
-    for (i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         // Write each element, separated by commas
-        for (j = 0; j < size; j++) {
+        for (size_t j = 0; j < size; j++) {
             ppl_strAppendf(out, outLen, &p, "%s%s", (j > 0) ? "," : "",
                            ppl_numericDisplay(gsl_matrix_get(m, i, j), c->numdispBuff[0],
                                               c->set->term_current.SignificantFigures, 0));
@@ -244,7 +243,6 @@ static void fitResidualParallel(fitComm *p, const long nBlocks, double *blockSum
             const long end =
                     ((start + FIT_BLOCK_POINTS < p->NDataPoints) ? (start + FIT_BLOCK_POINTS) : p->NDataPoints);
             double sum = 0.0, residual;
-            long j;
             // Report a thread which could not be set up as a failure at the start of its first block
             if ((w == NULL) || (myErrText == NULL) || w->stackFull) {
                 if (start < myFailIndex) { // Report the problem as if it occurred at the start of this block
@@ -255,7 +253,7 @@ static void fitResidualParallel(fitComm *p, const long nBlocks, double *blockSum
             }
             if (start >= myFailIndex) continue; // A failure earlier in the data has already been found
             // Sum the residuals of the data points in this block
-            for (j = start; j < end; j++) {
+            for (long j = start; j < end; j++) {
                 // Note where the first failure occurred, so that the earliest failure is the one reported
                 if (fitPoint(w, p, fn, &dummy, j, &residual, myErrText)) {
                     myFailIndex = j;
@@ -290,11 +288,10 @@ static double fitResidual(fitComm *p) {
     ppl_context *c = p->c;
     char *errText = p->errtext; // A buffer of LSTR_LENGTH bytes
     const long nBlocks = (p->NDataPoints + FIT_BLOCK_POINTS - 1) / FIT_BLOCK_POINTS;
-    long b, failIndex;
-    int i;
+    long failIndex;
 
     // Set free parameter values
-    for (i = 0; i < p->NFitVars; i++)
+    for (int i = 0; i < p->NFitVars; i++)
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF)
             p->varObj[i]->real =
                     gsl_vector_get(p->paramVals, i); // This is setting variables in the user's variable space
@@ -332,14 +329,13 @@ static double fitResidual(fitComm *p) {
         dummy.ascii = NULL;
         failIndex = p->NDataPoints;
         // Sum each block, stopping at the first failure
-        for (b = 0; (b < nBlocks) && (failIndex == p->NDataPoints); b++) {
+        for (long b = 0; (b < nBlocks) && (failIndex == p->NDataPoints); b++) {
             const long start = b * FIT_BLOCK_POINTS;
             const long end =
                     ((start + FIT_BLOCK_POINTS < p->NDataPoints) ? (start + FIT_BLOCK_POINTS) : p->NDataPoints);
             double sum = 0.0, residual;
-            long j;
             // Sum the residuals of the data points in this block
-            for (j = start; j < end; j++) {
+            for (long j = start; j < end; j++) {
                 // Note where the failure occurred
                 if (fitPoint(c, p, p->functionObj, &dummy, j, &residual, errText)) {
                     failIndex = j;
@@ -359,7 +355,7 @@ static double fitResidual(fitComm *p) {
 
     // Add up the sums of the blocks, in order
     double accumulator = 0.0;
-    for (b = 0; b < nBlocks; b++) accumulator += blockSums[b];
+    for (long b = 0; b < nBlocks; b++) accumulator += blockSums[b];
     free(blockSums);
     return accumulator;
 }
@@ -411,13 +407,12 @@ static double GetHessian_diff1(const double x, void *p_void) {
 
 static gsl_matrix *GetHessian(fitComm *p) {
     // Variables for computing the Hessian matrix
-    int i, j;
     double output, output_error;
     gsl_function fn;
 
     // Allocate a vector for passing our position in free-parameter space to fitResidual()
     p->paramValsHessian = gsl_vector_alloc(p->NParams);
-    for (i = 0; i < p->NParams; i++) gsl_vector_set(p->paramValsHessian, i, gsl_vector_get(p->bestFitParamVals, i));
+    for (int i = 0; i < p->NParams; i++) gsl_vector_set(p->paramValsHessian, i, gsl_vector_get(p->bestFitParamVals, i));
     p->paramVals = p->paramValsHessian;
 
     gsl_matrix *out = gsl_matrix_alloc(p->NParams, p->NParams); // Allocate memory for Hessian matrix
@@ -428,8 +423,8 @@ static gsl_matrix *GetHessian(fitComm *p) {
     fn.params = (void *) p;
 
     // Loop over the elements of the Hessian, differentiating with steps of a millionth of each parameter
-    for (i = 0; i < p->NParams; i++)
-        for (j = 0; j < p->NParams; j++) // Loop over elements of Hessian matrix
+    for (int i = 0; i < p->NParams; i++)
+        for (int j = 0; j < p->NParams; j++) // Loop over elements of Hessian matrix
         {
             p->diff1 = i;
             p->diff1step = ((output = fabs(gsl_vector_get(p->paramVals, i)) * 1e-6) < 1e-100) ? 1e-6 : output;
@@ -508,11 +503,10 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
                               const unsigned char FittingsigmaData) {
     ppl_context *c = commlink->c;
     size_t iter = 0, iter2 = 0;
-    int i, status = 0, NParams;
+    int status = 0, NParams;
     double size = 0, sizelast = 0, sizelast2 = 0;
     const gsl_multimin_fminimizer_type *T =
             gsl_multimin_fminimizer_nmsimplex; // We don't use nmsimplex2 here because it was new in gsl 1.12
-    gsl_multimin_fminimizer *s;
     gsl_multimin_function fn;
 
     // When fitting the size of the error bars, there is only one parameter to vary
@@ -536,10 +530,10 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
         // Start from the current values of the parameters, or from the current estimate of the size of the error bars
         if (!FittingsigmaData) {
             if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF)
-                for (i = 0; i < commlink->NFitVars; i++) gsl_vector_set(x, i, commlink->varObj[i]->real);
+                for (int i = 0; i < commlink->NFitVars; i++) gsl_vector_set(x, i, commlink->varObj[i]->real);
             else
                 // Each variable takes two elements of the vector
-                for (i = 0; i < commlink->NFitVars; i++) {
+                for (int i = 0; i < commlink->NFitVars; i++) {
                     gsl_vector_set(x, 2 * i, commlink->varObj[i]->real);
                     gsl_vector_set(x, 2 * i + 1, commlink->varObj[i]->imag);
                 }
@@ -548,13 +542,13 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
         }
 
         // The initial step size is 10% of each parameter
-        for (i = 0; i < NParams; i++) {
+        for (int i = 0; i < NParams; i++) {
             if (fabs(gsl_vector_get(x, i)) > 1e-6) gsl_vector_set(ss, i, 0.1 * gsl_vector_get(x, i));
             else gsl_vector_set(ss, i, 0.1); // Avoid having a stepsize of zero
         }
 
         // Create the minimiser
-        s = gsl_multimin_fminimizer_alloc(T, fn.n);
+        gsl_multimin_fminimizer *s = gsl_multimin_fminimizer_alloc(T, fn.n);
         gsl_multimin_fminimizer_set(s, &fn, x, ss);
 
         // If initial value we are giving the minimiser produces an algebraic error, it's not worth continuing
@@ -576,7 +570,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
         // Each batch of iterations
         do {
             iter++;
-            for (i = 0; i < 2 + NParams * 2;
+            for (int i = 0; i < 2 + NParams * 2;
                  i++) // When you're minimising over many parameters simultaneously sometimes nothing happens for a long time
             {
                 status = gsl_multimin_fminimizer_iterate(s);
@@ -682,9 +676,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Get pointers to fitting variables
     {
-        int i;
         // Look up each fitting variable, creating it if it does not exist
-        for (i = 0; i < Nvars; i++) {
+        for (int i = 0; i < Nvars; i++) {
             pplObj dummyTemp;
             ppl_contextGetVarPointer(c, fitVars[i], &varObj[i], &dummyTemp);
             // If the variable already had a numerical value, use it, with its units, as the starting guess
@@ -757,10 +750,10 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Read ranges
     {
-        int i, pos = PARSE_fit_0range_list, nr = 0;
+        int pos = PARSE_fit_0range_list, nr = 0;
         const int o1 = PARSE_fit_min_0range_list;
         const int o2 = PARSE_fit_max_0range_list;
-        for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
+        for (int i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
         // Walk the linked list of ranges on the parser stack
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
@@ -812,12 +805,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     dataBlock *blk = data->first;
     // Count the data points which fall within the ranges
     while (blk != NULL) {
-        int j;
         // Loop over the rows in each block
-        for (j = 0; j < blk->blockPosition; j++) {
-            int inRange = 1, k;
+        for (int j = 0; j < blk->blockPosition; j++) {
+            int inRange = 1;
             // Skip rows with any value outside its column's range
-            for (k = 0; k < NExpect; k++) {
+            for (int k = 0; k < NExpect; k++) {
                 val = blk->data_real[k + NExpect * j];
                 // This value is outside the range
                 if ((minSet[k] && (val < min[k])) || (maxSet[k] && (val > max[k]))) {
@@ -842,12 +834,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     blk = data->first;
     // Copy the data points which fall within the ranges into a single array
     while (blk != NULL) {
-        int j;
         // Loop over the rows in each block
-        for (j = 0; j < blk->blockPosition; j++) {
-            int inRange = 1, k;
+        for (int j = 0; j < blk->blockPosition; j++) {
+            int inRange = 1;
             // Skip rows with any value outside its column's range
-            for (k = 0; k < NExpect; k++) {
+            for (int k = 0; k < NExpect; k++) {
                 val = blk->data_real[k + NExpect * j];
                 // This value is outside the range
                 if ((minSet[k] && (val < min[k])) || (maxSet[k] && (val > max[k]))) {

@@ -703,7 +703,6 @@ int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOpera
 int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // XXX Should perhaps check that we're not re-defining an existing font here
     // XXX Could check that we're not after POST and hence that we need to do this
-    int i;
 
     // Allocate a record for the font
     dviFontDetails *font = (dviFontDetails *) ppl_memAlloc(sizeof(dviFontDetails));
@@ -723,7 +722,7 @@ int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperat
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
     }
-    for (i = 0; i < op->ul[4]; i++) font->area[i] = op->s[0][i];
+    for (int i = 0; i < op->ul[4]; i++) font->area[i] = op->s[0][i];
     font->area[op->ul[4]] = '\0';
     font->name = (char *) ppl_memAlloc(op->ul[5] + 1);
     // Failure to allocate memory is reported as an error
@@ -731,7 +730,7 @@ int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperat
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
     }
-    for (i = 0; i < op->ul[5]; i++) font->name[i] = op->s[0][op->ul[4] + i];
+    for (int i = 0; i < op->ul[5]; i++) font->name[i] = op->s[0][op->ul[4] + i];
     font->name[op->ul[5]] = '\0';
     font->useSize = op->ul[2];
     font->desSize = op->ul[3];

@@ -82,9 +82,8 @@ void ppl_withWordsZero(const ppl_context *context, withWords *a) {
 void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserLine *pl, const int *ptab,
                            const int stkbase, withWords *out) {
     pplObj *stk = in->stk + stkbase;
-    int tempint, i;
+    int tempint;
     double tempdbl;
-    char *tempstr;
     pplExpr *tempexp;
     ppl_withWordsZero(context, out);
 
@@ -189,8 +188,8 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_STR);
     // The plot style, e.g. lines or points
     if (got) {
-        tempstr = (char *) stk[pos].auxil;
-        i = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_STYLE_INT, SW_STYLE_STR);
+        char *tempstr = (char *) stk[pos].auxil;
+        int i = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_STYLE_INT, SW_STYLE_STR);
         out->linespoints = i;
         out->USElinespoints = 1;
     }
@@ -297,7 +296,6 @@ int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *
 
 void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a, const withWords *b,
                         const withWords *c, const withWords *d, const withWords *e, const unsigned char ExpandStyles) {
-    int i;
     const withWords *InputArray[25] = {a, b, c, d, e};
     unsigned char BlockStyleSubstitution[25] = {0, 0, 0, 0, 0};
     const withWords *x;
@@ -308,7 +306,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
     ppl_withWordsZero(context, out);
 
     // Apply each input in turn
-    for (i = 4; i >= 0; i--) {
+    for (int i = 4; i >= 0; i--) {
         // Numbered styles which refer to one another in a loop would expand forever
         if (i > 24) {
             ppl_error(&context->errcontext, ERR_GENERIC, -1, -1,

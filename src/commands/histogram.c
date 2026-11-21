@@ -81,7 +81,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     dataTable *data;
     long int i = 0, j, k;
     int errCount = DATAFILE_NERRS;
-    pplObj v, firstEntry;
+    pplObj firstEntry;
     char filenameOut[FNAME_LENGTH] = "";
     pplObj unit[USING_ITEMS_MAX];
     int minSet[USING_ITEMS_MAX], maxSet[USING_ITEMS_MAX];
@@ -90,10 +90,10 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
     // Read ranges
     {
-        int i, pos = PARSE_histogram_0range_list, nr = 0;
+        int pos = PARSE_histogram_0range_list, nr = 0;
         const int o1 = PARSE_histogram_min_0range_list;
         const int o2 = PARSE_histogram_max_0range_list;
-        for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
+        for (int i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
         // Walk the linked list of ranges on the parser stack; only one range is allowed
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
@@ -117,7 +117,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     // Read input data
     {
         const int NcolRequired = 1;
-        int status = 0, j;
+        int status = 0;
         ppldata_fromCmd(c, &data, pl, in, 0, filenameOut, dataSpool, PARSE_TABLE_histogram_, 0, NcolRequired, 0, min,
                         minSet, max, maxSet, unit, 0, &status, c->errStat.errBuff, &errCount, iterDepth);
 
@@ -129,7 +129,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
 
         // Check that the firstEntries above have the same units as any supplied ranges
-        for (j = 0; j < NcolRequired; j++)
+        for (int j = 0; j < NcolRequired; j++)
             // Only columns with a range need checking
             if (minSet[j] || maxSet[j]) {
                 // The range must have the same units as the data
@@ -197,7 +197,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             // Warn about values which have no logarithm, and skip them
             if (xdata[j] <= 0.0) {
                 if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
-                    v = firstEntry;
+                    pplObj v = firstEntry;
                     v.real = xdata[j];
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -631,7 +631,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
 void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor *desc, pplObj *in, pplObj *out,
                             int *status, char *errout) {
-    long i, ss, pos;
+    long i, pos;
 
     // The argument must have the same units as the data
     if (!ppl_unitsDimEqual(in, &desc->unit)) {
@@ -684,7 +684,7 @@ void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor 
     long Nsteps = (long) ceil(log(len) / log(2));
     // Take steps of halving size, so long as they do not pass the argument
     for (pos = i = 0; i < Nsteps; i++) {
-        ss = 1 << (Nsteps - 1 - i);
+        long ss = 1 << (Nsteps - 1 - i);
         if (pos + ss >= len) continue;
         if (desc->bins[pos + ss] <= dblin) pos += ss;
     }

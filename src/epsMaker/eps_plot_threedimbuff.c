@@ -112,10 +112,6 @@ static int ThreeDimBuffer_qsort_slave(const void *x, const void *y) {
 
 int ThreeDimBuffer_Deactivate(EPSComm *x) {
     // Variables for sorting the buffer
-    int i, j;
-    struct DepthArrayEntry *DepthArray;
-    ThreeDimBufferItem *item;
-    listIterator *ListIter;
 
     // If the buffer is not active, there is nothing to write
     if (!ThreeDimBuffer_ACTIVE) {
@@ -129,15 +125,15 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         eps_core_WritePSColor(x);
 
         // Display all items in 3D display buffer, from back to front
-        DepthArray = (struct DepthArrayEntry *) malloc(Nitems * sizeof(struct DepthArrayEntry));
+        struct DepthArrayEntry *DepthArray = (struct DepthArrayEntry *) malloc(Nitems * sizeof(struct DepthArrayEntry));
         // Failure to allocate memory is reported as an error
         if (DepthArray == NULL) {
             ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             ThreeDimBuffer_Reset(x);
             return 1;
         }
-        i = 0;
-        ListIter = ppl_listIterateInit(ThreeDimBuffer_buffer);
+        int i = 0;
+        listIterator *ListIter = ppl_listIterateInit(ThreeDimBuffer_buffer);
         // Make an array of the items and their depths
         while (ListIter != NULL) {
             DepthArray[i].item = ListIter->data;
@@ -148,8 +144,8 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         qsort((void *) DepthArray, i, sizeof(struct DepthArrayEntry), ThreeDimBuffer_qsort_slave);
         ThreeDimBuffer_LineSegmentID = -5;
         // Write each item; line segments continue the previous path if they followed it in the original line
-        for (j = 0; j < i; j++) {
-            item = (ThreeDimBufferItem *) DepthArray[j].item;
+        for (int j = 0; j < i; j++) {
+            ThreeDimBufferItem *item = (ThreeDimBufferItem *) DepthArray[j].item;
             // A line segment, or a fragment of postscript
             if (item->FlagLineSegment) {
                 ThreeDimBuffer_linesegment(x, item->depth, item->linetype, item->linewidth, item->colstr, item->x0,
@@ -185,8 +181,6 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
 
 int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const double linewidth, const double offset,
                            double pointsize, char *colstr, char *psfrag) {
-    ThreeDimBufferItem *item;
-    char *tempstr;
 
     // When the buffer is inactive, write the fragment now with its style; otherwise store a copy of it
     if (!ThreeDimBuffer_ACTIVE) {
@@ -202,8 +196,8 @@ int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const
         eps_core_SetLinewidth(x, linewidth * EPS_DEFAULT_LINEWIDTH, linetype, offset);
         fprintf(x->epsbuffer, "%s\n", psfrag);
     } else {
-        item = (ThreeDimBufferItem *) ppl_memAlloc(sizeof(ThreeDimBufferItem));
-        tempstr = (char *) ppl_memAlloc(strlen(psfrag) + 1);
+        ThreeDimBufferItem *item = (ThreeDimBufferItem *) ppl_memAlloc(sizeof(ThreeDimBufferItem));
+        char *tempstr = (char *) ppl_memAlloc(strlen(psfrag) + 1);
         if ((item == NULL) || (tempstr == NULL)) return 1;
         strcpy(tempstr, psfrag);
         item->FlagLineSegment = item->FirstLineSegment = 0;
@@ -243,7 +237,6 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
                                double x0, double y0, double x1, double y1, double x2, double y2,
                                const unsigned char FirstSegment, const unsigned char broken,
                                const double LengthOffset) {
-    ThreeDimBufferItem *item;
 
     // When the buffer is inactive, write the segment now, continuing the current path if possible; otherwise store it
     if (!ThreeDimBuffer_ACTIVE) {
@@ -299,7 +292,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
             linetype_old_SET = 1;
             linetype_old = linetype;
         }
-        item = (ThreeDimBufferItem *) ppl_memAlloc(sizeof(ThreeDimBufferItem));
+        ThreeDimBufferItem *item = (ThreeDimBufferItem *) ppl_memAlloc(sizeof(ThreeDimBufferItem));
         if (item == NULL) return 1;
         item->FlagLineSegment = 1;
         item->LineSegmentID = ThreeDimBuffer_LineSegmentID++;

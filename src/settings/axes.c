@@ -63,7 +63,6 @@
 
 void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
     // Free each of the axis's malloced members, if present
-    int i;
     // The expression which formats tick labels
     if (in->format != NULL) {
         pplExpr_free(in->format);
@@ -83,7 +82,7 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
     // The labels of minor ticks, a NULL-terminated array of strings
     if (in->ticsM.tickStrs != NULL) {
         // Free each label
-        for (i = 0; in->ticsM.tickStrs[i] != NULL; i++) {
+        for (int i = 0; in->ticsM.tickStrs[i] != NULL; i++) {
             free(in->ticsM.tickStrs[i]);
             in->ticsM.tickStrs[i] = NULL;
         }
@@ -96,7 +95,7 @@ void pplaxis_destroy(const ppl_context *context, pplset_axis *in) {
     // The labels of major ticks, a NULL-terminated array of strings
     if (in->tics.tickStrs != NULL) {
         // Free each label
-        for (i = 0; in->tics.tickStrs[i] != NULL; i++) {
+        for (int i = 0; in->tics.tickStrs[i] != NULL; i++) {
             free(in->tics.tickStrs[i]);
             in->tics.tickStrs[i] = NULL;
         }
@@ -148,7 +147,7 @@ void pplaxis_copy(ppl_context *context, pplset_axis *out, const pplset_axis *in)
 
 void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
     // i is the number of tick labels
-    int i = 0, j;
+    int i = 0;
     // Copy the NULL-terminated array of tick labels, string by string
     if (in->tics.tickStrs != NULL) {
         for (i = 0; in->tics.tickStrs[i] != NULL; i++);
@@ -159,7 +158,7 @@ void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis 
             return;
         }
         // Copy each label
-        for (j = 0; j < i; j++) {
+        for (int j = 0; j < i; j++) {
             out->tics.tickStrs[j] = malloc(strlen(in->tics.tickStrs[j]) + 1);
             // On failure to allocate memory, fall back to the default axis
             if (out->tics.tickStrs[j] == NULL) {
@@ -192,7 +191,7 @@ void pplaxis_copyTics(ppl_context *context, pplset_axis *out, const pplset_axis 
 
 void pplaxis_copyMTics(ppl_context *context, pplset_axis *out, const pplset_axis *in) {
     // i is the number of tick labels
-    int i = 0, j;
+    int i = 0;
     // Copy the NULL-terminated array of tick labels, string by string
     if (in->ticsM.tickStrs != NULL) {
         for (i = 0; in->ticsM.tickStrs[i] != NULL; i++);
@@ -203,7 +202,7 @@ void pplaxis_copyMTics(ppl_context *context, pplset_axis *out, const pplset_axis
             return;
         }
         // Copy each label
-        for (j = 0; j < i; j++) {
+        for (int j = 0; j < i; j++) {
             out->ticsM.tickStrs[j] = malloc(strlen(in->ticsM.tickStrs[j]) + 1);
             // On failure to allocate memory, fall back to the default axis
             if (out->ticsM.tickStrs[j] == NULL) {
@@ -281,17 +280,16 @@ unsigned char pplaxis_cmpTics(const ppl_context *context, const pplset_tics *ta,
 
 double pplaxis_GetPosition(const double xin, const pplset_axis *xa, const int xrn, const unsigned char AllowOffBounds) {
     // imin and imax delimit the part of the interpolation table which covers the axis's range xrn
-    int imin, imax, i;
     if (xa == NULL) return xin;
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {
-        imin = xa->AxisTurnings[xrn];
-        imax = xa->AxisTurnings[xrn + 1];
+        int imin = xa->AxisTurnings[xrn];
+        int imax = xa->AxisTurnings[xrn + 1];
         // Non-linear axes, e.g. those linked to other axes through a function, are described by a table of the axis's
         // value at AXISLINEARINTERPOLATION_NPOINTS evenly-spaced positions along it. Find the pair of entries which
         // bracket xin, and interpolate between them. The table may contain several monotonic ranges, delimited by
         // AxisTurnings, of which xrn is the one to use.
-        for (i = imin; i < imax; i++) {
+        for (int i = imin; i < imax; i++) {
             if (((xa->AxisLinearInterpolation[i] < xin) && (xa->AxisLinearInterpolation[i + 1] >= xin)) ||
                 ((xa->AxisLinearInterpolation[i] > xin) && (xa->AxisLinearInterpolation[i + 1] <= xin)))
                 return (i +

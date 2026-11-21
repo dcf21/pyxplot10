@@ -132,12 +132,12 @@ static int readConfigCrange(ppl_context *c, const char *setkey, const char *setv
     const int nSuffixes = sizeof(suffixes) / sizeof(suffixes[0]);
     pplset_graph *g = &c->set->graph_default;
     char key[SSTR_LENGTH], msg[PPL_MSG_LENGTH];
-    int C, j, status = 0;
+    int status = 0;
 
     // Find which of the seven settings of which of the four color ranges the key names
-    for (C = 0; C < 4; C++)
+    for (int C = 0; C < 4; C++)
         // Each setting
-        for (j = 0; j < nSuffixes; j++) {
+        for (int j = 0; j < nSuffixes; j++) {
             ppl_snprintfTrunc(key, sizeof(key), "C%dRANGE_%s", C + 1, suffixes[j]);
             if (strcmp(setkey, key) != 0) continue;
 
@@ -282,13 +282,13 @@ static void readConf_execLine(ppl_context *c, const char *linebuffer, const int 
 static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
     // Variables for reading the file
     char msg[PPL_MSG_LENGTH];
-    char linebuffer[LSTR_LENGTH], setkey[LSTR_LENGTH], setvalue[LSTR_LENGTH], ColorName[SSTR_LENGTH], *StringScan;
+    char linebuffer[LSTR_LENGTH], setkey[LSTR_LENGTH], setvalue[LSTR_LENGTH], ColorName[SSTR_LENGTH];
     char *linebufferPtr = &linebuffer[0];
     char errtext[LSTR_LENGTH];
     FILE *infile;
     int state = -1;
     int linecounter = 0;
-    int i, j, k, PalettePos, ColorNumber, crangeStatus;
+    int i, j, k, crangeStatus;
     double fl, PaperHeight, PaperWidth;
 
     // Log progress in debugging mode
@@ -1497,8 +1497,8 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             ppl_strUpper(setkey, setkey);
             // The palette is a comma-separated list of named colors
             if (strcmp(setkey, "PALETTE") == 0) {
-                PalettePos = 0;
-                StringScan = setvalue;
+                int PalettePos = 0;
+                char *StringScan = setvalue;
                 // Read each color of the list
                 while (strlen(ppl_strCommaSeparatedListScan(&StringScan, ColorName)) != 0) {
                     // Warn if the palette is too long
@@ -1511,7 +1511,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                         continue;
                     } else {
                         ppl_strUpper(ColorName, ColorName);
-                        ColorNumber = ppl_fetchSettingByName(&c->errcontext, ColorName, SW_COLOR_INT, SW_COLOR_STR);
+                        int ColorNumber = ppl_fetchSettingByName(&c->errcontext, ColorName, SW_COLOR_INT, SW_COLOR_STR);
                         // Warn about a color which is not recognised
                         if (ColorNumber <= 0) {
                             ppl_snprintfTrunc(msg, sizeof(msg),

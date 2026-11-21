@@ -58,25 +58,23 @@
 
 static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *node, const int interactive) {
     // The page is built up in textBuffer, using the "\\" line-break markers understood by ppl_strWordWrap
-    xmlNode *cur_node;
     char textBuffer[LSTR_LENGTH];
     char textBuffer2[LSTR_LENGTH];
     char defaultpagerName[] = "less";
     char *pagerName;
-    char *Ncolumns_text;
-    int j, Ncolumns, strlen_version, strlen_date;
+    int Ncolumns;
     FILE *pagerHandle;
 
     // Start with a title line, then copy the text of the page
     ppl_snprintfTrunc(textBuffer, sizeof(textBuffer), "\\\\**** Help Topic: %s****\\\\", PageName);
     int i = strlen(textBuffer);
-    for (cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
+    for (xmlNode *cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
         // Copy each text node, substituting the version number and date for $VERSION and $DATE
         if (cur_node->type == XML_TEXT_NODE) {
-            strlen_version = strlen("$VERSION");
-            strlen_date = strlen("$DATE");
+            int strlen_version = strlen("$VERSION");
+            int strlen_date = strlen("$DATE");
             // Copy the text character by character
-            for (j = 0; cur_node->content[j] != '\0';) {
+            for (int j = 0; cur_node->content[j] != '\0';) {
                 // Substitute the placeholders where they appear
                 if (strncmp((char *) cur_node->content + j, "$VERSION", strlen_version) == 0) {
                     j += strlen_version;
@@ -96,7 +94,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     sprintf(textBuffer + i, "\\\\\\\\\\\\");
     // Insert information about children
     int Nchildren = 0;
-    for (cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
+    for (xmlNode *cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
         // Each child element is a subtopic; list their names, separated by commas
         if (cur_node->type == XML_ELEMENT_NODE) {
             // Introduce the list before the first subtopic
@@ -123,7 +121,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     // If interactive, tell user how to quit, and also work out column width of display
     if (interactive != 0) {
         sprintf(textBuffer + i, "Press the 'Q' key to exit this help page.\\\\");
-        Ncolumns_text = getenv("COLUMNS");
+        char *Ncolumns_text = getenv("COLUMNS");
         if (!((Ncolumns_text != NULL) && (Ncolumns = ppl_getFloat(Ncolumns_text, &i), i == strlen(Ncolumns_text))))
             Ncolumns = 80;
         pagerName = getenv("PAGER");
@@ -180,8 +178,6 @@ static void help_TopicPrint(char *out, char **words, const int Nwords) {
 
 static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *topicWords, int *matchTextPos,
                             int *Nmatches, int *ambiguous, char **helpPosition, char **helpTexts) {
-    int abbreviation, i;
-    list *prevMatchPosition;
 
     // There is a fixed limit on the number of matches which can be recorded
     if ((*Nmatches) == MAX_HELP_HITS) {
@@ -196,10 +192,10 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
             *matchTextPos = 0;
             *matchNode = node; // This is the first match we've found
         } else {
-            prevMatchPosition = ppl_strSplit(helpTexts[*matchTextPos]);
+            list *prevMatchPosition = ppl_strSplit(helpTexts[*matchTextPos]);
 
-            abbreviation = 1; // If previous match is an autocomplete shortening of current match, let it stand
-            for (i = 0; i <= ppl_listLen(topicWords); i++)
+            int abbreviation = 1; // If previous match is an autocomplete shortening of current match, let it stand
+            for (int i = 0; i <= ppl_listLen(topicWords); i++)
                 // Stop if any word of the previous match is not an abbreviation of this one
                 if (ppl_strAutocomplete((char *) ppl_listGetItem(prevMatchPosition, i), helpPosition[i], 1) == -1) {
                     abbreviation = 0;
@@ -209,7 +205,7 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
             if (abbreviation != 1) {
                 abbreviation =
                         1; // If current match is an autocomplete shortening of previous match, the current match wins
-                for (i = 0; i <= ppl_listLen(topicWords); i++)
+                for (int i = 0; i <= ppl_listLen(topicWords); i++)
                     // Stop if any word of this match is not an abbreviation of the previous one
                     if (ppl_strAutocomplete(helpPosition[i], (char *) ppl_listGetItem(prevMatchPosition, i), 1) == -1) {
                         abbreviation = 0;
@@ -244,7 +240,6 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
 void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *topicWords, int *matchTextPos,
                   int *Nmatches, int *ambiguous, char **helpPosition, char **helpTexts, const int depth) {
     xmlNode *cur_node = NULL;
-    int match, i;
 
     // Do not search deeper than the number of words in the request
     if (depth > ppl_listLen(topicWords)) return;
@@ -256,12 +251,12 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
 
     for (cur_node = node; cur_node; cur_node = cur_node->next) // Loop over siblings
     {
-        match = 1;
+        int match = 1;
         // Record this element's name, and check whether each word of the request so far abbreviates the element names
         // on its path
         if (cur_node->type == XML_ELEMENT_NODE) {
             sprintf(helpPosition[depth], "%s", cur_node->name); // Converted signedness of chars
-            for (i = 1; i <= depth; i++)
+            for (int i = 1; i <= depth; i++)
                 // This element does not match the request
                 if (ppl_strAutocomplete((char *) ppl_listGetItem(topicWords, i - 1), helpPosition[i], 1) == -1) {
                     match = 0;

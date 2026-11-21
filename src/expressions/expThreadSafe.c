@@ -78,8 +78,7 @@ static int objThreadSafe(threadSafeCheck *t, const pplObj *o, int depth);
 //! \return True if <name> is a dummy variable, or an argument of a user-defined function being checked
 
 static int isLocal(const threadSafeCheck *t, const char *name) {
-    int i;
-    for (i = 0; i < t->nLocals; i++)
+    for (int i = 0; i < t->nLocals; i++)
         if (strcmp(t->locals[i], name) == 0) return 1;
     return 0;
 }
@@ -100,20 +99,20 @@ static int funcThreadSafe(threadSafeCheck *t, const pplFunc *f) {
             return 1; // Evaluating these only reads their tables of data
         case PPL_FUNC_USERDEF: {
             const pplFunc *g;
-            int i, nLocalsOld = t->nLocals, safe = 1;
+            int nLocalsOld = t->nLocals, safe = 1;
 
             // A function which calls itself is only checked once: if it is safe, so are the calls it makes to itself
-            for (i = 0; i < t->depth; i++)
+            for (int i = 0; i < t->depth; i++)
                 if (t->checking[i] == f) return 1;
             if (t->depth >= MAX_CHECK_DEPTH) return 0;
             t->checking[t->depth++] = f;
 
             // A function may have several definitions, which apply over different ranges of its arguments
             for (g = f; (g != NULL) && safe; g = g->next) {
-                int k, j;
+                int k;
                 if (g->functionPtr == NULL) continue;
                 // The function's arguments are bound in the worker's own namespace while it runs
-                for (j = k = 0; (j < g->minArgs) && (g->argList != NULL); j++) {
+                for (int j = k = 0; (j < g->minArgs) && (g->argList != NULL); j++) {
                     // A function with too many arguments to track is treated as unsafe
                     if (t->nLocals >= MAX_LOCALS) {
                         safe = 0;
@@ -181,11 +180,10 @@ static int objThreadSafe(threadSafeCheck *t, const pplObj *o, const int depth) {
 
 static int exprThreadSafe(threadSafeCheck *t, const pplExpr *e) {
     const pplObj *module = NULL; // The module produced by the previous instruction, if it looked one up
-    int i;
     if (e == NULL) return 0;
     // Check each instruction of the expression's bytecode, looking for anything unsafe: variables which are assigned
     // to, or which hold unsafe functions, and calls to unsafe methods
-    for (i = 0; i < e->bcLen; i++) {
+    for (int i = 0; i < e->bcLen; i++) {
         const pplExprInstruction *in = &e->bytecode[i];
         const pplObj *previousModule = module;
         module = NULL;
@@ -259,12 +257,11 @@ static int exprThreadSafe(threadSafeCheck *t, const pplExpr *e) {
 
 int ppl_expThreadSafe(ppl_context *c, const pplExpr *e, const char *const *locals, const int nLocals) {
     threadSafeCheck t;
-    int i;
     if ((nLocals > MAX_LOCALS) || (c->ns_ptr != 1)) return 0; // Only commands at the top level are supported
     t.c = c;
     t.nLocals = nLocals;
     t.depth = 0;
-    for (i = 0; i < nLocals; i++) t.locals[i] = locals[i];
+    for (int i = 0; i < nLocals; i++) t.locals[i] = locals[i];
     return exprThreadSafe(&t, e);
 }
 
@@ -360,10 +357,10 @@ static int privatiseFuncBody(ppl_context *w, threadSafeCheck *t, const pplFunc *
     // Privatise the variables used by each definition in the function's chain
     for (g = f; (g != NULL) && (!status); g = g->next) {
         const int nLocalsOld = t->nLocals;
-        int j, k;
+        int k;
         if (g->functionPtr == NULL) continue;
         // The function's arguments are bound in the worker's own namespace, so are not copied
-        for (j = k = 0; (j < g->minArgs) && (g->argList != NULL) && (t->nLocals < MAX_LOCALS); j++) {
+        for (int j = k = 0; (j < g->minArgs) && (g->argList != NULL) && (t->nLocals < MAX_LOCALS); j++) {
             t->locals[t->nLocals++] = g->argList + k;
             k += strlen(g->argList + k) + 1;
         }
@@ -384,9 +381,8 @@ static int privatiseFuncBody(ppl_context *w, threadSafeCheck *t, const pplFunc *
 static int privatiseExpr(ppl_context *w, threadSafeCheck *t, const pplExpr *e) {
     // own is the worker's own namespace, into which private copies of variables are placed
     dict *own = w->namespaces[w->ns_ptr];
-    int i;
     // Find each variable which the expression looks up, and copy it into the worker's own namespace
-    for (i = 0; i < e->bcLen; i++) {
+    for (int i = 0; i < e->bcLen; i++) {
         const pplExprInstruction *in = &e->bytecode[i];
         pplObj *obj = NULL, v;
         if (in->opcode != PPL_BC_LOOKUP) continue;
@@ -429,13 +425,12 @@ static int privatiseExpr(ppl_context *w, threadSafeCheck *t, const pplExpr *e) {
 int ppl_contextWorkerPrivatise(ppl_context *w, ppl_context *parent, pplExpr **exprs, const int nExprs,
                                const char *const *locals, const int nLocals) {
     threadSafeCheck t;
-    int i;
     if (nLocals > MAX_LOCALS) return 1;
     t.c = parent;
     t.nLocals = nLocals;
     t.depth = 0;
-    for (i = 0; i < nLocals; i++) t.locals[i] = locals[i];
-    for (i = 0; i < nExprs; i++)
+    for (int i = 0; i < nLocals; i++) t.locals[i] = locals[i];
+    for (int i = 0; i < nExprs; i++)
         if (privatiseExpr(w, &t, exprs[i])) return 1;
     return 0;
 }
@@ -488,7 +483,6 @@ int ppl_contextWorkerPrivatiseFunc(ppl_context *w, ppl_context *parent, const pp
 void ppl_contextWorkerFree(ppl_context *w) {
     pplObj *item;
     char *key;
-    int i;
     if (w == NULL) return;
     ppl_stackClean(w, 0); // Discard anything left on the worker's stack
 
@@ -498,10 +492,10 @@ void ppl_contextWorkerFree(ppl_context *w) {
     // Detach the cloned functions from the worker's namespace before freeing it, since the clones are freed separately
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         if (item->objType != PPLOBJ_FUNC) continue;
-        for (i = 0; i < w->workerNClones; i++)
+        for (int i = 0; i < w->workerNClones; i++)
             if (item->auxil == w->workerClones[i]) pplObjZom(item, item->amMalloced);
     }
-    for (i = 0; i < w->workerNClones; i++) free(w->workerClones[i]);
+    for (int i = 0; i < w->workerNClones; i++) free(w->workerClones[i]);
     free(w->workerClones);
     ppl_garbageNamespace(w->namespaces[w->ns_ptr]);
     free(w->stack);

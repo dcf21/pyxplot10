@@ -75,10 +75,7 @@
 
 static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     // Variables for freeing the item
-    int i;
     canvas_itemlist *canvas_items = c->canvas_items;
-    canvas_plotrange *pr2;
-    canvas_plotdesc *pd2;
 
     // Free the points of a polygon
     free(ptr->polygonPoints);
@@ -96,19 +93,19 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     ptr->settings.c1format = NULL;
     // Free the x axes
     if (ptr->XAxes != NULL) {
-        for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
         free(ptr->XAxes);
         ptr->XAxes = NULL;
     }
     // Free the y axes
     if (ptr->YAxes != NULL) {
-        for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
         free(ptr->YAxes);
         ptr->YAxes = NULL;
     }
     // Free the z axes
     if (ptr->ZAxes != NULL) {
-        for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
         free(ptr->ZAxes);
         ptr->ZAxes = NULL;
     }
@@ -120,7 +117,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     canvas_plotrange *pr = ptr->plotranges;
     // Free the list of ranges given in a plot command
     while (pr != NULL) {
-        pr2 = pr->next;
+        canvas_plotrange *pr2 = pr->next;
         free(pr);
         pr = pr2;
     }
@@ -129,21 +126,21 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     canvas_plotdesc *pd = ptr->plotitems;
     // Free each dataset of a plot
     while (pd != NULL) {
-        pd2 = pd->next;
+        canvas_plotdesc *pd2 = pd->next;
         if (pd->functions != NULL)
             // Free the functions plotted
-            for (i = 0; i < pd->NFunctions; i++) {
+            for (int i = 0; i < pd->NFunctions; i++) {
                 pplExpr_free(pd->functions[i]);
                 pd->functions[i] = NULL;
             }
         if (pd->UsingList != NULL)
             // Free the using expressions
-            for (i = 0; i < pd->NUsing; i++) {
+            for (int i = 0; i < pd->NUsing; i++) {
                 pplExpr_free(pd->UsingList[i]);
                 pd->UsingList[i] = NULL;
             }
         if (pd->vectors != NULL)
-            for (i = 0; i < pd->NFunctions; i++) ppl_garbageObject(&pd->vectors[i]);
+            for (int i = 0; i < pd->NFunctions; i++) ppl_garbageObject(&pd->vectors[i]);
         // Free the filename
         free(pd->filename);
         pd->filename = NULL;
@@ -201,7 +198,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
 static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, canvas_item **output, int *id,
                                const unsigned char includeAxes) {
     canvas_item *next, *prev, **insertpointA, **insertpointB;
-    int i, editNo;
+    int editNo;
 
     // If we're not in multiplot mode, clear the canvas now
     if (c->set->term_current.multiplot == SW_ONOFF_OFF) ppl_directive_clear(c, NULL, NULL, 0);
@@ -314,9 +311,9 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
         } else {
-            for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->XAxes[i]), &(c->set->XAxes[i]));
-            for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->YAxes[i]), &(c->set->YAxes[i]));
-            for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->ZAxes[i]), &(c->set->ZAxes[i]));
+            for (int i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->XAxes[i]), &(c->set->XAxes[i]));
+            for (int i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->YAxes[i]), &(c->set->YAxes[i]));
+            for (int i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->ZAxes[i]), &(c->set->ZAxes[i]));
         }
         pplarrow_list_copy(c, &ptr->arrow_list, &c->set->pplarrow_list);
         ppllabel_list_copy(c, &ptr->label_list, &c->set->ppllabel_list);
@@ -341,14 +338,13 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
 
 int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     canvas_itemlist *canvas_items = c->canvas_items;
-    canvas_item *next;
 
     // There is nothing to clear if the canvas has never been used
     if (canvas_items == NULL) return 0;
     canvas_item *ptr = canvas_items->first;
     // Free each item
     while (ptr != NULL) {
-        next = ptr->next;
+        canvas_item *next = ptr->next;
         ptr->prev = NULL;
         canvas_item_delete(c, ptr);
         ptr = next;
@@ -369,7 +365,7 @@ int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput
 
 char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, const size_t outLen) {
     // Write the command for the item's type, with all of its parameters
-    int i, j;
+    int i;
     if (ptr->type == CANVAS_ARROW) // Produce textual representations of arrow commands
     {
         ppl_snprintfTrunc(
@@ -533,7 +529,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                     i += strlen(output + i); // Filename of datafile we are plotting
                 }
             } else
-                for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
+                for (int j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
                 {
                     ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                     ppl_strAppendStripped(output, outLen, &i, pd->functions[j]->ascii);
@@ -569,7 +565,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             ppl_strAppendf(output, outLen, &i, " using %s", (pd->UsingRowCols == DATAFILE_COL) ? "columns" : "rows");
             i += strlen(output + i); // Print using list
             // Each using item
-            for (j = 0; j < pd->NUsing; j++) {
+            for (int j = 0; j < pd->NUsing; j++) {
                 ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                 ppl_strAppendf(output, outLen, &i, "%s", pd->UsingList[j]->ascii);
             }
@@ -646,7 +642,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                     i += strlen(output + i); // Filename of datafile we are plotting
                 }
             } else
-                for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
+                for (int j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
                 {
                     ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                     ppl_strAppendStripped(output, outLen, &i, pd->functions[j]->ascii);
@@ -705,7 +701,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             ppl_strAppendf(output, outLen, &i, " using %s", (pd->UsingRowCols == DATAFILE_COL) ? "columns" : "rows");
             i += strlen(output + i); // Print using list
             // Each using item
-            for (j = 0; j < pd->NUsing; j++) {
+            for (int j = 0; j < pd->NUsing; j++) {
                 ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                 ppl_strAppendf(output, outLen, &i, "%s", pd->UsingList[j]->ascii);
             }
@@ -727,11 +723,10 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         ppl_withWordsAppend(c, &ptr->with_data, output, outLen, &i);
     } else if (ptr->type == CANVAS_POLYGON) // Produce textual representations of polygon commands
     {
-        int p;
         ppl_snprintfTrunc(output, outLen, "polygon item %d [", ptr->id);
         i = strlen(output);
         // Each point of a polygon
-        for (p = 0; p < ptr->NpolygonPoints; p++) {
+        for (int p = 0; p < ptr->NpolygonPoints; p++) {
             if (p > 0) ppl_strAppendChar(output, outLen, &i, ',');
             ppl_strAppendf(output, outLen, &i, "[%s,%s]",
                            ppl_numericDisplayDefault(c, ptr->polygonPoints[2 * p] * 100, 0),
@@ -767,7 +762,6 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
 int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     char msg[LSTR_LENGTH];
     canvas_itemlist *canvas_items = c->canvas_items;
-    int i;
 
     // There is nothing to list if the canvas has never been used
     ppl_report(&c->errcontext, "# ID   Command");
@@ -776,7 +770,7 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
     // List each item, marking those which have been deleted
     while (ptr != NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "%5d  %s", ptr->id, (ptr->deleted) ? "[deleted] " : "");
-        i = strlen(msg);
+        int i = strlen(msg);
         ppl_canvas_item_textify(c, ptr, msg + i, sizeof(msg) - i);
         ppl_report(&c->errcontext, msg);
         ptr = ptr->next;
@@ -964,13 +958,12 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
 
     // Polygons are moved by moving each of their points; other items by their positions
     if (ptr->type == CANVAS_POLYGON) {
-        int c;
         // Move the polygon so that its first point is at the new position, or rotate it about its first point
         if (!gotRotation) {
             const double ox = x - ptr->polygonPoints[0];
             const double oy = y - ptr->polygonPoints[1];
             // Shift each point
-            for (c = 0; c < ptr->NpolygonPoints; c++) {
+            for (int c = 0; c < ptr->NpolygonPoints; c++) {
                 ptr->polygonPoints[2 * c] += ox;
                 ptr->polygonPoints[2 * c + 1] += oy;
             }
@@ -979,7 +972,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
             // original position is kept, since the first iteration moves it.
             const double x0 = ptr->polygonPoints[0];
             const double y0 = ptr->polygonPoints[1];
-            for (c = 0; c < ptr->NpolygonPoints; c++) {
+            for (int c = 0; c < ptr->NpolygonPoints; c++) {
                 // The offset of this point from the first point, before it is moved
                 const double ox = ptr->polygonPoints[2 * c] - x0;
                 const double oy = ptr->polygonPoints[2 * c + 1] - y0;
@@ -1235,7 +1228,6 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int e = 0, r = 0, p = 0, id;
-    double ratio;
 
     // Look up the input parameters which define the ellipse
     double ang = stk[PARSE_ellipse_rotation].real;
@@ -1366,7 +1358,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
             b = (ppl_dblEqual(ecc, 0.0)) ? a : a * sqrt(1.0 - pow(ecc, 2));
         } else if (gotSlr) // or semi-latus rectum...
         {
-            ratio = hypot(xc - xf, yc - yf) / slr;
+            double ratio = hypot(xc - xf, yc - yf) / slr;
             ecc = (sqrt(1 + 4 * pow(ratio, 2)) - 1.0) / (2 * ratio);
             // The eccentricity must be between zero and one
             if ((ecc < 0.0) || (ecc >= 1.0)) {
@@ -1643,7 +1635,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_item *ptr;
-    int id, i;
+    int id;
 
     // Count how many points have been supplied
     if (stk[PARSE_polygon_pointlist].objType != PPLOBJ_LIST) {
@@ -1668,7 +1660,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     }
     // Read each point, which may be a vector or a list of two numbers, with units of length or dimensionless (in
     // centimetres)
-    for (i = 0; i < Npts; i++) {
+    for (int i = 0; i < Npts; i++) {
         double x, y;
         pplObj *item = (pplObj *) ppl_listGetItem(ptListObj, i);
         // A point given as a vector
@@ -1704,7 +1696,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
             x = gsl_vector_get(v->v, 0) * m;
             y = gsl_vector_get(v->v, 1) * m;
         } else if (item->objType == PPLOBJ_LIST) {
-            int j, p;
+            int p;
             double m[2] = {1, 1}; // The scaling of each coordinate, which may differ if only one has units
             list *l = (list *) item->auxil;
             pplObj *xo[2];
@@ -1716,7 +1708,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
                 goto fail;
             }
             // Each coordinate must be a real number
-            for (j = 0; j < 2; j++) {
+            for (int j = 0; j < 2; j++) {
                 xo[j] = (pplObj *) ppl_listGetItem(l, j);
                 // The coordinate must be a number
                 if (xo[j]->objType != PPLOBJ_NUM) {
@@ -1891,7 +1883,6 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
 static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNumber, canvas_plotdesc *out) {
     // Variables for expanding the wildcard
     char msg[PPL_MSG_LENGTH];
-    int i;
     char escaped[FNAME_LENGTH];
     wordexp_t wordExp;
     glob_t globData;
@@ -1922,7 +1913,7 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
         return 1;
     }
     // Find the requested match of the wildcards among the files matching each word of the expanded filename
-    for (i = 0; i < wordExp.we_wordc; i++) {
+    for (int i = 0; i < wordExp.we_wordc; i++) {
         // A word which matches no files
         if ((glob(wordExp.we_wordv[i], 0, NULL, &globData) != 0) || ((i == 0) && (globData.gl_pathc == 0))) {
             // Report it on the first pass only
@@ -2590,22 +2581,19 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     ptr->settings.c1format = NULL;
     // Free the old x axes
     if (ptr->XAxes != NULL) {
-        int i;
-        for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
         free(ptr->XAxes);
         ptr->XAxes = NULL;
     }
     // Free the old y axes
     if (ptr->YAxes != NULL) {
-        int i;
-        for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
         free(ptr->YAxes);
         ptr->YAxes = NULL;
     }
     // Free the old z axes
     if (ptr->ZAxes != NULL) {
-        int i;
-        for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
         free(ptr->ZAxes);
         ptr->ZAxes = NULL;
     }
@@ -2634,10 +2622,9 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ptr->ZAxes = NULL;
         return 1;
     } else {
-        int i;
-        for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->XAxes[i]), &(c->set->XAxes[i]));
-        for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->YAxes[i]), &(c->set->YAxes[i]));
-        for (i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->ZAxes[i]), &(c->set->ZAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->XAxes[i]), &(c->set->XAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->YAxes[i]), &(c->set->YAxes[i]));
+        for (int i = 0; i < MAX_AXES; i++) pplaxis_copy(c, &(ptr->ZAxes[i]), &(c->set->ZAxes[i]));
     }
     pplarrow_list_copy(c, &ptr->arrow_list, &c->set->pplarrow_list);
     ppllabel_list_copy(c, &ptr->label_list, &c->set->ppllabel_list);
@@ -2803,7 +2790,6 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int pos = PARSE_replot_0plot_list;
         // Walk the linked list of datasets on the parser stack
         while (stk[pos].objType == PPLOBJ_NUM) {
-            int w;
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
 
@@ -2842,7 +2828,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
 
             // Loop over wildcard matches
-            for (w = 0;; w++) {
+            for (int w = 0;; w++) {
                 const int status =
                         ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_replot_, pos, w, iterDepth, dataSpool, -1);
                 // Give up if the description cannot be read; a later wildcard match which fails just means there are no

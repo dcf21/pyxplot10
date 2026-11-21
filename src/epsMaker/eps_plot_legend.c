@@ -128,8 +128,8 @@ int eps_yieldTextItemCopy(EPSComm *x, const char *text) {
 
 void GraphLegend_YieldUpText(EPSComm *x) {
     // Variables for building automatic titles
-    char *cptr, *buffer;
-    int j, k, inlen;
+    char *cptr;
+    int inlen;
 
     // There is nothing to do if the key is turned off
     if (x->current->settings.key != SW_ONOFF_ON) return;
@@ -151,11 +151,11 @@ void GraphLegend_YieldUpText(EPSComm *x) {
         else // generate automatic title for dataset
         {
             pd->TitleFinal = cptr = (char *) ppl_memAlloc(LSTR_LENGTH);
-            buffer = (char *) ppl_memAlloc(LSTR_LENGTH);
+            char *buffer = (char *) ppl_memAlloc(LSTR_LENGTH);
             if (buffer == NULL) cptr = NULL;
             // Build the title from the parts of the plot command, converted into LaTeX
             if (cptr != NULL) {
-                k = 0;
+                int k = 0;
                 // Parametric plots
                 if (pd->parametric) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, "parametric");
@@ -168,7 +168,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                 }
                 // The functions plotted, or the name of the data file
                 if ((pd->function) || (pd->vectors != NULL)) {
-                    for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
+                    for (int j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
                     {
                         ppl_strAppendChar(cptr, LSTR_LENGTH, &k, (j != 0) ? ':' : ' ');
                         inlen = strlen(pd->functions[j]->ascii);
@@ -237,7 +237,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                                    (pd->UsingRowCols == DATAFILE_COL) ? "" : "rows");
                     k += strlen(cptr + k); // Print using list
                     // Each using item
-                    for (j = 0; j < pd->NUsing; j++) {
+                    for (int j = 0; j < pd->NUsing; j++) {
                         ppl_strAppendChar(cptr, LSTR_LENGTH, &k, (j != 0) ? ':' : ' ');
                         inlen = strlen(pd->UsingList[j]->ascii);
                         ppl_texify_generic(x->c, pd->UsingList[j]->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL,
@@ -282,11 +282,11 @@ static canvas_plotdesc *titledDataset(canvas_plotdesc *pd, int *iDataSet) {
 void GraphLegend_ArrangeToHeight(const EPSComm *x, const double TrialHeight, double *AttainedHeight, int *Ncolumns,
                                  double *ColumnX, double *ColumnHeight, int *ColumnNItems) {
     canvas_plotdesc *pd;
-    int i, ColumnNo = 0;
+    int ColumnNo = 0;
     double ColumnYPos = 0.0, ColumnWidth = 0.0;
 
     *AttainedHeight = 0.0;
-    for (i = 0; i < MAX_LEGEND_COLUMNS; i++) ColumnNItems[i] = 0;
+    for (int i = 0; i < MAX_LEGEND_COLUMNS; i++) ColumnNItems[i] = 0;
     ColumnX[0] = 0.0;
     {
         int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
@@ -329,11 +329,9 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     double ColumnX[MAX_LEGEND_COLUMNS + 1], ColumnHeight[MAX_LEGEND_COLUMNS];
     double BestHeight, AttainedHeight, TrialHeight;
     int Ncolumns, ColumnNItems[MAX_LEGEND_COLUMNS];
-    double height1, height2, bb_top, bb_bottom, ab_left, ab_right, ab_top, ab_bottom;
     unsigned char hfixed = 0, vfixed = 0;
     canvas_plotdesc *pd;
-    int j, kp = x->current->settings.KeyPos;
-    postscriptPage *dviPage;
+    int kp = x->current->settings.KeyPos;
     withWords ww;
 
     // There is nothing to do if the key is turned off
@@ -352,7 +350,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                 pageno++;
                 continue;
             }
-            dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
+            postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
             // If LaTeX did not typeset the title, give it zero size
             if (dviPage == NULL) {
                 pd->TitleFinal_width = 0;
@@ -361,15 +359,15 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                 continue;
             } // Such doom will trigger errors later
             //bb_left   = dviPage->boundingBox[0];
-            bb_bottom = dviPage->boundingBox[1];
+            double bb_bottom = dviPage->boundingBox[1];
             //bb_right  = dviPage->boundingBox[2];
-            bb_top = dviPage->boundingBox[3];
-            ab_left = dviPage->textSizeBox[0];
-            ab_bottom = dviPage->textSizeBox[1];
-            ab_right = dviPage->textSizeBox[2];
-            ab_top = dviPage->textSizeBox[3];
-            height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
-            height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
+            double bb_top = dviPage->boundingBox[3];
+            double ab_left = dviPage->textSizeBox[0];
+            double ab_bottom = dviPage->textSizeBox[1];
+            double ab_right = dviPage->textSizeBox[2];
+            double ab_top = dviPage->textSizeBox[3];
+            double height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
+            double height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
             pd->TitleFinal_height = ((height2 < height1) ? height2 : height1) * fs;
             pd->TitleFinal_width = ((ab_right - ab_left) + MARGIN_HSIZE) * fs;
             CombinedHeight += pd->TitleFinal_height;
@@ -416,13 +414,13 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     // Adjust spacing between legend items to justify them as necessary
     GraphLegend_ArrangeToHeight(x, BestHeight, &AttainedHeight, &Ncolumns, ColumnX, ColumnHeight, ColumnNItems);
     TrialHeight = vfixed ? (height - 2 * LEGEND_MARGIN) : AttainedHeight; // Vertical justification
-    for (j = 0; j < Ncolumns; j++)
+    for (int j = 0; j < Ncolumns; j++)
         // Do not stretch columns of fewer than two items, or columns which would need gaps larger than the maximum
         if ((ColumnNItems[j] < 2) || (ColumnHeight[j] < TrialHeight - LEGEND_VGAP_MAXIMUM * (ColumnNItems[j] - 1))) {
             TrialHeight = AttainedHeight;
             break;
         }
-    for (j = 0; j < Ncolumns; j++)
+    for (int j = 0; j < Ncolumns; j++)
         // Spread out the items in each column which can be stretched to the full height
         if (ColumnHeight[j] >= TrialHeight - LEGEND_VGAP_MAXIMUM * (ColumnNItems[j] - 1)) {
             double GapPerItem = (TrialHeight - ColumnHeight[j]) / (ColumnNItems[j] - 1), gap = 0.0;
@@ -455,7 +453,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                     pd->TitleFinal_xpos += pd->TitleFinal_col * GapPerColumn;
                 }
             }
-            for (j = 0; j < Ncolumns; j++) ColumnX[j] += j * GapPerColumn;
+            for (int j = 0; j < Ncolumns; j++) ColumnX[j] += j * GapPerColumn;
             ColumnX[Ncolumns] += (Ncolumns - 1) * GapPerColumn;
         }
     }

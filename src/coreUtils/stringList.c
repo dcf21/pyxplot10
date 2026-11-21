@@ -35,8 +35,6 @@
 //! current ppl_memAlloc context.
 
 list *ppl_strSplit(char *in) {
-    int start, end;
-    char *word;
     list *out = ppl_listInit(0);
     int pos = 0;
     char *text_buffer = (char *) malloc(strlen(in) + 1);
@@ -44,15 +42,15 @@ list *ppl_strSplit(char *in) {
     while (in[pos] != '\0') {
         // Scan along to find the next word
         while (((unsigned char) in[pos] <= ' ') && (in[pos] > '\0')) pos++;
-        start = pos;
+        int start = pos;
 
         // Scan along to find the end of this word
         while (((unsigned char) in[pos] > ' ') && (in[pos] > '\0')) pos++;
-        end = pos;
+        int end = pos;
 
         // Copy each non-empty word into the list
         if (end > start) {
-            word = ppl_strSlice(in, text_buffer, start, end);
+            char *word = ppl_strSlice(in, text_buffer, start, end);
             ppl_listAppendCpy(out, word, strlen(word) + 1);
         }
     }

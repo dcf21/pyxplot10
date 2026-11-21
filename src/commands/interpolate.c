@@ -86,9 +86,8 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     dataTable *data;
-    dataBlock *blk;
     bitmap_data bmpdata;
-    long int i = 0, j, k, ims, jms, sizeX = 0, sizeY = 0;
+    long int i = 0, j, k, sizeX = 0, sizeY = 0;
     int errCount = DATAFILE_NERRS;
     unsigned char *bmpchars = NULL;
     double *xdata = NULL, *ydata = NULL, *zdata = NULL, *MinList = NULL, *MaxList = NULL;
@@ -106,10 +105,10 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
     // Read ranges
     {
-        int i, pos = PARSE_interpolate2d_0range_list, nr = 0;
+        int pos = PARSE_interpolate2d_0range_list, nr = 0;
         const int o1 = PARSE_interpolate2d_min_0range_list;
         const int o2 = PARSE_interpolate2d_max_0range_list;
-        for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
+        for (int i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
         // Walk the linked list of ranges on the parser stack; at most two are allowed, for x and y
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
@@ -242,7 +241,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         MaxList = xdata + NcolRequired * (data->Nrows + 1);
 
         // Copy data table into an array of x values, and an array of y values
-        blk = data->first;
+        dataBlock *blk = data->first;
         i = 0;
         // Copy each block of the data table into the arrays of x, y and z values
         while (blk != NULL) {
@@ -273,10 +272,10 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         }
 
         // Fill out minimum and maximum of data
-        for (jms = 0; jms < NcolRequired; jms++) {
+        for (long int jms = 0; jms < NcolRequired; jms++) {
             MinList[jms] = MaxList[jms] = 0.0;
             // Find the range of values in this column
-            for (ims = 0; ims < i; ims++) {
+            for (long int ims = 0; ims < i; ims++) {
                 if ((ims == 0) || (MinList[jms] > xdata[jms * data->Nrows + ims]))
                     MinList[jms] = xdata[jms * data->Nrows + ims];
                 if ((ims == 0) || (MaxList[jms] < xdata[jms * data->Nrows + ims]))
@@ -296,8 +295,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         if (NcolRequired > 2) firstEntries[2] = data->firstEntries[2];
     } else // Read data from bmp file
     {
-        int i, j;
-        long p;
+        int i;
         unsigned char buff[10];
         int pos = PARSE_interpolate2d_expression_list;
 
@@ -373,7 +371,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
         for (i = 0; i < 3; i++) // Use magic to determine file type
         {
-            j = fgetc(infile);
+            int j = fgetc(infile);
             // Report a file which is too short
             if (j == EOF) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -424,10 +422,10 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
         if (bmpdata.colour == BMP_COLOUR_RGB) // RGB image
         {
-            for (p = 0; p < sizeX * sizeY; p++) bmpchars[p] = bmpdata.data[3 * p + bmp];
+            for (long p = 0; p < sizeX * sizeY; p++) bmpchars[p] = bmpdata.data[3 * p + bmp];
         } else // Paletted image
         {
-            for (p = 0; p < sizeX * sizeY; p++) bmpchars[p] = bmpdata.palette[3 * bmpdata.data[p] + bmp];
+            for (long p = 0; p < sizeX * sizeY; p++) bmpchars[p] = bmpdata.palette[3 * bmpdata.data[p] + bmp];
         }
     }
 
@@ -470,23 +468,22 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         {
             long int *sortArray = (long int *) malloc(2 * i * sizeof(long int));
             long int *sortArrayI = sortArray + i;
-            long int j;
             // Failure to allocate memory is reported as an error
             if (sortArray == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                 ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
                 return;
             }
-            for (j = 0; j < i; j++) sortArray[j] = j;
+            for (long int j = 0; j < i; j++) sortArray[j] = j;
 
             // Sort an array of indices by x value, and make the inverse mapping
             compareZeroPoint = xdata;
             qsort((void *) sortArray, i, sizeof(long int), interpolateSorter);
-            for (j = 0; j < i; j++) sortArrayI[sortArray[j]] = j;
+            for (long int j = 0; j < i; j++) sortArrayI[sortArray[j]] = j;
 
             // Permute the x and y values into sorted order in place, keeping the index arrays up to date as values are
             // swapped
-            for (j = 0; j < i; j++) {
+            for (long int j = 0; j < i; j++) {
                 long int tmp3 = sortArray[j];
                 if (tmp3 == j) continue;
                 double tmp = xdata[j];
@@ -736,11 +733,11 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
         *status = gsl_spline_eval_e(desc->splineObj, dblin, desc->accelerator, &dblout);
     } else // Stepwise interpolation
     {
-        long i, pos, ss, len = desc->sizeX, xystep = desc->sizeY, Nsteps = (long) ceil(log(desc->sizeX) / log(2));
+        long i, pos, len = desc->sizeX, xystep = desc->sizeY, Nsteps = (long) ceil(log(desc->sizeX) / log(2));
         double *data = (double *) desc->splineObj;
         // Binary search for the last data point at or below the argument
         for (pos = i = 0; i < Nsteps; i++) {
-            ss = 1 << (Nsteps - 1 - i);
+            long ss = 1 << (Nsteps - 1 - i);
             if (pos + ss >= len) continue;
             if (data[pos + ss] <= dblin) pos += ss;
         }

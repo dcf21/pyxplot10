@@ -304,7 +304,6 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     pplObj v;
     char *tmp;
     char escaped[FNAME_LENGTH], *raw = (char *) in[0].auxil;
-    int i, j;
     // The argument must be a single string, the pattern
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         ppl_funcError(status, errType, errText, ERR_TYPE, "The os.glob() function requires a single string argument.");
@@ -321,10 +320,10 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     ppl_strEscapeSpaces(raw, escaped, FNAME_LENGTH);
     if (wordexp(escaped, &w, 0) != 0) return; // No matches; return empty list
     // Expand the wildcards in each word, and add each match to the list
-    for (i = 0; i < w.we_wordc; i++) {
+    for (int i = 0; i < w.we_wordc; i++) {
         if (glob(w.we_wordv[i], 0, NULL, &g) != 0) continue;
         // Add each matching filename
-        for (j = 0; j < g.gl_pathc; j++) {
+        for (int j = 0; j < g.gl_pathc; j++) {
             if ((tmp = ppl_funcStrdup(&call, g.gl_pathv[j])) == NULL) return;
             pplObjStr(&v, 1, 1, tmp);
             ppl_listAppendCpy(l, &v, sizeof(v));

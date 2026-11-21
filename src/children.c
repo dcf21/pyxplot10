@@ -79,7 +79,7 @@ static int PyxplotRunning = 1; // Flag which we drop in the CSP when the main pr
 
 void pplcsp_init(ppl_context *context) {
     // Variables for creating the CSP
-    int pid, i;
+    int pid;
     struct stat statinfo;
 
     // Create empty lists for storing lists of GhostView processes
@@ -91,8 +91,8 @@ void pplcsp_init(ppl_context *context) {
     // Failure to allocate memory is fatal
     if ((GhostViews == NULL) || (GhostView_Persists == NULL) || (HelperPIDs == NULL))
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Out of memory.");
-    for (i = 0; i < PTABLE_LISTLEN; i++) GhostViews[i] = GhostView_Persists[i] = 0;
-    for (i = 0; i < PTABLE_LISTLEN; i++) HelperPIDs[i] = 0;
+    for (int i = 0; i < PTABLE_LISTLEN; i++) GhostViews[i] = GhostView_Persists[i] = 0;
+    for (int i = 0; i < PTABLE_LISTLEN; i++) HelperPIDs[i] = 0;
 
     // The string "signal 15" we filter out of GhostView's output
     ppl_snprintfTrunc(SIGTERM_NAME, sizeof(SIGTERM_NAME), "signal %d", SIGTERM);
@@ -258,8 +258,7 @@ void pplcsp_main(ppl_context *context) {
         if (PyxplotRunning) gotPersists = 1;
         // After Pyxplot has quit, wait for persistent viewers to close
         else {
-            int i;
-            for (i = 0; i < PTABLE_LISTLEN; i++)
+            for (int i = 0; i < PTABLE_LISTLEN; i++)
                 // A persistent viewer is still open
                 if (GhostView_Persists[i] != 0) {
                     gotPersists = 1;
@@ -275,12 +274,11 @@ void pplcsp_main(ppl_context *context) {
 
 void pplcsp_checkForChildExits(const int signo) {
     // Variables for reaping viewers
-    int i;
     char errtext[FNAME_LENGTH];
     ppl_context *context = static_context;
 
     // Note which viewers have exited
-    for (i = 0; i < PTABLE_LISTLEN; i++) {
+    for (int i = 0; i < PTABLE_LISTLEN; i++) {
         const int gv_pid = GhostViews[i];
         if (gv_pid == 0) continue;
         // This viewer has exited
@@ -296,7 +294,7 @@ void pplcsp_checkForChildExits(const int signo) {
     }
 
     // Note which persistent viewers have exited
-    for (i = 0; i < PTABLE_LISTLEN; i++) {
+    for (int i = 0; i < PTABLE_LISTLEN; i++) {
         const int gv_pid = GhostView_Persists[i];
         if (gv_pid == 0) continue;
         // This viewer has exited
@@ -383,9 +381,9 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
     } else if (in[0] == '0') // gv_singlewindow
     {
         // Pick out filename of eps file to display, which is last command-line argument
-        int state = 0, i;
+        int state = 0;
         char *filename = in + 1;
-        for (i = 1; in[i] != '\0'; i++)
+        for (int i = 1; in[i] != '\0'; i++)
             // A new word
             if ((((unsigned char) in[i] > ' ') || (in[i] < '\0')) || ((i > 1) && (in[i - 1] == '\\'))) {
                 // Remember where the word starts
@@ -491,8 +489,7 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
     // The CSP records the viewer's pid; the child runs the viewer
     else if (pid != 0) {
         // Parent process (i.e. the CSP)
-        int i;
-        for (i = 0; i < PTABLE_LISTLEN; i++)
+        for (int i = 0; i < PTABLE_LISTLEN; i++)
             // Record the viewer in the first free slot
             if (gv_list[i] == 0) {
                 gv_list[i] = pid;
@@ -537,10 +534,9 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
 //! \param [in] context - The Pyxplot context
 
 void pplcsp_killAllGvs(ppl_context *context) {
-    int i;
     if (DEBUG) ppl_log(&context->errcontext, "Killing all ghostview processes.");
     // Close each viewer
-    for (i = 0; i < PTABLE_LISTLEN; i++) {
+    for (int i = 0; i < PTABLE_LISTLEN; i++) {
         const int gv_pid = GhostViews[i];
         if (gv_pid == 0) continue;
         kill(gv_pid, SIGTERM); // Dulce et decorum est pro patria mori
@@ -582,12 +578,11 @@ void pplcsp_killLatestSinglewindow(ppl_context *context) {
 //! \param [in] signo - The signal number
 
 void pplcsp_checkForHelperExits(const int signo) {
-    int i;
     char errtext[256];
     ppl_context *context = static_context;
 
     // Note which helpers have exited
-    for (i = 0; i < PTABLE_LISTLEN; i++) {
+    for (int i = 0; i < PTABLE_LISTLEN; i++) {
         const int pid = HelperPIDs[i];
         if (pid == 0) continue;
         // This helper has exited
@@ -607,7 +602,6 @@ void pplcsp_checkForHelperExits(const int signo) {
 //! \param [in] context - The Pyxplot context
 
 void pplcsp_killAllHelpers(const ppl_context *context) {
-    int i;
     sigset_t sigs;
 
     // Block SIGCHLD while helpers are killed
@@ -615,7 +609,7 @@ void pplcsp_killAllHelpers(const ppl_context *context) {
     sigaddset(&sigs, SIGCHLD);
     sigprocmask(SIG_BLOCK, &sigs, NULL);
     // Kill each helper
-    for (i = 0; i < PTABLE_LISTLEN; i++) {
+    for (int i = 0; i < PTABLE_LISTLEN; i++) {
         const int pid = HelperPIDs[i];
         if (pid == 0) continue;
         kill(pid, SIGTERM); // Dulce et decorum est pro patria mori
@@ -635,7 +629,7 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
     // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];
-    int i, pid;
+    int pid;
     sigset_t sigs;
 
     // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
@@ -660,7 +654,7 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
         *fstdin = fd0[1];
         close(fd1[1]);
         *fstdout = fd1[0];
-        for (i = 0; i < PTABLE_LISTLEN; i++)
+        for (int i = 0; i < PTABLE_LISTLEN; i++)
             // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;
@@ -722,7 +716,7 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
     // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];
-    int i, pid;
+    int pid;
     sigset_t sigs;
 
     // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
@@ -748,7 +742,7 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
         close(fd1[1]);
         *fstdout = fd1[0];
         *PidOut = pid;
-        for (i = 0; i < PTABLE_LISTLEN; i++)
+        for (int i = 0; i < PTABLE_LISTLEN; i++)
             // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;
@@ -807,7 +801,7 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
     // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2];
-    int i, pid;
+    int pid;
     sigset_t sigs;
 
     // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
@@ -829,7 +823,7 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
         // Parent process
         close(fd0[1]);
         *fstdout = fd0[0];
-        for (i = 0; i < PTABLE_LISTLEN; i++)
+        for (int i = 0; i < PTABLE_LISTLEN; i++)
             // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;
@@ -885,7 +879,7 @@ void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout)
     char msg[PPL_MSG_LENGTH];
     char CmdLineOpt[128];
     int fd0[2];
-    int i, pid;
+    int pid;
     sigset_t sigs;
 
     // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
@@ -907,7 +901,7 @@ void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout)
         // Parent process
         close(fd0[1]);
         *fstdout = fd0[0];
-        for (i = 0; i < PTABLE_LISTLEN; i++)
+        for (int i = 0; i < PTABLE_LISTLEN; i++)
             // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;

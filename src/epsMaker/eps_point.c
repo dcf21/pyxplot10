@@ -48,7 +48,6 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_point_YieldUpText(EPSComm *x) {
-    CanvasTextItem *i;
 
     // Record where this item's text starts in the list of text items, then add its label, if any
     if (x->current->text != NULL) {
@@ -56,7 +55,7 @@ void eps_point_YieldUpText(EPSComm *x) {
         if (x->current->text[0] == '\0') return;
 
         // Add the label to the list of text to typeset
-        i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+        CanvasTextItem *i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
         // Failure to allocate memory is reported as an error
         if (i == NULL) {
             ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
@@ -76,8 +75,7 @@ void eps_point_YieldUpText(EPSComm *x) {
 
 void eps_point_RenderEPS(EPSComm *x) {
     // Variables for the style of the point
-    int pt, lt;
-    double lw, lw_scale;
+    double lw_scale;
     withWords ww, ww_default;
 
     // This item's label is on the page of the typeset text which was recorded in eps_point_YieldUpText()
@@ -103,14 +101,14 @@ void eps_point_RenderEPS(EPSComm *x) {
         // Set linewidth and linetype of point
         if (ww.USElinewidth) lw_scale = ww.pointlinewidth;
         else lw_scale = x->current->settings.LineWidth;
-        lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
-        lt = 1;
+        double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+        int lt = 1;
         eps_core_SetLinewidth(x, lw, lt, 0.0);
         fprintf(x->epsbuffer, "/ps { %f } def\n", ww.pointsize * EPS_DEFAULT_PS);
 
         // Point types cycle through the available symbols; note which are used, so that only those are defined in the
         // postscript prolog
-        pt = (ww.pointtype - 1) % N_POINTTYPES;
+        int pt = (ww.pointtype - 1) % N_POINTTYPES;
         while (pt < 0) pt += N_POINTTYPES;
         x->PointTypesUsed[pt] = 1;
         fprintf(x->epsbuffer, "%.2f %.2f pt%d\n", xpos, ypos, pt + 1);

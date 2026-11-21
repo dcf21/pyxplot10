@@ -57,8 +57,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_plot_labelsarrows_YieldUpText(EPSComm *x) {
-    ppllabel_object *li;
-    for (li = x->current->label_list; li != NULL; li = li->next) {
+    for (ppllabel_object *li = x->current->label_list; li != NULL; li = li->next) {
         if (eps_yieldTextItem(x, li->text)) return;
     }
     return;
@@ -164,10 +163,9 @@ static int clipArrowEnd(double *pos[6], const double grad[3][6], const int xyz, 
                         int *ArrowType) {
     const double *ap = pos[3 + xyz]; // The fractional axis positions of the ends of the arrow along this axis
     const double t = ap[P];
-    int k;
     if (!(apv ? (t > 1) : (t < 0))) return 0; // This end of the arrow lies inside the face
     if (apv ? (ap[1 - P] > 1) : (ap[1 - P] < 0)) return 1; // Both ends lie beyond the face
-    for (k = 0; k < 6; k++) pos[k][P] += grad[xyz][k] * (apv - t);
+    for (int k = 0; k < 6; k++) pos[k][P] += grad[xyz][k] * (apv - t);
 
     // Remove the arrowhead from the end which has been clipped
     if (P == 0) {
@@ -177,7 +175,7 @@ static int clipArrowEnd(double *pos[6], const double grad[3][6], const int xyz, 
         // An arrow with two heads keeps only the head at its start
         if (*ArrowType == SW_ARROWTYPE_TWOWAY) {
             // Reverse the arrow, so that its remaining head is at its end
-            for (k = 0; k < 6; k++) {
+            for (int k = 0; k < 6; k++) {
                 const double tmp = pos[k][0];
                 pos[k][0] = pos[k][1];
                 pos[k][1] = tmp;
@@ -200,8 +198,6 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                            const double height, const double zdepth) {
     int hal, val;
     char ItemName[64];
-    pplarrow_object *ai;
-    ppllabel_object *li;
     withWords ww, ww_default;
 
     // Arrows are drawn in solid black lines unless their style says otherwise
@@ -215,12 +211,12 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
     int pageno = x->LaTeXpageno = x->current->SetLabelTextID;
 
     // Loop through all arrows, rendering them in turn
-    for (ai = x->current->arrow_list; ai != NULL; ai = ai->next) {
+    for (pplarrow_object *ai = x->current->arrow_list; ai != NULL; ai = ai->next) {
         pplset_axis *xa0, *ya0, *za0 = NULL, *xa1, *ya1, *za1 = NULL;
         double xin0, yin0, zin0 = 0.5, xin1, yin1, zin1 = 0.5;
-        double xpos_, ypos_, xpos[2], ypos[2], depth[2];
+        double xpos[2], ypos[2], depth[2];
         double xap[2], yap[2], zap[2], theta_x, theta_y, theta_z;
-        int status = 0, xrn0, yrn0, zrn0, xrn1, yrn1, zrn1;
+        int status = 0;
         int ArrowType = ai->pplarrow_style;
         ppl_snprintfTrunc(ItemName, sizeof(ItemName), "arrow %d on plot %d", ai->id, x->current->id);
         status |= fetchAxis(x, ai->system_x0, x->current->XAxes, ai->axis_x0, &ai->x0, ItemName, &xa0, &xin0);
@@ -234,13 +230,13 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
             status |= fetchAxis(x, ai->system_z1, x->current->ZAxes, ai->axis_z1, &ai->z1, ItemName, &za1, &zin1);
         }
         if (!status)
-            for (xrn0 = 0; xrn0 <= ((xa0 != NULL) ? xa0->AxisValueTurnings : 0); xrn0++)
-                for (yrn0 = 0; yrn0 <= ((ya0 != NULL) ? ya0->AxisValueTurnings : 0); yrn0++)
-                    for (zrn0 = 0; zrn0 <= ((x->current->ThreeDim && (za0 != NULL)) ? za0->AxisValueTurnings : 0);
+            for (int xrn0 = 0; xrn0 <= ((xa0 != NULL) ? xa0->AxisValueTurnings : 0); xrn0++)
+                for (int yrn0 = 0; yrn0 <= ((ya0 != NULL) ? ya0->AxisValueTurnings : 0); yrn0++)
+                    for (int zrn0 = 0; zrn0 <= ((x->current->ThreeDim && (za0 != NULL)) ? za0->AxisValueTurnings : 0);
                          zrn0++)
-                        for (xrn1 = 0; xrn1 <= ((xa1 != NULL) ? xa1->AxisValueTurnings : 0); xrn1++)
-                            for (yrn1 = 0; yrn1 <= ((ya1 != NULL) ? ya1->AxisValueTurnings : 0); yrn1++)
-                                for (zrn1 = 0;
+                        for (int xrn1 = 0; xrn1 <= ((xa1 != NULL) ? xa1->AxisValueTurnings : 0); xrn1++)
+                            for (int yrn1 = 0; yrn1 <= ((ya1 != NULL) ? ya1->AxisValueTurnings : 0); yrn1++)
+                                for (int zrn1 = 0;
                                      zrn1 <= ((x->current->ThreeDim && (za1 != NULL)) ? za1->AxisValueTurnings : 0);
                                      zrn1++) {
                                     if ((xa0 == xa1) && (xrn0 != xrn1)) continue;
@@ -259,8 +255,8 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                                         ((xa0 == NULL) || (ya0 == NULL) || (x->current->ThreeDim && (za0 == NULL)) ||
                                          (xa1 == NULL) || (ya1 == NULL) || (x->current->ThreeDim && (za1 == NULL))))
                                         continue;
-                                    xpos_ = xpos[0];
-                                    ypos_ = ypos[0];
+                                    double xpos_ = xpos[0];
+                                    double ypos_ = ypos[0];
                                     addPageCoordinates(ai->system_x0, &ai->x0, theta_x, &xpos_, &ypos_);
                                     addPageCoordinates(ai->system_y0, &ai->y0, theta_y, &xpos_, &ypos_);
                                     if (x->current->ThreeDim) {
@@ -357,13 +353,13 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
     }
 
     // Loop through all text labels, rendering them in turn
-    for (li = x->current->label_list; li != NULL; li = li->next)
+    for (ppllabel_object *li = x->current->label_list; li != NULL; li = li->next)
         // Labels with no text are skipped
         if ((li->text != NULL) && (li->text[0] != '\0')) {
             pplset_axis *xa, *ya, *za = NULL;
             double xin, yin, zin = 0.5;
             double xpos_, ypos_, depth, xap, yap, zap, theta_x, theta_y, theta_z;
-            int status = 0, xrn, yrn, zrn;
+            int status = 0;
             ppl_snprintfTrunc(ItemName, sizeof(ItemName), "label %d on plot %d", li->id, x->current->id);
             status |= fetchAxis(x, li->system_x, x->current->XAxes, li->axis_x, &li->x, ItemName, &xa, &xin);
             status |= fetchAxis(x, li->system_y, x->current->YAxes, li->axis_y, &li->y, ItemName, &ya, &yin);
@@ -371,9 +367,9 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                 status |= fetchAxis(x, li->system_z, x->current->ZAxes, li->axis_z, &li->z, ItemName, &za, &zin);
             }
             if (!status)
-                for (xrn = 0; xrn <= ((xa != NULL) ? xa->AxisValueTurnings : 0); xrn++)
-                    for (yrn = 0; yrn <= ((ya != NULL) ? ya->AxisValueTurnings : 0); yrn++)
-                        for (zrn = 0; zrn <= ((x->current->ThreeDim && (za != NULL)) ? za->AxisValueTurnings : 0);
+                for (int xrn = 0; xrn <= ((xa != NULL) ? xa->AxisValueTurnings : 0); xrn++)
+                    for (int yrn = 0; yrn <= ((ya != NULL) ? ya->AxisValueTurnings : 0); yrn++)
+                        for (int zrn = 0; zrn <= ((x->current->ThreeDim && (za != NULL)) ? za->AxisValueTurnings : 0);
                              zrn++) {
                             eps_plot_GetPosition(&xpos_, &ypos_, &depth, &xap, &yap, &zap, &theta_x, &theta_y, &theta_z,
                                                  x->current->ThreeDim, xin, yin, zin, xa, ya, za, xrn, yrn, zrn,

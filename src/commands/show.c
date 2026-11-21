@@ -214,7 +214,6 @@ static void showColor(ppl_context *c, char *out, const size_t outLen, char *item
 static void showTicks(ppl_context *c, char *out, const size_t outLen, char *itemSet, const int interactive, char *name,
                       char *buf, char *buf2, const pplset_tics *T, const pplset_tics *TD, pplObj *U, const pplObj *UD,
                       const int amLog, const int amLogD, const char axisLetter, const int axisNumber) {
-    int n;
     ppl_snprintfTrunc(buf2, FNAME_LENGTH, "Sets where the %s ticks are placed along the %c%d axis, and how they appear",
                       (name[0] == 'm') ? "minor" : "major", axisLetter, axisNumber);
     ppl_snprintfTrunc(
@@ -246,7 +245,7 @@ static void showTicks(ppl_context *c, char *out, const size_t outLen, char *item
         // A list of tick positions, each optionally with a label
         ppl_strAppendChar(buf, LSTR_LENGTH, &m, '(');
         // Write each tick position
-        for (n = 0; T->tickStrs[n] != NULL; n++) {
+        for (int n = 0; T->tickStrs[n] != NULL; n++) {
             U->real = T->tickList[n];
             ppl_strAppendf(buf, LSTR_LENGTH, &m, "%s%s", (n == 0) ? "" : ", ", ppl_unitsNumericDisplay(c, U, 0, 0, 0));
             // A tick label is marked as absent by a leading byte 0xFF
@@ -312,7 +311,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                                pplarrow_object **al, ppllabel_object **ll, pplset_axis *xa, pplset_axis *ya,
                                pplset_axis *za) {
     char *bufp, *bufp2, temp1[32], temp2[32];
-    int i = 0, p = 0, j, k, l, m;
+    int i = 0, p = 0, k, l, m;
     unsigned char unchanged;
     unit *ud = c->unit_database;
     int outLen = 8 * LSTR_LENGTH;
@@ -612,12 +611,11 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "%d %slabel", sg->ContoursN,
                               (sg->ContoursLabel == SW_ONOFF_ON) ? "" : "no");
         } else {
-            int q;
             pplObj v = sg->ContoursUnit;
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "(");
             int p = strlen(buf);
             // Write each contour level, separated by commas
-            for (q = 0; q < sg->ContoursListLen; q++) {
+            for (int q = 0; q < sg->ContoursListLen; q++) {
                 // Separate the levels with commas
                 if (q != 0) {
                     ppl_snprintfTrunc(buf + p, LSTR_LENGTH - p, ", ");
@@ -668,9 +666,8 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "logscale", 1) >= 0) ||
         (ppl_strAutocomplete(word, "linearscale", 1) >= 0)) {
-        int C;
         // Show the logscale setting of each of the four color axes
-        for (C = 0; C < 4; C++) {
+        for (int C = 0; C < 4; C++) {
             if (sg->Clog[C] == SW_BOOL_TRUE) bufp = "logscale";
             else bufp = "nologscale";
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "c%d", C + 1);
@@ -735,7 +732,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             bufp = buf;
             k = 1;
             // List the x axes from which grid lines are drawn
-            for (j = 0; j < MAX_AXES; j++) {
+            for (int j = 0; j < MAX_AXES; j++) {
                 // This axis has grid lines
                 if (sg->GridAxisX[j] != 0) {
                     ppl_snprintfTrunc(bufp, LSTR_LENGTH - (bufp - buf), "x%d", j);
@@ -752,7 +749,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             bufp = buf;
             k = 1;
             // Loop over the y axes
-            for (j = 0; j < MAX_AXES; j++) {
+            for (int j = 0; j < MAX_AXES; j++) {
                 // This axis has grid lines
                 if (sg->GridAxisY[j] != 0) {
                     ppl_snprintfTrunc(bufp, LSTR_LENGTH - (bufp - buf), "y%d", j);
@@ -769,7 +766,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             bufp = buf;
             k = 1;
             // Loop over the z axes
-            for (j = 0; j < MAX_AXES; j++) {
+            for (int j = 0; j < MAX_AXES; j++) {
                 // This axis has grid lines
                 if (sg->GridAxisZ[j] != 0) {
                     ppl_snprintfTrunc(bufp, LSTR_LENGTH - (bufp - buf), "z%d", j);
@@ -924,7 +921,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     // Show the palette setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "palette", 1) >= 0)) {
         l = 0;
-        for (j = 0; j < PALETTE_LENGTH; j++) // Check whether the palette has been changed from its default setting
+        for (int j = 0; j < PALETTE_LENGTH; j++) // Check whether the palette has been changed from its default setting
         {
             if ((c->set->palette_current[j] == -1) && (c->set->palette_default[j] == -1)) break;
             if ((c->set->palette_current[j] == c->set->palette_default[j]) &&
@@ -939,7 +936,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             break;
         }
         // Write each color of the palette, by name or by its components
-        for (j = k = 0; c->set->palette_current[j] >= 0; j++) {
+        for (int j = k = 0; c->set->palette_current[j] >= 0; j++) {
             // Separate the colors with commas
             if (j > 0) {
                 ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, ", ");
@@ -1305,7 +1302,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                             "Selects the scheme (e.g. SI or Imperial) of preferred units");
         i += strlen(out + i);
         p = 1;
-        for (j = 0; j < c->unit_pos; j++)
+        for (int j = 0; j < c->unit_pos; j++)
             // Show the units which the user has chosen for particular quantities
             if (ud[j].userSel != 0) {
                 ppl_snprintfTrunc(buf, LSTR_LENGTH, "unit of %s", ud[j].quantity);
@@ -1324,10 +1321,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             listIterator *listiter = ppl_listIterateInit(c->unit_PreferredUnits);
             // Show each preferred unit, a product of powers of units
             while ((pu = (PreferredUnit *) ppl_listIterate(&listiter)) != NULL) {
-                int pbuf = 0, ppu;
+                int pbuf = 0;
                 buf[0] = '\0';
                 // Write each unit in the product, with its prefix and power
-                for (ppu = 0; ppu < pu->NUnits; ppu++) {
+                for (int ppu = 0; ppu < pu->NUnits; ppu++) {
                     if (ppu > 0) ppl_snprintfTrunc(buf + pbuf, LSTR_LENGTH - pbuf, "*");
                     pbuf += strlen(buf + pbuf);
                     if (c->set->term_current.UnitDisplayAbbrev == SW_ONOFF_ON)
@@ -1450,7 +1447,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
         for (k = 0; k < 3; k++)
             // Loop over the x, y and z axes, and the axes of each direction
-            for (j = 0; j < MAX_AXES; j++) {
+            for (int j = 0; j < MAX_AXES; j++) {
                 pplset_axis *axisPtrDef, *axisPtr;
                 // Point to the axis, and to its default settings
                 switch (k) {
@@ -1687,7 +1684,6 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     if (ppl_strAutocomplete(word, "arrows", 1) >= 0) {
         // Show the arrows, if the item has any
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
-            pplarrow_object *ai;
             pplarrow_object *ai_default_prev = c->set->pplarrow_list_default;
             pplarrow_object *ai_default = c->set->pplarrow_list_default;
             showHighlight(c, out, outLen, &i, interactive, 1);
@@ -1696,7 +1692,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             p = 1;
             showDehighlight(c, out, outLen, &i, interactive);
             // Show each arrow, in order of number, interleaved with any default arrows which have been removed
-            for (ai = *al; ai != NULL; ai = ai->next) {
+            for (pplarrow_object *ai = *al; ai != NULL; ai = ai->next) {
                 // Stop if the output buffer is nearly full
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
@@ -1737,7 +1733,6 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     if (ppl_strAutocomplete(word, "labels", 1) >= 0) {
         // Show the text labels, if the item has any
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
-            ppllabel_object *li;
             ppllabel_object *li_default_prev = c->set->ppllabel_list_default;
             ppllabel_object *li_default = c->set->ppllabel_list_default;
             showHighlight(c, out, outLen, &i, interactive, 1);
@@ -1746,7 +1741,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             p = 1;
             showDehighlight(c, out, outLen, &i, interactive);
             // Show each label, in order of number, interleaved with any default labels which have been removed
-            for (li = *ll; li != NULL; li = li->next) {
+            for (ppllabel_object *li = *ll; li != NULL; li = li->next) {
                 // Stop if the output buffer is nearly full
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
@@ -1791,7 +1786,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         p = 1;
         showDehighlight(c, out, outLen, &i, interactive);
         // Show each line style which has been defined
-        for (j = 0; j < MAX_PLOTSTYLES; j++) {
+        for (int j = 0; j < MAX_PLOTSTYLES; j++) {
             if (ppl_withWordsCmp_zero(c, &(c->set->plot_styles[j]))) continue;
             // Stop if the output buffer is nearly full
             if (i > outLen - 1024) {
@@ -1812,9 +1807,8 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     // Show variables
     if ((ppl_strAutocomplete(word, "variables", 1) >= 0) || (ppl_strAutocomplete(word, "vars", 1) >= 0) ||
         (ppl_strAutocomplete(word, "uservariables", 1) >= 0) || (ppl_strAutocomplete(word, "uservars", 1) >= 0)) {
-        int l;
         // Show the variables in the local namespace, then the global namespace, then the default namespace
-        for (l = c->ns_ptr; l >= 0; l = (l > 1) ? 1 : l - 1) {
+        for (int l = c->ns_ptr; l >= 0; l = (l > 1) ? 1 : l - 1) {
             char *key;
             pplObj *item;
             dictIterator *di = ppl_dictIterateInit(c->namespaces[l]);
@@ -1879,9 +1873,8 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     // Show user functions
     if ((ppl_strAutocomplete(word, "functions", 1) >= 0) || (ppl_strAutocomplete(word, "funcs", 1) >= 0) ||
         (ppl_strAutocomplete(word, "userfunctions", 1) >= 0) || (ppl_strAutocomplete(word, "userfuncs", 1) >= 0)) {
-        int l;
         // Show the functions in the local namespace, then the global namespace
-        for (l = c->ns_ptr; l > 0; l = (l > 1) ? 1 : l - 1) {
+        for (int l = c->ns_ptr; l > 0; l = (l > 1) ? 1 : l - 1) {
             char *key;
             pplObj *item;
             dictIterator *di = ppl_dictIterateInit(c->namespaces[l]);
@@ -1922,7 +1915,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         do {
             m = -1;
             // Find the first unit whose name comes after unit l
-            for (j = 0; j < c->unit_pos; j++) {
+            for (int j = 0; j < c->unit_pos; j++) {
                 if ((l == -1) && (m == -1)) m = j;
                 else if ((l == -1) && (ppl_strCmpNoCase(ud[j].nameFs, ud[m].nameFs) < 0)) m = j;
                 else if ((l >= 0) && (m == -1) && (ppl_strCmpNoCase(ud[j].nameFs, ud[l].nameFs) > 0)) m = j;

@@ -47,7 +47,6 @@
 void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     // The colors found so far, as 24-bit numbers; one more than a palette can hold
     char msg[PPL_MSG_LENGTH];
-    unsigned long i;
     int j, colour;
     int palette[257];
 
@@ -57,7 +56,7 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     unsigned char *p = image->data;
 
     // Count the number of colours in the image
-    for (i = 0; i < size; i++) {
+    for (unsigned long i = 0; i < size; i++) {
         colour = (((int) *p) << 16) + (((int) *(p + 1)) << 8) + *(p + 2);
         p += 3;
         for (j = 0; j < ncols; j++)
@@ -90,7 +89,7 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     }
 
     // Copy colours we found into palette
-    for (i = 0; i < ncols; i++) {
+    for (unsigned long i = 0; i < ncols; i++) {
         image->palette[3 * i] = (palette[i] & 0xff0000) >> 16;
         image->palette[3 * i + 1] = (palette[i] & 0xff00) >> 8;
         image->palette[3 * i + 2] = (palette[i] & 0xff);
@@ -99,7 +98,7 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     // Replace RGB data with paletted colours
     p = image->data;
     // Replace each pixel's three bytes with one byte giving its palette entry, in place
-    for (i = 0; i < size; i++) {
+    for (unsigned long i = 0; i < size; i++) {
         colour = (((int) p[3 * i]) << 16) + (((int) p[3 * i + 1]) << 8) + p[3 * i + 2];
         for (j = 0; j < ncols; j++)
             if (colour == palette[j]) break;
@@ -134,7 +133,6 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
 
 void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
     char msg[PPL_MSG_LENGTH];
-    int i;
 
     // Only 8-bit paletted images are checked
     if (image->type != BMP_COLOUR_PALETTE) return;
@@ -143,7 +141,7 @@ void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
     // Find highest used palette entry
     unsigned char ncols = 0;
     unsigned long size = image->data_len;
-    for (i = 0; i < size; i++) ncols = (ncols > image->data[i] ? ncols : image->data[i]);
+    for (int i = 0; i < size; i++) ncols = (ncols > image->data[i] ? ncols : image->data[i]);
 
     // Shorten the palette, if its last entries are unused
     if (ncols < (image->pal_len - 1)) {
@@ -167,7 +165,7 @@ void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
 void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
     // Variables describing the greyscale image
     char msg[PPL_MSG_LENGTH];
-    int i, depth = 8, magic, test;
+    int depth = 8, magic;
 
     // Only 8-bit paletted images are checked
     if (image->type != BMP_COLOUR_PALETTE) return;
@@ -179,7 +177,7 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
 
     // See if palette is greyscale. If not, we cannot reduce it to greyscale.
     int grey = 1;
-    for (i = 0; i < image->pal_len; i++)
+    for (int i = 0; i < image->pal_len; i++)
         if ((image->palette[3 * i] != image->palette[3 * i + 1]) ||
             (image->palette[3 * i] != image->palette[3 * i + 2])) {
             grey = 0;
@@ -208,9 +206,9 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
             magic = 255 / 15;
             depth = 4;
         }
-        test = 1; // Test whether the colours we have are all evenly spaced between 0 and 255
+        int test = 1; // Test whether the colours we have are all evenly spaced between 0 and 255
         // Check that every grey is a whole number of steps
-        for (i = 0; i < ncols; i++) {
+        for (int i = 0; i < ncols; i++) {
             // This grey is not a whole number of steps
             if ((image->palette[3 * i] % magic) != 0) {
                 test = 0;
@@ -219,7 +217,7 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
         }
         if (test) // If so, we can reduce colour depth
         {
-            for (i = 0; i < ncols; i++) image->palette[3 * i] /= magic;
+            for (int i = 0; i < ncols; i++) image->palette[3 * i] /= magic;
             // Log the depth in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Greyscale depth is %d bit", depth);
@@ -236,7 +234,7 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
     }
 
     // See if palette is already ordered
-    for (i = 0; i < image->pal_len; i++)
+    for (int i = 0; i < image->pal_len; i++)
         // Check whether each palette entry is already its own grey level
         if (image->palette[3 * i] != i) {
             grey = 0;
@@ -246,7 +244,7 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
     if (!grey) // Need to order things
     {
         if (DEBUG) ppl_log(ec, "Greyscale palette being reordered");
-        for (i = 0; i < size; i++) image->data[i] = image->palette[3 * image->data[i]];
+        for (int i = 0; i < size; i++) image->data[i] = image->palette[3 * image->data[i]];
         if (image->trans != NULL)
             image->trans[0] = image->palette[3 * image->trans[0]]; // Reorder transparent colour as well
     }
@@ -272,7 +270,7 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
 
 void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
     // Variables for packing the pixels
-    int i, j;
+    int j;
     unsigned char *p, *p2, ctmp;
 
     // Only 8-bit paletted images with no more than 16 colors can be packed
@@ -292,7 +290,7 @@ void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
         image->depth = 1;
         p = p2 = image->data;
         // Pack each row, eight pixels per byte
-        for (i = 0; i < height; i++) {
+        for (int i = 0; i < height; i++) {
             for (j = 0; j < width - 7; j += 8, p2 += 8)
                 *p++ = (*p2 << 7) + (*(p2 + 1) << 6) + (*(p2 + 2) << 5) + (*(p2 + 3) << 4) + (*(p2 + 4) << 3) +
                         (*(p2 + 5) << 2) + (*(p2 + 6) << 1) + *(p2 + 7);
@@ -316,7 +314,7 @@ void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
         image->depth = 2;
         p = p2 = image->data;
         // Pack each row, four pixels per byte
-        for (i = 0; i < height; i++) {
+        for (int i = 0; i < height; i++) {
             for (j = 0; j < width - 3; j += 4, p2 += 4)
                 *p++ = (*p2 << 6) + (*(p2 + 1) << 4) + (*(p2 + 2) << 2) + *(p2 + 3);
             if (j != width) {
@@ -338,7 +336,7 @@ void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
         image->depth = 4;
         p = p2 = image->data;
         // Pack each row, two pixels per byte
-        for (i = 0; i < height; i++) {
+        for (int i = 0; i < height; i++) {
             for (j = 0; j < (width - 1); j += 2, p2 += 2) *(p++) = (*p2 << 4) + *(p2 + 1);
             // An odd pixel at the end of the row has a byte of its own
             if (j == (width - 1)) {

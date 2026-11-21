@@ -96,11 +96,10 @@ int main(const int argc, char **argv) {
     struct timespec waitperiod, waitedperiod; // A time.h timespec specifier; used for sleeping
     char init_string[LSTR_LENGTH], help_string[LSTR_LENGTH], version_string[FNAME_LENGTH],
             version_string_underline[FNAME_LENGTH];
-    int i, j, DoneWork;
     glob_t GlobData;
 
     // A dictionary of the stat() information of each file, recording when each was last modified
-    struct stat StatInfo, *StatInfoPtr;
+    struct stat StatInfo;
 
     // Initialise sub-modules
     pplerr_context *context = malloc(sizeof(pplerr_context));
@@ -165,7 +164,7 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
     // Scan command-line options for any switches
     int HaveFilenames = 0;
     // Process each command-line argument in turn
-    for (i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strlen(argv[i]) == 0) continue;
         // Arguments which are not switches are the filenames to watch
         if (argv[i][0] != '-') {
@@ -229,17 +228,17 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 
     // Scan command-line options and glob all filenames
     while (1) {
-        DoneWork = 0;
+        int DoneWork = 0;
         // Expand each filename argument, which may contain wildcards
-        for (i = 1; i < argc; i++) {
+        for (int i = 1; i < argc; i++) {
             if ((argv[i][0] == '\0') || (argv[i][0] == '-')) continue;
             if (glob(argv[i], 0, NULL, &GlobData) != 0) continue;
 
             // Run Pyxplot on each matching file which is new, or has been modified since we last ran it, pausing
             // briefly after each one
-            for (j = 0; j < GlobData.gl_pathc; j++) {
+            for (int j = 0; j < GlobData.gl_pathc; j++) {
                 if (stat(GlobData.gl_pathv[j], &StatInfo) != 0) continue; // Stat didn't work...
-                StatInfoPtr = (struct stat *) ppl_dictLookup(StatInfodict, GlobData.gl_pathv[j]);
+                struct stat *StatInfoPtr = (struct stat *) ppl_dictLookup(StatInfodict, GlobData.gl_pathv[j]);
                 if ((StatInfoPtr != NULL) && (StatInfoPtr->st_mtime >= StatInfo.st_mtime))
                     continue; // This file has not been modified lately
                 ppl_dictAppendCpy(StatInfodict, GlobData.gl_pathv[j], (void *) &StatInfo, sizeof(struct stat));

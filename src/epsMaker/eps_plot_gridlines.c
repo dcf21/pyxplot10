@@ -78,7 +78,6 @@ static void setGridColor(EPSComm *x, withWords *ww, const int major) {
 
 void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double width, double height,
                         const double zdepth) {
-    int i, j, k, l, m;
     double left, right, adepth, bdepth, cdepth, ddepth, x1, y1, x2, y2, ap_back[3];
     pplset_axis *axes;
     unsigned char *GridLines;
@@ -101,7 +100,7 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
         ap_back[2] = (adepth < ddepth);
     }
 
-    for (j = 0; j < 3; j++) // Loop over x,y,z axes
+    for (int j = 0; j < 3; j++) // Loop over x,y,z axes
     {
         if ((j == 2) && (!x->current->ThreeDim)) continue;
 
@@ -122,10 +121,10 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
             right = origin_x + width;
         }
 
-        for (i = 0; i < MAX_AXES; i++) // Loop over all axes in a particular direction
+        for (int i = 0; i < MAX_AXES; i++) // Loop over all axes in a particular direction
             // Only draw grid lines from axes which are drawn, and on which grid lines are turned on
             if ((axes[i].FinalActive) && (!axes[i].invisible) && (GridLines[i])) {
-                for (k = 0; k < 2; k++) // Minor ticks. Then major ticks
+                for (int k = 0; k < 2; k++) // Minor ticks. Then major ticks
                 {
                     double *TLP;
                     char **TLS;
@@ -143,13 +142,13 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
                     } // Minor ticks
                     // Draw a grid line at each tick
                     if (TLP != NULL) {
-                        for (l = 0; TLS[l] != NULL; l++) // Loop over all ticks along this axis
+                        for (int l = 0; TLS[l] != NULL; l++) // Loop over all ticks along this axis
                         {
                             // Three-dimensional axes
                             if (x->current->ThreeDim) {
                                 // Draw a line across each of the two back faces of the cube which contain this
                                 // direction
-                                for (m = 0; m < 2; m++) {
+                                for (int m = 0; m < 2; m++) {
                                     double ap[3];
                                     ap[j] = TLP[l];
                                     int n = (j != 0) ? 0 : 1;

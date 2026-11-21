@@ -82,8 +82,9 @@ static void fftwindow_rectangular(pplObj *x, const int Ndim, int *Npos, int *Nst
 
 static void fftwindow_hamming(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
-    int i;
-    for (i = 0; i < Ndim; i++) { y *= 0.54 - 0.46 * cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1))); }
+    for (int i = 0; i < Ndim; i++) {
+        y *= 0.54 - 0.46 * cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)));
+    }
     x->real *= y;
     x->imag *= y;
     // A sample with no imaginary part is marked as real
@@ -101,8 +102,9 @@ static void fftwindow_hamming(pplObj *x, const int Ndim, int *Npos, int *Nstep) 
 
 static void fftwindow_hann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
-    int i;
-    for (i = 0; i < Ndim; i++) { y *= 0.5 * (1.0 - cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)))); }
+    for (int i = 0; i < Ndim; i++) {
+        y *= 0.5 * (1.0 - cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1))));
+    }
     x->real *= y;
     x->imag *= y;
     // A sample with no imaginary part is marked as real
@@ -120,8 +122,7 @@ static void fftwindow_hann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
 
 static void fftwindow_cosine(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
-    int i;
-    for (i = 0; i < Ndim; i++) { y *= sin(M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1))); }
+    for (int i = 0; i < Ndim; i++) { y *= sin(M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1))); }
     x->real *= y;
     x->imag *= y;
     // A sample with no imaginary part is marked as real
@@ -138,11 +139,10 @@ static void fftwindow_cosine(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
 //! \param [in] Nstep - The number of samples along each dimension of the data grid
 
 static void fftwindow_lanczos(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
-    double y = 1.0, z;
-    int i;
+    double y = 1.0;
     // The window is the product of the window function in each dimension
-    for (i = 0; i < Ndim; i++) {
-        z = 2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)) - M_PI;
+    for (int i = 0; i < Ndim; i++) {
+        double z = 2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)) - M_PI;
         // sin(z)/z tends to one at the central sample, where z is zero
         if (z != 0.0) y *= sin(z) / z;
     }
@@ -163,8 +163,7 @@ static void fftwindow_lanczos(pplObj *x, const int Ndim, int *Npos, int *Nstep) 
 
 static void fftwindow_bartlett(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
-    int i;
-    for (i = 0; i < Ndim; i++) {
+    for (int i = 0; i < Ndim; i++) {
         y *= (2.0 / (Nstep[i] - 1)) * ((Nstep[i] - 1) / 2.0 - fabs(Npos[i] - (Nstep[i] - 1) / 2.0));
     }
     x->real *= y;
@@ -184,8 +183,9 @@ static void fftwindow_bartlett(pplObj *x, const int Ndim, int *Npos, int *Nstep)
 
 static void fftwindow_triangular(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
-    int i;
-    for (i = 0; i < Ndim; i++) { y *= (2.0 / (Nstep[i])) * ((Nstep[i]) / 2.0 - fabs(Npos[i] - (Nstep[i] - 1) / 2.0)); }
+    for (int i = 0; i < Ndim; i++) {
+        y *= (2.0 / (Nstep[i])) * ((Nstep[i]) / 2.0 - fabs(Npos[i] - (Nstep[i] - 1) / 2.0));
+    }
     x->real *= y;
     x->imag *= y;
     // A sample with no imaginary part is marked as real
@@ -204,8 +204,7 @@ static void fftwindow_triangular(pplObj *x, const int Ndim, int *Npos, int *Nste
 static void fftwindow_gauss(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     const double sigma = 0.5;
-    int i;
-    for (i = 0; i < Ndim; i++) {
+    for (int i = 0; i < Ndim; i++) {
         y *= exp(-0.5 * pow((Npos[i] - ((Nstep[i] - 1) / 2.0)) / (sigma * (Nstep[i] - 1) / 2.0), 2.0));
     }
     x->real *= y;
@@ -226,9 +225,8 @@ static void fftwindow_gauss(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
 
 static void fftwindow_bartletthann(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
-    int i;
     // The window is the product of the window function in each dimension
-    for (i = 0; i < Ndim; i++) {
+    for (int i = 0; i < Ndim; i++) {
         y *= 0.62 - 0.48 * (((double) Npos[i]) / ((double) (Nstep[i] - 1)) - 0.5) -
                 0.38 * cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)));
     }
@@ -250,9 +248,8 @@ static void fftwindow_bartletthann(pplObj *x, const int Ndim, int *Npos, int *Ns
 static void fftwindow_blackman(pplObj *x, const int Ndim, int *Npos, int *Nstep) {
     double y = 1.0;
     const double alpha = 0.16;
-    int i;
     // The window is the product of the window function in each dimension
-    for (i = 0; i < Ndim; i++) {
+    for (int i = 0; i < Ndim; i++) {
         y *= (1.0 - alpha) / 2.0 - 0.5 * cos(2 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1))) +
                 alpha / 2.0 * cos(4 * M_PI * ((double) Npos[i]) / ((double) (Nstep[i] - 1)));
     }
@@ -304,11 +301,11 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Read ranges
     {
-        int i, pos = PARSE_ifft_range_list, nr = 0;
+        int pos = PARSE_ifft_range_list, nr = 0;
         const int o1 = PARSE_ifft_min_range_list;
         const int o2 = PARSE_ifft_max_range_list;
         const int o3 = PARSE_ifft_step_range_list;
-        for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
+        for (int i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
         // Walk the linked list of ranges on the parser stack; each gives the minimum, maximum and step of one dimension
         // of the grid
         while (stk[pos].objType == PPLOBJ_NUM) {
@@ -574,7 +571,6 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else // Fetch data from a function
     {
-        int i;
         int pos = PARSE_ifft_fnnames;
         char *scratchpad = (char *) malloc(LSTR_LENGTH);
 
@@ -606,21 +602,21 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_strAppendChar(scratchpad, LSTR_LENGTH, &fnlen, '(');
 
         // Sample the function at each point of the grid, by compiling and evaluating an expression which calls it there
-        for (i = 0; i < Nsamples; i++) {
+        for (int i = 0; i < Nsamples; i++) {
             const int stkLevelOld = c->stackPtr;
             int j = fnlen;
-            int k = i, l, explen2, errPos = -1, errType = -1, lastOpAssign;
+            int k = i, explen2, errPos = -1, errType = -1, lastOpAssign;
             int Npos[USING_ITEMS_MAX];
             double pos[USING_ITEMS_MAX];
             pplExpr *e;
             // Work out the position of this sample on the grid, in row-major order
-            for (l = Ndims - 1; l >= 0; l--) {
+            for (int l = Ndims - 1; l >= 0; l--) {
                 Npos[l] = (k % Nsteps[l]);
                 pos[l] = min[l] + step[l] * Npos[l];
                 k /= Nsteps[l];
             }
             // Write the position as the arguments of the function call
-            for (l = 0; l < Ndims; l++) {
+            for (int l = 0; l < Ndims; l++) {
                 pplObj x = unit[l];
                 x.real = pos[l];
                 ppl_strAppendf(scratchpad, LSTR_LENGTH, &j, "%s,", ppl_unitsNumericDisplay(c, &x, 0, 1, 20));
@@ -685,7 +681,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 ppl_strAppendf(c->errStat.errBuff, sizeof(c->errStat.errBuff), &j,
                                "Could not evaluate input function at position %.*s", fnlen, scratchpad);
                 // Write the position at which the function failed
-                for (l = 0; l < Ndims; l++) {
+                for (int l = 0; l < Ndims; l++) {
                     pplObj x = unit[l];
                     x.real = pos[l];
                     ppl_strAppendf(c->errStat.errBuff, sizeof(c->errStat.errBuff), &j, "%s,",
@@ -782,18 +778,16 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         for (i = 0; i < Ndims; i++) Npos[i] = -min[i] * Nsteps[i] / (max[i] - min[i]); // Position of zero
         // Multiply each sample by the normalisation and by the phase factor for the grid's origin
         for (i = 0; i < Nsamples; i++) {
-            int l;
-            double pos, angle, normR2, normI2;
             double normR = norm;
             double normI = 0.0;
             k = i;
             // Accumulate the phase factor for each dimension
-            for (l = Ndims - 1; l >= 0; l--) {
-                pos = (k % Nsteps[l]);
+            for (int l = Ndims - 1; l >= 0; l--) {
+                double pos = (k % Nsteps[l]);
                 k /= Nsteps[l];
-                angle = (inverse ? -1 : 1) * 2 * M_PI * pos * Npos[l] / Nsteps[l];
-                normR2 = normR * cos(angle) - normI * sin(angle);
-                normI2 = normR * sin(angle) + normI * cos(angle);
+                double angle = (inverse ? -1 : 1) * 2 * M_PI * pos * Npos[l] / Nsteps[l];
+                double normR2 = normR * cos(angle) - normI * sin(angle);
+                double normI2 = normR * sin(angle) + normI * cos(angle);
                 normR = normR2;
                 normI = normI2;
             }
@@ -895,8 +889,6 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
 void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplObj *in, pplObj *out, int *status,
                       char *errout) {
-    int i;
-    double tempDbl;
 
     *out = desc->outputUnit;
 
@@ -907,7 +899,7 @@ void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplOb
                 "Attempt to evaluate a Fourier transform function whilst complex arithmetic is disabled. Fourier transforms are almost invariably complex and so this is unlikely to work.");
 
     // Check dimensions of input arguments and ensure that they are all real
-    for (i = 0; i < desc->Ndims; i++) {
+    for (int i = 0; i < desc->Ndims; i++) {
         // Each argument must have the inverse units of the corresponding dimension of the grid
         if (!ppl_unitsDimEqual(in + i, &desc->invRange[i])) {
             // Report an error, or return NaN if errors are switched off
@@ -946,8 +938,8 @@ void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplOb
     // Work out closest datapoint in FFT datagrid to the one we want
     int j = 0;
     // Find the grid cell for each argument; FFTW stores positive frequencies first, followed by negative ones
-    for (i = 0; i < desc->Ndims; i++) {
-        tempDbl = floor((in + i)->real * desc->range[i].real + 0.5);
+    for (int i = 0; i < desc->Ndims; i++) {
+        double tempDbl = floor((in + i)->real * desc->range[i].real + 0.5);
         if ((tempDbl >= 0.0) && (tempDbl <= desc->XSize[i] / 2)) {
         } // Positive frequencies stored in lower half of array
         else if ((tempDbl < 0.0) && (tempDbl >= -desc->XSize[i] / 2)) {

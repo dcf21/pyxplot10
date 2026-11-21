@@ -37,9 +37,8 @@
 //! \param [in] c - The Pyxplot context
 
 void ppl_tbClear(ppl_context *c) {
-    int i;
     // Free the copy of the line of input stored at each level of the traceback
-    for (i = c->errStat.tracebackDepth - 1; i >= 0; i--) {
+    for (int i = c->errStat.tracebackDepth - 1; i >= 0; i--) {
         traceback *t = &c->errStat.tbLevel[i];
         // Free the copy of the line
         free(t->linetext);
@@ -150,7 +149,7 @@ void ppl_tbAddExpr(ppl_context *c, const pplExpr *expr, const int errType, const
 void ppl_tbWrite(ppl_context *c) {
     // h1 and h2 are the positions in the message of characters to highlight
     char msg[LSTR_LENGTH];
-    int i = 0, j, k;
+    int i = 0;
     char *out = msg;
     int outLen = sizeof(msg);
     int h1 = -1, h2 = -1;
@@ -213,7 +212,7 @@ void ppl_tbWrite(ppl_context *c) {
 
     // Print each level of the traceback, from the outermost inwards: where the error occurred, and the line in which it
     // did
-    for (j = c->errStat.tracebackDepth - 1; j >= 0; j--) {
+    for (int j = c->errStat.tracebackDepth - 1; j >= 0; j--) {
         i = 0;
         h1 = -1;
         traceback *t = &c->errStat.tbLevel[j];
@@ -255,10 +254,10 @@ void ppl_tbWrite(ppl_context *c) {
         if ((t->sourceId == c->errStat.sourceIdCmd) && (lp >= 0)) {
             ppl_snprintfTrunc(out + i, outLen - i, "%s\n", c->errStat.errMsgCmd);
             i += strlen(out + i);
-            for (k = 0; ((k < lp) && (i < outLen - 8)); k++, i++) out[i] = ' ';
+            for (int k = 0; ((k < lp) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, " |\n");
             i += strlen(out + i);
-            for (k = 0; ((k < lp) && (i < outLen - 8)); k++, i++) out[i] = ' ';
+            for (int k = 0; ((k < lp) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, "\\|/\n");
             i += strlen(out + i);
             h1 = i + 1 + lp;
@@ -268,10 +267,10 @@ void ppl_tbWrite(ppl_context *c) {
         i += strlen(out + i);
         // An arrow pointing to the position of the error in the expression
         if ((t->sourceId == c->errStat.sourceIdExpr) && (lp2 >= 0)) {
-            for (k = 0; ((k < lp2) && (i < outLen - 8)); k++, i++) out[i] = ' ';
+            for (int k = 0; ((k < lp2) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, "/|\\\n");
             i += strlen(out + i);
-            for (k = 0; ((k < lp2) && (i < outLen - 8)); k++, i++) out[i] = ' ';
+            for (int k = 0; ((k < lp2) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, " |\n");
             i += strlen(out + i);
             snprintf(out + i, outLen - i, "%s\n", c->errStat.errMsgExpr);

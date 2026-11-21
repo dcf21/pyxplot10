@@ -172,8 +172,8 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
     // The function which GSL minimises: it sets the free variables to the position given by the minimiser, evaluates
     // the expressions, and returns a score
     char msg[LSTR_LENGTH];
-    pplObj output1, output2, *tmp;
-    int i, lastOpAssign;
+    pplObj output1, output2;
+    int lastOpAssign;
     unsigned char squareroot = 0;
     double accumulator = 0.0;
     MMComm *data = (MMComm *) params;
@@ -184,11 +184,11 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
     // Set the free variables from the minimiser's position vector; with complex arithmetic, each variable has a real
     // and an imaginary component
     if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
-        for (i = 0; i < data->Nfitvars; i++)
+        for (int i = 0; i < data->Nfitvars; i++)
             data->fitvar[i]->real = ppl_optimise_LogToReal(gsl_vector_get(x, i), data->iter2, &data->norm[i]);
     } else {
         // Each variable takes two elements of the vector
-        for (i = 0; i < data->Nfitvars; i++) {
+        for (int i = 0; i < data->Nfitvars; i++) {
             data->fitvar[i]->real = ppl_optimise_LogToReal(gsl_vector_get(x, 2 * i), data->iter2, &data->norm[2 * i]);
             data->fitvar[i]->imag =
                     ppl_optimise_LogToReal(gsl_vector_get(x, 2 * i + 1), data->iter2, &data->norm[2 * i + 1]);
@@ -199,8 +199,8 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
     }
 
     // Evaluate each expression, or each side of each equation
-    for (i = 0; i < data->Nexprs; i++) {
-        tmp = ppl_expEval(c, data->expr1[i], &lastOpAssign, 0, data->iterDepth + 1);
+    for (int i = 0; i < data->Nexprs; i++) {
+        pplObj *tmp = ppl_expEval(c, data->expr1[i], &lastOpAssign, 0, data->iterDepth + 1);
 
         // If a numerical error happened; ignore it for now, but return NAN
         if (c->errStat.status) {
@@ -454,9 +454,7 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
                      const double sign) {
     pplObj *stk = in->stk;
     MMComm commlink;
-    char *varName;
     pplObj dummyTemp;
-    int i;
 
     // Set up the data passed to the minimiser; there is one expression to minimise or maximise
     commlink.context = c;
@@ -470,7 +468,7 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
     // Walk the linked list of the free variables on the parser stack
     while ((pos->objType == PPLOBJ_NUM) && (pos->real > 0)) {
         pos = &stk[(int) round(pos->real)];
-        varName = (char *) (pos + PARSE_minimise_fit_variable_fit_variables)->auxil;
+        char *varName = (char *) (pos + PARSE_minimise_fit_variable_fit_variables)->auxil;
         ppl_contextGetVarPointer(c, varName, &commlink.fitvar[commlink.Nfitvars], &dummyTemp);
         // If the variable already had a numerical value, use it, with its units, as the starting guess
         if (dummyTemp.objType == PPLOBJ_NUM) {
@@ -509,7 +507,7 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
     // If the minimiser failed, set all the free variables to NaN
     if ((c->errStat.status) || (commlink.GoneNaN == 1)) {
         // Set each variable to NaN
-        for (i = 0; i < commlink.Nfitvars; i++) {
+        for (int i = 0; i < commlink.Nfitvars; i++) {
             commlink.fitvar[i]->real = GSL_NAN;
             commlink.fitvar[i]->imag = 0;
             commlink.fitvar[i]->flagComplex = 0;
@@ -534,9 +532,7 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
                          const int iterDepth) {
     pplObj *stk = in->stk;
     MMComm commlink;
-    char *varName;
     pplObj dummyTemp;
-    int i;
 
     // Set up the data passed to the minimiser
     commlink.context = c;
@@ -550,7 +546,7 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
     // Walk the linked list of the free variables on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);
-        varName = (char *) stk[pos + PARSE_solve_fit_variable_fit_variables].auxil;
+        char *varName = (char *) stk[pos + PARSE_solve_fit_variable_fit_variables].auxil;
         ppl_contextGetVarPointer(c, varName, &commlink.fitvar[commlink.Nfitvars], &dummyTemp);
         // If the variable already had a numerical value, use it, with its units, as the starting guess
         if (dummyTemp.objType == PPLOBJ_NUM) {
@@ -608,7 +604,7 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
     commlink.GoneNaN = 0;
     commlink.WorstScore = WORSTSCORE_INIT;
     // Each equation has not yet been evaluated
-    for (i = 0; i < commlink.Nexprs; i++) {
+    for (int i = 0; i < commlink.Nexprs; i++) {
         commlink.isFirst[i] = 1;
         pplObjNum(&commlink.first[i], 0, 0, 0);
     }
@@ -619,7 +615,7 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
     // If the minimiser failed, set all the free variables to NaN
     if ((c->errStat.status) || (commlink.GoneNaN == 1)) {
         // Set each variable to NaN
-        for (i = 0; i < commlink.Nfitvars; i++) {
+        for (int i = 0; i < commlink.Nfitvars; i++) {
             commlink.fitvar[i]->real = GSL_NAN;
             commlink.fitvar[i]->imag = 0;
             commlink.fitvar[i]->flagComplex = 0;

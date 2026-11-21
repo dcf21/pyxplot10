@@ -372,7 +372,7 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
 void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOutput *in) {
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
-    int start = 0, k;
+    int start = 0;
     HIST_ENTRY **history_data;
 
     // Fetch readline's history
@@ -386,7 +386,7 @@ void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOut
     }
 
     // Print each line of history
-    for (k = start; k < endpos; k++) ppl_report(&c->errcontext, history_data[k]->line);
+    for (int k = start; k < endpos; k++) ppl_report(&c->errcontext, history_data[k]->line);
     return;
 #else
     snprintf(
@@ -558,7 +558,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
     int pos = PARSE_save_filename;
-    int start = 0, k;
+    int start = 0;
     long x;
     char *outfname = "";
     FILE *outfile = NULL;
@@ -591,7 +591,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     start = (int) x;
 
     // Write each line, except the last, which is this save command
-    for (k = start; k < endpos - 1; k++) { fprintf(outfile, "%s\n", (history_data[k]->line)); }
+    for (int k = start; k < endpos - 1; k++) { fprintf(outfile, "%s\n", (history_data[k]->line)); }
     fclose(outfile);
     return;
 #else

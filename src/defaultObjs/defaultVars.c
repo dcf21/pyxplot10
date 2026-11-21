@@ -81,14 +81,13 @@ static void markThreadUnsafeFuncs(dict *defaults) {
     // Modules whose functions all have side effects: os runs processes and touches files; random has a shared state
     static const char *const unsafeModules[] = {"os", "random", NULL};
     pplObj *item;
-    int i;
     // Mark each unsafe built-in function
-    for (i = 0; unsafe[i] != NULL; i++) {
+    for (int i = 0; unsafe[i] != NULL; i++) {
         item = (pplObj *) ppl_dictLookup(defaults, unsafe[i]);
         if ((item != NULL) && (item->objType == PPLOBJ_FUNC)) ((pplFunc *) item->auxil)->threadSafe = 0;
     }
     // Mark every function in each unsafe module
-    for (i = 0; unsafeModules[i] != NULL; i++) {
+    for (int i = 0; unsafeModules[i] != NULL; i++) {
         item = (pplObj *) ppl_dictLookup(defaults, unsafeModules[i]);
         if ((item != NULL) && (item->objType == PPLOBJ_MOD)) markModuleThreadUnsafe((dict *) item->auxil);
     }
@@ -117,7 +116,6 @@ void ppl_makeDefaultVars(ppl_context *out) {
     // Default variables
     {
         pplObj v, m;
-        int i;
         m.refCount = v.refCount = 1;
         ppl_dictAppendCpy(out->namespaces[1], "defaults", pplObjModule(&m, 1, 1, 1), sizeof(v));
         dict *d = (dict *) m.auxil;
@@ -152,7 +150,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         // types module
         ppl_dictAppendCpy(d, "types", pplObjModule(&m, 1, 1, 1), sizeof(v));
         dict *d2 = (dict *) m.auxil;
-        for (i = 0; i <= PPLOBJ_USER; i++)
+        for (int i = 0; i <= PPLOBJ_USER; i++)
             // Every type which users can see has a type object in the types module, e.g. types.string
             if ((i != PPLOBJ_GLOB) && (i != PPLOBJ_ZOM) && (i != PPLOBJ_EXP) && (i != PPLOBJ_BYT)) {
                 pplObjCpy(&v, &pplObjPrototypes[i], 0, 1, 1);
@@ -191,7 +189,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         ppl_dictAppendCpy(d, "colors", pplObjModule(&m, 1, 1, 1), sizeof(v));
         d2 = (dict *) m.auxil;
         // The colors module holds a color object for each named color; exponent[2] records the color's number
-        for (i = 0; SW_COLOR_INT[i] >= 0; i++) {
+        for (int i = 0; SW_COLOR_INT[i] >= 0; i++) {
             pplObjColor(&v, 1, SW_COLSPACE_CMYK, SW_COLOR_CMYK_C[i], SW_COLOR_CMYK_M[i], SW_COLOR_CMYK_Y[i],
                         SW_COLOR_CMYK_K[i]);
             v.exponent[2] = SW_COLOR_INT[i];

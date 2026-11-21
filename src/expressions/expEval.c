@@ -226,7 +226,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
     int outlen = 65536;
     int inP = 0;
     int outP = 0;
-    int inP2, requiredArgs, l, arg1i = 0, arg2i = 0;
+    int l, arg1i = 0, arg2i = 0;
     char *out = (char *) malloc(outlen);
 
     // Failure to allocate memory is reported as an error
@@ -258,8 +258,8 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
             out[outP++] = format[inP];
             continue;
         } // Characters other than % tokens are copied straight to output
-        inP2 = inP + 1; // inP2 looks ahead to see experimentally if syntax is right
-        requiredArgs = 1; // Normal %f like tokens require 1 argument
+        int inP2 = inP + 1; // inP2 looks ahead to see experimentally if syntax is right
+        int requiredArgs = 1; // Normal %f like tokens require 1 argument
         if ((format[inP2] == '+') || (format[inP2] == '-') || (format[inP2] == ' ') || (format[inP2] == '#'))
             inP2++; // optional flag can be <+- #>
         // The width may be * or a number
@@ -514,10 +514,10 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_LOOKUP: {
-                int i, got = 0;
+                int got = 0;
                 char *key = inExpr->strings + instruction->operand.string;
                 *lastOpAssign = 0;
-                for (i = context->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
+                for (int i = context->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
                     if (obj == NULL) continue;
                     if ((obj->objType == PPLOBJ_GLOB) || (obj->objType == PPLOBJ_ZOM)) continue;
@@ -538,10 +538,9 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_LOOKUP_POINTER: {
-                int i;
                 char *key = inExpr->strings + instruction->operand.string;
                 *lastOpAssign = 0;
-                for (i = context->ns_ptr;; i = 1) {
+                for (int i = context->ns_ptr;; i = 1) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
                     // Look up the variable in the local namespace, creating it if it does not exist, so that it can be
                     // assigned to. A variable declared global sends us on to the global namespace (i = 1).
@@ -698,12 +697,12 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 const int range = (mode & PPL_SLICE_SINGLE_ITEM) == 0;
                 const int maxset = (mode & PPL_SLICE_MAX_SET) != 0;
                 const int minset = (mode & PPL_SLICE_MIN_SET) != 0;
-                int Nrange = 1, i, min = 0, max = 0;
+                int Nrange = 1, min = 0, max = 0;
                 *lastOpAssign = 0;
                 if (range) {
                     Nrange = minset + maxset;
                     // Read the limits of the range from the stack; each must be a real, dimensionless integer
-                    for (i = 1; i <= Nrange; i++) {
+                    for (int i = 1; i <= Nrange; i++) {
                         int *out = ((i == 1) && maxset) ? &max : &min;
                         // The limit must be a number
                         if ((stk - i)->objType != PPLOBJ_NUM) {
@@ -752,7 +751,6 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_MAKE_DICT: {
-                int k;
                 const int len = instruction->operand.count;
                 dict *d = ppl_dictInit(1);
                 *lastOpAssign = 0;
@@ -768,7 +766,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
-                for (k = 0; k < len; k++)
+                for (int k = 0; k < len; k++)
                     // Every key must be a string
                     if ((stk - 2 * (len - k))->objType != PPLOBJ_STR) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -778,13 +776,13 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         goto cleanup_on_error;
                     }
                 // Copy each key and value into the new dictionary
-                for (k = 0; k < len; k++) {
+                for (int k = 0; k < len; k++) {
                     pplObj v;
                     pplObjCpy(&v, stk - 2 * (len - k) + 1, 0, 1, 1);
                     v.refCount = 1;
                     ppl_dictAppendCpy(d, (char *) ((stk - 2 * (len - k))->auxil), (void *) &v, sizeof(pplObj));
                 }
-                for (k = 0; k < 2 * len; k++) {
+                for (int k = 0; k < 2 * len; k++) {
                     ppl_stackPop(context);
                 } // Pop the keys and values, now copied into the dictionary
                 pplObjDict(&context->stack[context->stackPtr], 0, 1, d);
@@ -793,7 +791,6 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_MAKE_LIST: {
-                int k;
                 const int len = instruction->operand.count;
                 list *l = ppl_listInit(1);
                 *lastOpAssign = 0;
@@ -810,13 +807,13 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     goto cleanup_on_error;
                 }
                 // Copy each item into the new list
-                for (k = 0; k < len; k++) {
+                for (int k = 0; k < len; k++) {
                     pplObj v;
                     pplObjCpy(&v, stk - len + k, 0, 1, 1);
                     v.refCount = 1;
                     ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
                 }
-                for (k = 0; k < len; k++) { ppl_stackPop(context); } // Pop the items, now copied into the list
+                for (int k = 0; k < len; k++) { ppl_stackPop(context); } // Pop the items, now copied into the list
                 pplObjList(&context->stack[context->stackPtr], 0, 1, l);
                 context->stack[context->stackPtr].refCount = 1;
                 context->stackPtr++; // Push the new list
@@ -1210,7 +1207,6 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             }
             case PPL_BC_STRING_SUBST: {
                 const int Nsubs = instruction->operand.count;
-                int i;
                 // The format string is on the stack, followed by the values to substitute into it
                 if (context->stackPtr < Nsubs + 1) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -1231,7 +1227,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 // The result was written to the slot above the top of the stack. Pop the format string and the Nsubs
                 // values substituted into it, then move the result down into their place.
                 context->stackPtr--;
-                for (i = 0; i < Nsubs + 1; i++) { ppl_stackPop(context); }
+                for (int i = 0; i < Nsubs + 1; i++) { ppl_stackPop(context); }
                 memcpy(&context->stack[context->stackPtr], stk, sizeof(pplObj));
                 context->stackPtr++; // Push the result
                 break;

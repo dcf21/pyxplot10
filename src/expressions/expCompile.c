@@ -148,13 +148,12 @@ static int tokenBuffEnsure(tokeniserState *t, const int n) {
 
 static int tokenNewState(tokeniserState *t, const char state, const unsigned char opcode,
                          const unsigned char precedence, const int len) {
-    int i;
     t->state = state;
     t->opcode = opcode;
     t->precedence = precedence;
     if (tokenBuffEnsure(t, len)) return 1;
     // Write a token code for each of the characters which the new token occupies
-    for (i = 0; i < len; i++) {
+    for (int i = 0; i < len; i++) {
         pplTokenCode *o = tokenOut(t);
         o->state = state;
         o->opcode = opcode;
@@ -225,7 +224,6 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                              "SFJKPQRU",  "T",         "BEHILMNOG", "SFJKPQRU", "",       "JKU"};
     int nCommaItems = 1, nDictItems = 0, tertiaryDepth = 0;
     char trialstate;
-    int oldpos, trialpos;
     tokeniserState t = {context, outOffset, 0, 0, 'A', 0, 0};
     int expOp = 0; // Was last named function one which acts on an expression -- e.g. unit() or int_dx()?
     int extraArg =
@@ -259,10 +257,10 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
             if (tokenSameState(&t)) goto overflow;
         } // Sop up whitespace
-        oldpos = t.scanpos;
+        int oldpos = t.scanpos;
 
         // Try each state which may follow the current one
-        for (trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
+        for (int trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
             if ((expOp) && (trialstate != 'P'))
                 continue; // int_dx and diff_dx MUST be followed by arguments; they have already put one on the stack.
             if (trialstate == 'B') // string literal
@@ -852,7 +850,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "At this point, was expecting ");
         i = strlen(errText);
         // Describe each of the states which could have come next, in words
-        for (trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
+        for (int trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
             if ((expOp) && (trialstate != 'P'))
                 continue; // int_dx and diff_dx MUST be followed by arguments; they have already put one on the stack.
 
@@ -923,16 +921,15 @@ overflow:
 
 void ppl_tokenPrint(const ppl_context *context, char *in, const int len) {
     pplTokenCode *tdat = context->tokenBuff;
-    int i;
-    for (i = 0; i < len; i++) printf("  %c", in[i]);
+    for (int i = 0; i < len; i++) printf("  %c", in[i]);
     printf("\n");
-    for (i = 0; i < len; i++) printf("  %c", tdat[i].state);
+    for (int i = 0; i < len; i++) printf("  %c", tdat[i].state);
     printf("\n");
-    for (i = 0; i < len; i++) printf(" %02x", (int) tdat[i].opcode);
+    for (int i = 0; i < len; i++) printf(" %02x", (int) tdat[i].opcode);
     printf("\n");
-    for (i = 0; i < len; i++) printf(" %02x", (int) tdat[i].precedence);
+    for (int i = 0; i < len; i++) printf(" %02x", (int) tdat[i].precedence);
     printf("\n");
-    for (i = 0; i < len; i++) printf(" %02x", (int) tdat[i].depth);
+    for (int i = 0; i < len; i++) printf(" %02x", (int) tdat[i].depth);
     printf("\n");
     return;
 }
@@ -1329,8 +1326,7 @@ static int compileStringLiteral(pplExprCompiler *c, const char *in, const pplTok
     } else {
         // Quoted string
         const int tripleQuote = (in[start + 1] == quote) && (in[start + 2] == quote);
-        int i;
-        for (i = start + (tripleQuote ? 3 : 1);
+        for (int i = start + (tripleQuote ? 3 : 1);
              tripleQuote ? ((in[i] != quote) || (in[i + 1] != quote) || (in[i + 2] != quote)) : (in[i] != quote); i++) {
             char decoded = in[i];
             // The tokeniser should have found the closing quote
@@ -1529,10 +1525,9 @@ static void optimiseBranches(pplExpr *expr) {
     // Make branches which jump to another branch jump straight to its destination, where that is equivalent, repeating
     // until nothing changes
     do {
-        int i;
         changed = 0;
         // Examine each branch instruction
-        for (i = 0; i < expr->bcLen; i++) {
+        for (int i = 0; i < expr->bcLen; i++) {
             pplExprInstruction *const branch = &bytecode[i];
             const pplExprInstruction *destination;
             if ((branch->opcode != PPL_BC_BRANCH_IF_FALSE) && (branch->opcode != PPL_BC_BRANCH_IF_TRUE)) continue;
@@ -1854,10 +1849,9 @@ static const char *assignmentSymbol(const int code) {
 void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
     // Describe each instruction on a line of its own
     char msg[PPL_MSG_LENGTH];
-    int j;
 
     // Describe each instruction
-    for (j = 0; j < expIn->bcLen; j++) {
+    for (int j = 0; j < expIn->bcLen; j++) {
         const pplExprInstruction *const in = &expIn->bytecode[j];
         const char *string = expIn->strings + in->operand.string; // Only meaningful for instructions with strings
         const char *op = "???", *optype = "";

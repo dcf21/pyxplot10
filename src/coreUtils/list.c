@@ -57,12 +57,11 @@ list *ppl_listInit(const int useMalloc) {
 //! \return Zero
 
 int ppl_listFree(list *in) {
-    listItem *ptrnext;
     if ((in == NULL) || (!in->useMalloc)) return 0;
     listItem *ptr = in->first;
     // Free each item in turn, with its data
     while (ptr != NULL) {
-        ptrnext = ptr->next;
+        listItem *ptrnext = ptr->next;
         free(ptr->data);
         ptr->data = NULL;
         free(ptr);
@@ -169,7 +168,6 @@ int ppl_listAppendCpy(list *in, const void *item, const int size) {
 //! \return Zero on success, or one if memory allocation failed
 
 int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
-    int i;
     if (in == NULL) return 1;
     listItem *ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
@@ -186,7 +184,7 @@ int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
     memcpy(ptrnew->data, item, size);
     listItem **ptr = &in->first;
     // Find the link which points to the Nth item (or the end of the list), and splice the new item in there
-    for (i = 0; ((i < N) && (*ptr != NULL)); i++, ptr = &(*ptr)->next);
+    for (int i = 0; ((i < N) && (*ptr != NULL)); i++, ptr = &(*ptr)->next);
     ptrnew->prev = (*ptr == NULL) ? in->last : (*ptr)->prev;
     ptrnew->next = *ptr;
     if (*ptr != NULL) (*ptr)->prev = ptrnew;
@@ -277,11 +275,10 @@ int ppl_listRemoveAll(list *in, void *item) {
 //! \return The data pointer stored in the Nth item, or NULL if the list has fewer than N+1 items
 
 void *ppl_listGetItem(const list *in, const int N) {
-    int i;
     if (in == NULL) return NULL;
     listItem *ptr = in->first;
     // Walk along the list to the Nth item
-    for (i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
+    for (int i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
     if (ptr == NULL) return NULL;
     return ptr->data;
 }
@@ -311,11 +308,10 @@ void *ppl_listPop(list *in) {
 
 void *ppl_listPopItem(list *in, const int N) {
     void *out = NULL;
-    int i;
     if (in == NULL) return NULL;
     listItem *ptr = in->first;
     // Walk along the list to the Nth item
-    for (i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
+    for (int i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
     if (ptr == NULL) return NULL;
     // Take the item's data, and remove the item from the list
     else {

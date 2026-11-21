@@ -99,7 +99,7 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
     // ApplyHighlighting is set if the terminal supports colour; reverse counts down the characters still to be shown in
     // reverse video; i is the length of the message assembled so far
     unsigned char reverse = 0;
-    int i = 0, j;
+    int i = 0;
 
     // Count the error, and decide whether to use colour
     if (msg == NULL) msg = "";
@@ -177,7 +177,7 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
 
     // Copy the message, highlighting the characters at HighlightPos1 and HighlightPos2. Each highlight covers three
     // characters, e.g. the arrow /|\ which points to the position of a syntax error.
-    for (j = 0; msg[j] != '\0'; j++) {
+    for (int j = 0; msg[j] != '\0'; j++) {
         // Switch reverse video on at each highlighted position, and off three characters later
         if (ApplyHighlighting) {
             // Start of the first highlight

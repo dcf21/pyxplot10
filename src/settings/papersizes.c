@@ -115,7 +115,7 @@ static const PaperSeries PaperSeriesList[] = {
 //! extensions to them
 
 void ppl_PaperSizeInit() {
-    int pos, i, j;
+    int pos;
 
     // Find the end of the fixed part of the table, where the computed entries begin
     for (pos = 0; (strcmp(PaperSizeList[pos].name, "END") != 0); pos++);
@@ -133,9 +133,9 @@ void ppl_PaperSizeInit() {
     pos++;
 
     // Add sizes 0-10 of each series, e.g. a0 to a10
-    for (j = 0; PaperSeriesList[j].name != NULL; j++)
+    for (int j = 0; PaperSeriesList[j].name != NULL; j++)
         // Name each size by its series and number, e.g. b5
-        for (i = 0; i < 11; i++) {
+        for (int i = 0; i < 11; i++) {
             ppl_snprintfTrunc(PaperSizeList[pos].name, sizeof(PaperSizeList[pos].name), "%s%d",
                               PaperSeriesList[j].name, i);
             PaperSizeList[pos].width = PaperSeriesList[j].size[i][0];

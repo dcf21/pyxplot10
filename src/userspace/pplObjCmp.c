@@ -327,9 +327,8 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         if (!ppl_unitsDimEqual(a, b)) {
             // Sorting: order by the exponents of the units
             if (c == NULL) {
-                int i;
                 // Compare the exponent of each base unit in turn
-                for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
+                for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) {
                     if (a->exponent[i] < b->exponent[i]) return -1;
                     if (a->exponent[i] > b->exponent[i]) return 1;
                 }
@@ -396,18 +395,17 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         return 0;
     } else if (t1o == 6) // 6 - vector
     {
-        int i;
         gsl_vector *av = ((pplVector *) a->auxil)->v;
         gsl_vector *bv = ((pplVector *) b->auxil)->v;
         if (av->size < bv->size) return -1;
         if (av->size > bv->size) return 1;
         // Vectors are compared by length, then units, then element by element
-        for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
+        for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) {
             if (a->exponent[i] < b->exponent[i]) return -1;
             if (a->exponent[i] > b->exponent[i]) return 1;
         }
         // Compare the elements in turn
-        for (i = 0; i < av->size; i++) {
+        for (int i = 0; i < av->size; i++) {
             if (gsl_vector_get(av, i) < gsl_vector_get(bv, i)) return -1;
             if (gsl_vector_get(av, i) > gsl_vector_get(bv, i)) return 1;
         }
@@ -427,19 +425,18 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         return out;
     } else if (t1o == 8) // 8 - matrix
     {
-        int i, j;
         gsl_matrix *am = ((pplMatrix *) a->auxil)->m;
         gsl_matrix *bm = ((pplMatrix *) b->auxil)->m;
         if (am->size1 * am->size2 < bm->size1 * bm->size2) return -1;
         if (am->size1 * am->size2 > bm->size1 * bm->size2) return 1;
         // Matrices are compared by number of elements, then units, then element by element
-        for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
+        for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) {
             if (a->exponent[i] < b->exponent[i]) return -1;
             if (a->exponent[i] > b->exponent[i]) return 1;
         }
-        for (i = 0; i < am->size1; i++)
+        for (int i = 0; i < am->size1; i++)
             // Compare the elements in turn
-            for (j = 0; j < am->size2; j++) {
+            for (int j = 0; j < am->size2; j++) {
                 if (gsl_matrix_get(am, i, j) < gsl_matrix_get(bm, i, j)) return -1;
                 if (gsl_matrix_get(am, i, j) > gsl_matrix_get(bm, i, j)) return 1;
             }

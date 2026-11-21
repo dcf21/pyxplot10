@@ -54,8 +54,7 @@
 
 void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *status, const char *errText) {
     // a is the argument; b is a - 1; g is |a - 1|
-    gsl_complex c, d, e;
-    int j;
+    gsl_complex d, e;
 
     gsl_complex a = gsl_complex_rect(x, y); /* the argument to zeta */
     gsl_complex b = gsl_complex_sub_real(a, 1);
@@ -67,7 +66,7 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
         e = gsl_complex_add_real(e, 0.57721566490153286061);
         d = gsl_complex_mul_real(b, -0.07281584548367672486);
         e = gsl_complex_sub(e, d);
-        c = gsl_complex_mul(b, b);
+        gsl_complex c = gsl_complex_mul(b, b);
         d = gsl_complex_mul_real(c, -0.00484518159643615924);
         e = gsl_complex_add(e, d);
         c = gsl_complex_mul(c, b);
@@ -98,7 +97,7 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
 
     // Accumulate the first sum of Borwein's method; h accumulates the binomial coefficients g, and the sum and
     // coefficients are halved whenever they grow large, to avoid overflow, with m counting the halvings left
-    for (j = 0; j <= (n - 1); j++) {
+    for (int j = 0; j <= (n - 1); j++) {
         sign = -sign;
         d = gsl_complex_pow(gsl_complex_rect(((double) (2 * n - j)), 0.0), am);
         h += g;
@@ -126,7 +125,7 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
     sign = 1;
 
     // Add each term of the second sum
-    for (j = 1; j <= (n - 1); j++) {
+    for (int j = 1; j <= (n - 1); j++) {
         sign = -sign;
         d = gsl_complex_pow(gsl_complex_rect(((double) (j + 1)), 0.0), am);
 
@@ -153,7 +152,6 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
 
 void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char *errText) {
     // x and y are the real and imaginary parts of the argument
-    gsl_complex b, c;
     gsl_sf_result dr, dt;
 
     // Deal first with the special points, and with arguments which would take too long or overflow
@@ -191,8 +189,8 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
         riemann_zeta_complex__(x, y, output, status, errText);
         return;
     } else {
-        b = gsl_complex_mul_real(in, M_LN2);
-        c = gsl_complex_mul_real(gsl_complex_sub_real(in, 1.0), log(M_PI));
+        gsl_complex b = gsl_complex_mul_real(in, M_LN2);
+        gsl_complex c = gsl_complex_mul_real(gsl_complex_sub_real(in, 1.0), log(M_PI));
         b = gsl_complex_add(b, c);
         // At the trivial zeros (negative even integers), the sine term is exactly zero
         if (fabs(y) < 41) {

@@ -60,7 +60,6 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
     char msg[PPL_MSG_LENGTH];
     char errStr[SSTR_LENGTH];
     int err = 0;
-    int i;
 
     // Get the TFM file
     char *s = (char *) ppl_memAlloc(strlen(font->name) + 5);
@@ -120,7 +119,7 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
     // Deal with built-in fonts
     font->psName = NULL;
     // Fonts built into postscript interpreters need no font file
-    for (i = 0; i < N_BUILTIN_FONTS; i++) {
+    for (int i = 0; i < N_BUILTIN_FONTS; i++) {
         if (strlen(font->name) == strlen(builtinFonts[i]) &&
             strncmp(font->name, builtinFonts[i], L_BUILTIN_FNAME) == 0) {
             font->pfaPath = NULL;
@@ -197,10 +196,8 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
 
 int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
     // Variables for finding the font file
-    FILE *fpin, *fpout;
     char errStr[SSTR_LENGTH];
-    char *PFBpath;
-    int err, i;
+    int err;
 
     // The filename with the extension .pfa or .pfb
     char *s = (char *) ppl_memAlloc(strlen(filename) + 5);
@@ -211,7 +208,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
     }
     sprintf(s, "%s.pfa", filename);
     // Crude lower-casing
-    for (i = 0; i < strlen(filename); i++)
+    for (int i = 0; i < strlen(filename); i++)
         if (s[i] >= 'A' && s[i] <= 'Z') s[i] = s[i] + 'a' - 'A';
     char *PFApath = ppl_kpse_wrap_find_pfa(ec, s);
     // Use a PFA file if there is one
@@ -221,9 +218,9 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
         // Make a PFA file from the PFB file (assuming that one exists)
         sprintf(s, "%s.pfb", filename);
         // Crude lower-casing
-        for (i = 0; i < strlen(filename); i++)
+        for (int i = 0; i < strlen(filename); i++)
             if (s[i] >= 'A' && s[i] <= 'Z') s[i] = s[i] + 'a' - 'A';
-        PFBpath = ppl_kpse_wrap_find_pfb(ec, s);
+        char *PFBpath = ppl_kpse_wrap_find_pfb(ec, s);
         // Otherwise there must be a PFB file
         if (PFBpath == NULL) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot find pfa or pfb file for font %s using name %s",
@@ -231,7 +228,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
             ppl_log(ec, errStr);
             return DVIE_NOFONT;
         }
-        fpin = fopen(PFBpath, "r");
+        FILE *fpin = fopen(PFBpath, "r");
         // Report a PFB file which cannot be opened
         if (fpin == NULL) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot open pfb file %s", PFBpath);
@@ -254,7 +251,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
             fclose(fpin);
             return DVIE_INTERNAL;
         }
-        fpout = fopen(PFApath, "w");
+        FILE *fpout = fopen(PFApath, "w");
         // Report a PFA file which cannot be written
         if (fpout == NULL) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot write to pfa file %s", PFApath);
@@ -604,7 +601,6 @@ static int pfbReadLength(FILE *in) {
 //! \return Zero on success, or a DVIE_* error code
 
 int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
-    int i, j; // Loop variables
     int len; // Record length
     char c; // Input string
 
@@ -616,13 +612,13 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
             ppl_error(ec, ERR_INTERNAL, -1, -1, "Error in pfb file format");
             return 1;
         }
-        i = getc(in);
+        int i = getc(in); // Loop variables
         // Copy text records, converting carriage returns to newlines; write binary records in hexadecimal
         if (i == 1) {
             // Ascii text record
             len = pfbReadLength(in);
             // Copy each character of the text record
-            for (j = 0; j < len; j++) {
+            for (int j = 0; j < len; j++) {
                 if ((c = getc(in)) == '\r') putc('\n', out);
                 else putc(c, out);
             }
@@ -630,7 +626,7 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
             // Binary data record
             len = pfbReadLength(in);
             // Write each byte of the binary record as two hexadecimal digits
-            for (j = 0; j < len; j++) {
+            for (int j = 0; j < len; j++) {
                 fprintf(out, "%02x", getc(in));
                 if ((j + 1) % 30 == 0) putc('\n', out);
             }
@@ -805,9 +801,8 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     // Read the information about each character: indices into the tables of widths, heights, depths and italic
     // corrections, and its ligature, kerning or extensible recipe
     for (i = 0; i < Nchars; i++) {
-        int j;
         int t[4];
-        for (j = 0; j < 4; j++)
+        for (int j = 0; j < 4; j++)
             if ((*err = ReadUChar(ec, fp, t + j)) != 0) return NULL;
         (tfm->charInfo + i)->wi = t[0];
         (tfm->charInfo + i)->hi = t[1] >> 4;
@@ -936,7 +931,6 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     int hi, di; // Indices
     int chnum; // Character number in this font
     TFMcharInfo *chin; // Character info for this character
-    int i;
     double height, depth;
 
     // There must be a font
@@ -953,7 +947,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     int hmax = 0;
     int dmax = 0;
     // Find the greatest height and depth among the upper-case letters
-    for (i = ASCII_CHAR_A_UP; i <= loopMax; i++) {
+    for (int i = ASCII_CHAR_A_UP; i <= loopMax; i++) {
         chnum = i - tfm->bc;
         chin = tfm->charInfo + chnum;
         hi = (int) chin->hi;
@@ -975,7 +969,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     // Loop over lower-case characters
     loopMax = tfm->ec > ASCII_CHAR_Z_DN ? ASCII_CHAR_Z_DN : tfm->ec;
     // Also among the lower-case letters
-    for (i = ASCII_CHAR_A_DN; i <= loopMax; i++) {
+    for (int i = ASCII_CHAR_A_DN; i <= loopMax; i++) {
         chnum = i - tfm->bc;
         chin = tfm->charInfo + chnum;
         hi = (int) chin->hi;

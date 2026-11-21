@@ -182,7 +182,7 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
     // searching in log(z) with the golden-section method
     Lcdm_comm p;
     int iter = 0, max_iter = 100, status;
-    double m, a, b;
+    double m;
     const gsl_min_fminimizer_type *T = gsl_min_fminimizer_goldensection;
     gsl_min_fminimizer *s;
     gsl_function fn;
@@ -208,8 +208,8 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
 
         // The current best estimate, and the interval which contains the minimum
         m = gsl_min_fminimizer_x_minimum(s);
-        a = gsl_min_fminimizer_x_lower(s);
-        b = gsl_min_fminimizer_x_upper(s);
+        double a = gsl_min_fminimizer_x_lower(s);
+        double b = gsl_min_fminimizer_x_upper(s);
 
         // Stop when the interval is narrower than 0.001 in log10(z)
         status = gsl_min_test_interval(a, b, 0.001, 0.0);

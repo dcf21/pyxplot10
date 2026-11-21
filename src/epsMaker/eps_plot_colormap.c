@@ -77,8 +77,7 @@
 //! \param [in,out] comp - The components
 
 static void clipComponents(double comp[4]) {
-    int i;
-    for (i = 0; i < 4; i++) comp[i] = (comp[i] < 0.0) ? 0.0 : ((comp[i] > 1.0) ? 1.0 : comp[i]);
+    for (int i = 0; i < 4; i++) comp[i] = (comp[i] < 0.0) ? 0.0 : ((comp[i] > 1.0) ? 1.0 : comp[i]);
 }
 
 
@@ -249,7 +248,6 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     // Variables for finding the range of c1, and the size of the color scale
     const int XSize = pd->GridXSize;
     const int YSize = pd->GridYSize;
-    int l;
     double CMin, CMax;
     double height, zdepth;
     double xmin, xmax, ymin, ymax;
@@ -322,7 +320,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     // Submit axis labels for color key
     pd->C1Axis.FirstTextID = x->NTextItems;
     if (pd->C1Axis.TickListStrings != NULL)
-        for (l = 0; pd->C1Axis.TickListStrings[l] != NULL; l++) {
+        for (int l = 0; pd->C1Axis.TickListStrings[l] != NULL; l++) {
             if (eps_yieldTextItem(x, pd->C1Axis.TickListStrings[l])) return;
         }
     if (eps_yieldTextItem(x, pd->C1Axis.FinalAxisLabel)) return;
@@ -611,9 +609,8 @@ static void writePostscriptImage(EPSComm *x, const bitmap_data *img) {
 //! \param [in] CDummy - The values of c1...c4 saved by ppl_contextGetVarPointer()
 
 static void restoreColorVars(EPSComm *x, pplObj *CDummy) {
-    int i;
     // Restore each variable
-    for (i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         char v[3] = {'c', '1' + i, '\0'};
         ppl_contextRestoreVarPointer(x->c, v, CDummy + i);
     }
@@ -642,10 +639,10 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     char msg[PPL_MSG_LENGTH];
     int XSize = pd->GridXSize;
     int YSize = pd->GridYSize;
-    int i, j, c, NcolsData;
+    int j, c, NcolsData;
     long p;
     double xo, yo, Lx, Ly, ThetaX, ThetaY, CMin[4], CMax[4];
-    pplObj *CVar[4], *C1Var, CDummy[4];
+    pplObj *CVar[4], CDummy[4];
     unsigned char CMinAuto[4], CMaxAuto[4], CLog[4];
     unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
     bitmap_data img;
@@ -695,7 +692,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     }
 
     // Get pointer to variable c in the user's variable space
-    for (i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         char v[3] = {'c', '1' + i, '\0'};
         ppl_contextGetVarPointer(x->c, v, CVar + i, CDummy + i);
         // Without renormalisation, c1...c4 take the units of their columns; otherwise they are dimensionless
@@ -730,7 +727,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
             ppl_snprintfTrunc(msg, sizeof(msg), "No data supplied to determine range for variable c%d", c + 1);
             ppl_log(&x->c->errcontext, msg);
             // Restore the variables c1...c4 before giving up
-            for (i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++) {
                 char v[3] = {'c', '1' + i, '\0'};
                 ppl_contextRestoreVarPointer(x->c, v, CDummy + i);
             }
@@ -766,7 +763,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     // Populate bitmap data array
     for (p = 0, j = YSize - 1; j >= 0; j--) // Postscript images are top-first. Data block is bottom-first.
         // Color each pixel of each row, starting from the top row, as postscript images are stored from the top down
-        for (i = 0; i < XSize; i++) {
+        for (int i = 0; i < XSize; i++) {
             // Set values of c1...c4
             for (c = 0; c < 4; c++)
                 // Set c1...c4 to the values in this pixel, normalised unless renormalisation is off; unused variables
@@ -788,7 +785,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                 }
 
             // Color the pixel
-            C1Var = CVar[0];
+            pplObj *C1Var = CVar[0];
             if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) {
                 restoreColorVars(x, CDummy);
                 return 1;
@@ -797,7 +794,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         }
 
     // Restore variables c1...c4 in the user's variable space
-    for (i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         char v[3] = {'c', '1' + i, '\0'};
         ppl_contextRestoreVarPointer(x->c, v, CDummy + i);
     }
@@ -830,7 +827,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double origin_y, const double width,
                                  const double height, const double zdepth) {
     char msg[PPL_MSG_LENGTH];
-    int i, j;
+    int j;
     long p;
     double xmin, xmax, ymin, ymax;
     pplset_graph *sg = &x->current->settings;
@@ -868,7 +865,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             const double WIDTH = EPS_COLORSCALE_WIDTH * M_TO_PS;
             const unsigned char Lr = (sg->ColKeyPos == SW_COLKEYPOS_B) || (sg->ColKeyPos == SW_COLKEYPOS_R);
             bitmap_data img;
-            pplObj *CVar = NULL, *C1Var, CDummy;
+            pplObj *CVar = NULL, CDummy;
 
             // The scale's inner edge runs along the side of the graph it is on, beyond the axes there
             if (sg->ColKeyPos == SW_COLKEYPOS_T) {
@@ -974,7 +971,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             // Populate bitmap data array
             for (p = 0, j = YSize - 1; j >= 0; j--) // Postscript images are top-first. Data block is bottom-first.
                 // Color each pixel of the scale, with c1 running across its range
-                for (i = 0; i < XSize; i++) {
+                for (int i = 0; i < XSize; i++) {
                     // Set value of c1
                     if (sg->Crenorm[0] == SW_BOOL_FALSE) {
                         if (!CLog) CVar->real = CMin + (CMax - CMin) * ((double) i) / (XSize - 1);
@@ -982,7 +979,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                     } else CVar->real = ((double) i) / (XSize - 1);
 
                     // Color the pixel
-                    C1Var = CVar;
+                    pplObj *C1Var = CVar;
                     if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) return 1;
                     p += 3;
                 }

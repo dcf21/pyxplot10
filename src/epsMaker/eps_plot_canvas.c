@@ -43,12 +43,12 @@
 
 int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
     // Variables for the range of the axis
-    int xrn, swapI, xminset = 0, xmaxset = 0;
-    double xmin = 0, xmax = 0, swapD;
+    int xminset = 0, xmaxset = 0;
+    double xmin = 0, xmax = 0;
 
     // An axis whose mapping is tabulated: the value is in range if it lies on any monotonic section of the table
     if (xa->AxisLinearInterpolation != NULL) {
-        for (xrn = 0; xrn <= xa->AxisValueTurnings; xrn++)
+        for (int xrn = 0; xrn <= xa->AxisValueTurnings; xrn++)
             if (gsl_finite(pplaxis_GetPosition(xin, xa, xrn, 0))) return 1;
         return 0;
     }
@@ -68,10 +68,10 @@ int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
 
     // Reversed ranges are written with the larger value first
     if (xa->RangeReversed) {
-        swapI = xminset;
+        int swapI = xminset;
         xminset = xmaxset;
         xmaxset = swapI;
-        swapD = xmin;
+        double swapD = xmin;
         xmin = xmax;
         xmax = swapD;
     }

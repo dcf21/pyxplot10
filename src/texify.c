@@ -150,15 +150,15 @@ static char *LatexVarNamesTo[] = {
 
 static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, int *mathMode, int *textRm) {
     // Variables for scanning the name, and the position of the end of the output before any final digits
-    int i, ji = 0, jg, a, l, m, k = 0, kno_ = 0;
+    int ji = 0, jg, k = 0, kno_ = 0;
 
     // Variable names are written in math mode
     texSetMode(out, outlen, &k, mathMode, textRm, 1, 0);
     // Convert each part of the name, separated by underscores
     while ((isalnum(in[ji])) || (in[ji] == '_')) {
-        a = 0;
+        int a = 0;
         // Check whether the name starts with the name of a Greek letter
-        for (i = 0; LatexVarNamesFr[i] != NULL; i++) {
+        for (int i = 0; LatexVarNamesFr[i] != NULL; i++) {
             for (jg = 0; LatexVarNamesFr[i][jg] != '\0'; jg++)
                 if (LatexVarNamesFr[i][jg] != in[ji + jg]) break;
             if (LatexVarNamesFr[i][jg] != '\0') continue;
@@ -170,12 +170,12 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
                 a = 1;
                 break;
             } else if (isdigit(in[ji + jg])) {
-                l = ji + jg;
+                int l = ji + jg;
                 while (isdigit(in[ji + jg])) jg++;
                 if (isalnum(in[ji + jg])) continue;
                 snprintf(out + k, outlen - 1 - k, "%s_{", LatexVarNamesTo[i]); // We have Greek letter underscore number
                 k += strlen(out + k);
-                for (m = l; m < ji + jg; m++)
+                for (int m = l; m < ji + jg; m++)
                     if (k < outlen - 1) out[k++] = in[m];
                 if (k < outlen - 1) out[k++] = '}';
                 ji += jg;
@@ -191,7 +191,7 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
                 k = kno_;
                 snprintf(out + k, outlen - 1 - k, "_{"); // We have an underscore number at the end of variable name
                 k += strlen(out + k);
-                for (m = ji; m < ji + jg; m++)
+                for (int m = ji; m < ji + jg; m++)
                     if (k < outlen - 1) out[k++] = in[m];
                 if (k < outlen - 1) out[k++] = '}';
                 ji += jg;
@@ -224,10 +224,10 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
 
 void ppl_texify_string(const char *in, char *out, const int inlen, const int outlen) {
     // Variables for tracking whether quotes are opening or closing ones
-    int i, j, DoubleQuoteLevel = 0, QuoteLevel = 0;
+    int j, DoubleQuoteLevel = 0, QuoteLevel = 0;
 
     // Escape each character which is special to LaTeX
-    for (i = j = 0; ((in[i] != '\0') && ((inlen < 0) || (i < inlen))); i++) {
+    for (int i = j = 0; ((in[i] != '\0') && ((inlen < 0) || (i < inlen))); i++) {
         // Stop with an ellipsis if the output is nearly full
         if (j > outlen - 16) {
             strcpy(out + j, "...");
@@ -318,7 +318,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     const int dollarAllowed = 1;
     int errPos = -1, errType, tlen;
     char errbuff[LSTR_LENGTH];
-    int i, lastOpMultDiv = 0;
+    int lastOpMultDiv = 0;
 
     // Math mode and roman type are tracked in the caller's variables if supplied, so that nested calls can share them
     int mm = 0, tr = 0;
@@ -358,11 +358,11 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         *end = 0;
         return;
     }
-    for (i = 0; i < tlen; i++) stkpos[i] = -1;
+    for (int i = 0; i < tlen; i++) stkpos[i] = -1;
 
     // Evaluate numerical constants
     int k = c->stackPtr;
-    for (i = 0; i < tlen; i++)
+    for (int i = 0; i < tlen; i++)
         // Each numeric literal is pushed onto the stack, and every character of it is noted as belonging to that stack
         // entry
         if (tokenBuff[i].state == (unsigned char) 'L') {
@@ -382,7 +382,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         }
 
     // Evaluate the unit() function (but not after a ., and only if followed by () )
-    for (i = 0; i < tlen; i++)
+    for (int i = 0; i < tlen; i++)
         if ((tokenBuff[i].state == (unsigned char) 'G') &&
             ((i < 1) ||
              ((tokenBuff[i - 1].state != (unsigned char) 'R') && (tokenBuff[i - 1].state != (unsigned char) 'G')))) {
@@ -425,7 +425,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         }
 
     // Evaluate minus signs if literal is right argument
-    for (i = 0; i < tlen; i++)
+    for (int i = 0; i < tlen; i++)
         if ((tokenBuff[i].state == (unsigned char) 'I') && ((i < 1) || (tokenBuff[i - 1].state != (unsigned char) 'I')))
             // Fold a minus sign into the following literal
             if (in[i] == '-') {
@@ -439,7 +439,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             }
 
     // Evaluate ** operator if unit() is left argument
-    for (i = 0; i < tlen; i++)
+    for (int i = 0; i < tlen; i++)
         if ((tokenBuff[i].state == (unsigned char) 'J') && (i > 0) && (tokenBuff[i - 1].state == (unsigned char) 'P') &&
             (stkpos[i - 1] >= 0))
             // Fold a unit raised to a literal power into a single value
@@ -463,7 +463,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             }
 
     // Evaluate * and / operators if unit() is either argument
-    for (i = 0; i < tlen; i++)
+    for (int i = 0; i < tlen; i++)
         if ((tokenBuff[i].state == (unsigned char) 'J') && (i > 0) && (stkpos[i - 1] >= 0))
             // Fold a literal multiplied or divided by a unit into a single value
             if (((in[i] == '*') && (in[i + 1] != '*')) || (in[i] == '/')) {
@@ -490,7 +490,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             }
 
     // Produce tex output
-    for (i = k = 0; i < tlen;) {
+    for (int i = k = 0; i < tlen;) {
         int opMultDiv = 0;
         const char o = tokenBuff[i].state; // Get tokenised markup state code
         texSetMode(out, outlen, &k, mathMode, textRm, 1, 0);
@@ -577,7 +577,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             // Functions in the default namespace which have LaTeX templates are written using them, unless they have
             // been redefined
             if ((o == 'G') && ((i < 1) || (tokenBuff[i - 1].state != 'R'))) {
-                int j, bi, cp[16], ncp, cbp;
+                int bi, cp[16], ncp, cbp;
                 char dummyVar[FNAME_LENGTH], dummyVarGreek[FNAME_LENGTH];
                 dictItem *dptr;
                 if ((ei >= tlen) || ((tokenBuff[ei].state != 'P') && (tokenBuff[ei].state != 'B')))
@@ -613,7 +613,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 ppl_texify_MakeGreek(dummyVar, dummyVarGreek, FNAME_LENGTH, mathMode, textRm);
                 // Write the template, replacing @? with the dummy variable, @< and @> with brackets, @1 to @6 with the
                 // arguments, and @0 with all of the arguments
-                for (j = 0; latex[j] != '\0'; j++) {
+                for (int j = 0; latex[j] != '\0'; j++) {
                     if (latex[j] != '@') snprintf(out + k, outlen - k, "%c", latex[j]);
                     else if (latex[j + 1] == '?') snprintf(out + k, outlen - k, "%s", dummyVarGreek);
                     // An opening bracket
@@ -627,9 +627,9 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                                            mathMode, textRm);
                         k += strlen(out + k);
                     } else if (latex[j + 1] == '0') {
-                        int a, end;
+                        int end;
                         // Write all of the arguments, separated by commas
-                        for (a = 0; a < ncp; a++) {
+                        for (int a = 0; a < ncp; a++) {
                             // Separate the arguments with commas
                             if (a != 0) {
                                 snprintf(out + k, outlen - k, ",");

@@ -85,9 +85,8 @@ static void tics_rm(pplset_tics *a) {
     a->tickList = NULL;
     // Free the tick labels, which form a NULL-terminated list
     if (a->tickStrs != NULL) {
-        int i;
         // Free each label
-        for (i = 0; a->tickStrs[i] != NULL; i++) {
+        for (int i = 0; a->tickStrs[i] != NULL; i++) {
             free(a->tickStrs[i]);
             a->tickStrs[i] = NULL;
         }
@@ -104,7 +103,7 @@ static void tics_rm(pplset_tics *a) {
 static void tics_cp(pplset_tics *o, pplset_tics *i) {
     *o = *i;
     if (i->tickList != NULL) {
-        int j, l;
+        int l;
         for (l = 0; i->tickStrs[l] != NULL; l++);
         o->tickList = (double *) malloc((l + 1) * sizeof(double));
         o->tickStrs = (char **) malloc((l + 1) * sizeof(char *));
@@ -116,7 +115,7 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
         }
         memcpy(o->tickList, i->tickList, (l + 1) * sizeof(double));
         // Copy each tick label
-        for (j = 0; j < l; j++) {
+        for (int j = 0; j < l; j++) {
             o->tickStrs[j] = (char *) malloc(strlen(i->tickStrs[j]) + 1);
             // If memory could not be allocated, abandon the copy
             if (o->tickStrs[j] == NULL) {
@@ -562,22 +561,20 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             // With no axes named, autoscale all of them
             else {
-                int i, j;
-                for (j = 0; j < 2; j++)
-                    for (i = 0; i < MAX_AXES; i++) setAutoscaleAxis(c, xa, ya, za, j, i, set, SetAll);
+                for (int j = 0; j < 2; j++)
+                    for (int i = 0; i < MAX_AXES; i++) setAutoscaleAxis(c, xa, ya, za, j, i, set, SetAll);
             }
         }
     } else if (strcmp_set && (strcmp(setoption, "axis") == 0)) /* set axis */
     {
         int pos = PARSE_unset_axis_axes;
-        int i, anum;
         // Set each axis named
         while (command[pos].objType == PPLOBJ_NUM) {
             pplset_axis *a, *ad;
             pos = (int) round(command[pos].real);
             if (pos <= 0) break;
-            anum = (int) round(command[pos + PARSE_set_axis_axis_axes].real);
-            i = (int) round(command[pos + PARSE_set_axis_axis_axes].exponent[0]);
+            int anum = (int) round(command[pos + PARSE_set_axis_axis_axes].real);
+            int i = (int) round(command[pos + PARSE_set_axis_axis_axes].exponent[0]);
             // Point to the axis, and to its default settings
             if (i == 1) {
                 a = &ya[anum];
@@ -654,30 +651,28 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int pos = PARSE_unset_axis_0axes;
         // With no axes named, remove all axes and restore the defaults
         if (command[pos].objType != PPLOBJ_NUM) {
-            int i;
             // Restore the default x axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(xa[i]));
                 pplaxis_copy(c, &(xa[i]), &(c->set->XAxesDefault[i]));
             }
             // Restore the default y axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(ya[i]));
                 pplaxis_copy(c, &(ya[i]), &(c->set->YAxesDefault[i]));
             }
             // Restore the default z axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(za[i]));
                 pplaxis_copy(c, &(za[i]), &(c->set->ZAxesDefault[i]));
             }
         } else {
-            int i, anum;
             // Restore each axis named to its default
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                anum = (int) round(command[pos + PARSE_unset_axis_axis_axes].real);
-                i = (int) round(command[pos + PARSE_unset_axis_axis_axes].exponent[0]);
+                int anum = (int) round(command[pos + PARSE_unset_axis_axis_axes].real);
+                int i = (int) round(command[pos + PARSE_unset_axis_axis_axes].exponent[0]);
                 // Point to the axis
                 if (i == 1) {
                     pplaxis_destroy(c, &(ya[anum]));
@@ -1280,16 +1275,15 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int pos = PARSE_set_grid_0axes;
         // With no axes named, draw the grid from the default axes
         if (command[pos].objType != PPLOBJ_NUM) {
-            int i;
             // If the grid was off, draw it from the default axes
             if (sg->grid != SW_ONOFF_ON) {
-                for (i = 0; i < MAX_AXES; i++) sg->GridAxisX[i] = c->set->graph_default.GridAxisX[i];
-                for (i = 0; i < MAX_AXES; i++) sg->GridAxisY[i] = c->set->graph_default.GridAxisY[i];
-                for (i = 0; i < MAX_AXES; i++) sg->GridAxisZ[i] = c->set->graph_default.GridAxisZ[i];
+                for (int i = 0; i < MAX_AXES; i++) sg->GridAxisX[i] = c->set->graph_default.GridAxisX[i];
+                for (int i = 0; i < MAX_AXES; i++) sg->GridAxisY[i] = c->set->graph_default.GridAxisY[i];
+                for (int i = 0; i < MAX_AXES; i++) sg->GridAxisZ[i] = c->set->graph_default.GridAxisZ[i];
             }
             sg->grid = SW_ONOFF_ON;
         } else {
-            int i, anum;
+            int i;
             // If the grid was off, clear the list of axes it is drawn from
             if (sg->grid != SW_ONOFF_ON) {
                 for (i = 0; i < MAX_AXES; i++) sg->GridAxisX[i] = 0;
@@ -1301,7 +1295,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                anum = (int) round(command[pos + PARSE_set_grid_axis_0axes].real);
+                int anum = (int) round(command[pos + PARSE_set_grid_axis_0axes].real);
                 i = (int) round(command[pos + PARSE_set_grid_axis_0axes].exponent[0]);
                 // Mark the axis in the requested direction
                 if (i == 1) {
@@ -1315,11 +1309,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_unset && (strcmp(setoption, "grid") == 0)) /* unset grid */
     {
-        int i;
         sg->grid = c->set->graph_default.grid;
-        for (i = 0; i < MAX_AXES; i++) sg->GridAxisX[i] = c->set->graph_default.GridAxisX[i];
-        for (i = 0; i < MAX_AXES; i++) sg->GridAxisY[i] = c->set->graph_default.GridAxisY[i];
-        for (i = 0; i < MAX_AXES; i++) sg->GridAxisZ[i] = c->set->graph_default.GridAxisZ[i];
+        for (int i = 0; i < MAX_AXES; i++) sg->GridAxisX[i] = c->set->graph_default.GridAxisX[i];
+        for (int i = 0; i < MAX_AXES; i++) sg->GridAxisY[i] = c->set->graph_default.GridAxisY[i];
+        for (int i = 0; i < MAX_AXES; i++) sg->GridAxisZ[i] = c->set->graph_default.GridAxisZ[i];
     } else if (strcmp_set && (strcmp(setoption, "key") == 0)) /* set key */
     {
         sg->key = SW_ONOFF_ON; // Turn key on
@@ -1589,7 +1582,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         } else if (!ul) // set logscale or nologscale on all axes
         {
-            int i, *alog;
+            int *alog;
             pplset_axis *a;
             const int newstate = sl ? SW_BOOL_TRUE : SW_BOOL_FALSE;
             // If the color axis changes between linear and logarithmic, its ticks no longer apply
@@ -1599,7 +1592,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             sg->Clog[0] = sg->Clog[1] = sg->Clog[2] = sg->Clog[3] = sg->Tlog = sg->Ulog = sg->Vlog = newstate;
             // Change all enabled x axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 a = &xa[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -1614,7 +1607,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Change all enabled y axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 a = &ya[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -1629,7 +1622,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Change all enabled z axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 a = &za[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -1645,7 +1638,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         } else // unset logscale on all axes
         {
-            int i, *alog, *adlog;
+            int *alog, *adlog;
             pplset_axis *a, *ad;
             // If the color axis changes between linear and logarithmic, its ticks no longer apply
             if (sg->Clog[0] != c->set->graph_default.Clog[0]) {
@@ -1660,7 +1653,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->Ulog = c->set->graph_default.Ulog;
             sg->Vlog = c->set->graph_default.Vlog;
             // Restore the default for all enabled x axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 a = &xa[i];
                 ad = &c->set->XAxesDefault[i];
                 // Only change axes which are enabled
@@ -1677,7 +1670,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Restore the default for all enabled y axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 a = &ya[i];
                 ad = &c->set->YAxesDefault[i];
                 // Only change axes which are enabled
@@ -1694,7 +1687,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Restore the default for all enabled z axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 a = &za[i];
                 ad = &c->set->ZAxesDefault[i];
                 // Only change axes which are enabled
@@ -1753,13 +1746,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (command[pos].objType != PPLOBJ_NUM) {
             sg->grid = SW_ONOFF_OFF;
         } else {
-            int i, anum;
             // Stop drawing the grid from each axis named
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
-                anum = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].real);
-                i = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].exponent[0]);
+                int anum = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].real);
+                int i = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].exponent[0]);
                 // Unmark the axis in the requested direction
                 if (i == 1) {
                     sg->GridAxisY[anum] = 0;
@@ -1807,9 +1799,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         } else if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             // Axis settings cannot be changed for multiplot items which have no axes
-            int i;
             // Remove the ticks from all enabled x axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -1818,7 +1809,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Remove the ticks from all enabled y axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -1827,7 +1818,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Remove the ticks from all enabled z axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -2472,10 +2463,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         } else if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             // Axis settings cannot be changed for multiplot items which have no axes
-            int i;
             char *cmd = m ? "mtics" : "tics";
             // Set the ticks of all enabled x axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -2497,7 +2487,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Set the ticks of all enabled y axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -2519,7 +2509,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
             // Set the ticks of all enabled z axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i];
                 // Only change axes which are enabled
                 if (a->enabled) {
@@ -2565,19 +2555,18 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         } else if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             // Axis settings cannot be changed for multiplot items which have no axes
-            int i;
             // Restore the default ticks of all x axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i], *ad = &c->set->XAxesDefault[i];
                 if (a->enabled) { unsetTicks(a, ad, m); }
             }
             // Restore the default ticks of all y axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i], *ad = &c->set->YAxesDefault[i];
                 if (a->enabled) { unsetTicks(a, ad, m); }
             }
             // Restore the default ticks of all z axes
-            for (i = 0; i < MAX_AXES; i++) {
+            for (int i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i], *ad = &c->set->ZAxesDefault[i];
                 if (a->enabled) { unsetTicks(a, ad, m); }
             }
@@ -2690,14 +2679,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
         // Add or remove preferred units
         if (got2 || got3) {
-            int i;
             char *buf = (char *) malloc(LSTR_LENGTH);
             PreferredUnit *pu;
             if (buf == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             } else
                 // Parse the unit to add (i == 0), then the unit to remove (i == 1)
-                for (i = 0; i < 2; i++) {
+                for (int i = 0; i < 2; i++) {
                     int errpos = -1;
                     // Parse the unit to add
                     if (i == 0) {
@@ -2752,7 +2740,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             int pos = PARSE_set_unit_preferred_units;
             // Set the unit used to display each quantity named, e.g. "set unit of length miles"
             while (command[pos].objType == PPLOBJ_NUM) {
-                int i = 0, j = 0, k = 0, l = 0, m = 0, multiplier;
+                int i = 0, j = 0, k = 0, l = 0, m = 0;
                 int p = 0;
                 int pp = 0;
                 char *unit;
@@ -2772,7 +2760,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
                     // Skip units for other quantities
                     if (pp != 0) continue;
-                    multiplier = 8;
+                    int multiplier = 8;
                     if ((k = ppl_unitNameCmp(unit, c->unit_database[j].nameAp, 1)) != 0) p = 1;
                     else if ((k = ppl_unitNameCmp(unit, c->unit_database[j].nameAs, 1)) != 0) p = 1;
                     else if ((k = ppl_unitNameCmp(unit, c->unit_database[j].nameFp, 0)) != 0) p = 1;

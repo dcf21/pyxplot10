@@ -44,14 +44,13 @@
 //! \return The value of the series
 
 gsl_complex airy_series_y1(gsl_complex z) {
-    int i;
     gsl_complex c = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
     c = GSL_COMPLEX_ONE;
     gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
-    for (i = 0; i <= 45; i += 3) {
+    for (int i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
         c = gsl_complex_div_real(c, ((double) (i + 2) * (i + 3)));
@@ -64,14 +63,13 @@ gsl_complex airy_series_y1(gsl_complex z) {
 //! \return The derivative of the series
 
 gsl_complex airy_series_y1_diff(gsl_complex z) {
-    int i;
     gsl_complex c = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
     c = gsl_complex_div_real(c, 2.0);
     gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
-    for (i = 0; i <= 45; i += 3) {
+    for (int i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
         c = gsl_complex_div_real(c, ((double) (i + 3) * (i + 5)));
@@ -85,14 +83,13 @@ gsl_complex airy_series_y1_diff(gsl_complex z) {
 //! \return The value of the series
 
 gsl_complex airy_series_y2(gsl_complex z) {
-    int i;
     gsl_complex c = z;
     z = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
     gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
-    for (i = 0; i <= 45; i += 3) {
+    for (int i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
         c = gsl_complex_div_real(c, ((double) (i + 3) * (i + 4)));
@@ -105,7 +102,6 @@ gsl_complex airy_series_y2(gsl_complex z) {
 //! \return The derivative of the series
 
 gsl_complex airy_series_y2_diff(gsl_complex z) {
-    int i;
     gsl_complex c = z;
     z = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
@@ -113,7 +109,7 @@ gsl_complex airy_series_y2_diff(gsl_complex z) {
     gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
-    for (i = 0; i <= 45; i += 3) {
+    for (int i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
         c = gsl_complex_div_real(c, ((double) (i + 1) * (i + 3)));

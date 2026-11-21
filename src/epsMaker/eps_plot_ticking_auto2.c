@@ -141,7 +141,7 @@ static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, c
 
 static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, const double OoM, const unsigned char IsLog,
                                 const int LogBase, const int *FactorsTen, const int NFactors) {
-    int i, LevelDescend = 1;
+    int LevelDescend = 1;
     *NTickSchemes = 0;
     while (pow(10.0, LevelDescend - 1) < (10.0 * TICKS_MAXIMUM)) {
         const double OoMscan = OoM / pow(10.0, LevelDescend);
@@ -151,7 +151,7 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, cons
             GenerateLogTickSchemes(TickSchemes, NTickSchemes, LogBase);
         } else {
             // Make a scheme for each factor
-            for (i = NFactors - 1; i >= 0; i--) {
+            for (int i = NFactors - 1; i >= 0; i--) {
                 double t;
                 TickSchemes[*NTickSchemes].mantissa[0] = 1;
                 TickSchemes[*NTickSchemes].Nmantissas = 1;
@@ -178,11 +178,10 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, cons
 void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
                             const pplset_axis *linkedto) {
     char msg[PPL_MSG_LENGTH];
-    int i, j, k, ContextRough = -1, NFactorsTen, number_ticks, major, OverlayMatch;
+    int i, j, ContextRough = -1, NFactorsTen;
     unsigned char IsLog = (axis->LogFinal == SW_BOOL_TRUE);
     int FactorsTen[MAX_FACTORS];
-    double OoM, axis_min_l, axis_max_l, outer_min, outer_max;
-    int TL_trial_len;
+    double OoM, outer_min, outer_max;
     double *TLP, *TL_best = NULL, *TL_trial = NULL;
     char **TLS;
     int NTickSchemes;
@@ -222,8 +221,8 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
         outer_min = floor(axis_min / OoM) * OoM;
         outer_max = ceil(axis_max / OoM) * OoM;
     } else {
-        axis_min_l = log(axis_min) / log(LogBase);
-        axis_max_l = log(axis_max) / log(LogBase);
+        double axis_min_l = log(axis_min) / log(LogBase);
+        double axis_max_l = log(axis_max) / log(LogBase);
         OoM = pow(10.0, ceil(log10(axis_max_l - axis_min_l)));
         outer_min = floor(axis_min_l / OoM) * OoM;
         outer_max = ceil(axis_max_l / OoM) * OoM;
@@ -254,7 +253,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     if (TickSchemes == NULL) goto FAIL;
 
     // Deal with MAJOR ticks. Then MINOR ticks.
-    for (major = 1; major >= 0; major--)
+    for (int major = 1; major >= 0; major--)
         // Place the major ticks, then the minor ticks
         if (AutoTicks[major]) {
             // Fill the list of major ticks, or minor ticks
@@ -267,7 +266,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
             }
 
             // How many ticks can we fit onto this axis?
-            number_ticks = (major ? axis->PhysicalLengthMajor : axis->PhysicalLengthMinor) + 1;
+            int number_ticks = (major ? axis->PhysicalLengthMajor : axis->PhysicalLengthMinor) + 1;
             if (number_ticks < 2) number_ticks = 2; // Minimum of two ticks along any given axis
             if (number_ticks > TICKS_MAXIMUM)
                 number_ticks = TICKS_MAXIMUM; // Maximum number of ticks along any given axis
@@ -278,12 +277,12 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
             // Try each tick scheme in turn
             for (i = 0; i < NTickSchemes; i++) {
                 const double ts_min = outer_min + TickSchemes[i].offset;
-                TL_trial_len = 0;
+                int TL_trial_len = 0;
                 // Generate the ticks of this scheme which lie within the axis's range
                 for (j = 0; j < ((outer_max - outer_min) / TickSchemes[i].ticksep + 1.5); j++) {
                     if (TL_trial_len >= TICKS_MAXIMUM) break;
                     // Each mantissa within each step
-                    for (k = 0; k < TickSchemes[i].Nmantissas; k++) {
+                    for (int k = 0; k < TickSchemes[i].Nmantissas; k++) {
                         if (TL_trial_len >= TICKS_MAXIMUM) break;
                         double x = ts_min + j * TickSchemes[i].ticksep;
                         if (fabs(x) < 1e-6 * TickSchemes[i].ticksep) x = 0;
@@ -296,7 +295,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                 }
 
                 // If minor ticks, make sure that this tick scheme overlays major ticks
-                OverlayMatch = 1;
+                int OverlayMatch = 1;
                 // Minor tick schemes must have ticks at every major tick, which are then removed from the list of minor
                 // ticks
                 if (!major) {
@@ -311,7 +310,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                     for (j = 0; axis->TickListStrings[j] != NULL; j++) {
                         OverlayMatch = 0;
                         // Find a minor tick at the same position, and remove it
-                        for (k = 0; k < TL_trial_len; k++) {
+                        for (int k = 0; k < TL_trial_len; k++) {
                             const double pos = pplaxis_GetPosition(TL_trial[k] / UnitMultiplier, axis, 0, 0);
                             if (fabs(pos - axis->TickListPositions[j]) > 1e-4) continue;
                             for (k++; k < TL_trial_len; k++) TL_trial[k - 1] = TL_trial[k];

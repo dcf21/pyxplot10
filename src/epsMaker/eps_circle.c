@@ -42,7 +42,7 @@ void eps_circ_RenderEPS(EPSComm *x) {
     // Variables for the shape and style of the circle
     int lt;
     unsigned char filled = 0, stroked = 0;
-    double lw_scale, start = 0, end = 360, theta;
+    double lw_scale, start = 0, end = 360;
     withWords ww;
 
     // Print label at top of postscript description of circle
@@ -118,7 +118,7 @@ void eps_circ_RenderEPS(EPSComm *x) {
             eps_core_BoundingBox(x, xpos, ypos + r, lw);
         } else {
             if (end < start) end += 2 * M_PI;
-            for (theta = 0.0; theta <= 1.0; theta += 0.01)
+            for (double theta = 0.0; theta <= 1.0; theta += 0.01)
                 eps_core_BoundingBox(x, xpos + r * cos(start + (end - start) * theta),
                                      ypos + r * sin(start + (end - start) * theta), lw);
         }

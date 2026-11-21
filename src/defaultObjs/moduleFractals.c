@@ -63,13 +63,13 @@ void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckLong(&call, &in[2], "MaxIter", "function's third argument must be")) return;
     {
-        double y = in[0].imag, x = in[0].real, x2;
+        double y = in[0].imag, x = in[0].real;
         double cy = in[1].imag, cx = in[1].real;
         long MaxIter = (long) (in[2].real), iter;
 
         // Iterate z -> z^2 + c, with z = x + iy, until |z| exceeds 2 (when the point has escaped) or MaxIter is reached
         for (iter = 0; ((iter < MaxIter) && ((x * x + y * y) < 4)); iter++) {
-            x2 = x * x - y * y + cx;
+            double x2 = x * x - y * y + cx;
             y = 2 * x * y + cy;
             x = x2;
         }
@@ -93,13 +93,13 @@ void pplfunc_mandelbrot(ppl_context *c, pplObj *in, const int nArgs, int *status
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckLong(&call, &in[1], "MaxIter", "function's second argument must be")) return;
     {
-        double y = in[0].imag, x = in[0].real, x2;
+        double y = in[0].imag, x = in[0].real;
         double cy = in[0].imag, cx = in[0].real;
         long MaxIter = (long) (in[1].real), iter;
 
         // Iterate z -> z^2 + c, with z = x + iy starting from zero, until |z| exceeds 2 or MaxIter is reached
         for (iter = 0; ((iter < MaxIter) && ((x * x + y * y) < 4)); iter++) {
-            x2 = x * x - y * y + cx;
+            double x2 = x * x - y * y + cx;
             y = 2 * x * y + cy;
             x = x2;
         }

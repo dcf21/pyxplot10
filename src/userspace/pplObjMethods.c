@@ -352,9 +352,9 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
     // starts there.
     for (i = 0, j = 0;; i++) {
         int breaking = (instr[i] == '\0');
-        int k, l = 0;
+        int l = 0;
         // Test each separator against the string at position i
-        for (k = 0; ((k < nArgs) && (!breaking)); k++) {
+        for (int k = 0; ((k < nArgs) && (!breaking)); k++) {
             char *cmp = (char *) in[k].auxil;
             // Compare the separator with the string, character by character
             for (l = 0; cmp[l] != '\0'; l++) {
@@ -672,7 +672,6 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
 static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
-    int p;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         ppl_funcError(status, errType, errText, ERR_TYPE, "The find() method requires a single string argument.");
@@ -682,7 +681,7 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
     int il = strlen(instr);
     int cl = strlen(cmpstr);
     int pmax = il - cl;
-    for (p = 0; p <= pmax; p++)
+    for (int p = 0; p <= pmax; p++)
         // Return the position of the first match
         if (strncmp(instr + p, cmpstr, cl) == 0) {
             pplObjNum(&OUTPUT, 0, ppl_utf8CharIndex(instr, p), 0); // Position in characters, not bytes
@@ -706,7 +705,6 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
-    int p;
     pplObj v;
     // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -724,7 +722,7 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     int il = strlen(instr);
     int cl = strlen(cmpstr);
     int pmax = il - cl;
-    for (p = 0; p <= pmax; p++)
+    for (int p = 0; p <= pmax; p++)
         // Add the position of each match to the list
         if (strncmp(instr + p, cmpstr, cl) == 0) {
             pplObjNum(&v, 1, ppl_utf8CharIndex(instr, p), 0); // Position in characters, not bytes
@@ -1377,9 +1375,8 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
 
     // Copy in the elements of the vector or list
     if (t == PPLOBJ_VEC) {
-        int j;
         gsl_vector *vi = ((pplVector *) in[0].auxil)->v;
-        for (j = 0; j < vi->size; j++, i++) gsl_vector_set(vo, i, gsl_vector_get(vi, j));
+        for (int j = 0; j < vi->size; j++, i++) gsl_vector_set(vo, i, gsl_vector_get(vi, j));
     } else if (t == PPLOBJ_LIST) {
         list *listin = (list *) in[0].auxil;
         listIterator *li = ppl_listIterateInit(listin);
@@ -1533,7 +1530,6 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
 
 static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                    char *errText) {
-    long i;
     pplObj *st = in[-1].self_this;
     gsl_vector *v = ((pplVector *) st->auxil)->v;
     // The position must be a real number, within or at the end of the vector
@@ -1575,7 +1571,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     }
     gsl_vector *vo = ((pplVector *) (OUTPUT.auxil))->v;
     gsl_vector_set(vo, p, in[1].real);
-    for (i = 0; i < v->size; i++) gsl_vector_set(vo, i + (i >= p), gsl_vector_get(v, i));
+    for (long i = 0; i < v->size; i++) gsl_vector_set(vo, i + (i >= p), gsl_vector_get(v, i));
     ppl_unitsDimCpy(&OUTPUT, st);
     // If the vector is a variable, replace its value with the new vector, so that the method changes it in place
     updateInPlace(st, &OUTPUT);
@@ -1610,7 +1606,6 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_vector *vec = ((pplVector *) st->auxil)->v;
-    int i;
     const int l = vec->size;
     pplObj v;
     // The output is a new list
@@ -1623,7 +1618,7 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjNum(&v, 1, 0, 0);
     ppl_unitsDimCpy(&v, st);
     // Add each element to the list, as a number with the vector's units
-    for (i = 0; i < l; i++) {
+    for (int i = 0; i < l; i++) {
         v.real = gsl_vector_get(vec, i);
         ppl_listAppendCpy(lo, &v, sizeof(pplObj));
     }
@@ -1645,7 +1640,6 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     char *FunctionDescription = "map(f)";
     pplObj *st = in[-1].self_this;
     gsl_vector *vec = ((pplVector *) st->auxil)->v;
-    int i;
     pplObj v, val2;
     pplExpr dummy;
 
@@ -1691,7 +1685,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     ppl_unitsDimCpy(&v, st);
 
     // Call the function on each element
-    for (i = 0; i < vec->size; i++) {
+    for (int i = 0; i < vec->size; i++) {
         const int stkLevelOld = c->stackPtr;
 
         // Push the function to call, followed by its arguments
@@ -1784,7 +1778,6 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
                                    char *errText) {
     char *FunctionDescription = "reduce(f)";
     const int stkLevelOld = c->stackPtr;
-    int i;
     pplExpr dummy;
     pplObj *st = in[-1].self_this;
     gsl_vector *v = ((pplVector *) st->auxil)->v;
@@ -1834,7 +1827,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     memcpy(&val2, &val, sizeof(pplObj));
 
     // Combine the running value with each further element in turn: val = f(val, element)
-    for (i = 1; i < v->size; i++) {
+    for (int i = 1; i < v->size; i++) {
         // Push the function to call, followed by its arguments
         ppl_stackPushCopy(c, &in[0], 0);
 
@@ -1986,13 +1979,12 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
 
     // Append the elements of a vector, as numbers with the vector's units, or the items of a list
     if (t == PPLOBJ_VEC) {
-        int i;
         gsl_vector *vi = ((pplVector *) in[0].auxil)->v;
         v.refCount = 1; // Each copy appended to the list holds one reference
         pplObjNum(&v, 1, 0, 0);
         ppl_unitsDimCpy(&v, &in[0]);
         // Append each element of the vector
-        for (i = 0; i < vi->size; i++) {
+        for (int i = 0; i < vi->size; i++) {
             v.real = gsl_vector_get(vi, i);
             ppl_listAppendCpy(l, &v, sizeof(pplObj));
         }
@@ -2505,7 +2497,6 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_listReverse(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                   char *errText) {
-    long i;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
     listItem *l1 = l->first;
@@ -2515,7 +2506,7 @@ static void pplmethod_listReverse(ppl_context *c, pplObj *in, const int nArgs, i
     if (n < 2) return;
 
     // Swap the data of items from the two ends of the list, working inwards
-    for (i = 0; i < n / 2; i++) {
+    for (long i = 0; i < n / 2; i++) {
         void *tmp = l1->data;
         l1->data = l2->data;
         l2->data = tmp;
@@ -2991,7 +2982,6 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_dictItems()"};
     char *key, *tmp;
     pplObj v, va, vb, *item;
-    list *l2;
     dictIterator *di = ppl_dictIterateInit((dict *) in[-1].self_this->auxil);
     // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
@@ -3016,7 +3006,7 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
-        l2 = (list *) v.auxil;
+        list *l2 = (list *) v.auxil;
         ppl_listAppendCpy(l2, (void *) &va, sizeof(pplObj));
         ppl_listAppendCpy(l2, (void *) &vb, sizeof(pplObj));
         ppl_listAppendCpy(l, (void *) &v, sizeof(pplObj));
@@ -3117,7 +3107,7 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     double d = 0;
-    int n = m->size1, i;
+    int n = m->size1;
     int s;
     gsl_matrix *tmp = NULL;
     gsl_permutation *p = NULL;
@@ -3151,7 +3141,7 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     tmp = NULL;
     pplObjNum(&OUTPUT, 0, d, 0);
     ppl_unitsDimCpy(&OUTPUT, st);
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] *= n;
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] *= n;
 }
 
 //! pplmethod_matrixDiagonal - Implement the diagonal() method of matrices, which returns a boolean indicating whether a
@@ -3167,15 +3157,14 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
 
 static void pplmethod_matrixDiagonal(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                      char *errText) {
-    int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     // Only square matrices can be diagonal
     if (m->size1 != m->size2) {
         pplObjBool(&OUTPUT, 0, 0);
         return;
     }
-    for (i = 0; i < m->size1; i++)
-        for (j = 0; j < m->size2; j++)
+    for (int i = 0; i < m->size1; i++)
+        for (int j = 0; j < m->size2; j++)
             // Every off-diagonal element must be zero
             if ((i != j) && (gsl_matrix_get(m, i, j) != 0)) {
                 pplObjBool(&OUTPUT, 0, 0);
@@ -3197,7 +3186,6 @@ static void pplmethod_matrixDiagonal(ppl_context *c, pplObj *in, const int nArgs
 
 static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                         char *errText) {
-    int i, j;
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
     gsl_matrix *tmp = NULL;
@@ -3209,8 +3197,8 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
                 "%s", "Eigenvalues are only defined for square matrices.");
         return;
     }
-    for (i = 0; i < m->size1; i++)
-        for (j = 0; j < i; j++)
+    for (int i = 0; i < m->size1; i++)
+        for (int j = 0; j < i; j++)
             // The matrix must be symmetric
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 ppl_funcError(status, errType, errText, ERR_NUMERICAL,
@@ -3262,13 +3250,11 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
 
 static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                          char *errText) {
-    int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     gsl_matrix *tmp1 = NULL;
     gsl_matrix *tmp2 = NULL;
     gsl_vector *vtmp = NULL;
     pplObj v;
-    gsl_vector *vo;
     const int n = m->size1;
     gsl_eigen_symmv_workspace *w;
     v.refCount = 1;
@@ -3278,8 +3264,8 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
                 "%s", "Eigenvectors are only defined for square matrices.");
         return;
     }
-    for (i = 0; i < m->size1; i++)
-        for (j = 0; j < i; j++)
+    for (int i = 0; i < m->size1; i++)
+        for (int j = 0; j < i; j++)
             // The matrix must be symmetric
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 ppl_funcError(status, errType, errText, ERR_NUMERICAL,
@@ -3326,14 +3312,14 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     }
     list *lo = (list *) OUTPUT.auxil;
     // Each eigenvector is a column of tmp2
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         // Make a vector for the eigenvector
         if (pplObjVector(&v, 1, 1, n) == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
-        vo = ((pplVector *) v.auxil)->v;
-        for (j = 0; j < n; j++) gsl_vector_set(vo, j, gsl_matrix_get(tmp2, j, i)); // GSL puts eigenvectors in columns
+        gsl_vector *vo = ((pplVector *) v.auxil)->v;
+        for (int j = 0; j < n; j++) gsl_vector_set(vo, j, gsl_matrix_get(tmp2, j, i)); // GSL puts eigenvectors in columns
         ppl_listAppendCpy(lo, (void *) &v, sizeof(pplObj));
     }
     gsl_matrix_free(tmp2);
@@ -3437,15 +3423,14 @@ static void pplmethod_matrixSize(ppl_context *c, pplObj *in, const int nArgs, in
 
 static void pplmethod_matrixSymmetric(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType,
                                       char *errText) {
-    int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     // Only square matrices can be symmetric
     if (m->size1 != m->size2) {
         pplObjBool(&OUTPUT, 0, 0);
         return;
     }
-    for (i = 0; i < m->size1; i++)
-        for (j = 0; j < i; j++)
+    for (int i = 0; i < m->size1; i++)
+        for (int j = 0; j < i; j++)
             // Every element must equal its reflection in the diagonal
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 pplObjBool(&OUTPUT, 0, 0);
@@ -3468,7 +3453,7 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
                                   char *errText) {
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
-    int n = m->size1, i, j;
+    int n = m->size1;
     gsl_matrix *vo = NULL;
     // Only square matrices can be transposed by this method
     if (m->size1 != m->size2) {
@@ -3482,8 +3467,8 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
         return;
     }
     vo = ((pplMatrix *) OUTPUT.auxil)->m;
-    for (i = 0; i < m->size1; i++)
-        for (j = 0; j < m->size2; j++) gsl_matrix_set(vo, i, j, gsl_matrix_get(m, j, i));
+    for (int i = 0; i < m->size1; i++)
+        for (int j = 0; j < m->size2; j++) gsl_matrix_set(vo, i, j, gsl_matrix_get(m, j, i));
     ppl_unitsDimCpy(&OUTPUT, st);
 }
 
@@ -3874,12 +3859,11 @@ static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int 
 
 void pplObjMethodsInit(ppl_context *c) {
     // Create a dictionary of methods for each type
-    int i;
     const int n = PPLOBJ_USER + 1;
     pplObjMethods = (dict **) malloc(n * sizeof(dict *));
     if (pplObjMethods == NULL) ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Out of memory.");
     // Every type has the universal methods, such as class(), str() and type()
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         dict *d = pplObjMethods[i] = ppl_dictInit(1);
         if (d == NULL) ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Out of memory.");
         ppl_addSystemMethod(d, "class", 0, 0, 1, 1, 1, 1, (void *) &pplmethod_class, "class()", "\\mathrm{class}@<@>",
@@ -4093,7 +4077,7 @@ void pplObjMethodsInit(ppl_context *c) {
             "vector() turns a list into a vector, providing all the list elements are numbers with the same physical dimensions");
 
     // Dictionary methods
-    for (i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
         int pplobj;
         if (i == 0) pplobj = PPLOBJ_DICT;
         else if (i == 1) pplobj = PPLOBJ_MOD;

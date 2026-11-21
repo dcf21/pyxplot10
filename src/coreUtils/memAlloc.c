@@ -70,7 +70,6 @@ static int _fastmalloc_initialised = 0;
 //! that are freed en masse when an allocation context is freed. Has no effect if already initialised.
 
 void fastmalloc_init() {
-    int i;
     if (_fastmalloc_initialised == 1) return;
 
     // Allocate the arrays which record the chain of blocks belonging to each context
@@ -79,8 +78,8 @@ void fastmalloc_init() {
     _fastmalloc_currentblock_alloc_ptr = (long *) malloc(PPL_MAX_CONTEXTS * sizeof(long));
 
     // Every context starts with no blocks
-    for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_firstblocklist[i] = _fastmalloc_currentblocklist[i] = NULL;
-    for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_currentblock_alloc_ptr[i] = 0;
+    for (int i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_firstblocklist[i] = _fastmalloc_currentblocklist[i] = NULL;
+    for (int i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_currentblock_alloc_ptr[i] = 0;
 
     // Reset the statistics
     _fastmalloc_callcount = 0;
@@ -94,14 +93,12 @@ void fastmalloc_init() {
 //! \param [in] context - The shallowest allocation context to free
 
 void fastmalloc_freeall(const int context) {
-    int i;
-    void *ptr, *ptr2;
     // Free the chain of blocks belonging to each context, from <context> downwards
-    for (i = context; i < PPL_MAX_CONTEXTS; i++) {
-        ptr = _fastmalloc_firstblocklist[i];
+    for (int i = context; i < PPL_MAX_CONTEXTS; i++) {
+        void *ptr = _fastmalloc_firstblocklist[i];
         // The first word of each block points to the next block in the chain
         while (ptr != NULL) {
-            ptr2 = *((void **) ptr);
+            void *ptr2 = *((void **) ptr);
             free(ptr);
             ptr = ptr2;
         }
@@ -117,11 +114,10 @@ void fastmalloc_freeall(const int context) {
 //! \param [in] context - The allocation context to free
 
 void fastmalloc_free(const int context) {
-    void *ptr2;
     void *ptr = _fastmalloc_firstblocklist[context];
     // Free the chain of blocks; the first word of each block points to the next block in the chain
     while (ptr != NULL) {
-        ptr2 = *((void **) ptr);
+        void *ptr2 = *((void **) ptr);
         free(ptr);
         ptr = ptr2;
     }

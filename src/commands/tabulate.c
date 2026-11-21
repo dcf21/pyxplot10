@@ -69,16 +69,16 @@
 static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data, const int *minSet, const double *min,
                                    const int *maxSet, const double *max, pplObj *unit, char *format) {
     char msg[PPL_MSG_LENGTH];
-    char *cptr, tmpchr = '\0';
+    char tmpchr = '\0';
     double tmpdbl, multiplier[USING_ITEMS_MAX];
     int inRange, allInts[USING_ITEMS_MAX], allSmall[USING_ITEMS_MAX];
     long i, k;
-    int j, l, pos;
+    int l;
     double val;
     const int Ncolumns = data->Ncolumns_real;
 
     // Check that the firstEntries above have the same units as any supplied ranges
-    for (j = 0; j < Ncolumns; j++)
+    for (int j = 0; j < Ncolumns; j++)
         // Only columns with a range need checking
         if (minSet[j] || maxSet[j]) {
             // The range must have the same units as the data
@@ -96,7 +96,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
     // Output a column units line
     fprintf(output, "# ColumnUnits: ");
     // For each column, write its units and find the factor which converts its values into them
-    for (j = 0; j < Ncolumns; j++) {
+    for (int j = 0; j < Ncolumns; j++) {
         // Dimensionless columns need no conversion
         if (data->firstEntries[j].dimensionless) {
             fprintf(output, "1 "); // This column contains dimensionless data
@@ -105,7 +105,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
             data->firstEntries[j].real = 1.0;
             data->firstEntries[j].imag = 0.0;
             data->firstEntries[j].flagComplex = 0;
-            cptr = ppl_printUnit(c, data->firstEntries + j, multiplier + j, &tmpdbl, 0, 1, SW_DISPLAY_T);
+            char *cptr = ppl_printUnit(c, data->firstEntries + j, multiplier + j, &tmpdbl, 0, 1, SW_DISPLAY_T);
             for (i = 0; ((cptr[i] != '\0') && (cptr[i] != '(')); i++);
             i++; // Fastforward over opening bracket
             for (; ((cptr[i] != '\0') && (cptr[i] != ')')); i++) fprintf(output, "%c", cptr[i]);
@@ -115,7 +115,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
     fprintf(output, "\n");
 
     // Iterate over columns of data in this data grid, working out which columns of data are all ints, and which are all %f-able data
-    for (j = 0; j < Ncolumns; j++) { allInts[j] = allSmall[j] = 1; }
+    for (int j = 0; j < Ncolumns; j++) { allInts[j] = allSmall[j] = 1; }
     dataBlock *blk = data->first;
     // Loop over the blocks of the data table
     while (blk != NULL) {
@@ -183,7 +183,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
                     }
                 } else { // The user has supplied a format string, which we now substitute column values into
                     // Step through the format string; if it runs out before all the columns are used, it is repeated
-                    for (pos = l = 0;; pos++) {
+                    for (int pos = l = 0;; pos++) {
                         // At the end of the format string, start again if some columns remain
                         if (format[pos] == '\0') {
                             if ((l > 0) && (l < Ncolumns)) pos = 0;
@@ -285,10 +285,10 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
 
     // Read data range
     {
-        int i, pos = PARSE_tabulate_0range_list, nr = 0;
+        int pos = PARSE_tabulate_0range_list, nr = 0;
         const int o1 = PARSE_tabulate_min_0range_list;
         const int o2 = PARSE_tabulate_max_0range_list;
-        for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
+        for (int i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = maxSet[i] = 0;
         // Walk the linked list of ranges on the parser stack; each may have a minimum and a maximum
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
@@ -346,7 +346,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
     // Walk the linked list of the items to tabulate on the parser stack
     while (stk[pos].objType == PPLOBJ_NUM) {
         char *format, datafname[FNAME_LENGTH] = "";
-        int w, errCount = 5;
+        int errCount = 5;
         dataTable *data = NULL;
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
@@ -358,7 +358,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
         else format = NULL;
 
         // A filename may contain wildcards; tabulate each matching file in turn, until no more are found
-        for (w = 0;; w++) {
+        for (int w = 0;; w++) {
             // Descend into new memory context
             const int contextLocal = ppl_memAlloc_DescendIntoNewContext();
             int status = 0;

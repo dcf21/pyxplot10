@@ -198,7 +198,7 @@ char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const 
 
 char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typeable, int NSigFigs) {
     // OoM is the smallest component which is significant at the chosen number of significant figures
-    double numberOutReal, numberOutImag, OoM;
+    double numberOutReal, numberOutImag;
     char *output;
     int i = 0;
     if (N == 0) output = c->udNumDispA;
@@ -226,7 +226,7 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
         ppl_strAppendf(output, LSTR_LENGTH, &i, "%s",
                        ppl_numericDisplay(GSL_NAN, c->numdispBuff[N], NSigFigs, (typeable == SW_DISPLAY_L)));
     } else {
-        OoM = hypot(numberOutReal, numberOutImag) * pow(10, -NSigFigs);
+        double OoM = hypot(numberOutReal, numberOutImag) * pow(10, -NSigFigs);
 
         // In LaTeX, the number is in math mode. A complex number with significant real and imaginary parts is
         // bracketed.
@@ -328,20 +328,19 @@ static int unitInScheme(const ppl_context *c, const unit *u) {
 void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned char first, unit **best, double *pow) {
     // For each candidate unit, power is the power to which it must be raised to match one dimension of the quantity,
     // and score counts how many of the quantity's dimensions it then matches
-    int i, j, k, score, found = 0, BestScore = 0;
-    double power;
+    int found = 0, BestScore = 0;
 
     // Consider every unit in the database
-    for (i = 0; i < c->unit_pos; i++) {
+    for (int i = 0; i < c->unit_pos; i++) {
         if (!ppl_tempTypeMatch(in->tempType, c->unit_database[i].tempType))
             continue; // Don't convert between different temperature units
         // Try raising the unit to the power which matches each of the quantity's dimensions in turn, and score how many
         // dimensions then match
-        for (j = 0; j < UNITS_MAX_BASEUNITS; j++) {
+        for (int j = 0; j < UNITS_MAX_BASEUNITS; j++) {
             if ((c->unit_database[i].exponent[j] == 0) || (in->exponent[j] == 0)) continue;
-            power = in->exponent[j] / c->unit_database[i].exponent[j];
-            score = 0;
-            for (k = 0; k < UNITS_MAX_BASEUNITS; k++)
+            double power = in->exponent[j] / c->unit_database[i].exponent[j];
+            int score = 0;
+            for (int k = 0; k < UNITS_MAX_BASEUNITS; k++)
                 if (ppl_dblEqual(in->exponent[k], power * c->unit_database[i].exponent[k])) score++;
 
             // Some units, e.g. the hertz, may only be used on their own, to express the whole of a quantity's
@@ -402,7 +401,7 @@ void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned 
         *best = NULL;
         return;
     }
-    for (j = 0; j < UNITS_MAX_BASEUNITS; j++) { in->exponent[j] -= (*pow) * (*best)->exponent[j]; }
+    for (int j = 0; j < UNITS_MAX_BASEUNITS; j++) { in->exponent[j] -= (*pow) * (*best)->exponent[j]; }
     return;
 }
 
@@ -417,25 +416,26 @@ void ppl_udFindOptimalNextUnit(const ppl_context *c, pplObj *in, const unsigned 
 
 void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const double *UnitPow, int *UnitPref,
                      const int Nunits) {
-    int i, j;
-    double NewValueReal, NewValueImag, PrefixBestVal, NewMagnitude, OldMagnitude;
-    int PrefixBestPos, BestPrefix = 0;
+    double NewMagnitude, OldMagnitude;
+    int BestPrefix = 0;
 
     // Apply unit multipliers to the value we're going to display
-    for (i = 0; i < Nunits; i++) {
+    for (int i = 0; i < Nunits; i++) {
         in->real /= pow(UnitList[i]->multiplier, UnitPow[i]);
         in->imag /= pow(UnitList[i]->multiplier, UnitPow[i]);
         UnitPref[i] = 0;
     }
 
     // Search for alternative dimensionally-equivalent units which give a smaller value
-    for (i = 0; i < Nunits; i++)
-        for (j = 0; j < c->unit_pos; j++)
+    for (int i = 0; i < Nunits; i++)
+        for (int j = 0; j < c->unit_pos; j++)
             if (ppl_tempTypeMatch(UnitList[i]->tempType, c->unit_database[j].tempType) &&
                 (ppl_unitsDimEqual3(UnitList[i], c->unit_database + j))) {
                 OldMagnitude = hypot(in->real, in->imag);
-                NewValueReal = in->real * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier, UnitPow[i]);
-                NewValueImag = in->imag * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier, UnitPow[i]);
+                double NewValueReal = in->real * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier,
+                                                     UnitPow[i]);
+                double NewValueImag = in->imag * pow(UnitList[i]->multiplier / c->unit_database[j].multiplier,
+                                                     UnitPow[i]);
                 NewMagnitude = hypot(NewValueReal, NewValueImag);
 
                 // A user-preferred unit always beats a non-user-preferred unit
@@ -465,7 +465,7 @@ void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const do
             }
 
     // Apply unit multiplier which arise from user-preferred SI prefixes, for example, millimetres
-    for (i = 0; i < Nunits; i++)
+    for (int i = 0; i < Nunits; i++)
         // Prefixes are numbered 0 (yocto) to 16 (yotta), with 8 meaning no prefix, so prefix p multiplies by
         // 10^((p-8)*3)
         if (UnitList[i]->userSel) {
@@ -477,14 +477,14 @@ void ppl_udPrefixFix(const ppl_context *c, pplObj *in, unit **UnitList, const do
     // Search for an SI prefix we can use to reduce the size of this number
     if (c->set->term_current.UnitDisplayPrefix == SW_ONOFF_ON) {
         OldMagnitude = hypot(in->real, in->imag);
-        PrefixBestPos = -1;
-        PrefixBestVal = OldMagnitude;
-        for (i = 0; i < Nunits; i++)
+        int PrefixBestPos = -1;
+        double PrefixBestVal = OldMagnitude;
+        for (int i = 0; i < Nunits; i++)
             if (ppl_dblEqual(UnitPow[i], 1))
                 if (UnitList[i]->userSel == 0)
                     // Try each SI prefix which this unit may take, e.g. km but not kg/1000, in steps of a factor of
                     // 1000
-                    for (j = UnitList[i]->minPrefix; j <= UnitList[i]->maxPrefix; j += 3) {
+                    for (int j = UnitList[i]->minPrefix; j <= UnitList[i]->maxPrefix; j += 3) {
                         NewMagnitude = OldMagnitude / pow(10, j);
                         // Choose the prefix which gives the smallest value which is at least 1
                         if ((NewMagnitude >= 1) && ((NewMagnitude < PrefixBestVal) || (PrefixBestVal < 1))) {
@@ -525,7 +525,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
     unsigned char UnitDisp[UNITS_MAX_BASEUNITS];
     double ExpMax = 0;
     int pos = 0, OutputPos = 0;
-    int i, j = 0, k, l, found;
+    int j = 0, l;
     PreferredUnit *pu;
 
     // Use the user's display style unless the caller asked for one, and choose which of three static output buffers to
@@ -551,7 +551,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
     {
         // Use the preferred unit's list of units, powers and prefixes; the residual value is the number to display in
         // front of them
-        for (i = 0; i < pu->NUnits; i++) {
+        for (int i = 0; i < pu->NUnits; i++) {
             UnitList[i] = c->unit_database + pu->UnitID[i];
             UnitPow[i] = pu->exponent[i];
             UnitPref[i] = (pu->prefix[i] >= 0) ? pu->prefix[i] - 8 : 0;
@@ -560,7 +560,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
         pos = pu->NUnits;
         residual.real /= pu->value.real;
         residual.imag /= pu->value.real;
-        for (i = 0; i < UNITS_MAX_BASEUNITS; i++) residual.exponent[i] = 0;
+        for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) residual.exponent[i] = 0;
         residual.dimensionless = 1;
     } else // Not using a preferred unit
     {
@@ -594,8 +594,8 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
     // Write the units in order of decreasing power, so that those with positive powers come first, and those with
     // negative powers can follow a /
     while (1) {
-        found = 0;
-        for (i = 0; i < pos; i++)
+        int found = 0;
+        for (int i = 0; i < pos; i++)
             // Find the unit with the highest power which has not yet been written
             if ((UnitDisp[i] == 0) && ((found == 0) || (UnitPow[i] > ExpMax))) {
                 ExpMax = UnitPow[i];
@@ -663,7 +663,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
             // In LaTeX, underscores in names must be escaped
             else {
                 // Copy the name, escaping underscores
-                for (k = l = 0; temp[k] != '\0'; k++) {
+                for (int k = l = 0; temp[k] != '\0'; k++) {
                     if (temp[k] == '_')
                         ppl_strAppendChar(output, LSTR_LENGTH, &OutputPos,
                                           '\\'); // ... or with escaped underscores for LaTeX
@@ -739,8 +739,8 @@ int ppl_unitNameCmp(const char *in, const char *unit, const unsigned char caseSe
 void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, int *end, int *errpos, char *errText) {
     // i is the position reached in the string; power is the power of the unit being read; powerneg is -1 after a / and
     // 0 when the string has ended; p is set when a unit name has been matched
-    int i = 0, j = 0, k, l, m, p;
-    double power = 1.0, powerneg = 1.0, multiplier;
+    int i = 0, j = 0, k, m;
+    double power = 1.0, powerneg = 1.0;
     pplObjNum(out, out->amMalloced, 0.0, 0.0);
 
     // The string may begin with a number, e.g. "1000 m", optionally followed by * or /
@@ -763,12 +763,12 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
 
     // Read units one at a time, each optionally followed by a power and then * or /
     while (powerneg != 0.0) {
-        p = 0;
+        int p = 0;
         while (((unsigned char) in[i] <= ' ') && (in[i] != '\0')) i++;
         // Try to match each unit in the database: abbreviated names are case-sensitive, and full names and alternative
         // names case-insensitive
         for (j = 0; j < c->unit_pos; j++) {
-            multiplier = 1.0;
+            double multiplier = 1.0;
             if ((k = ppl_unitNameCmp(in + i, c->unit_database[j].nameAp, 1)) != 0) p = 1;
             else if ((k = ppl_unitNameCmp(in + i, c->unit_database[j].nameAs, 1)) != 0) p = 1;
             else if ((k = ppl_unitNameCmp(in + i, c->unit_database[j].nameFp, 0)) != 0) p = 1;
@@ -781,7 +781,7 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
             // Otherwise try each SI prefix which the unit can take, followed by its name
             else {
                 // Prefixes are numbered 0 (yocto) to 16 (yotta), with 8 meaning no prefix
-                for (l = c->unit_database[j].minPrefix / 3 + 8; l <= c->unit_database[j].maxPrefix / 3 + 8; l++) {
+                for (int l = c->unit_database[j].minPrefix / 3 + 8; l <= c->unit_database[j].maxPrefix / 3 + 8; l++) {
                     if (l == 8) continue;
                     for (k = 0;
                          ((SIprefixes_full[l][k] != '\0') && (toupper(SIprefixes_full[l][k]) == toupper(in[i + k])));
@@ -921,7 +921,7 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
 
 void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, const int OutputContext, int *errpos,
                           char *errText) {
-    int PrefixOut, i, j, k, l, m, p;
+    int i, k, m;
     double power = 1.0, powerneg = 1.0;
     pplObj UnitVal;
 
@@ -944,12 +944,12 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
     // Read the string again, this time recording each unit, its prefix and its power, so that quantities with these
     // dimensions can be displayed in these units
     while ((powerneg != 0.0) && (outpos < UNITS_MAX_BASEUNITS)) {
-        PrefixOut = -1;
-        p = 0;
+        int PrefixOut = -1;
+        int p = 0;
         while (((unsigned char) instr[i] <= ' ') && (instr[i] != '\0')) i++;
         // Try to match each unit in the database, by its names, or by an SI prefix followed by its names, as in
         // ppl_unitsStringEvaluate()
-        for (j = 0; j < c->unit_pos; j++) {
+        for (int j = 0; j < c->unit_pos; j++) {
             if ((k = ppl_unitNameCmp(instr + i, c->unit_database[j].nameAp, 1)) != 0) p = 1;
             else if ((k = ppl_unitNameCmp(instr + i, c->unit_database[j].nameAs, 1)) != 0) p = 1;
             else if ((k = ppl_unitNameCmp(instr + i, c->unit_database[j].nameFp, 0)) != 0) p = 1;
@@ -962,7 +962,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
             // Otherwise try each SI prefix which the unit can take, followed by its name
             else {
                 // Prefixes are numbered 0 (yocto) to 16 (yotta), with 8 meaning no prefix
-                for (l = c->unit_database[j].minPrefix / 3 + 8; l <= c->unit_database[j].maxPrefix / 3 + 8; l++) {
+                for (int l = c->unit_database[j].minPrefix / 3 + 8; l <= c->unit_database[j].maxPrefix / 3 + 8; l++) {
                     if (l == 8) continue;
                     for (k = 0;
                          ((SIprefixes_full[l][k] != '\0') && (toupper(SIprefixes_full[l][k]) == toupper(instr[i + k])));

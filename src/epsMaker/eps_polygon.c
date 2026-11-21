@@ -44,7 +44,6 @@
 
 void eps_polygon_RenderEPS(EPSComm *x) {
     // Variables for the shape and style of the polygon
-    int i;
     unsigned char filled = 0, stroked = 0;
     withWords ww;
     double lw_scale;
@@ -65,7 +64,7 @@ void eps_polygon_RenderEPS(EPSComm *x) {
     if (eps_core_isVisible(x)) {
         fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n", x->current->polygonPoints[0] * M_TO_PS,
                 x->current->polygonPoints[1] * M_TO_PS);
-        for (i = 0; i < x->current->NpolygonPoints; i++)
+        for (int i = 0; i < x->current->NpolygonPoints; i++)
             fprintf(x->epsbuffer, "%.2f %.2f lineto\n", x->current->polygonPoints[2 * i] * M_TO_PS,
                     x->current->polygonPoints[2 * i + 1] * M_TO_PS);
         fprintf(x->epsbuffer, "closepath\nfill\n");
@@ -91,7 +90,7 @@ void eps_polygon_RenderEPS(EPSComm *x) {
     if (eps_core_isVisible(x)) {
         fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n", x->current->polygonPoints[0] * M_TO_PS,
                 x->current->polygonPoints[1] * M_TO_PS);
-        for (i = 0; i < x->current->NpolygonPoints; i++)
+        for (int i = 0; i < x->current->NpolygonPoints; i++)
             fprintf(x->epsbuffer, "%.2f %.2f lineto\n", x->current->polygonPoints[2 * i] * M_TO_PS,
                     x->current->polygonPoints[2 * i + 1] * M_TO_PS);
         fprintf(x->epsbuffer, "closepath\nstroke\n");
@@ -100,7 +99,7 @@ void eps_polygon_RenderEPS(EPSComm *x) {
 
     // Factor four corners of box into EPS file's bounding box
     if (filled || stroked)
-        for (i = 0; i < x->current->NpolygonPoints; i++)
+        for (int i = 0; i < x->current->NpolygonPoints; i++)
             eps_core_BoundingBox(x, x->current->polygonPoints[2 * i] * M_TO_PS,
                                  x->current->polygonPoints[2 * i + 1] * M_TO_PS, lw);
 

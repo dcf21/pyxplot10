@@ -99,11 +99,10 @@ char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username
 
 char *ppl_unixGetIRLName(pplerr_context *context) {
     static char name[FNAME_LENGTH];
-    int i;
     struct passwd *ptr = UnixGetPwEntry(context);
     if (ptr == NULL) return getlogin(); // In case of failure, return user's login.
     snprintf(name, FNAME_LENGTH, "%s", ptr->pw_gecos);
-    for (i = 0; name[i] != '\0'; i++)
+    for (int i = 0; name[i] != '\0'; i++)
         if (name[i] == ',') name[i] = '\0'; // Remove commas from in-real-life name
     return name;
 }
@@ -119,7 +118,7 @@ char *ppl_unixGetIRLName(pplerr_context *context) {
 
 char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, char *out, const size_t outLen) {
     char userName[1024];
-    char *scanIn, *homeDir;
+    char *scanIn;
     int i;
     if (in[0] == '/') ppl_snprintfTrunc(out, outLen, "%s", in);
     else if (in[0] != '~') ppl_snprintfTrunc(out, outLen, "%s%s%s", cwd, PATHLINK, in);
@@ -130,7 +129,7 @@ char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, ch
         for (scanIn = in + 1, i = 0; ((*scanIn != '/') && (*scanIn != '\0') && (i < (int) sizeof(userName) - 1));
              userName[i++] = *(scanIn++));
         userName[i] = '\0';
-        homeDir = ((*scanIn == '/') || (*scanIn == '\0')) ? ppl_unixGetUserHomeDir(context, userName) : NULL;
+        char *homeDir = ((*scanIn == '/') || (*scanIn == '\0')) ? ppl_unixGetUserHomeDir(context, userName) : NULL;
         if (homeDir != NULL) ppl_snprintfTrunc(out, outLen, "%s%s", homeDir, scanIn);
         else ppl_snprintfTrunc(out, outLen, "%s", in);
     }

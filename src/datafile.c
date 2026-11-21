@@ -116,7 +116,6 @@ dataBlock *ppldata_NewDataBlock(const int Ncolumns_real, const int Ncolumns_obj,
 
 dataTable *ppldata_NewDataTable(const int Ncolumns_real, const int Ncolumns_obj, const int memContext,
                                 const int length) {
-    int i;
 
     // Allocate the table, with its first block
     dataTable *output = (dataTable *) ppl_memAlloc_incontext(sizeof(dataTable), memContext);
@@ -127,7 +126,7 @@ dataTable *ppldata_NewDataTable(const int Ncolumns_real, const int Ncolumns_obj,
     output->memContext = memContext;
     output->firstEntries = (pplObj *) ppl_memAlloc_incontext(Ncolumns_real * sizeof(pplObj), memContext);
     if (output->firstEntries == NULL) return NULL;
-    for (i = 0; i < Ncolumns_real; i++) pplObjNum(output->firstEntries + i, 0, 0, 0);
+    for (int i = 0; i < Ncolumns_real; i++) pplObjNum(output->firstEntries + i, 0, 0, 0);
     output->first = ppldata_NewDataBlock(Ncolumns_real, Ncolumns_obj, memContext, length);
     output->current = output->first;
     if (output->first == NULL) return NULL;
@@ -224,8 +223,6 @@ int ppldata_RawDataTable_AddRow(rawDataTable *i) {
 
 void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
     // Variables for printing the table
-    pplObj v;
-    int j, k;
 
     // Report an empty table
     if (i == NULL) {
@@ -239,11 +236,11 @@ void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
     // Print each block of the table
     while (blk != NULL) {
         // Print each row, with blank lines where the data are split
-        for (j = 0; j < blk->blockPosition; j++) {
+        for (int j = 0; j < blk->blockPosition; j++) {
             if (blk->split[j]) printf("\n\n");
             // Print each value in the row, with its units
-            for (k = 0; k < Ncolumns; k++) {
-                v = i->firstEntries[k];
+            for (int k = 0; k < Ncolumns; k++) {
+                pplObj v = i->firstEntries[k];
                 v.real = blk->data_real[j * Ncolumns + k];
                 v.imag = 0.0;
                 v.flagComplex = 0;
@@ -273,7 +270,6 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                               char *errtext) {
     char msg[PPL_MSG_LENGTH];
     FILE *infile;
-    char *filter, *filterArgs, **argList;
     int i, j, k;
     sigset_t sigs;
 
@@ -291,7 +287,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
 
     // glob filename
     {
-        int i, done = 0;
+        int done = 0;
         wordexp_t wordExp;
         glob_t globData;
         char fName[FNAME_LENGTH];
@@ -306,7 +302,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
             return NULL;
         };
         // Find the requested match of the wildcards among the files matching each word of the expanded filename
-        for (i = 0; i < wordExp.we_wordc; i++) {
+        for (int i = 0; i < wordExp.we_wordc; i++) {
             // Report a word which matches no files
             if ((glob(wordExp.we_wordv[i], 0, NULL, &globData) != 0) || ((i == 0) && (globData.gl_pathc == 0))) {
                 if (wildcardMatchNumber == 0)
@@ -357,14 +353,14 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
         char *dkey = NULL;
         // This filter matches
         if (ppl_strWildcardTest(filename, dictIter->key)) {
-            filter = (char *) ((pplObj *) dictIter->data)->auxil;
+            char *filter = (char *) ((pplObj *) dictIter->data)->auxil;
             // Log the filter in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Using input filter '%s'.", filter);
                 ppl_log(&c->errcontext, msg);
             }
-            filterArgs = (char *) malloc(strlen(filter) + 1);
-            argList = (char **) malloc((strlen(filter) / 2 + 3) * sizeof(char *));
+            char *filterArgs = (char *) malloc(strlen(filter) + 1);
+            char **argList = (char **) malloc((strlen(filter) / 2 + 3) * sizeof(char *));
             // Failure to allocate memory is reported as an error
             if ((filterArgs == NULL) || (argList == NULL)) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (01).");
@@ -780,7 +776,6 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
                            pplExpr *selectExpr, const int continuity, char *filename, const long block_count,
                            const long index_number, char **colHeads, const int NcolHeads, pplObj *colUnits,
                            const int NcolUnits, int *status, char *errtext, int *errCount, const int iterDepth) {
-    int i;
     long linenumber_count = 0;
     int discontinuity = 1;
     const int contextRaw = (*in)->memContext;
@@ -788,8 +783,8 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
     unsigned char hadcomma[MAX_DATACOLS];
 
     // Each column starts at a word boundary
-    for (i = 0; i < MAX_DATACOLS; i++) hadspace[i] = 1;
-    for (i = 0; i < MAX_DATACOLS; i++) hadcomma[i] = 0;
+    for (int i = 0; i < MAX_DATACOLS; i++) hadspace[i] = 1;
+    for (int i = 0; i < MAX_DATACOLS; i++) hadcomma[i] = 0;
 
     // Make a row of data from the next word of each line read, until the lines run out
     while (!cancellationFlag) {
@@ -802,7 +797,7 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
         while ((blk != NULL) && (Ncols < MAX_DATACOLS)) {
             file_linenumber[0] = -1;
             // Each stored line
-            for (i = 0; ((i < blk->blockPosition) && (Ncols < MAX_DATACOLS)); i++) {
+            for (int i = 0; ((i < blk->blockPosition) && (Ncols < MAX_DATACOLS)); i++) {
                 char *s = blk->text[i];
                 // A line which has run out supplies a blank value
                 if (s == NULL) {
@@ -914,9 +909,8 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
     long jo = 0;
     // Make an array of pointers to the rows
     while (blk != NULL) {
-        long ji;
         // Each row of the block
-        for (ji = 0; ji < blk->blockPosition; ji++, jo++) {
+        for (long ji = 0; ji < blk->blockPosition; ji++, jo++) {
             sorter[jo].data_real = &(blk->data_real[Nd * ji]);
             sorter[jo].data_obj = &(blk->data_obj[Nc * ji]);
             sorter[jo].text = blk->text[ji];
@@ -945,21 +939,20 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
     if (output != NULL) {
         const int sc = sortCol - in->Ncolumns_real;
         int i, io;
-        long jo;
         for (i = 0, io = 0; i < Nc; i++) output->firstEntries[io++] = in->firstEntries[i];
-        for (jo = 0; jo < Nr; jo++)
+        for (long jo = 0; jo < Nr; jo++)
             for (i = 0, io = 0; i < Nc; i++) output->first->data_real[(io++) + Nc * jo] = sorter[jo].data_real[i];
-        for (jo = 0; jo < Nr; jo++)
+        for (long jo = 0; jo < Nr; jo++)
             for (i = 0, io = 0; i < Nd; i++)
                 if (i != sc) output->first->data_obj[(io++) + (Nd - 1) * jo] = sorter[jo].data_obj[i];
-        for (jo = 0; jo < Nr; jo++) output->first->text[jo] = sorter[jo].text;
-        for (jo = 0; jo < Nr; jo++)
+        for (long jo = 0; jo < Nr; jo++) output->first->text[jo] = sorter[jo].text;
+        for (long jo = 0; jo < Nr; jo++)
             for (i = 0, io = 0; i < Nc; i++)
                 output->first->fileLine_real[(io++) + Nc * jo] = sorter[jo].fileLine_real[i];
-        for (jo = 0; jo < Nr; jo++)
+        for (long jo = 0; jo < Nr; jo++)
             for (i = 0, io = 0; i < Nd; i++)
                 if (i != sc) output->first->fileLine_obj[(io++) + (Nd - 1) * jo] = sorter[jo].fileLine_obj[i];
-        for (jo = 0; jo < Nr; jo++) output->first->split[jo] = sorter[jo].split;
+        for (long jo = 0; jo < Nr; jo++) output->first->split[jo] = sorter[jo].split;
         output->Nrows = Nr;
         output->first->blockPosition = Nr;
     }
@@ -987,9 +980,8 @@ static char *ppldata_fetchFromSpool(parserLine **dataSpool) {
 //! \return Zero on success, or one if the expressions could not be compiled
 
 int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols, char *errtext) {
-    int i;
     // Compile the expression for each column, $1, $2, ...
-    for (i = 0; i < Ncols; i++) {
+    for (int i = 0; i < Ncols; i++) {
         int end = 0, ep = 0, es = 0;
         char ascii[16];
         pplExpr *exptmp = NULL;
@@ -1064,7 +1056,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                       const long *everyList, const int continuity, const int persistent, int *status, char *errtext,
                       int *errCount, const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    int readFromCommandLine = 0, discontinuity = 0, hadwhitespace, hadcomma, oneColumnInput = 1;
+    int readFromCommandLine = 0, discontinuity = 0, hadwhitespace, oneColumnInput = 1;
     char lineNumberStr[32];
     const long linestep = everyList[0], blockstep = everyList[1], linefirst = everyList[2], blockfirst = everyList[3],
                linelast = everyList[4], blocklast = everyList[5];
@@ -1080,7 +1072,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
     char linebuffer[LSTR_LENGTH], *lineptr = linebuffer, *linebufferPtr = &linebuffer[0], *cptr;
 
     // Variables for reading the data file
-    int i, j, k, l, m;
+    int i, j, l, m;
 
     // Column and row headings and units, read from comment lines in the file
     char **columnHeadings = NULL;
@@ -1274,7 +1266,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld column headings read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
                     // Log each heading
-                    for (k = 0; k < itemsOnLine; k++) {
+                    for (int k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Column heading %d: %s", k, columnHeadings[k]);
                         ppl_log(&c->errcontext, msg);
                     }
@@ -1333,7 +1325,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld row headings read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
                     // Log each heading
-                    for (k = 0; k < itemsOnLine; k++) {
+                    for (int k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Row heading %d: %s", k, rowHeadings[k]);
                         ppl_log(&c->errcontext, msg);
                     }
@@ -1376,7 +1368,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 // Evaluate each unit in turn
-                for (k = 0; cptr[k] != '\0'; k++) {
+                for (int k = 0; cptr[k] != '\0'; k++) {
                     // Skip whitespace between units
                     if ((unsigned char) cptr[k] <= ' ') {
                         continue;
@@ -1406,7 +1398,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld column units read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
                     // Log each unit
-                    for (k = 0; k < itemsOnLine; k++) {
+                    for (int k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Column unit %d: %s", k,
                                           ppl_unitsNumericDisplay(c, columnUnits + k, 0, 0, 0));
                         ppl_log(&c->errcontext, msg);
@@ -1449,7 +1441,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 itemsOnLine = 0;
                 hadwhitespace = 1;
                 // Evaluate each unit in turn
-                for (k = 0; cptr[k] != '\0'; k++) {
+                for (int k = 0; cptr[k] != '\0'; k++) {
                     // Skip whitespace between units
                     if ((unsigned char) cptr[k] <= ' ') {
                         continue;
@@ -1479,7 +1471,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld row units read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
                     // Log each unit
-                    for (k = 0; k < itemsOnLine; k++) {
+                    for (int k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Row unit %d: %s", k,
                                           ppl_unitsNumericDisplay(c, rowUnits + k, 0, 0, 0));
                         ppl_log(&c->errcontext, msg);
@@ -1536,7 +1528,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             // Count the number of data items on this line
             itemsOnLine = 0;
             hadwhitespace = 1;
-            hadcomma = 0;
+            int hadcomma = 0;
             // Split the line into words at whitespace or commas
             for (i = 0; linebuffer[i] != '\0'; i++) {
                 // Whitespace separates words
@@ -1643,8 +1635,6 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
                                char *const *dummyNames, const int nDummy, const double *rasterX, const int rasterXlen,
                                const pplObj *unitX, const double *rasterY, const int rasterYlen, const pplObj *unitY,
                                const int iterDepth) {
-    long p;
-    int j;
     s->results = NULL;
     s->failed = NULL;
 #ifndef _OPENMP
@@ -1668,7 +1658,7 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
     // Only large numbers of samples are worth sharing between threads, and only if every function is safe to evaluate
     // in parallel
     if ((s->nSamples < PARALLEL_MIN_SAMPLES) || (omp_get_max_threads() < 2)) return 0;
-    for (j = 0; j < fnlist_len; j++)
+    for (int j = 0; j < fnlist_len; j++)
         if (!ppl_expThreadSafe(c, fnlist[j], (const char *const *) dummyNames, nDummy)) return 0;
 
     // Allocate space for the values of the functions at a block of samples
@@ -1683,7 +1673,7 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
         return 0; // Fall back to evaluating the functions serially
     }
     // Initialise each value
-    for (p = 0; p < PARALLEL_BLOCK_SAMPLES * fnlist_len; p++) {
+    for (long p = 0; p < PARALLEL_BLOCK_SAMPLES * fnlist_len; p++) {
         s->results[p].refCount = 1;
         pplObjZom(&s->results[p], 0);
     }
@@ -1698,9 +1688,8 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
 //! \param [in] nEvaluated - The number of functions which were evaluated at the sample
 
 static void discardSample(parallelSampler *s, const long q, const int nEvaluated) {
-    int g;
     // Free the values of the functions already evaluated
-    for (g = 0; g < nEvaluated; g++) {
+    for (int g = 0; g < nEvaluated; g++) {
         pplObj *r = &s->results[q * s->fnlist_len + g];
         ppl_garbageObject(r);
         r->refCount = 1;
@@ -1725,12 +1714,11 @@ static void parallelSamplerFill(parallelSampler *s, const long start) {
         // Each thread evaluates the functions in a worker context of its own, with its own dummy variables
         ppl_context *w = ppl_contextWorkerNew(s->c);
         pplObj *dummy[2] = {NULL, NULL};
-        long q;
-        int a, k;
+        int k;
         // Each thread gets its own copies of the dummy variables
         if (w != NULL) {
             // Copy each dummy variable into the thread's own namespace
-            for (a = 0; a < s->nDummy; a++) {
+            for (int a = 0; a < s->nDummy; a++) {
                 pplObj temp;
                 ppl_contextGetVarPointer(w, s->dummyNames[a], &dummy[a], &temp); // Creates the variable
                 pplObjCpy(dummy[a], (pplObj *) ((a == 0) ? s->unitX : s->unitY), 0, dummy[a]->amMalloced, 1);
@@ -1745,9 +1733,8 @@ static void parallelSamplerFill(parallelSampler *s, const long start) {
 
 #pragma omp for schedule(dynamic, 256)
         // Share the samples of the block between the threads
-        for (q = 0; q < s->blockLen; q++) {
+        for (long q = 0; q < s->blockLen; q++) {
             const long sample = s->blockStart + q;
-            int f;
             // Samples which a thread cannot evaluate are left to be evaluated serially
             if ((w == NULL) || cancellationFlag) {
                 s->failed[q] = 1; // Evaluated serially later, if at all
@@ -1756,7 +1743,7 @@ static void parallelSamplerFill(parallelSampler *s, const long start) {
             dummy[0]->real = s->rasterX[sample % s->rasterXlen];
             if (s->nDummy > 1) dummy[1]->real = s->rasterY[sample / s->rasterXlen];
             // Evaluate each function at this sample
-            for (f = 0; f < s->fnlist_len; f++) {
+            for (int f = 0; f < s->fnlist_len; f++) {
                 const int stkLevelOld = w->stackPtr; // Stack: note its level, to discard the value afterwards
                 const pplObj *ob = ppl_expEval(w, s->fnlist[f], &k, 0, s->iterDepth);
                 // Only plain values may leave the worker; other objects (e.g. functions) could refer to its private
@@ -1782,9 +1769,8 @@ static void parallelSamplerFill(parallelSampler *s, const long start) {
 //! \param [in,out] s - The state of the parallel evaluation
 
 static void parallelSamplerFree(parallelSampler *s) {
-    long q;
     if (s->results == NULL) return;
-    for (q = 0; q < PARALLEL_BLOCK_SAMPLES * s->fnlist_len; q++) ppl_garbageObject(&s->results[q]);
+    for (long q = 0; q < PARALLEL_BLOCK_SAMPLES * s->fnlist_len; q++) ppl_garbageObject(&s->results[q]);
     free(s->results);
     free(s->failed);
     s->results = NULL;
@@ -1890,8 +1876,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     char msg[PPL_MSG_LENGTH];
     int discontinuity2 = 0;
     const int sampleGrid = (rasterY != NULL);
-    int a, j, k;
-    long expectedNrows;
+    int k;
     char buffer[FNAME_LENGTH];
     pplObj colData[USING_ITEMS_MAX + 2];
     pplObj *ordinateVar[2], dummyTemp[2];
@@ -1920,7 +1905,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
             return;
     }
     // Initialise the values of the functions
-    for (a = 0; a < USING_ITEMS_MAX + 2; a++) {
+    for (int a = 0; a < USING_ITEMS_MAX + 2; a++) {
         colData[a].refCount = 1;
         pplObjZom(&colData[a], 0); // Also clears the pointers which the garbage collector follows
     }
@@ -1947,7 +1932,6 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
 
     // Loop over ordinate values
     {
-        int i, i2;
         const int ilen = rasterXlen, i2len = sampleGrid ? rasterYlen : 1;
         int offset = 1 + (!parametric) + ((!parametric) && sampleGrid);
         long p = 0;
@@ -1963,15 +1947,15 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
         }
 
         // Sample each point of the raster, or of the grid
-        for (i2 = 0; i2 < i2len; i2++, discontinuity2 = 1)
+        for (int i2 = 0; i2 < i2len; i2++, discontinuity2 = 1)
             // Each point along x
-            for (i = 0; i < ilen; i++, p++) {
+            for (int i = 0; i < ilen; i++, p++) {
                 if (cancellationFlag) goto CANCEL;
 
                 // Get a pointer to the value of the variable 'x' in the user's variable space
                 ordinateVar[1] = NULL;
                 // Set the dummy variable, or variables, to the position of this sample
-                for (a = 0; a <= sampleGrid; a++) {
+                for (int a = 0; a <= sampleGrid; a++) {
                     char *v, *v2;
                     pplObj **ru;
                     // The first dummy variable is x, or t or u for parametric plots; the second is y, or v
@@ -2018,13 +2002,13 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                     // The functions have already been evaluated in parallel: take ownership of their values
                     pplObj *r = &parallel.results[(p - parallel.blockStart) * fnlist_len];
                     // Take each value
-                    for (j = 0; j < fnlist_len; j++) {
+                    for (int j = 0; j < fnlist_len; j++) {
                         memcpy(&colData[j + offset], &r[j], sizeof(pplObj));
                         pplObjZom(&r[j], 0);
                     }
                 } else
                     // Evaluate each function
-                    for (j = 0; j < fnlist_len; j++) {
+                    for (int j = 0; j < fnlist_len; j++) {
                         const int stkLevelOld = c->stackPtr;
                         pplObj *ob = ppl_expEval(c, fnlist[j], &k, 0, iterDepth);
                         // Report a failure to evaluate the function, and skip this sample
@@ -2051,7 +2035,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                         pplObjCpy(&colData[j + offset], ob, 0, 0, 1);
                         ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
                     }
-                expectedNrows = (*out)->Nrows + 1;
+                long expectedNrows = (*out)->Nrows + 1;
                 // Apply the using expressions to the values
                 if (!(*status)) {
                     ppldata_ApplyUsingList(c, *out, usingExprs, labelExpr, selectExpr, continuity, &discontinuity2,
@@ -2063,17 +2047,16 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                 if (sampleGrid &&
                     ((*out)->Nrows < expectedNrows)) // If sampling a grid, MUST have entry for every point
                 {
-                    int i;
-                    for (i = 0; i < (*out)->Ncolumns_real; i++)
+                    for (int i = 0; i < (*out)->Ncolumns_real; i++)
                         (*out)->current->data_real[i + (*out)->current->blockPosition * (*out)->Ncolumns_real] =
                                 GSL_NAN;
-                    for (i = 0; i < (*out)->Ncolumns_obj; i++)
+                    for (int i = 0; i < (*out)->Ncolumns_obj; i++)
                         pplObjNum(&(*out)->current->data_obj[i + (*out)->current->blockPosition * (*out)->Ncolumns_obj],
                                   0, GSL_NAN, 0);
                     (*out)->current->text[(*out)->current->blockPosition] = NULL;
                     ppldata_DataTable_AddRow(*out);
                 }
-                for (j = 0; j < fnlist_len; j++) ppl_garbageObject(&colData[j + offset]);
+                for (int j = 0; j < fnlist_len; j++) ppl_garbageObject(&colData[j + offset]);
                 *status = 0;
 
                 // Reset the variable x (and maybe y or t) to its old value
@@ -2126,7 +2109,7 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
                          pplExpr *sortBy, const int continuity, int *status, char *errtext, int *errCount,
                          const int iterDepth) {
     char msg[PPL_MSG_LENGTH];
-    int discontinuity = 0, i, j;
+    int discontinuity = 0;
     const int vlen = ((pplVector *) objList[0].auxil)->v->size;
     pplObj colData[USING_ITEMS_MAX + 2];
     gsl_vector *v[USING_ITEMS_MAX + 2];
@@ -2150,10 +2133,10 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
         autoUsingExprs = 1;
         if ((*status = ppldata_autoUsingList(c, usingExprs, Ncols = objListLen, errtext))) return;
     }
-    for (i = 0; i < objListLen; i++) v[i] = ((pplVector *) objList[i].auxil)->v;
-    for (i = 0; i < objListLen; i++) pplObjNum(colData + i + 1, 0, 0, 0);
-    for (i = 0; i < objListLen; i++) colData[i + 1].refCount = 1;
-    for (i = 0; i < objListLen; i++) ppl_unitsDimCpy(colData + i + 1, objList + i);
+    for (int i = 0; i < objListLen; i++) v[i] = ((pplVector *) objList[i].auxil)->v;
+    for (int i = 0; i < objListLen; i++) pplObjNum(colData + i + 1, 0, 0, 0);
+    for (int i = 0; i < objListLen; i++) colData[i + 1].refCount = 1;
+    for (int i = 0; i < objListLen; i++) ppl_unitsDimCpy(colData + i + 1, objList + i);
 
     // If sortBy is not null, add it to using list
     if (sortBy != NULL) {
@@ -2174,11 +2157,11 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
     }
 
     // Loop over data
-    for (i = 0; i < vlen; i++) {
+    for (int i = 0; i < vlen; i++) {
         char *buffer = "vector data";
         if (cancellationFlag) break;
         pplObjNum(colData + 0, 0, i, 0);
-        for (j = 0; j < objListLen; j++) colData[j + 1].real = gsl_vector_get(v[j], i);
+        for (int j = 0; j < objListLen; j++) colData[j + 1].real = gsl_vector_get(v[j], i);
         ppldata_ApplyUsingList(c, *out, usingExprs, labelExpr, selectExpr, continuity, &discontinuity, NULL, colData,
                                objListLen, buffer, 0, NULL, i, 0, 0, DATAFILE_COL, NULL, 0, NULL, 0, status, errtext,
                                errCount, iterDepth);
@@ -2424,11 +2407,10 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
 
         // See if spacing has been specified
         if ((poss > 0) && (stko[poss].objType != PPLOBJ_ZOM)) {
-            int i;
             pplObj *spacing = &stko[poss];
             spacingSet = 1;
             // Work out the number of samples from the spacing, for each raster
-            for (i = 0; i <= sampleGrid; i++) {
+            for (int i = 0; i <= sampleGrid; i++) {
                 double SpacingDbl, NumberOfSamplesDbl;
                 int *rast_log = i ? &rasterYlog : &rasterXlog;
                 double *rast_min = i ? &rasterYmin : &rasterXmin;
@@ -2702,11 +2684,11 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
 
     // Print using items to log file
     if (DEBUG) {
-        int logi = 0, logj;
+        int logi = 0;
         ppl_snprintfTrunc(msg + logi, sizeof(msg) - (logi), "Using ");
         logi += strlen(msg + logi);
         // Log each using item
-        for (logj = 0; logj < Nusing; logj++) {
+        for (int logj = 0; logj < Nusing; logj++) {
             if (logj == 0) msg[logi++] = ':';
             ppl_snprintfTrunc(msg + logi, sizeof(msg) - (logi), "%s", usingExprs[logj]->ascii);
         }

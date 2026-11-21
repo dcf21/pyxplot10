@@ -431,7 +431,6 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 
 int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
     // Interlaced GIFs store every 8th row, then the rows halfway between them, then the quarter rows, then the odd rows
-    int i, j;
 
     // Allocate the reordered image
     unsigned char *out = (unsigned char *) ppl_memAlloc(image->height * image->width);
@@ -447,32 +446,32 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
     // First pass is eights
     unsigned char *outp = out;
     // Rows 0, 8, 16, ...
-    for (i = 0; i < image->height; i += 8) {
-        for (j = 0; j < image->width; j++) *outp++ = *in++;
+    for (int i = 0; i < image->height; i += 8) {
+        for (int j = 0; j < image->width; j++) *outp++ = *in++;
         outp += 7 * image->width;
     }
 
     // Next is fours
     outp = out + 4 * image->width;
     // Rows 4, 12, 20, ...
-    for (i = 4; i < image->height; i += 8) {
-        for (j = 0; j < image->width; j++) *outp++ = *in++;
+    for (int i = 4; i < image->height; i += 8) {
+        for (int j = 0; j < image->width; j++) *outp++ = *in++;
         outp += 7 * image->width;
     }
 
     // Next is twos
     outp = out + 2 * image->width;
     // Rows 2, 6, 10, ...
-    for (i = 2; i < image->height; i += 4) {
-        for (j = 0; j < image->width; j++) *outp++ = *in++;
+    for (int i = 2; i < image->height; i += 4) {
+        for (int j = 0; j < image->width; j++) *outp++ = *in++;
         outp += 3 * image->width;
     }
 
     // Next is ones
     outp = out + image->width;
     // Rows 1, 3, 5, ...
-    for (i = 1; i < image->height; i += 2) {
-        for (j = 0; j < image->width; j++) *outp++ = *in++;
+    for (int i = 1; i < image->height; i += 2) {
+        for (int j = 0; j < image->width; j++) *outp++ = *in++;
         outp += image->width;
     }
 
@@ -500,7 +499,7 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsi
         unsigned char *s;
         unsigned len;
     } table[1 << MAXCS];
-    int tmax = (1 << MAXCS) - 1, i, j;
+    int tmax = (1 << MAXCS) - 1, i;
 
     // The start and end of the output buffer
     unsigned char *start = out;
@@ -586,7 +585,7 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsi
         }
 
         // Write the string for this code
-        for (j = 0; (j < table[i].len) && (out < end); j++) *(out++) = *(table[i].s + j);
+        for (int j = 0; (j < table[i].len) && (out < end); j++) *(out++) = *(table[i].s + j);
 
         // Lengthen the codes when the table outgrows them
         if ((tpos == (1 << ccs) + 1) && (ccs < MAXCS)) ccs++;

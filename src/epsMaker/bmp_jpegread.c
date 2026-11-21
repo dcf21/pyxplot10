@@ -56,9 +56,9 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     int comps = 0, i;
 
     // Buffers for the image data, and for the header segments which are kept
-    unsigned int width = 0, height = 0, save;
+    unsigned int width = 0, height = 0;
     unsigned int len, chunk = 64 * 1024;
-    unsigned char type = 0, comp = 0, *p;
+    unsigned char type = 0, comp = 0;
 
     // Allocate the buffers
     unsigned char *buff = (unsigned char *) ppl_memAlloc(chunk);
@@ -91,7 +91,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         }
         type = buff[0];
         len = buff[1] * 256 + buff[2] - 2;
-        save = 0;
+        unsigned int save = 0;
         // Read the segment
         if (fread(buff, len, 1, jpeg) != 1) {
             ppl_error(ec, ERR_FILE, -1, -1, "This JPEG image file appears to be corrupted (B)");
@@ -275,7 +275,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
         // Double the size of the buffer, and read more
         while (i == len) {
             chunk *= 2;
-            p = (unsigned char *) ppl_memAlloc(
+            unsigned char *p = (unsigned char *) ppl_memAlloc(
                     chunk); // We didn't malloc enough memory, and ppl_memAlloc can't realloc, so just have to malloc a new chunk :(
             // Failure to allocate memory is reported as an error
             if (p == NULL) {

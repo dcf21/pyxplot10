@@ -76,7 +76,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     // Variables for reading the data
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int j, status = 0, errCount = DATAFILE_NERRS, NExpect = 1;
+    int status = 0, errCount = DATAFILE_NERRS, NExpect = 1;
     canvas_plotdesc *pd = x->current->plotitems;
     pplExpr *LabelExpr;
     unsigned char autoUsingList = 0;
@@ -205,7 +205,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     double acc = 0.0;
     // Add up the sizes of all the wedges
     while (blk != NULL) {
-        for (j = 0; j < blk->blockPosition; j++) { acc += fabs(blk->data_real[0 + Ncolumns * j]); }
+        for (int j = 0; j < blk->blockPosition; j++) { acc += fabs(blk->data_real[0 + Ncolumns * j]); }
         blk = blk->next;
     }
     // The total must be positive and finite
@@ -233,7 +233,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
     // Variables for evaluating the labels
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int j, errCount = DATAFILE_NERRS;
+    int errCount = DATAFILE_NERRS;
     pplExpr *formatExpr;
     canvas_plotdesc *pd;
     pplObj DummyTemp_l, DummyTemp_p, DummyTemp_w;
@@ -276,7 +276,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Evaluate the label of each wedge
-        for (j = 0; j < blk->blockPosition; j++) {
+        for (int j = 0; j < blk->blockPosition; j++) {
             // Set values of variables [percentage, label, wedgesize] for this wedge
             const int stkLevelOld = c->stackPtr;
             int lOp = 0;
@@ -366,7 +366,7 @@ static double labelMargin(const double X, const double Y, const double a, const 
 void eps_pie_RenderEPS(EPSComm *x) {
     // Variables for drawing the pie chart
     ppl_context *c = x->c;
-    int j, lt, l, m;
+    int lt, l, m;
     double size;
     canvas_plotdesc *pd;
     double lw_scale;
@@ -398,7 +398,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Fill each wedge with the next color from the palette, going clockwise from the top
-        for (j = 0; j < blk->blockPosition; j++) {
+        for (int j = 0; j < blk->blockPosition; j++) {
             // Work out what fillcolor to use
             for (l = 0; l < PALETTE_LENGTH; l++)
                 if (c->set->palette_current[l] == -1) break; // l now contains length of palette
@@ -458,7 +458,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Draw the line along the edge of each wedge
-        for (j = 0; j < blk->blockPosition; j++) {
+        for (int j = 0; j < blk->blockPosition; j++) {
             size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 360.0;
             if (eps_core_isVisible(x))
                 fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nclosepath\nstroke\n", xpos, ypos,
@@ -494,9 +494,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     if (eps_core_isVisible(x)) {
         int ItemNo = 0;
         double TotalHeight = 0.0;
-        double height1, height2, bb_top, bb_bottom, ab_left, ab_right, ab_top, ab_bottom;
-        double label_rpos, best_label_rpos, best_label_margin, min_margin, key_vpos = 0.0;
-        postscriptPage *dviPage;
+        double key_vpos = 0.0;
 
         // Calculate dimensions of text items
         double *TextWidth = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
@@ -506,23 +504,24 @@ void eps_pie_RenderEPS(EPSComm *x) {
         // Loop over the blocks of the data table
         while (blk != NULL) {
             // Measure the typeset label of each wedge
-            for (j = 0; j < blk->blockPosition; j++) {
-                dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, x->LaTeXpageno + ItemNo);
+            for (int j = 0; j < blk->blockPosition; j++) {
+                postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages,
+                                           x->LaTeXpageno + ItemNo);
                 // A label which LaTeX did not typeset is skipped
                 if (dviPage == NULL) {
                     ItemNo++;
                     continue;
                 } // Such doom will trigger errors later
                 //bb_left = dviPage->boundingBox[0];
-                bb_bottom = dviPage->boundingBox[1];
+                double bb_bottom = dviPage->boundingBox[1];
                 //bb_right= dviPage->boundingBox[2];
-                bb_top = dviPage->boundingBox[3];
-                ab_left = dviPage->textSizeBox[0];
-                ab_bottom = dviPage->textSizeBox[1];
-                ab_right = dviPage->textSizeBox[2];
-                ab_top = dviPage->textSizeBox[3];
-                height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
-                height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
+                double bb_top = dviPage->boundingBox[3];
+                double ab_left = dviPage->textSizeBox[0];
+                double ab_bottom = dviPage->textSizeBox[1];
+                double ab_right = dviPage->textSizeBox[2];
+                double ab_top = dviPage->textSizeBox[3];
+                double height1 = fabs(ab_top - ab_bottom) * AB_ENLARGE_FACTOR;
+                double height2 = fabs(bb_top - bb_bottom) * BB_ENLARGE_FACTOR;
                 TextWidth[ItemNo] = ((ab_right - ab_left) + MARGIN_HSIZE) * x->current->settings.FontSize;
                 TextHeight[ItemNo] = ((height2 < height1) ? height2 : height1) * x->current->settings.FontSize;
                 TotalHeight += TextHeight[ItemNo];
@@ -539,18 +538,18 @@ void eps_pie_RenderEPS(EPSComm *x) {
         // Loop over the blocks of the data table
         while (blk != NULL) {
             // Place the label of each wedge
-            for (j = 0; j < blk->blockPosition; j++) {
+            for (int j = 0; j < blk->blockPosition; j++) {
                 size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 2 * M_PI; // Angular size of wedge
                 // Wedges with no label are skipped
                 if (blk->text[j] != NULL) {
                     double a = angle + size / 2; // Central angle of wedge
 
                     // Test different radii where label can be placed
-                    best_label_rpos = 0.7;
-                    best_label_margin = -1e10;
+                    double best_label_rpos = 0.7;
+                    double best_label_margin = -1e10;
                     // Find the distance from the centre at which the label fits furthest within its wedge
-                    for (label_rpos = 0.7; label_rpos >= 0.3; label_rpos -= 0.05) {
-                        min_margin = 1e10;
+                    for (double label_rpos = 0.7; label_rpos >= 0.3; label_rpos -= 0.05) {
+                        double min_margin = 1e10;
 
                         // The margin is the smallest margin of any corner of the label
                         min_margin =

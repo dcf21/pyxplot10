@@ -151,9 +151,8 @@ int ppl_funcCheckOutput(pplFuncCall *f) {
 //! \return Zero if the arguments are acceptable, or nonzero if not (and this has been reported)
 
 int ppl_funcCheckFinite(pplFuncCall *f, const int nArgs) {
-    int i;
     // Every argument must be finite, and real unless complex arithmetic is on
-    for (i = 0; i < nArgs; i++) {
+    for (int i = 0; i < nArgs; i++) {
         const pplObj *x = &f->in[i];
         if (((f->c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && x->flagComplex) || (!gsl_finite(x->real)) ||
             (!gsl_finite(x->imag))) {
@@ -290,9 +289,8 @@ int ppl_funcCheckRealDimensionlessFinite(pplFuncCall *f, const pplObj *x, const 
 
 int ppl_funcCheckUnit(pplFuncCall *f, const pplObj *x, const char *description, const char *unitName, const int unit,
                       const int power) {
-    int i;
     if (x->dimensionless) return 0;
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++)
         // The exponent of every base unit must be zero, except the required unit, which must have the required power
         if (x->exponent[i] != power * (i == unit)) {
             funcFail(f, ERR_UNIT, 1,
@@ -1721,7 +1719,7 @@ void pplfunc_expint(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
-    int i, n = (int) in[0].real;
+    int n = (int) in[0].real;
     char *FunctionDescription = "factors(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
@@ -1733,7 +1731,7 @@ void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     v.refCount = 1;
     list *l = (list *) OUTPUT.auxil;
     // Add every number up to n/2 which divides n, and then n itself
-    for (i = 1; i <= n / 2; i++) {
+    for (int i = 1; i <= n / 2; i++) {
         if ((n % i) != 0) continue;
         pplObjNum(&v, 0, i, 0);
         ppl_listAppendCpy(l, &v, sizeof(v));
@@ -1806,14 +1804,13 @@ void pplfunc_gamma(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 void pplfunc_gcd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gcd(x,...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    int i;
     // Every argument must be a positive integer; non-positive ones are set to -1 so that the check reports them
-    for (i = 0; i < nArgs; i++) {
+    for (int i = 0; i < nArgs; i++) {
         if (round(in[i].real) < 1) in[i].real = -1;
         if (ppl_funcCheckInt(&call, &in[i], "x", "function's requires arguments to be")) return;
     }
     int out = ppl_gcd((int) round(in[0].real), (int) round(in[1].real));
-    for (i = 2; i < nArgs; i++) out = ppl_gcd(out, (int) round(in[i].real));
+    for (int i = 2; i < nArgs; i++) out = ppl_gcd(out, (int) round(in[i].real));
     OUTPUT.real = out;
     if (ppl_funcCheckOutput(&call)) return;
 }
@@ -1977,14 +1974,13 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     // The arguments are copied into a buffer of doubles for gsl_hypot
     char *FunctionDescription = "hypot(...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    int i;
     double acc = 0;
     // With no arguments, the result is zero
     if (nArgs < 1) {
         pplObjNum(&OUTPUT, 0, 0, 0);
         return;
     }
-    for (i = 1; i < nArgs; i++) // Check matching dimensions
+    for (int i = 1; i < nArgs; i++) // Check matching dimensions
         // All the arguments must have the same units
         if (!ppl_unitsDimEqual(&in[0], &in[i])) {
             ppl_funcError(status, errType, errText, ERR_UNIT,
@@ -1999,9 +1995,9 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
-    for (i = 0; i < nArgs; i++) buffer[i] = hypot(in[i].real, in[i].imag);
+    for (int i = 0; i < nArgs; i++) buffer[i] = hypot(in[i].real, in[i].imag);
     qsort((void *) buffer, nArgs, sizeof(double), ppl_dblSort);
-    for (i = 0; i < nArgs; i++) acc += gsl_pow_2(buffer[i]);
+    for (int i = 0; i < nArgs; i++) acc += gsl_pow_2(buffer[i]);
     free(buffer);
     buffer = NULL;
     OUTPUT.real = sqrt(acc);
@@ -2154,9 +2150,9 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     // an int
     char *FunctionDescription = "lcm(x,...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    int i, zero = 0;
+    int zero = 0;
     // Every argument must be an integer; if any is zero or negative, the result is zero
-    for (i = 0; i < nArgs; i++) {
+    for (int i = 0; i < nArgs; i++) {
         if (round(in[i].real) < 1) zero = 1;
         if (ppl_funcCheckInt(&call, &in[i], "x", "function's requires arguments to be")) return;
     }
@@ -2183,7 +2179,7 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     }
     int lcm_i = (int) round(lcm);
     // Combine each further argument with the result so far
-    for (i = 2; i < nArgs; i++) {
+    for (int i = 2; i < nArgs; i++) {
         gcd = ppl_gcd(lcm_i, (int) round(in[i].real));
         lcm = 1.0 / ((double) gcd) * lcm * round(in[i].real);
         // Report an overflow, or return NaN if errors are switched off
@@ -2382,7 +2378,6 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     char *FunctionDescription = "lrange([f],l,[s])";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double start, end, step;
-    int i;
     if (nArgs > 1) {
         if (ppl_funcCheckDimensionsMatch(&call)) return;
     }
@@ -2419,7 +2414,7 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, in
         ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
-    for (i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start * pow(step, i));
+    for (int i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start * pow(step, i));
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
@@ -2460,29 +2455,26 @@ void pplfunc_max(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         if (best == NULL) pplObjNull(&OUTPUT, 0);
         else pplObjCpy(&OUTPUT, best, 0, 0, 1);
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_VEC)) {
-        int i;
         double *best = NULL;
         gsl_vector *v = ((pplVector *) (in[0].auxil))->v;
-        for (i = 0; i < v->size; i++)
+        for (int i = 0; i < v->size; i++)
             if ((best == NULL) || (gsl_vector_get(v, i) > *best)) best = gsl_vector_ptr(v, i);
         if (best == NULL) pplObjNull(&OUTPUT, 0);
         else pplObjNum(&OUTPUT, 0, *best, 0);
         ppl_unitsDimCpy(&OUTPUT, &in[0]);
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_MAT)) {
-        int i, j;
         double *best = NULL;
         gsl_matrix *m = ((pplMatrix *) (in[0].auxil))->m;
-        for (i = 0; i < m->size1; i++)
-            for (j = 0; j < m->size2; j++)
+        for (int i = 0; i < m->size1; i++)
+            for (int j = 0; j < m->size2; j++)
                 if ((best == NULL) || (gsl_matrix_get(m, i, j) > *best)) best = gsl_matrix_ptr(m, i, j);
         if (best == NULL) pplObjNull(&OUTPUT, 0);
         else pplObjNum(&OUTPUT, 0, *best, 0);
         ppl_unitsDimCpy(&OUTPUT, &in[0]);
     } else {
-        int i;
         pplObj *best = in;
         // Find the greatest argument
-        for (i = 1; i < nArgs; i++) {
+        for (int i = 1; i < nArgs; i++) {
             pplObj *x = &in[i];
             if (pplObjCmpQuiet((void *) &x, (void *) &best) == 1) best = &in[i];
         }
@@ -2526,29 +2518,26 @@ void pplfunc_min(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         if (best == NULL) pplObjNull(&OUTPUT, 0);
         else pplObjCpy(&OUTPUT, best, 0, 0, 1);
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_VEC)) {
-        int i;
         double *best = NULL;
         gsl_vector *v = ((pplVector *) (in[0].auxil))->v;
-        for (i = 0; i < v->size; i++)
+        for (int i = 0; i < v->size; i++)
             if ((best == NULL) || (gsl_vector_get(v, i) < *best)) best = gsl_vector_ptr(v, i);
         if (best == NULL) pplObjNull(&OUTPUT, 0);
         else pplObjNum(&OUTPUT, 0, *best, 0);
         ppl_unitsDimCpy(&OUTPUT, &in[0]);
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_MAT)) {
-        int i, j;
         double *best = NULL;
         gsl_matrix *m = ((pplMatrix *) (in[0].auxil))->m;
-        for (i = 0; i < m->size1; i++)
-            for (j = 0; j < m->size2; j++)
+        for (int i = 0; i < m->size1; i++)
+            for (int j = 0; j < m->size2; j++)
                 if ((best == NULL) || (gsl_matrix_get(m, i, j) < *best)) best = gsl_matrix_ptr(m, i, j);
         if (best == NULL) pplObjNull(&OUTPUT, 0);
         else pplObjNum(&OUTPUT, 0, *best, 0);
         ppl_unitsDimCpy(&OUTPUT, &in[0]);
     } else {
-        int i;
         pplObj *best = in;
         // Find the least argument
-        for (i = 1; i < nArgs; i++) {
+        for (int i = 1; i < nArgs; i++) {
             pplObj *x = &in[i];
             if (pplObjCmpQuiet((void *) &x, (void *) &best) == -1) best = &in[i];
         }
@@ -2742,7 +2731,7 @@ void pplfunc_prime(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // primeFactors(x) lists the prime factors of x, with repeats
     pplObj v;
-    int i, n = (int) in[0].real;
+    int n = (int) in[0].real;
     char *FunctionDescription = "primeFactors(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     if (ppl_funcCheckInt(&call, &in[0], "x", "function's argument must be")) return;
@@ -2769,7 +2758,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
     v.refCount = 1;
     list *l = (list *) OUTPUT.auxil;
     // Try dividing by each prime up to the square root of what remains of n
-    for (i = 2; i <= sqrt(n); i++) {
+    for (int i = 2; i <= sqrt(n); i++) {
         int prime = 1;
         if (i < 53)
             prime = (i == 2) || (i == 3) || (i == 5) || (i == 7) || (i == 11) || (i == 13) || (i == 17) || (i == 19) ||
@@ -2777,9 +2766,9 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
         else if (((i % 2) == 0) || ((i % 3) == 0) || ((i % 5) == 0) || ((i % 7) == 0)) prime = 0;
         // Test larger numbers for primality by trial division
         else {
-            int t, tm = sqrt(i);
+            int tm = sqrt(i);
             // Trial division by numbers of the form 6k-1 and 6k+1
-            for (t = 11; ((t <= tm) && prime); t += 6) {
+            for (int t = 11; ((t <= tm) && prime); t += 6) {
                 if ((i % t) == 0) prime = 0;
                 if ((i % (t + 2)) == 0) prime = 0;
             }
@@ -2875,7 +2864,6 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     char *FunctionDescription = "range([f],l,[s])";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double start, end, step;
-    int i;
     if (nArgs > 1) {
         if (ppl_funcCheckDimensionsMatch(&call)) return;
     }
@@ -2912,7 +2900,7 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
         ppl_funcError(status, errType, errText, ERR_MEMORY, "%s", "Out of memory.");
         return;
     }
-    for (i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start + i * step);
+    for (int i = 0; i < n; i++) gsl_vector_set(((pplVector *) OUTPUT.auxil)->v, i, start + i * step);
     ppl_unitsDimCpy(&OUTPUT, &in[0]);
 }
 
@@ -3009,7 +2997,6 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // root(z, n) is the nth root of z; negative real numbers have real odd roots
     pplObj x2;
-    double tmpdbl;
     char *FunctionDescription = "root(z,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     unsigned char negated = 0;
@@ -3055,7 +3042,7 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                     return;
                 }
             } else {
-                tmpdbl = OUTPUT.imag;
+                double tmpdbl = OUTPUT.imag;
                 OUTPUT.imag = OUTPUT.real;
                 OUTPUT.real = -tmpdbl;
                 OUTPUT.flagComplex = !ppl_dblEqual(OUTPUT.imag, 0);
@@ -3242,7 +3229,6 @@ void pplfunc_sinh(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 void pplfunc_sqrt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "sqrt(z)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    int i;
     gsl_complex z;
     // Complex arguments use GSL's complex functions; real ones the real functions
     if ((in[0].flagComplex)) {
@@ -3257,7 +3243,7 @@ void pplfunc_sqrt(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     if (ppl_funcCheckOutput(&call)) return;
     OUTPUT.dimensionless = in[0].dimensionless;
     OUTPUT.tempType = in[0].tempType;
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] = in[0].exponent[i] / 2;
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) OUTPUT.exponent[i] = in[0].exponent[i] / 2;
 }
 
 //! pplfunc_sum - Implement the function sum(...) in the default namespace, which returns the sum of its arguments
@@ -3325,25 +3311,22 @@ void pplfunc_sum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         if (first) pplObjNum(&OUTPUT, 0, 0, 0);
         else memcpy(&OUTPUT, &acc, sizeof(pplObj));
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_VEC)) {
-        int i;
         double acc = 0;
         gsl_vector *v = ((pplVector *) (in[0].auxil))->v;
-        for (i = 0; i < v->size; i++) acc += gsl_vector_get(v, i);
+        for (int i = 0; i < v->size; i++) acc += gsl_vector_get(v, i);
         pplObjNum(&OUTPUT, 0, acc, 0);
     } else if ((nArgs == 1) && (in[0].objType == PPLOBJ_MAT)) {
-        int i, j;
         double acc = 0;
         gsl_matrix *m = ((pplMatrix *) (in[0].auxil))->m;
-        for (i = 0; i < m->size1; i++)
-            for (j = 0; j < m->size2; j++) acc += gsl_matrix_get(m, i, j);
+        for (int i = 0; i < m->size1; i++)
+            for (int j = 0; j < m->size2; j++) acc += gsl_matrix_get(m, i, j);
         pplObjNum(&OUTPUT, 0, acc, 0);
     } else {
-        int i;
         pplObj acc, acc2;
         pplObjCpy(&acc2, &in[0], 0, 0, 1);
         memcpy(&acc, &acc2, sizeof(pplObj));
         // Add each further argument to the running total
-        for (i = 1; i < nArgs; i++) {
+        for (int i = 1; i < nArgs; i++) {
             ppl_opAdd(c, &acc, &in[i], &acc2, 1, status, errType, errText);
             // Give up if the addition failed
             if (*status) {

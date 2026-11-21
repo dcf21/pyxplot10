@@ -342,13 +342,12 @@ void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_ob
 //! \param [in|out] inlist - Pointer to the head of the list to free, which is set to NULL
 
 void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
-    ppllabel_object *obj;
 
     // Free each label in turn, with its style and text
     ppllabel_object **first = inlist;
     // Unlink the first label, and free it
     while (*inlist != NULL) {
-        obj = *inlist;
+        ppllabel_object *obj = *inlist;
         *inlist = (*inlist)->next;
         ppl_withWordsDestroy(context, &obj->style);
         free(obj->text);

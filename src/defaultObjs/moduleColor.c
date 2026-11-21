@@ -314,7 +314,6 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     char *FunctionDescription = "spectrum(spec,norm)";
     const int stkLevelOld = c->stackPtr;
     double x = 0, y = 0, z = 0;
-    int i;
 
     // The first argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
@@ -352,7 +351,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     }
 
     // Evaluate the spectrum at each wavelength in the table, and weight it by the color-matching functions
-    for (i = 0; i < N_CIE_STEPS; i++) {
+    for (int i = 0; i < N_CIE_STEPS; i++) {
         const double wlen = (CIE_WLEN_MIN + i * CIE_WLEN_STEPSIZE) * 1e-9;
         pplExpr dummy;
 

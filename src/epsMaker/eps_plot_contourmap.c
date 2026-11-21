@@ -113,7 +113,6 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
                                                                           : x->current->settings.SamplesX;
     const int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesY;
-    int k;
     double CMin, CMax, UnitMultiplier;
     unsigned char CLog;
 
@@ -180,7 +179,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     if (gsl_finite(max_prelim) && ((!CLog) || (max_prelim > 1e-300))) CMax = max_prelim;
 
     // Loop over all contours submitting labels
-    for (k = 0; (k < MAX_CONTOURS) &&
+    for (int k = 0; (k < MAX_CONTOURS) &&
          (((sg->ContoursListLen < 0) && (k < sg->ContoursN)) ||
           ((sg->ContoursListLen >= 0) && (k < sg->ContoursListLen)));
          k++) {
@@ -346,11 +345,10 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
                         double *Xout, double *Yout) {
     dataBlock *blk = data->first;
     const int Ncol = data->Ncolumns_real;
-    int j;
     double f;
 
     // Look for an exit from the cell, first opposite the entry, then on any unused edge
-    for (j = 0; j < 2; j++) {
+    for (int j = 0; j < 2; j++) {
         // An exit through the top edge
         if (((j == 1) || (EntryFace == FACE_B)) && (x0 <= XSize - 2) && (x0 >= 0) && (y0 >= 0) && (y0 <= YSize - 1) &&
             (((blk->split[(x0) + (y0) *XSize] >> (0 + 2 * pass)) & 1) == 0) &&
@@ -432,7 +430,7 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
 static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, const pplObj *v, unsigned char *flags,
                           const int XSize, const int YSize, int xcell, int ycell, int face, double xpos, double ypos,
                           const double Lx, const double ThetaX, const double Ly, const double ThetaY) {
-    long i, j, i_flatest = 0;
+    long i, i_flatest = 0;
     int xcelli = xcell, ycelli = ycell;
     double xposi = xpos, yposi = ypos, grad_flatest = 1e100;
     const int facei = face;
@@ -445,14 +443,13 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
     for (i = 1;
          (GetNextPoint(v->real, data, 0, XSize, YSize, xcell, ycell, face, &face, &xcell, &ycell, &xpos, &ypos) != 0);
          i++) {
-        double grad;
         // Measure the gradient of each segment on the page, ignoring vertical ones
         if (xpos != xold) {
             double x0 = Lx * xold / (XSize - 1) * sin(ThetaX) + Ly * yold / (YSize - 1) * sin(ThetaY);
             double y0 = Lx * xold / (XSize - 1) * cos(ThetaX) + Ly * yold / (YSize - 1) * cos(ThetaY);
             double x1 = Lx * xpos / (XSize - 1) * sin(ThetaX) + Ly * ypos / (YSize - 1) * sin(ThetaY);
             double y1 = Lx * xpos / (XSize - 1) * cos(ThetaX) + Ly * ypos / (YSize - 1) * cos(ThetaY);
-            grad = fabs((y1 - y0) / (x1 - x0));
+            double grad = fabs((y1 - y0) / (x1 - x0));
             // Remember the flattest segment, where the label will go
             if (grad < grad_flatest) {
                 grad_flatest = grad;
@@ -482,7 +479,7 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
     // Trace path, looking for flattest segment and counting length
     cd->posdata[2 * 0] = xpos;
     cd->posdata[2 * 0 + 1] = ypos;
-    for (j = 1;
+    for (long j = 1;
          (GetNextPoint(v->real, data, 1, XSize, YSize, xcell, ycell, face, &face, &xcell, &ycell, &xpos, &ypos) != 0);
          j++) {
         cd->posdata[2 * j] = xpos;
@@ -540,7 +537,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
                                                                           : x->current->settings.SamplesX;
     const int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesY;
-    int i, j, k, cn, pass, face, xcell, ycell;
+    int i, j, cn, face, xcell, ycell;
     double xo, yo, Lx, Ly, ThetaX, ThetaY, xpos, ypos;
     double col = GSL_NAN, col1 = -1, col2 = -1, col3 = -1, col4 = -1, fc = GSL_NAN, fc1 = -1, fc2 = -1, fc3 = -1,
            fc4 = -1;
@@ -613,7 +610,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     } else pplObjNum(CVar, 0, 0, 0); // c1 is a dimensionless number in range 0-1, regardless of units of input data
 
     // Loop over contours
-    for (k = 0; (k < MAX_CONTOURS) &&
+    for (int k = 0; (k < MAX_CONTOURS) &&
          (((sg->ContoursListLen < 0) && (k < sg->ContoursN)) ||
           ((sg->ContoursListLen >= 0) && (k < sg->ContoursListLen)));
          k++) {
@@ -791,7 +788,7 @@ GOT_CONTOURS:
     qsort((void *) clist, cpos, sizeof(ContourDesc), ContourCmp);
 
     // Now loop over the contours that we have traced, drawing them
-    for (pass = 1; pass <= 4; pass++) // Fill contour, Stroke contour, Label contour
+    for (int pass = 1; pass <= 4; pass++) // Fill contour, Stroke contour, Label contour
     {
         if ((pass == 2) && (sg->ContoursLabel != SW_ONOFF_ON)) continue;
         if ((pass == 2) && (sg->ContoursLabel == SW_ONOFF_ON)) fprintf(x->epsbuffer, "gsave\n");

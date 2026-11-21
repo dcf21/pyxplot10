@@ -177,10 +177,9 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
 //! otherwise skip over them
 
 void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, const int returnGlobObjs) {
-    int i;
     // Search the current namespace, then the global namespace (1), and then the built-in namespace (0); the namespaces
     // of any subroutines which called the current one are not searched
-    for (i = c->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
+    for (int i = c->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
         pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[i], name);
         if (obj == NULL) continue;
         if ((!returnGlobObjs) && ((obj->objType == PPLOBJ_GLOB) || (obj->objType == PPLOBJ_ZOM))) continue;

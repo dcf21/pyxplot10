@@ -120,8 +120,8 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                         const double y2, const double *z2, const double theta_a, const double theta_b,
                         double *OutputWidth, const unsigned char PrintLabels) {
     char msg[PPL_MSG_LENGTH];
-    int i, l, m, lt;
-    double TickMaxHeight = 0.0, height, width, theta_axis;
+    int lt;
+    double TickMaxHeight = 0.0, height, width;
     int HALIGN, VALIGN, HALIGN_THIS, VALIGN_THIS;
     double theta, theta_pinpoint; // clockwise rotation
     double lw_scale;
@@ -151,11 +151,11 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
             eps_primitive_arrow(x, SW_ARROWTYPE_HEAD, x2, y2, z2, x1, y1, z1, ww);
 
         // The direction of the axis on the page
-        theta_axis = atan2(x2 - x1, y2 - y1);
+        double theta_axis = atan2(x2 - x1, y2 - y1);
         if (!gsl_finite(theta_axis)) theta_axis = 0.0;
 
         // Paint axis ticks
-        for (i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             int TR;
             double *TLP, TRA, TLEN;
             char **TLS;
@@ -189,26 +189,25 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
             // Draw each tick, unless there are none
             if (TLP != NULL) {
                 // Draw each tick and its label
-                for (l = 0; TLS[l] != NULL; l++) {
+                for (int l = 0; TLS[l] != NULL; l++) {
                     unsigned char state = 0;
                     double tic_lab_xoff = 0.0;
                     const double tic_x1 = x1 + (x2 - x1) * TLP[l];
                     const double tic_y1 = y1 + (y2 - y1) * TLP[l];
-                    double tic_x2, tic_y2, tic_x3, tic_y3;
 
                     // Draw the tick on each face of the graph which meets the axis, until one is drawn
-                    for (m = 0; ((m < 2) && (!state)); m++) {
+                    for (int m = 0; ((m < 2) && (!state)); m++) {
                         const double theta_ab = m ? theta_a : theta_b;
                         if (!gsl_finite(theta_ab)) continue;
-                        tic_x2 = tic_x1 +
+                        double tic_x2 = tic_x1 +
                                 (a->tics.tickDir == SW_TICDIR_IN ? 0.0 : 1.0) * sin(theta_ab) * TLEN *
                                         M_TO_PS; // top of tick
-                        tic_y2 =
+                        double tic_y2 =
                                 tic_y1 + (a->tics.tickDir == SW_TICDIR_IN ? 0.0 : 1.0) * cos(theta_ab) * TLEN * M_TO_PS;
-                        tic_x3 = tic_x1 +
+                        double tic_x3 = tic_x1 +
                                 (a->tics.tickDir == SW_TICDIR_OUT ? 0.0 : -1.0) * sin(theta_ab) * TLEN *
                                         M_TO_PS; // bottom of tick
-                        tic_y3 = tic_y1 +
+                        double tic_y3 = tic_y1 +
                                 (a->tics.tickDir == SW_TICDIR_OUT ? 0.0 : -1.0) * cos(theta_ab) * TLEN * M_TO_PS;
 
                         // Check for special case of ticks at zero on axes crossed by atzero axes
@@ -457,7 +456,7 @@ void eps_plot_setAxesStyle(EPSComm *x, withWords *ww) {
 
 void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y, const double width,
                         const double height, const double zdepth, const int pass) {
-    int i, j, k;
+    int k;
     double xc, yc, zc, theta[3] = {M_PI / 2, 0, 0}; // Coordinates of centre of graph
     pplset_axis *axes;
     withWords ww;
@@ -486,7 +485,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
     // Work out directions of each of the axes
     if (x->current->ThreeDim)
         // Find the direction on the page of each of the three axes of the cube
-        for (j = 0; j < 3; j++) {
+        for (int j = 0; j < 3; j++) {
             double x1, y1, z1, x2, y2, z2;
             eps_plot_ThreeDimProject(0, 0, 0, &x->current->settings, origin_x, origin_y, width, height, zdepth, &x1,
                                      &y1, &z1);
@@ -497,14 +496,14 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
         }
 
     // Set CrossedAtZero flags
-    for (j = 0; j < 3; j++) {
+    for (int j = 0; j < 3; j++) {
         if (j == 0) axes = x->current->XAxes;
         else if (j == 1) axes = x->current->YAxes;
         else axes = x->current->ZAxes;
 
         // Note whether any axis crosses the others at zero, in which case ticks at zero on the first axes are treated
         // specially
-        for (i = 0; i < MAX_AXES; i++)
+        for (int i = 0; i < MAX_AXES; i++)
             // An active, visible axis set at zero
             if ((axes[i].FinalActive) && (!axes[i].invisible) && (axes[i].atzero)) {
                 if (j != 0) x->current->XAxes[1].CrossedAtZero = 1;
@@ -515,8 +514,8 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
     }
 
     // Loop over all axes to draw. First loop over x, y and z directions.
-    for (j = 0; j < 2 + (x->current->ThreeDim != 0); j++) {
-        int xap, yap, zap, Naxes[4], FirstAutoMirror[4];
+    for (int j = 0; j < 2 + (x->current->ThreeDim != 0); j++) {
+        int Naxes[4], FirstAutoMirror[4];
         unsigned char side_a[4] = {0, 1, 0, 1}, side_b[4] = {0, 0, 1, 1};
         double xpos1[4], ypos1[4], zpos1[4], xpos2[4], ypos2[4], zpos2[4];
         const int NDIRS = x->current->ThreeDim ? 4 : 2;
@@ -529,10 +528,10 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
         if (!x->current->ThreeDim) theta_b = GSL_NAN;
 
         // Loop over vertices of graph factoring into bounding box and setting pos1 and pos2
-        for (xap = 0; xap <= 1; xap++)
-            for (yap = 0; yap <= 1; yap++)
+        for (int xap = 0; xap <= 1; xap++)
+            for (int yap = 0; yap <= 1; yap++)
                 // Each corner of the graph, as projected onto the page
-                for (zap = 0; zap <= 1; zap++) {
+                for (int zap = 0; zap <= 1; zap++) {
                     double tmp_x, tmp_y, tmp_z;
                     int k = 0, l = 0;
                     // Project the corner onto the page
@@ -568,9 +567,8 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
         if (x->current->ThreeDim) {
             // Bubble sort the four edges into order of decreasing distance from the origin
             static const int swaps[5][2] = {{2, 3}, {1, 2}, {0, 1}, {2, 3}, {1, 2}};
-            int sw;
             // Sort the four edges into order of decreasing distance from the centre
-            for (sw = 0; sw < 5; sw++) {
+            for (int sw = 0; sw < 5; sw++) {
                 const int A = swaps[sw][0], B = swaps[sw][1];
                 if (cubeEdgeDistance(xpos1, ypos1, xpos2, ypos2, A, origin_x, origin_y) <
                     0.9999999 * cubeEdgeDistance(xpos1, ypos1, xpos2, ypos2, B, origin_x, origin_y)) {
@@ -592,7 +590,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
         else axes = x->current->ZAxes;
 
         // Loop over all axes in this direction and draw any which are active and visible
-        for (i = 0; i < MAX_AXES; i++)
+        for (int i = 0; i < MAX_AXES; i++)
             // Draw each active, visible axis
             if ((axes[i].FinalActive) && (!axes[i].invisible)) {
                 // 2D Gnomonic axes

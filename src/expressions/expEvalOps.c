@@ -161,9 +161,8 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if (((t1 == PPLOBJ_DATE) && (t2 == PPLOBJ_NUM)) ||
                ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_DATE))) // adding time interval to date
     {
-        int i;
         pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
-        for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+        for (int i = 0; i < UNITS_MAX_BASEUNITS; i++)
             // The number added to a date must have units of time
             if (num->exponent[i] != (i == UNIT_TIME)) {
                 ppl_funcError(status, errType, errText, ERR_UNIT,
@@ -199,7 +198,6 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
     } else if ((t1 == PPLOBJ_LIST) && (t2 == PPLOBJ_VEC)) // adding vector to list
     {
-        int i;
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
         gsl_vector *bv = ((pplVector *) (b->auxil))->v;
@@ -218,13 +216,12 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObjNum(&buff, 1, 0, 0);
         ppl_unitsDimCpy(&buff, b);
         // Append the elements of the vector, as numbers with its units
-        for (i = 0; i < bv->size; i++) {
+        for (int i = 0; i < bv->size; i++) {
             buff.real = gsl_vector_get(bv, i);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
         }
     } else if ((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_LIST)) // adding list to vector
     {
-        int i;
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
         gsl_vector *av = ((pplVector *) (a->auxil))->v;
@@ -237,7 +234,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObjNum(&buff, 1, 0, 0);
         ppl_unitsDimCpy(&buff, a);
         // Copy the elements of the vector, as numbers with its units
-        for (i = 0; i < av->size; i++) {
+        for (int i = 0; i < av->size; i++) {
             buff.real = gsl_vector_get(av, i);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
         }
@@ -330,8 +327,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         o->exponent[UNIT_TIME] = 1;
     } else if ((t1 == PPLOBJ_DATE) && (t2 == PPLOBJ_NUM)) // subtracting time interval from date
     {
-        int i;
-        for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+        for (int i = 0; i < UNITS_MAX_BASEUNITS; i++)
             // The number subtracted from a date must have units of time
             if (b->exponent[i] != (i == UNIT_TIME)) {
                 ppl_funcError(status, errType, errText, ERR_UNIT,
@@ -428,7 +424,6 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
         gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
-        int i;
         double acc = 0;
         // The product of two vectors is their dot product, which needs vectors of the same length
         if (v1->size != v2->size) {
@@ -440,14 +435,13 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         a->real = a->imag = b->real = b->imag = 0;
         a->flagComplex = b->flagComplex = 0;
         ppl_uaMul(context, a, b, o, status, errType, errText);
-        for (i = 0; i < v1->size; i++) acc += gsl_vector_get(v1, i) * gsl_vector_get(v2, i);
+        for (int i = 0; i < v1->size; i++) acc += gsl_vector_get(v1, i) * gsl_vector_get(v2, i);
         o->real = acc;
         o->imag = 0;
         o->flagComplex = 0;
     } else if (((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_NUM)) || // multiplying vector by number
                ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_VEC))) // multiplying number by vector
     {
-        int i;
         pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
         pplObj *vec = (t1 == PPLOBJ_VEC) ? a : b;
         gsl_vector *v = ((pplVector *) (vec->auxil))->v;
@@ -468,12 +462,11 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         ppl_uaMul(context, a, b, o, status, errType, errText);
         vo = ((pplVector *) (o->auxil))->v;
-        for (i = 0; i < v->size; i++) gsl_vector_set(vo, i, gsl_vector_get(v, i) * o->real);
+        for (int i = 0; i < v->size; i++) gsl_vector_set(vo, i, gsl_vector_get(v, i) * o->real);
         o->real = 0;
     } else if (((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_NUM)) || // multiplying matrix by number
                ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_MAT))) // multiplying number by matrix
     {
-        int i, j;
         pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
         pplObj *mat = (t1 == PPLOBJ_MAT) ? a : b;
         gsl_matrix *m = ((pplMatrix *) (mat->auxil))->m;
@@ -494,8 +487,8 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         ppl_uaMul(context, a, b, o, status, errType, errText);
         mo = ((pplMatrix *) (o->auxil))->m;
-        for (i = 0; i < m->size1; i++)
-            for (j = 0; j < m->size2; j++) gsl_matrix_set(mo, i, j, gsl_matrix_get(m, i, j) * o->real);
+        for (int i = 0; i < m->size1; i++)
+            for (int j = 0; j < m->size2; j++) gsl_matrix_set(mo, i, j, gsl_matrix_get(m, i, j) * o->real);
         o->real = 0;
     } else if ((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_VEC)) // matrix-vector multiplication
     {
@@ -619,7 +612,6 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObjColor(o, 0, SW_COLSPACE_RGB, r1, g1, b1, 0);
     } else if ((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_NUM)) // dividing vector by number
     {
-        int i;
         gsl_vector *v = ((pplVector *) (a->auxil))->v;
         gsl_vector *vo = NULL;
         // Dividing a vector by a number: the number must be real
@@ -638,11 +630,10 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         ppl_uaDiv(context, a, b, o, status, errType, errText);
         vo = ((pplVector *) (o->auxil))->v;
-        for (i = 0; i < v->size; i++) gsl_vector_set(vo, i, gsl_vector_get(v, i) * o->real);
+        for (int i = 0; i < v->size; i++) gsl_vector_set(vo, i, gsl_vector_get(v, i) * o->real);
         o->real = 0;
     } else if ((t1 == PPLOBJ_MAT) && (t2 == PPLOBJ_NUM)) // dividing matrix by number
     {
-        int i, j;
         gsl_matrix *m = ((pplMatrix *) (a->auxil))->m;
         gsl_matrix *mo = NULL;
         // Dividing a matrix by a number: the number must be real
@@ -661,8 +652,8 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         ppl_uaDiv(context, a, b, o, status, errType, errText);
         mo = ((pplMatrix *) (o->auxil))->m;
-        for (i = 0; i < m->size1; i++)
-            for (j = 0; j < m->size2; j++) gsl_matrix_set(mo, i, j, gsl_matrix_get(m, i, j) * o->real);
+        for (int i = 0; i < m->size1; i++)
+            for (int j = 0; j < m->size2; j++) gsl_matrix_set(mo, i, j, gsl_matrix_get(m, i, j) * o->real);
         o->real = 0;
     } else // dividing numbers
     {

@@ -296,7 +296,7 @@ static long ppl_floorMod(const long a, const long b) { return a - b * ppl_floorD
 //! \param [out] day - The day of the month (optional)
 
 static void ppl_dayNumberToCalendar(const long a, const int gregorian, int *year, int *month, int *day) {
-    long b, c;
+    long c;
     // Meeus's algorithm: count the days from a March 1, so that leap days fall at the end of each year
     if (!gregorian) {
         // c = the day number, offset so that it counts from a March 1 before the start of the Julian period
@@ -304,7 +304,7 @@ static void ppl_dayNumberToCalendar(const long a, const int gregorian, int *year
     } else {
         // b = the number of centuries since AD 400, less those century years which were leap years; c is then the day
         // number as if every century year had been a leap year
-        b = (long) floor((a - 1867216.25) / 36524.25);
+        long b = (long) floor((a - 1867216.25) / 36524.25);
         c = a + b - ppl_floorDiv(b, 4) + 1525;
     }
     long d = (long) floor((c - 122.1) / 365.25); // Number of 365.25 day periods, starting the year at the start of March
@@ -328,22 +328,20 @@ void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearN
     // Gregorian leap days dropped since the Julian calendar; A the Hebrew year; a the year's position in the 19-year
     // Metonic cycle; Q the date of Passover in March, as a real number; j the day of the week on which it falls; and r
     // its fractional part.
-    int i;
-    long X, C, S, A, a, b, j, D, Qint, MONTH = 3;
-    double Q, JD, r;
+    long D, MONTH = 3;
 
-    for (i = 0; i < 3; i++) // Return THREE new year numbers and Julian Day numbers, and YearTypes for the first two.
+    for (int i = 0; i < 3; i++) // Return THREE new year numbers and Julian Day numbers, and YearTypes for the first two.
     {
-        X = GregYear - 1 + i;
-        C = ppl_floorDiv(X, 100);
-        S = ppl_floorDiv(3 * C - 5, 4);
-        A = X + 3760;
-        a = ppl_floorMod(12 * X + 12, 19); // Work out the date of the passover in the Hebrew year A
-        b = ppl_floorMod(X, 4);
-        Q = -1.904412361576 + 1.554241796621 * a + 0.25 * b - 0.003177794022 * X + S;
-        Qint = (long) floor(Q);
-        j = ppl_floorMod(Qint + 3 * X + 5 * b + 2 - S, 7);
-        r = Q - Qint;
+        long X = GregYear - 1 + i;
+        long C = ppl_floorDiv(X, 100);
+        long S = ppl_floorDiv(3 * C - 5, 4);
+        long A = X + 3760;
+        long a = ppl_floorMod(12 * X + 12, 19); // Work out the date of the passover in the Hebrew year A
+        long b = ppl_floorMod(X, 4);
+        double Q = -1.904412361576 + 1.554241796621 * a + 0.25 * b - 0.003177794022 * X + S;
+        long Qint = (long) floor(Q);
+        long j = ppl_floorMod(Qint + 3 * X + 5 * b + 2 - S, 7);
+        double r = Q - Qint;
 
         // The rules of postponement, which stop certain festivals falling on certain days of the week, give the day in
         // March of 15 Nisan
@@ -353,7 +351,7 @@ void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearN
         else D = Qint + 22; // D is day when 15 Nisan falls after 1st March in the Gregorian year X
 
         b = ppl_floorDiv(X, 400) - ppl_floorDiv(X, 100) + ppl_floorDiv(X, 4); // Gregorian calendar
-        JD = 365.0 * X - 679004.0 + 2400000.5 + b + floor(30.6001 * (MONTH + 1)) + D;
+        double JD = 365.0 * X - 679004.0 + 2400000.5 + b + floor(30.6001 * (MONTH + 1)) + D;
 
         // Tishri 1, the new year of the following Hebrew year, falls 163 days after 15 Nisan
         YearNumbers[i] = A + 1;
@@ -366,7 +364,7 @@ void ppl_getHebrewNewYears(const ppl_context *ct, const int GregYear, int *YearN
     }
 
     // We've so far worked out whether years are Common or Embolismic. Now need to work out how many days there will be in each year.
-    for (i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
         if (YearTypes[i] == 0) YearTypes[i] = JDs[i + 1] - JDs[i] - 353;
         else YearTypes[i] = 3 + JDs[i + 1] - JDs[i] - 383;
 
@@ -543,7 +541,6 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
 void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
                              char *errText) {
     int JulDay, JulMon, JulYr;
-    long CL, DL;
     const double JD = (UT / 86400.0) + 2440587.5;
 
     // Dates before AH 1 Muharram 1 cannot be expressed in the Islamic calendar
@@ -585,8 +582,8 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
 
     // Correct for days which run past the end of a 354-day year, or of a 355-day leap year
     if (JJ > 354) {
-        CL = H % 30;
-        DL = (11 * CL + 3) % 30;
+        long CL = H % 30;
+        long DL = (11 * CL + 3) % 30;
         // Common years have 354 days, and leap years 355
         if (DL < 19) {
             JJ -= 354;
@@ -973,10 +970,10 @@ void ppl_calendarTimezoneUnset(const ppl_context *ct) {
 
 void ppl_calendarTimezoneOffset(const ppl_context *ct, double unixTime, char *tzNameOut, double *offset) {
     struct tm *t;
-    int out = 0, i;
+    int out = 0;
     // Find the offset of the timezone from UTC at the given local time; this is iterated, since the offset depends on
     // the time, e.g. across a change to daylight saving time
-    for (i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
         time_t in = (time_t) (unixTime - out);
         t = localtime(&in);
         out = (int) t->tm_gmtoff;

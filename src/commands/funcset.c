@@ -208,10 +208,8 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
 
     // If old function has dimensionally incompatible limits with us, we cannot splice with it; supersede it
     {
-        int k;
-        pplFunc *fIter;
-        for (fIter = (pplFunc *) tmpObj->auxil; fIter != NULL; fIter = fIter->next)
-            for (k = 0; k < nArgs; k++)
+        for (pplFunc *fIter = (pplFunc *) tmpObj->auxil; fIter != NULL; fIter = fIter->next)
+            for (int k = 0; k < nArgs; k++)
                 if (((f->minActive[k]) && (fIter->minActive[k]) && (!ppl_unitsDimEqual(f->min + k, fIter->min + k))) ||
                     ((f->minActive[k]) && (fIter->maxActive[k]) && (!ppl_unitsDimEqual(f->min + k, fIter->max + k))) ||
                     ((f->maxActive[k]) && (fIter->minActive[k]) && (!ppl_unitsDimEqual(f->max + k, fIter->min + k))) ||
@@ -225,8 +223,8 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
         pplFunc *fIter = *fIterPtr;
         // Loop over all the existing definitions of the function, comparing their ranges with the new one
         for (; fIter != NULL;) {
-            int k, Nsupersede = 0, Noverlap = 0, Nmiss = 0, lastOverlapType = 0, lastOverlapK = 0;
-            for (k = 0; k < nArgs;
+            int Nsupersede = 0, Noverlap = 0, Nmiss = 0, lastOverlapType = 0, lastOverlapK = 0;
+            for (int k = 0; k < nArgs;
                  k++) // Looping over all dimensions, count how new ranges miss/overlap/supersede old ranges
             {
                 if (((!f->minActive[k]) || ((fIter->minActive[k]) && (fIter->min[k].real >= f->min[k].real))) &&

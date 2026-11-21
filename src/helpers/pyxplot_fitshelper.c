@@ -51,10 +51,10 @@ int main(const int argc, char **argv) {
     char help_string[LSTR_LENGTH], version_string[FNAME_LENGTH], version_string_underline[FNAME_LENGTH],
             warntext[FNAME_LENGTH];
     char *filename = NULL;
-    int i, HaveFilename = 0;
+    int HaveFilename = 0;
 #ifdef HAVE_FITSIO
     fitsfile *fptr = NULL;
-    int j, status = 0, hdupos, hdutype, nkeys, bitpix, naxis, ncols, anynull = 0, dispwidth[16384];
+    int status = 0, hdupos, hdutype, nkeys, bitpix, naxis, ncols, anynull = 0, dispwidth[16384];
     long naxes[256], nrows;
     char card[FLEN_CARD], keyword[FLEN_KEYWORD], colname[FLEN_VALUE], nullstr[] = "nan", tabval[16384] = "\0", *valptr;
 #endif
@@ -94,7 +94,7 @@ For the latest information on Pyxplot development, see the project website:\n\
     // Scan command-line options for any switches
     HaveFilename = 0;
     // Process each command-line argument in turn
-    for (i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strlen(argv[i]) == 0) continue;
         // Arguments which are not switches are the filename to convert
         if (argv[i][0] != '-') {
@@ -155,7 +155,7 @@ recompile Pyxplot.\n\n",
         fits_get_hdrspace(fptr, &nkeys, NULL, &status); // Get number of keywords in this extension
         fprintf(stdout, "\n\n\n\n# HDU %d\n#\n", hdupos);
 
-        for (i = 0; i <= nkeys; i++) // List keys from this header
+        for (int i = 0; i <= nkeys; i++) // List keys from this header
         {
             if (fits_read_record(fptr, i, card, &status)) break;
             fprintf(stdout, "# %s\n", card);
@@ -169,7 +169,7 @@ recompile Pyxplot.\n\n",
             fprintf(stdout, "\n# Image array, with %d bits per pixel, and %d axes", abs(bitpix), naxis);
             if (naxis > 0) fprintf(stdout, ". Size: ");
             // List the size of each axis
-            for (i = 0; i < naxis; i++) {
+            for (int i = 0; i < naxis; i++) {
                 if (i != 0) fprintf(stdout, " x ");
                 fprintf(stdout, "%ld", naxes[i]);
             }
@@ -185,7 +185,7 @@ recompile Pyxplot.\n\n",
             // Print a list of column names
             fprintf(stdout, "# Columns: ");
             // Write the name of each column, padded to its display width
-            for (i = 1; i <= ncols; i++) {
+            for (int i = 1; i <= ncols; i++) {
                 fits_get_col_display_width(fptr, i, &dispwidth[i], &status);
                 fits_make_keyn("TTYPE", i, keyword, &status);
                 fits_read_key(fptr, TSTRING, keyword, colname, NULL, &status);
@@ -196,7 +196,7 @@ recompile Pyxplot.\n\n",
             // Print a list of column units
             fprintf(stdout, "\n# Units:   ");
             // Write the units of each column, padded to its display width
-            for (i = 1; i <= ncols; i++) {
+            for (int i = 1; i <= ncols; i++) {
                 fits_get_col_display_width(fptr, i, &dispwidth[i], &status);
                 fits_make_keyn("TUNIT", i, keyword, &status);
                 fits_read_key(fptr, TSTRING, keyword, colname, NULL, &status);
@@ -213,10 +213,10 @@ recompile Pyxplot.\n\n",
             // Print data from table
             valptr = tabval;
             // Write each row of the table
-            for (j = 1; (j <= nrows) && (!status); j++) {
+            for (int j = 1; (j <= nrows) && (!status); j++) {
                 fprintf(stdout, "           "); // Indent to meet column headings
                 // Write each value in the row as a string, padded to the column's display width
-                for (i = 1; (i <= ncols) && (!status); i++) {
+                for (int i = 1; (i <= ncols) && (!status); i++) {
                     fits_read_col_str(fptr, i, j, 1, 1, nullstr, &valptr, &anynull, &status);
                     if (!status) fprintf(stdout, "%-*s ", dispwidth[i], tabval);
                 }

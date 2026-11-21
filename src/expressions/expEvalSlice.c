@@ -319,7 +319,6 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
         case PPLOBJ_LIST: {
             list *lin = (list *) called.auxil;
             const int inl = lin->length;
-            int i;
             pplObj obj, *objptr;
             if (!minset) min = 0;
             else if (min < 0) min += inl;
@@ -338,7 +337,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             list *lout = (list *) out->auxil;
             obj.refCount = 1;
             listIterator *li = ppl_listIterateInit(lin);
-            for (i = 0; ((objptr = (pplObj *) ppl_listIterate(&li)) != NULL); i++)
+            for (int i = 0; ((objptr = (pplObj *) ppl_listIterate(&li)) != NULL); i++)
                 // Copy the items in the range into the new list
                 if ((i >= min) && (i < max)) {
                     pplObjCpy(&obj, objptr, 0, 1, 1);

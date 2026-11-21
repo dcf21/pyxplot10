@@ -43,10 +43,9 @@
 //! \param [in] f - The first function descriptor in the chain
 
 void pplObjFuncDestroyChain(pplFunc *f) {
-    pplFunc *next;
     // Free each definition in the chain
     while (f != NULL) {
-        next = f->next;
+        pplFunc *next = f->next;
         pplObjFuncDestroy(f);
         f = next;
     }

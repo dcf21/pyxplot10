@@ -53,7 +53,6 @@
 
 ppl_context *ppl_contextInit() {
     // Allocate the context itself
-    int i;
     ppl_context *out = malloc(sizeof(ppl_context));
     if (out == NULL) return NULL;
 
@@ -116,7 +115,7 @@ ppl_context *ppl_contextInit() {
     out->shellBroken = 0;
     out->shellContinued = 0;
     out->shellReturned = 0;
-    for (i = 0; i < MAX_RECURSION_DEPTH + 8; i++) out->shellLoopName[i] = NULL;
+    for (int i = 0; i < MAX_RECURSION_DEPTH + 8; i++) out->shellLoopName[i] = NULL;
     out->shellReturnVal.refCount = 1;
     pplObjNum(&out->shellReturnVal, 0, 0, 0);
     out->historyNLinesWritten = 0;
@@ -137,8 +136,7 @@ ppl_context *ppl_contextInit() {
 //! \param [in] in - The context to free
 
 void ppl_contextFree(ppl_context *in) {
-    int i;
-    for (i = in->ns_ptr; i > in->ns_branch; i--) ppl_garbageNamespace(in->namespaces[i]);
+    for (int i = in->ns_ptr; i > in->ns_branch; i--) ppl_garbageNamespace(in->namespaces[i]);
     free(in);
     in = NULL;
     return;

@@ -379,8 +379,8 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
 
                 // See whether this line is the end of a datablock
                 if (strncmp(line + *linepos, "END", 3) == 0) {
-                    int i, endBlock = 1;
-                    for (i = 3; line[*linepos + i] != '\0'; i++)
+                    int endBlock = 1;
+                    for (int i = 3; line[*linepos + i] != '\0'; i++)
                         // Anything after END means that this line is data, not the end of the block
                         if ((unsigned char) line[*linepos + i] > ' ') {
                             endBlock = 0;
@@ -420,7 +420,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                          (s->eLlinePos <=
                           *linepos)) // Not tab completing, and we haven't matched a {: suggest { as an 'expecting' hint
                 {
-                    int j, k;
+                    int k;
                     // If this point is further along the line than any previous failure, start a new list of what was
                     // expected here
                     if (s->eLlinePos < *linepos) {
@@ -435,7 +435,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                     }
                     snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
                     int l = strlen(s->expectingList + s->eLPos);
-                    for (j = k = 0; ((j < s->eLPos) && !k); j++)
+                    for (int j = k = 0; ((j < s->eLPos) && !k); j++)
                         k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
                              0); // Don't repeat ourselves
                     // Add "{" to the list of what was expected, unless it is already there; otherwise remove the
@@ -479,7 +479,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         status = 0;
                         // Something other than {: add "{" to the list of what was expected at this point
                         if ((s != NULL) && (s->eLlinePos <= *linepos)) {
-                            int j, k;
+                            int k;
                             // If this point is further along the line than any previous failure, start a new list of
                             // what was expected here
                             if (s->eLlinePos < *linepos) {
@@ -495,7 +495,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                             }
                             snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
                             int l = strlen(s->expectingList + s->eLPos);
-                            for (j = k = 0; ((j < s->eLPos) && !k); j++)
+                            for (int j = k = 0; ((j < s->eLPos) && !k); j++)
                                 k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
                                      0); // Don't repeat ourselves
                             // Add "{" to the list, unless it is already there; otherwise remove the separator just
@@ -856,14 +856,14 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                 // Expressions of types %e, %E, %F and %g are stored unevaluated, for the command to
                                 // evaluate as it needs, e.g. once for each data point. A plot expression of '--'
                                 // introduces a block of inline data, which must be counted.
-                                int j, isInline = 1;
+                                int isInline = 1;
                                 pplObj val;
                                 val.refCount = 1;
                                 if (!(strcmp(node->varName, "expression") == 0)) isInline = 0;
                                 if (isInline && (strncmp(line + *linepos, "\"--\"", 4) != 0) &&
                                     (strncmp(line + *linepos, "'--'", 4) != 0))
                                     isInline = 0;
-                                for (j = 4; j < explen; j++)
+                                for (int j = 4; j < explen; j++)
                                     if ((unsigned char) line[*linepos + j] > ' ') isInline = 0;
                                 if (isInline) s->NinlineDatafiles[blockDepth]++;
                                 pplObjExpression(&val, 0, (void *) expr);
@@ -883,7 +883,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
             // If the item failed to match, add what it expected to the list of what was expected at this point, for the
             // error message
             if ((s != NULL) && (status != 1) && (s->eLlinePos <= *linepos)) {
-                int i, j, k, l;
+                int k, l;
                 char varname[FNAME_LENGTH];
                 // If this point is further along the line than any previous failure, start a new list of what was
                 // expected here
@@ -896,7 +896,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                     ppl_snprintfTrunc(varname, sizeof(varname), " (%s)", node->varName);
                 else varname[0] = '\0';
                 // Add one description for a keyword, or one for each type letter after a %
-                for (i = 1; 1; i++) {
+                for (int i = 1; 1; i++) {
                     // Separate the alternatives in the list of what was expected
                     if (s->eLPos != 0) {
                         snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "%s", ", or ");
@@ -1002,7 +1002,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         }
                     }
                     l = strlen(s->expectingList + s->eLPos);
-                    for (j = k = 0; ((j < s->eLPos) && !k); j++)
+                    for (int j = k = 0; ((j < s->eLPos) && !k); j++)
                         k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
                              0); // Don't repeat ourselves
                     // Keep the new description, unless it is already in the list; otherwise remove the separator just
@@ -1251,17 +1251,16 @@ void ppl_parserStatInit(parserStatus **in, parserLine **pl) {
 //! \param [in|out] in - The parser status to reset
 
 void ppl_parserStatReInit(parserStatus *in) {
-    int i, j;
     parserLine **pl = in->rootpl;
     if (*pl != NULL) ppl_parserLineFree(*pl);
     *pl = NULL;
-    for (i = 0; i < MAX_RECURSION_DEPTH; i++) in->pl[i] = NULL;
-    for (i = 0; i < MAX_RECURSION_DEPTH; i++)
-        for (j = 0; j < 16; j++) in->stk[i][j] = NULL;
-    for (i = 0; i < MAX_RECURSION_DEPTH; i++) in->outputPos[i] = -1;
+    for (int i = 0; i < MAX_RECURSION_DEPTH; i++) in->pl[i] = NULL;
+    for (int i = 0; i < MAX_RECURSION_DEPTH; i++)
+        for (int j = 0; j < 16; j++) in->stk[i][j] = NULL;
+    for (int i = 0; i < MAX_RECURSION_DEPTH; i++) in->outputPos[i] = -1;
     strcpy(in->prompt, "pyxplot");
     in->blockDepth = 0;
-    for (i = 0; i < MAX_RECURSION_DEPTH; i++) in->NinlineDatafiles[i] = 0;
+    for (int i = 0; i < MAX_RECURSION_DEPTH; i++) in->NinlineDatafiles[i] = 0;
     in->waitingForBrace = 0;
     in->eLPos = 0;
     in->eLlinePos = 0;
@@ -1403,9 +1402,8 @@ static int quoteStateUpdate(char *quoteChar, const char *line, const int i) {
 
 static int lineContainsMacros(const char *line) {
     char quoteChar = '\0';
-    int i;
     // Look for ` and @ characters outside quoted strings
-    for (i = 0; line[i] != '\0'; i++) {
+    for (int i = 0; line[i] != '\0'; i++) {
         if (quoteStateUpdate(&quoteChar, line, i)) continue;
         if ((quoteChar == '\0') && ((line[i] == '`') || (line[i] == '@'))) return 1;
     }
@@ -1521,9 +1519,8 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                 // Copy the line into outbuff, substituting for each macro
                 if (outbuff != NULL) {
                     char quoteChar = '\0';
-                    int i;
                     // Scan the line one character at a time
-                    for (i = 0; line[i] != '\0'; i++) {
+                    for (int i = 0; line[i] != '\0'; i++) {
                         // Quotation marks are copied to the output as they are
                         if (quoteStateUpdate(&quoteChar, line, i)) {
                             // Copy the quote character
@@ -1623,7 +1620,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 
                         // Second, substitute for macros
                         else if ((quoteChar == '\0') && (line[i] == '@')) {
-                            int is = ++i, j, got = 0;
+                            int is = ++i, got = 0;
                             char *key = NULL;
                             for (; (isalnum(line[i]) || (line[i] == '_')); i++); // Find end of macro name
                             key = (char *) malloc(i - is + 1); // Put macro name into a string
@@ -1637,7 +1634,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                             key[i - is] = '\0';
                             // Look up the macro's name as a variable: first in the local namespace, and then in the
                             // global one. Its value must be a string, which is copied into the line.
-                            for (j = 1; j >= 0; j--) {
+                            for (int j = 1; j >= 0; j--) {
                                 pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[j], key);
                                 if (obj == NULL) continue;
                                 if ((obj->objType == PPLOBJ_GLOB) || (obj->objType == PPLOBJ_ZOM)) continue;

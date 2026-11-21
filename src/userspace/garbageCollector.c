@@ -46,13 +46,12 @@
 //! \param [in] n - The namespace to free. Has no effect unless it was allocated with malloc().
 
 void ppl_garbageNamespace(dict *n) {
-    dictItem *ptrnext;
     if ((n == NULL) || (!n->useMalloc)) return;
     dictItem *ptr = n->first;
     // Release the value of each variable, and free its key and item. Each value is freed by the garbage collector
     // itself, since the dictionary was created with malloc().
     while (ptr != NULL) {
-        ptrnext = ptr->next;
+        dictItem *ptrnext = ptr->next;
         ppl_garbageObject((pplObj *) ptr->data);
         free(ptr->key);
         ptr->key = NULL;
@@ -70,12 +69,11 @@ void ppl_garbageNamespace(dict *n) {
 //! \param [in] l - The list to free. Has no effect unless it was allocated with malloc().
 
 void ppl_garbageList(list *l) {
-    listItem *ptrnext;
     if ((l == NULL) || (!l->useMalloc)) return;
     listItem *ptr = l->first;
     // Release each item in the list, and free the list item which held it
     while (ptr != NULL) {
-        ptrnext = ptr->next;
+        listItem *ptrnext = ptr->next;
         ppl_garbageObject((pplObj *) ptr->data);
         // free(ptr->data); -- already done by garbage collector
         free(ptr);

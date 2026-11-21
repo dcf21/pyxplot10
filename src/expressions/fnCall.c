@@ -383,7 +383,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 if (nArgs < 1) goto cleanup;
                 // Each element of the vector becomes an item of the list
                 if ((nArgs == 1) && (args[0].objType == PPLOBJ_VEC)) {
-                    int i;
                     gsl_vector *vec = ((pplVector *) args[0].auxil)->v;
                     const int l = vec->size;
                     pplObj v;
@@ -392,14 +391,13 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     pplObjNum(&v, 1, 0, 0);
                     ppl_unitsDimCpy(&v, &args[0]);
                     // Append each element, as a number with the vector's units
-                    for (i = 0; i < l; i++) {
+                    for (int i = 0; i < l; i++) {
                         v.real = gsl_vector_get(vec, i);
                         ppl_listAppendCpy(lo, &v, sizeof(pplObj));
                     }
                 } else {
-                    int i;
                     // Append a copy of each argument
-                    for (i = 0; i < nArgs; i++) {
+                    for (int i = 0; i < nArgs; i++) {
                         pplObj v;
                         list *lo = (list *) out->auxil;
                         v.refCount = 1;
@@ -423,7 +421,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         pplObjDeepCpy(out, &args[0], 0, 0, 1);
                         goto cleanup;
                     } else if (args[0].objType == PPLOBJ_NUM) {
-                        long i;
                         // The length must be a real, dimensionless, positive integer
                         if (!args[0].dimensionless) {
                             ppl_snprintfTrunc(
@@ -457,7 +454,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             goto cleanup;
                         }
                         gsl_vector *v = ((pplVector *) out->auxil)->v;
-                        for (i = 0; i < len; i++) { gsl_vector_set(v, i, 0); }
+                        for (long i = 0; i < len; i++) { gsl_vector_set(v, i, 0); }
                         goto cleanup;
                     } else if (args[0].objType == PPLOBJ_LIST) {
                         list *listin = (list *) args[0].auxil;
@@ -517,7 +514,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     pplObjDeepCpy(out, &args[0], 0, 0, 1);
                     goto cleanup;
                 } else if (args[0].objType == PPLOBJ_NUM) {
-                    int i, j;
                     // matrix(rows, columns) needs two real, dimensionless, positive integers
                     if (nArgs != 2) {
                         ppl_snprintfTrunc(
@@ -585,11 +581,10 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         goto cleanup;
                     }
                     gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
-                    for (i = 0; i < s1; i++)
-                        for (j = 0; j < s2; j++) { gsl_matrix_set(m, i, j, 0); }
+                    for (int i = 0; i < s1; i++)
+                        for (int j = 0; j < s2; j++) { gsl_matrix_set(m, i, j, 0); }
                     goto cleanup;
                 } else if (args[0].objType == PPLOBJ_VEC) {
-                    long i;
                     const long s1 = ((pplVector *) args[0].auxil)->v->size;
                     const long s2 = nArgs;
                     // matrix(v1, v2, ...): each vector becomes a column of the matrix
@@ -601,8 +596,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                     ppl_unitsDimCpy(out, &args[0]);
                     // Copy each vector into a column
-                    for (i = 0; i < s2; i++) {
-                        long j;
+                    for (long i = 0; i < s2; i++) {
                         // Every argument must be a vector
                         if (args[i].objType != PPLOBJ_VEC) {
                             ppl_snprintfTrunc(
@@ -631,7 +625,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                     ppl_printUnit(context, &args[i], NULL, NULL, 1, 1, 0));
                             ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                         }
-                        for (j = 0; j < s1; j++) { gsl_matrix_set(m, j, i, gsl_vector_get(v, j)); }
+                        for (long j = 0; j < s1; j++) { gsl_matrix_set(m, j, i, gsl_vector_get(v, j)); }
                     }
                     goto cleanup;
                 } else if (args[0].objType == PPLOBJ_LIST) {
@@ -648,10 +642,9 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     pplObj *item = (pplObj *) listin->first->data;
                     // Lists of numbers
                     if (item->objType == PPLOBJ_NUM) {
-                        long i;
                         const long s1 = len;
                         const long s2 = nArgs;
-                        for (i = 0; i < s2; i++)
+                        for (long i = 0; i < s2; i++)
                             // Every argument must be a list
                             if (args[i].objType != PPLOBJ_LIST) {
                                 ppl_snprintfTrunc(
@@ -671,8 +664,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                         ppl_unitsDimCpy(out, item);
                         // Copy each list into a row
-                        for (i = 0; i < s2; i++) {
-                            long j;
+                        for (long i = 0; i < s2; i++) {
                             list *listin = (list *) args[i].auxil;
                             listIterator *li = ppl_listIterateInit(listin);
                             // All the lists must have the same length
@@ -685,7 +677,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 goto cleanup;
                             }
                             // Each item must be a real number with the same units as the first
-                            for (j = 0; j < s1; j++) {
+                            for (long j = 0; j < s1; j++) {
                                 pplObj *item = (pplObj *) ppl_listIterate(&li);
                                 // Report an item which is not a number
                                 if (item->objType != PPLOBJ_NUM) {
@@ -719,7 +711,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         }
                         goto cleanup;
                     } else if (item->objType == PPLOBJ_VEC) {
-                        long i;
                         const long s1 = ((pplVector *) item->auxil)->v->size;
                         const long s2 = len;
                         // matrix([v1, v2, ...]): a single list of vectors, each of which becomes a column
@@ -741,8 +732,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                         ppl_unitsDimCpy(out, item);
                         // Copy each vector into a column
-                        for (i = 0; i < s2; i++) {
-                            long j;
+                        for (long i = 0; i < s2; i++) {
                             pplObj *item = (pplObj *) ppl_listIterate(&li);
                             // Every item must be a vector
                             if (item->objType != PPLOBJ_VEC) {
@@ -773,11 +763,10 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 ppl_tbAddExpr(context, inExpr, ERR_UNIT, inExprCharPos, "");
                                 goto cleanup;
                             }
-                            for (j = 0; j < s1; j++) { gsl_matrix_set(m, j, i, gsl_vector_get(v, j)); }
+                            for (long j = 0; j < s1; j++) { gsl_matrix_set(m, j, i, gsl_vector_get(v, j)); }
                         }
                         goto cleanup;
                     } else if (item->objType == PPLOBJ_LIST) {
-                        long i;
                         const long s1 = ((list *) item->auxil)->length;
                         const long s2 = len;
                         // matrix([[...], [...], ...]): a single list of lists, each of which becomes a row
@@ -806,8 +795,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                         ppl_unitsDimCpy(out, ((pplObj *) ((list *) item->auxil)->first->data));
                         // Copy each list into a row
-                        for (i = 0; i < s2; i++) {
-                            long j;
+                        for (long i = 0; i < s2; i++) {
                             pplObj *item = (pplObj *) ppl_listIterate(&li);
                             // Every item must be a list
                             if (item->objType != PPLOBJ_LIST) {
@@ -830,7 +818,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 goto cleanup;
                             }
                             // Each element must be a real number with the same units as the first
-                            for (j = 0; j < s1; j++) {
+                            for (long j = 0; j < s1; j++) {
                                 pplObj *item2 = (pplObj *) ppl_listIterate(&li2);
                                 // Report an element which is not a number
                                 if (item2->objType != PPLOBJ_NUM) {
@@ -1170,10 +1158,10 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
 
                 while (f != NULL) // Check whether supplied arguments are within the range of this definition
                 {
-                    int k, l = 1;
+                    int l = 1;
                     // A user-defined function may have several definitions, each valid over a range of its arguments:
                     // find the first whose ranges contain the arguments
-                    for (k = 0; ((k < nArgs) && l); k++) {
+                    for (int k = 0; ((k < nArgs) && l); k++) {
                         // Check the lower limit of this argument, if there is one
                         if (f->minActive[k] != 0) {
                             // Check, once, that the argument is a number with the units of the limit
@@ -1267,7 +1255,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         goto cleanup;
                     }
                 } else {
-                    int k, lastOpAssign = 0, stkp = context->stackPtr, ns_ptr = context->ns_ptr;
+                    int lastOpAssign = 0, stkp = context->stackPtr, ns_ptr = context->ns_ptr;
                     const int setSelf = (called.self_this != NULL) &&
                             ((called.self_this->objType == PPLOBJ_USER) || (called.self_this->objType == PPLOBJ_MOD));
 
@@ -1311,7 +1299,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
 
                     // Insert arguments into namespace dictionary. Any existing variables with the same names as the
                     // arguments are saved in the stack slots above the arguments (stkp + j), to be restored afterwards.
-                    for (k = j = 0; j < nArgs; j++) {
+                    for (int k = j = 0; j < nArgs; j++) {
                         pplObj *varObj;
                         ppl_contextGetVarPointer(context, fn->argList + k, &varObj, &context->stack[stkp + j]);
                         pplObjCpy(varObj, args + j, 0, varObj->amMalloced, 1);
@@ -1332,7 +1320,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                          iterDepth + 1);
 
                     // Take arguments out of namespace dictionary
-                    for (k = j = 0; j < nArgs; j++) {
+                    for (int k = j = 0; j < nArgs; j++) {
                         ppl_contextRestoreVarPointer(context, fn->argList + k, &context->stack[stkp + j]);
                         k += strlen(fn->argList + k) + 1;
                     }
@@ -1359,7 +1347,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 break;
             }
             case PPL_FUNC_SUBROUTINE: {
-                int j, k, ns_ptr = context->ns_ptr;
+                int j, ns_ptr = context->ns_ptr;
                 const int shellReturnableOld = context->shellReturnable;
                 const int stkLevelOld = context->stackPtr;
 
@@ -1384,7 +1372,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 context->shellReturnable = 1;
 
                 // Insert arguments into namespace dictionary
-                for (k = j = 0; j < nArgs; j++) {
+                for (int k = j = 0; j < nArgs; j++) {
                     pplObj *varObj, tmp;
                     ppl_contextGetVarPointer(context, fn->argList + k, &varObj, &tmp);
                     pplObjCpy(varObj, args + j, 0, varObj->amMalloced, 1);

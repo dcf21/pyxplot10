@@ -95,9 +95,8 @@ void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
 //! \param [in] in - The parser output to free. The structure itself is not freed.
 
 void ppl_parserOutFree(parserOutput *in) {
-    int i;
     if (in == NULL) return;
-    for (i = 0; i < in->stackLen; i++) ppl_garbageObject(&in->stk[i]);
+    for (int i = 0; i < in->stackLen; i++) ppl_garbageObject(&in->stk[i]);
     free(in->stk);
     in->stk = NULL;
     free(in->stkCharPos);

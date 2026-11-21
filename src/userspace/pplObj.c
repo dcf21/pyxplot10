@@ -57,7 +57,6 @@ pplObj *pplObjPrototypes;
 
 void pplObjInit(ppl_context *c) {
     static int initialised = 0; // Only ever run this once
-    int i;
     const int n = PPLOBJ_USER + 1;
     if (initialised) return;
     pplType *typeObjs = (pplType *) malloc(n * sizeof(pplType));
@@ -66,7 +65,7 @@ void pplObjInit(ppl_context *c) {
         ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Out of memory.");
     pplObjMethodsInit(c);
     // Create the type object for each type, holding the dictionary of its methods
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         typeObjs[i].refCount = 1;
         typeObjs[i].id = i;
         typeObjs[i].methods = pplObjMethods[i];
@@ -85,7 +84,6 @@ void pplObjInit(ppl_context *c) {
 //! \return Pointer to <in>
 
 pplObj *pplObjNum(pplObj *in, const unsigned char amMalloced, const double real, const double imag) {
-    int i;
     in->objType = PPLOBJ_NUM;
     in->real = real;
     in->imag = imag;
@@ -97,7 +95,7 @@ pplObj *pplObjNum(pplObj *in, const unsigned char amMalloced, const double real,
     in->self_this = NULL;
     in->amMalloced = amMalloced;
     in->immutable = 0;
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
     return in;
 }
 
@@ -133,7 +131,6 @@ pplObj *pplObjStr(pplObj *in, const unsigned char amMalloced, const unsigned cha
 //! \return Pointer to <in>
 
 pplObj *pplObjBool(pplObj *in, const unsigned char amMalloced, const int stat) {
-    int i;
     in->objType = PPLOBJ_BOOL;
     in->real = stat;
     in->auxil = NULL;
@@ -148,7 +145,7 @@ pplObj *pplObjBool(pplObj *in, const unsigned char amMalloced, const int stat) {
     in->imag = 0; // Need to set these as booleans use same object comparison logic as numeric values
     in->dimensionless = 1;
     in->flagComplex = in->tempType = 0;
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
     return in;
 }
 
@@ -296,7 +293,6 @@ pplObj *pplObjList(pplObj *in, const unsigned char amMalloced, unsigned char aux
 pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, const int size) {
     // A vector consists of a descriptor (pplVector), which may view part of a raw storage structure (pplVectorRaw)
     // shared with other vectors, e.g. slices of it
-    int i;
     pplVector *pv;
     pplVectorRaw *pvr;
     in->objType = PPLOBJ_ZOM;
@@ -338,7 +334,7 @@ pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned 
     in->amMalloced = amMalloced;
     in->immutable = 0;
     in->dimensionless = 1;
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
     in->objType = PPLOBJ_VEC;
     return in;
 }
@@ -354,7 +350,6 @@ pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned 
 
 pplObj *pplObjMatrix(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, const int size1,
                      const int size2) {
-    int i;
     pplMatrix *pm;
     pplMatrixRaw *pmr;
     in->objType = PPLOBJ_ZOM;
@@ -396,7 +391,7 @@ pplObj *pplObjMatrix(pplObj *in, const unsigned char amMalloced, const unsigned 
     in->amMalloced = amMalloced;
     in->immutable = 0;
     in->dimensionless = 1;
-    for (i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
+    for (int i = 0; i < UNITS_MAX_BASEUNITS; i++) in->exponent[i] = 0;
     in->objType = PPLOBJ_MAT;
     return in;
 }

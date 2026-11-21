@@ -124,10 +124,9 @@ int pplarrow_checkAxis(ppl_context *context, const parserOutput *in, const parse
 void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab,
                               const int index, const int system) {
     const pplObj *o = &in->stk[ptab[index]];
-    int i;
     if (o->objType != PPLOBJ_NUM) return;
     if (((system == SW_SYSTEM_GRAPH) || (system == SW_SYSTEM_PAGE)) && (!o->dimensionless))
-        for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+        for (int i = 0; i < UNITS_MAX_BASEUNITS; i++)
             // Dimensional coordinates must have units of length: the exponent of every base unit must be zero, except
             // length, which must be one
             if (o->exponent[i] != (i == UNIT_LENGTH)) {
@@ -404,13 +403,12 @@ void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_ob
 //! \param [in|out] inlist - Pointer to the head of the list to free, which is set to NULL
 
 void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist) {
-    pplarrow_object *obj;
 
     // Free each arrow in turn, with its style
     pplarrow_object **first = inlist;
     // Unlink the first arrow, and free it
     while (*inlist != NULL) {
-        obj = *inlist;
+        pplarrow_object *obj = *inlist;
         *inlist = (*inlist)->next;
         ppl_withWordsDestroy(context, &obj->style);
         free(obj);

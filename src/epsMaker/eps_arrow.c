@@ -197,11 +197,10 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
         if (!ThreeDim) {
             fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nstroke\n", xstart, ystart, xend, yend);
         } else {
-            int i;
             const int Nsteps = 100;
             double path = 0.0, element = hypot(xend - xstart, yend - ystart) / Nsteps;
             // Draw each piece of the stalk
-            for (i = 0; i < Nsteps; i++) {
+            for (int i = 0; i < Nsteps; i++) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nstroke\n",
                                   xstart + (xend - xstart) / Nsteps * i, ystart + (yend - ystart) / Nsteps * i,
                                   xstart + (xend - xstart) / Nsteps * (i + 1),
