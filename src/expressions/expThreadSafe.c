@@ -388,10 +388,9 @@ static int privatiseExpr(ppl_context *w, threadSafeCheck *t, const pplExpr *e) {
     // Find each variable which the expression looks up, and copy it into the worker's own namespace
     for (i = 0; i < e->bcLen; i++) {
         const pplExprInstruction *in = &e->bytecode[i];
-        char *name;
         pplObj *obj = NULL, v;
         if (in->opcode != PPL_BC_LOOKUP) continue;
-        name = e->strings + in->operand.string;
+        char *name = e->strings + in->operand.string;
         if (isLocal(t, name) || (ppl_dictLookup(own, name) != NULL)) continue;
         ppl_contextVarLookup(t->c, name, &obj, 0); // Look the variable up in the parent context
         if ((obj == NULL) || (obj->objType == PPLOBJ_MOD)) continue;
@@ -468,12 +467,11 @@ int ppl_funcThreadSafe(ppl_context *c, const pplObj *fn) {
 
 int ppl_contextWorkerPrivatiseFunc(ppl_context *w, ppl_context *parent, const pplObj *fn, pplObj *out) {
     threadSafeCheck t;
-    pplFunc *clone;
     t.c = parent;
     t.nLocals = 0;
     t.depth = 0;
     out->refCount = 1;
-    clone = cloneFunc(w, (const pplFunc *) fn->auxil);
+    pplFunc *clone = cloneFunc(w, (const pplFunc *) fn->auxil);
     // Failure to allocate memory leaves the output as a zombie
     if (clone == NULL) {
         pplObjZom(out, 0);
@@ -488,7 +486,6 @@ int ppl_contextWorkerPrivatiseFunc(ppl_context *w, ppl_context *parent, const pp
 //! \param [in] w - The worker context
 
 void ppl_contextWorkerFree(ppl_context *w) {
-    dictIterator *di;
     pplObj *item;
     char *key;
     int i;
@@ -497,7 +494,7 @@ void ppl_contextWorkerFree(ppl_context *w) {
 
     // The private copies of function descriptors are freed directly. They share their contents (e.g. the bytecode
     // of user-defined functions) with the originals, so must not be passed to the garbage collector.
-    di = ppl_dictIterateInit(w->namespaces[w->ns_ptr]);
+    dictIterator *di = ppl_dictIterateInit(w->namespaces[w->ns_ptr]);
     // Detach the cloned functions from the worker's namespace before freeing it, since the clones are freed separately
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         if (item->objType != PPLOBJ_FUNC) continue;

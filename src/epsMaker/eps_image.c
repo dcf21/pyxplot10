@@ -61,7 +61,6 @@ void eps_image_RenderEPS(EPSComm *x) {
     // Variables for the image and its placement
     char msg[PPL_MSG_LENGTH];
     bitmap_data data;
-    FILE *infile;
     int ImageType, i, j;
     double xscale, yscale, r;
     double xanchor = 0, yanchor = 0, xbotleft, ybotleft;
@@ -83,7 +82,7 @@ void eps_image_RenderEPS(EPSComm *x) {
     if (eps_eps_expandFilename(x, filename)) return;
 
     // Open input data file
-    infile = fopen(filename, "r");
+    FILE *infile = fopen(filename, "r");
     // Report a failure to open the file
     if (infile == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not open input file '%s'", filename);

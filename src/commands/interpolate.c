@@ -89,10 +89,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     dataBlock *blk;
     bitmap_data bmpdata;
     long int i = 0, j, k, ims, jms, sizeX = 0, sizeY = 0;
-    int contextLocalVec, contextDataTab, errCount = DATAFILE_NERRS;
+    int errCount = DATAFILE_NERRS;
     unsigned char *bmpchars = NULL;
     double *xdata = NULL, *ydata = NULL, *zdata = NULL, *MinList = NULL, *MaxList = NULL;
-    pplFunc *funcPtr;
     pplObj v, firstEntries[3];
     int NxRequired, NcolRequired, bmp = -1;
     char *splineTypeName;
@@ -101,7 +100,6 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     pplObj unit[USING_ITEMS_MAX];
     int minSet[USING_ITEMS_MAX], maxSet[USING_ITEMS_MAX];
     double min[USING_ITEMS_MAX], max[USING_ITEMS_MAX];
-    splineDescriptor *desc;
     const gsl_interp_type *splineType = NULL;
     gsl_spline *splineObj = NULL;
     gsl_interp_accel *accel = NULL;
@@ -176,8 +174,8 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     }
 
     // Allocate a new memory context for the data file we're about to read
-    contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
-    contextDataTab = ppl_memAlloc_DescendIntoNewContext();
+    int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
+    int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
 
     // Fetch string name of interpolation type
     if (mode == INTERP_AKIMA) splineTypeName = "Akima spline";
@@ -302,7 +300,6 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         long p;
         unsigned char buff[10];
         int pos = PARSE_interpolate2d_expression_list;
-        FILE *infile;
 
         // Bitmap images may not have ranges
         for (i = 0; i < 2; i++)
@@ -365,7 +362,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         }
 
         // Open the bitmap image
-        infile = fopen(filenameOut, "r");
+        FILE *infile = fopen(filenameOut, "r");
         // Report a failure to open the file
         if (infile == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open input file '%s'",
@@ -490,14 +487,12 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             // Permute the x and y values into sorted order in place, keeping the index arrays up to date as values are
             // swapped
             for (j = 0; j < i; j++) {
-                double tmp, tmp2;
-                long int tmp3;
-                tmp3 = sortArray[j];
+                long int tmp3 = sortArray[j];
                 if (tmp3 == j) continue;
-                tmp = xdata[j];
+                double tmp = xdata[j];
                 xdata[j] = xdata[tmp3];
                 xdata[tmp3] = tmp;
-                tmp2 = ydata[j];
+                double tmp2 = ydata[j];
                 ydata[j] = ydata[tmp3];
                 ydata[tmp3] = tmp2;
                 sortArray[sortArrayI[j]] = tmp3;
@@ -611,7 +606,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     }
 
     // Generate a function descriptor for this spline
-    desc = (splineDescriptor *) malloc(sizeof(splineDescriptor));
+    splineDescriptor *desc = (splineDescriptor *) malloc(sizeof(splineDescriptor));
     // Failure to allocate memory is reported as an error
     if (desc == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -639,7 +634,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     desc->splineType = splineTypeName;
 
     // Make a new function descriptor
-    funcPtr = (pplFunc *) malloc(sizeof(pplFunc));
+    pplFunc *funcPtr = (pplFunc *) malloc(sizeof(pplFunc));
     // Failure to allocate memory is reported as an error
     if (funcPtr == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -696,7 +691,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
 void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc, pplObj *in, pplObj *out, int *status,
                          char *errout) {
-    double dblin, dblout;
+    double dblout;
 
     // The argument must have the same units as the x data
     if (!ppl_unitsDimEqual(in, &desc->unitX)) {
@@ -733,7 +728,7 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     }
 
     // If loglinear interpolation, log input value
-    dblin = in->real;
+    double dblin = in->real;
     if (desc->logInterp) dblin = log(dblin);
 
     if (desc->splineType[1] != 't') // Not stepwise interpolation
@@ -812,7 +807,7 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
 
 void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescriptor *desc, const pplObj *in1,
                            const pplObj *in2, const unsigned char bmp, pplObj *out, int *status, char *errout) {
-    double dblin1, dblin2, dblout;
+    double dblout;
 
     // The first argument must have the same units as the x data
     if (!ppl_unitsDimEqual(in1, &desc->unitX)) {
@@ -883,8 +878,8 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
     }
 
     // Interpolate the scattered data, or look up the pixel of the bitmap, scaling its value to the range 0 to 1
-    dblin1 = in1->real;
-    dblin2 = in2->real;
+    double dblin1 = in1->real;
+    double dblin2 = in2->real;
 
     // Scattered data, or a bitmap
     if (!bmp) {

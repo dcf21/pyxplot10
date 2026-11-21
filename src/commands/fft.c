@@ -324,7 +324,6 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (ppldata_readRange(c, pl, in, pos, o1, o2, nr, NULL, unit, min, minSet, max, maxSet)) return;
             if ((stk[pos + o3].objType == PPLOBJ_NUM) || (stk[pos + o3].objType == PPLOBJ_DATE) ||
                 (stk[pos + o3].objType == PPLOBJ_BOOL)) {
-                double tempDbl;
                 // The step must have the same type as the limits
                 if (unit[nr].objType != stk[pos + o3].objType) {
                     ppl_snprintfTrunc(
@@ -345,7 +344,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     return;
                 }
                 step[nr] = stk[pos + o3].real;
-                tempDbl = 1.0 +
+                double tempDbl = 1.0 +
                         floor((max[nr] - min[nr]) / step[nr] + 0.5); // Add one because this is a fencepost problem
                 // There must be at least two samples in each dimension
                 if (tempDbl < 2.0) {
@@ -515,12 +514,11 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             for (k = 0; k < Ndims; k++)
                 // Report a data point which is not where it should be on the grid
                 if (!ppl_dblEqual(blk->data_real[k + (Ndims + 2) * j], pos[k])) {
-                    int m;
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
                             "Data supplied to fft command must be on a regular rectangular grid and in row-major ordering. Row %ld should represent a data point at position (",
                             i + 1);
-                    m = strlen(c->errStat.errBuff);
+                    int m = strlen(c->errStat.errBuff);
                     // Write the expected position
                     for (l = 0; l < Ndims; l++) {
                         pplObj x = unit[l];
@@ -576,7 +574,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else // Fetch data from a function
     {
-        int i, fnlen;
+        int i;
         int pos = PARSE_ifft_fnnames;
         char *scratchpad = (char *) malloc(LSTR_LENGTH);
 
@@ -597,7 +595,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
 
         // Print function name
-        fnlen = 0;
+        int fnlen = 0;
         // The function's name may have several parts, separated by dots
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
@@ -611,11 +609,10 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         for (i = 0; i < Nsamples; i++) {
             const int stkLevelOld = c->stackPtr;
             int j = fnlen;
-            int k = i, l, explen1, explen2, errPos = -1, errType = -1, lastOpAssign;
+            int k = i, l, explen2, errPos = -1, errType = -1, lastOpAssign;
             int Npos[USING_ITEMS_MAX];
             double pos[USING_ITEMS_MAX];
             pplExpr *e;
-            pplObj *out;
             // Work out the position of this sample on the grid, in row-major order
             for (l = Ndims - 1; l >= 0; l--) {
                 Npos[l] = (k % Nsteps[l]);
@@ -633,7 +630,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
             scratchpad[j] = '\0';
             ppl_strAppendChar(scratchpad, LSTR_LENGTH, &j, ')');
 
-            explen1 = explen2 = j; // The length of the expression, up to and including the closing bracket
+            int explen1 = explen2 = j; // The length of the expression, up to and including the closing bracket
             ppl_error_setstreaminfo(&c->errcontext, 1, "fitting expression");
             ppl_expCompile(c, pl->srcLineN, pl->srcId, pl->srcFname, scratchpad, &explen2, 1, 1, 1, &e, &errPos,
                            &errType, c->errStat.errBuff);
@@ -657,7 +654,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
                 return;
             }
-            out = ppl_expEval(c, e, &lastOpAssign, 1, 1);
+            pplObj *out = ppl_expEval(c, e, &lastOpAssign, 1, 1);
             pplExpr_free(e);
             e = NULL;
             // Give up if the function could not be evaluated
@@ -786,9 +783,9 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
         // Multiply each sample by the normalisation and by the phase factor for the grid's origin
         for (i = 0; i < Nsamples; i++) {
             int l;
-            double pos, angle, normR, normI, normR2, normI2;
-            normR = norm;
-            normI = 0.0;
+            double pos, angle, normR2, normI2;
+            double normR = norm;
+            double normI = 0.0;
             k = i;
             // Accumulate the phase factor for each dimension
             for (l = Ndims - 1; l >= 0; l--) {
@@ -898,7 +895,7 @@ void ppl_directive_fft(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
 void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplObj *in, pplObj *out, int *status,
                       char *errout) {
-    int i, j;
+    int i;
     double tempDbl;
 
     *out = desc->outputUnit;
@@ -947,7 +944,7 @@ void ppl_fft_evaluate(ppl_context *c, char *FuncName, FFTDescriptor *desc, pplOb
     }
 
     // Work out closest datapoint in FFT datagrid to the one we want
-    j = 0;
+    int j = 0;
     // Find the grid cell for each argument; FFTW stores positive frequencies first, followed by negative ones
     for (i = 0; i < desc->Ndims; i++) {
         tempDbl = floor((in + i)->real * desc->range[i].real + 0.5);

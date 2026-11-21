@@ -35,13 +35,11 @@
 //! current ppl_memAlloc context.
 
 list *ppl_strSplit(char *in) {
-    int pos, start, end;
+    int start, end;
     char *word;
-    char *text_buffer;
-    list *out;
-    out = ppl_listInit(0);
-    pos = 0;
-    text_buffer = (char *) malloc(strlen(in) + 1);
+    list *out = ppl_listInit(0);
+    int pos = 0;
+    char *text_buffer = (char *) malloc(strlen(in) + 1);
     // Find each word in turn
     while (in[pos] != '\0') {
         // Scan along to find the next word

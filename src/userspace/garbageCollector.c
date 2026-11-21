@@ -46,9 +46,9 @@
 //! \param [in] n - The namespace to free. Has no effect unless it was allocated with malloc().
 
 void ppl_garbageNamespace(dict *n) {
-    dictItem *ptr, *ptrnext;
+    dictItem *ptrnext;
     if ((n == NULL) || (!n->useMalloc)) return;
-    ptr = n->first;
+    dictItem *ptr = n->first;
     // Release the value of each variable, and free its key and item. Each value is freed by the garbage collector
     // itself, since the dictionary was created with malloc().
     while (ptr != NULL) {
@@ -70,9 +70,9 @@ void ppl_garbageNamespace(dict *n) {
 //! \param [in] l - The list to free. Has no effect unless it was allocated with malloc().
 
 void ppl_garbageList(list *l) {
-    listItem *ptr, *ptrnext;
+    listItem *ptrnext;
     if ((l == NULL) || (!l->useMalloc)) return;
-    ptr = l->first;
+    listItem *ptr = l->first;
     // Release each item in the list, and free the list item which held it
     while (ptr != NULL) {
         ptrnext = ptr->next;
@@ -93,10 +93,9 @@ void ppl_garbageList(list *l) {
 void ppl_garbageObject(pplObj *o) {
     // Drop one reference; if others remain, the object stays alive. Otherwise mark it as a zombie, so that any stray
     // use of it is harmless, and free what it owns.
-    int objType;
     if (o == NULL) return;
     if (__sync_sub_and_fetch(&o->refCount, 1) > 0) return;
-    objType = o->objType;
+    int objType = o->objType;
     o->objType = PPLOBJ_ZOM; // Object is now a zombie
     // Release the variable from which the object was read, kept so that methods such as list.append() can modify it in
     // place

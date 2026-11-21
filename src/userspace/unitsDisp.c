@@ -113,7 +113,7 @@ char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const 
                                         const char formatChar, int maxLen, const int requiredArgs, int arg1i,
                                         int arg2i) {
     double numberOutReal, numberOutImag;
-    char *output, *unitstr;
+    char *output;
     int i = 0, done = 0, intArg = 0;
     if (N == 0) output = c->udNumDispA;
     else output = c->udNumDispB;
@@ -129,7 +129,7 @@ char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const 
     }
 
     // Find the units in which to display the number, and its value in those units
-    unitstr = ppl_printUnit(c, in, &numberOutReal, &numberOutImag, N, 1, 0);
+    char *unitstr = ppl_printUnit(c, in, &numberOutReal, &numberOutImag, N, 1, 0);
 
     // Integer formats cannot show numbers beyond the range of an int; show them as infinite
     if ((formatChar == 'd') || (formatChar == 'i') || (formatChar == 'o')) {
@@ -199,7 +199,7 @@ char *ppl_unitsNumericDisplayWithFormat(ppl_context *c, const pplObj *in, const 
 char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typeable, int NSigFigs) {
     // OoM is the smallest component which is significant at the chosen number of significant figures
     double numberOutReal, numberOutImag, OoM;
-    char *output, *unitstr;
+    char *output;
     int i = 0;
     if (N == 0) output = c->udNumDispA;
     else output = c->udNumDispB;
@@ -217,7 +217,7 @@ char *ppl_unitsNumericDisplay(ppl_context *c, pplObj *in, const int N, int typea
     // Use the user's chosen display style, unless the caller asked for one; then find the units in which to display the
     // number, and its value in those units
     if (typeable == 0) typeable = c->set->term_current.NumDisplay;
-    unitstr = ppl_printUnit(c, in, &numberOutReal, &numberOutImag, N, 1, typeable);
+    char *unitstr = ppl_printUnit(c, in, &numberOutReal, &numberOutImag, N, 1, typeable);
 
     // Values which are not finite are shown as nan
     if (((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) && (in->flagComplex != 0)) ||
@@ -525,8 +525,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
     unsigned char UnitDisp[UNITS_MAX_BASEUNITS];
     double ExpMax = 0;
     int pos = 0, OutputPos = 0;
-    int i, j = 0, k, l, found, first;
-    listIterator *listiter;
+    int i, j = 0, k, l, found;
     PreferredUnit *pu;
 
     // Use the user's display style unless the caller asked for one, and choose which of three static output buffers to
@@ -539,7 +538,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
     else output = c->udBuffC;
 
     // Check whether input value is dimensionally equal to any preferred units
-    listiter = ppl_listIterateInit(c->unit_PreferredUnits);
+    listIterator *listiter = ppl_listIterateInit(c->unit_PreferredUnits);
     // Look for a unit, set with "set unit preferred", which matches the quantity's dimensions exactly
     while (listiter != NULL) {
         pu = (PreferredUnit *) listiter->data;
@@ -591,7 +590,7 @@ char *ppl_printUnit(ppl_context *c, const pplObj *in, double *numberOutReal, dou
     }
 
     // Display units one by one
-    first = 1;
+    int first = 1;
     // Write the units in order of decreasing power, so that those with positive powers come first, and those with
     // negative powers can follow a /
     while (1) {
@@ -922,13 +921,13 @@ void ppl_unitsStringEvaluate(const ppl_context *c, const char *in, pplObj *out, 
 
 void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, const int OutputContext, int *errpos,
                           char *errText) {
-    int end, outpos, PrefixOut, i, j, k, l, m, p;
+    int PrefixOut, i, j, k, l, m, p;
     double power = 1.0, powerneg = 1.0;
     pplObj UnitVal;
 
     *output = NULL;
     *errpos = -1;
-    end = strlen(instr);
+    int end = strlen(instr);
     ppl_unitsStringEvaluate(c, instr, &UnitVal, &end, errpos, errText);
     if (*errpos >= 0) return; // Error in parsing unit expression
     *output = (PreferredUnit *) malloc(sizeof(PreferredUnit));
@@ -941,7 +940,7 @@ void ppl_newPreferredUnit(ppl_context *c, PreferredUnit **output, char *instr, c
     (*output)->modified = 1;
 
     // Read list of units from preferred unit string
-    outpos = i = 0;
+    int outpos = i = 0;
     // Read the string again, this time recording each unit, its prefix and its power, so that quantities with these
     // dimensions can be displayed in these units
     while ((powerneg != 0.0) && (outpos < UNITS_MAX_BASEUNITS)) {

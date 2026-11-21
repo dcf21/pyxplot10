@@ -87,7 +87,6 @@ int main(const int argc, char **argv) {
     int tempdirnumber = 1;
     char tempdirpath[FNAME_LENGTH];
     char *EnvDisplay;
-    ppl_context *context;
     struct stat statinfo;
 
     // Signals to unblock when exiting after SIGINT, and the wait used while the temporary directory is created
@@ -99,7 +98,7 @@ int main(const int argc, char **argv) {
 
     // Initialise sub-modules
     ppl_PaperSizeInit();
-    context = ppl_contextInit();
+    ppl_context *context = ppl_contextInit();
     setenv("TZ", "UTC", 1);
     if (DEBUG) ppl_log(&context->errcontext, "Initialising Pyxplot.");
     // Log the timezone in debugging mode

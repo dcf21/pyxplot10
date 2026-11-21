@@ -397,8 +397,8 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
             const PotentialTick *tick;
             const ArgumentInfo *arg;
             int count_steps = 0;
-            double axispos_min, axispos_max, axispos_mid;
-            unsigned char DiscreteMoveMin, SlopePositive;
+            double axispos_mid;
+            unsigned char DiscreteMoveMin;
 
             // If we're not doing automatic major/minor ticks, don't finalise these ticks
             if ((TicksAccepted[i] == 1) && (!AutoTicks[1])) continue;
@@ -407,9 +407,9 @@ static int AutoTickListFinalise(EPSComm *X, pplset_axis *axis, const double Unit
             // Find precise location of tick
             tick = &PotTickList[TickOrder[i].id];
             arg = &args[tick->ArgNo];
-            axispos_min = ((double) tick->IntervalNum - 1.0) / (NIntervals - 1);
-            axispos_max = ((double) tick->IntervalNum) / (NIntervals - 1);
-            SlopePositive = (arg->NumericValues[tick->IntervalNum] >= arg->NumericValues[tick->IntervalNum - 1]);
+            double axispos_min = ((double) tick->IntervalNum - 1.0) / (NIntervals - 1);
+            double axispos_max = ((double) tick->IntervalNum) / (NIntervals - 1);
+            unsigned char SlopePositive = (arg->NumericValues[tick->IntervalNum] >= arg->NumericValues[tick->IntervalNum - 1]);
 
             // Locate the tick precisely by bisection, finding where the argument passes its target value
             while (count_steps < 200) {
@@ -538,27 +538,21 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                            pplset_axis *linkedto) {
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int i, j, k, start, NArgs, OutContext, ContextRough = -1, CommaPositions[MAX_ARGS + 2], NFactorsLogBase, LogBase;
+    int i, j, k, NArgs, ContextRough = -1, CommaPositions[MAX_ARGS + 2], NFactorsLogBase;
     int FactorsLogBase[MAX_FACTORS];
-    int N_STEPS, tripleQuote = 0, rawString = 0;
-    char *format, VarName[2] = "\0\0", FormatTemp[32], quoteType, *DummyStr;
-    pplObj CentralValue, *VarVal = NULL, DummyTemp;
+    int tripleQuote = 0, rawString = 0;
+    char *format, VarName[2] = "\0\0", FormatTemp[32];
+    pplObj *VarVal = NULL, DummyTemp;
     pplExpr **formatExp = NULL;
-    ArgumentInfo *args;
-    ArgLeagueTableEntry *ArgLeagueTable, *TickOrder;
-    PotentialTick *PotTickList;
-    int NPotTicks, NPotTicksMax;
-    unsigned char *TicksAccepted, *TicksAcceptedNew, *TicksAcceptedNewTF, *TicksAcceptedNew2B, *TicksAcceptedRough,
-            *TicksAcceptedRough2;
 
     // Log which algorithm is in use
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto()");
-    N_STEPS = (2 + axis->PhysicalLengthMajor) * STEP_DUPLICITY; // Number of intervals into which we divide axis
+    int N_STEPS = (2 + axis->PhysicalLengthMajor) * STEP_DUPLICITY; // Number of intervals into which we divide axis
 
     // Make temporary rough workspace
-    OutContext = ppl_memAlloc_GetMemContext();
+    int OutContext = ppl_memAlloc_GetMemContext();
     ContextRough = ppl_memAlloc_DescendIntoNewContext();
-    DummyStr = (char *) ppl_memAlloc(LSTR_LENGTH);
+    char *DummyStr = (char *) ppl_memAlloc(LSTR_LENGTH);
     if (DummyStr == NULL) goto FAIL;
 
     // Work through format string identifying substitution expressions
@@ -580,7 +574,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
         ppl_snprintfTrunc(FormatTemp, sizeof(FormatTemp), "\"%%s\"%%(logn(%s,%d))", VarName, axis->tics.logBase);
     }
     for (i = 0; ((format[i] != '\0') && (format[i] != '\'') && (format[i] != '\"')); i++);
-    quoteType = format[i];
+    char quoteType = format[i];
     if (quoteType == '\0') goto FAIL;
     if ((i > 0) && (format[i - 1] == 'r')) { rawString = 1; }
     // Skip over the opening quote, which may be tripled
@@ -618,12 +612,12 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     ppl_strBracketMatch(format + i, '(', ')', CommaPositions, &NArgs, &j, MAX_ARGS);
     if (j < 0) goto FAIL;
     if (NArgs < 1) goto FAIL;
-    start = i;
+    int start = i;
 
     // Malloc structure to hold argument info
-    args = (ArgumentInfo *) ppl_memAlloc(NArgs * sizeof(ArgumentInfo));
+    ArgumentInfo *args = (ArgumentInfo *) ppl_memAlloc(NArgs * sizeof(ArgumentInfo));
     if (args == NULL) goto FAIL;
-    ArgLeagueTable = (ArgLeagueTableEntry *) ppl_memAlloc(NArgs * sizeof(ArgLeagueTableEntry));
+    ArgLeagueTableEntry *ArgLeagueTable = (ArgLeagueTableEntry *) ppl_memAlloc(NArgs * sizeof(ArgLeagueTableEntry));
     if (ArgLeagueTable == NULL) goto FAIL;
 
     // Compile argument expressions
@@ -646,7 +640,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     ppl_contextGetVarPointer(x->c, VarName, &VarVal, &DummyTemp);
 
     // Identify string versus numeric arguments
-    CentralValue = axis->DataUnit;
+    pplObj CentralValue = axis->DataUnit;
     CentralValue.refCount = VarVal->refCount;
     CentralValue.amMalloced = VarVal->amMalloced;
     CentralValue.flagComplex = 0;
@@ -723,7 +717,6 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                 if ((j > 0) && (strcmp(args[i].StringValues[j], args[i].StringValues[j - 1]) != 0))
                     args[i].NValueChanges++;
             } else {
-                int err;
                 double x;
                 if ((o == NULL) || c->errStat.status ||
                     ((o->objType != PPLOBJ_NUM) && (o->objType != PPLOBJ_DATE) && (o->objType != PPLOBJ_BOOL))) {
@@ -732,7 +725,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
                 } else {
                     x = o->real;
                 }
-                err = !gsl_finite(x);
+                int err = !gsl_finite(x);
                 args[i].NumericValues[j] = x;
                 if ((!err) && (j > 0) && (x != args[i].NumericValues[j - 1])) args[i].NValueChanges++;
                 // Track the smallest value
@@ -758,14 +751,13 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     }
 
     // Work out factors of log base of axis. In fact, work out factors of log base ** 2, so that ten divides by four.
-    LogBase = (axis->LogFinal == SW_BOOL_TRUE) ? axis->tics.logBase : 10;
+    int LogBase = (axis->LogFinal == SW_BOOL_TRUE) ? axis->tics.logBase : 10;
     eps_plot_ticking_factorise(pow(LogBase, FACTOR_MULTIPLY), FactorsLogBase, MAX_FACTORS,
                                axis->PhysicalLengthMinor * 1.2, &NFactorsLogBase);
 
     // Work out throw of each argument (i.e. the spread of values that it takes)
     for (i = 0; i < NArgs; i++) {
-        double throw;
-        throw = args[i].MaxValue - args[i].MinValue;
+        double throw = args[i].MaxValue - args[i].MinValue;
         if ((fabs(throw -floor(throw +0.5)) < 1e-10) && (fabs(fmod(throw, 2.0) - 1.0) < 0.1)) throw = ceil(throw +0.5);
         throw = ceil(throw -1e-10);
         if ((throw > 1e6) || (args[i].MinValue < INT_MIN + 10) || (args[i].MaxValue > INT_MAX - 10))
@@ -792,9 +784,9 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     qsort((void *) args, NArgs, sizeof(ArgumentInfo), compare_arg);
 
     // Malloc table of potential ticks
-    NPotTicks = 0;
-    NPotTicksMax = NArgs * N_STEPS * MAX_TICKS_PER_INTERVAL;
-    PotTickList = (PotentialTick *) ppl_memAlloc(NPotTicksMax * sizeof(PotentialTick));
+    int NPotTicks = 0;
+    int NPotTicksMax = NArgs * N_STEPS * MAX_TICKS_PER_INTERVAL;
+    PotentialTick *PotTickList = (PotentialTick *) ppl_memAlloc(NPotTicksMax * sizeof(PotentialTick));
     if (PotTickList == NULL) goto FAIL;
 
     // Generate list of potential ticks
@@ -969,7 +961,7 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     if (DEBUG) qsort((void *) PotTickList, NPotTicks, sizeof(PotentialTick), compare_PotentialTicks);
 
     // Create look-up table of ticks in order of position along axis
-    TickOrder = (ArgLeagueTableEntry *) ppl_memAlloc(NPotTicks * sizeof(ArgLeagueTableEntry));
+    ArgLeagueTableEntry *TickOrder = (ArgLeagueTableEntry *) ppl_memAlloc(NPotTicks * sizeof(ArgLeagueTableEntry));
     if (TickOrder == NULL) goto FAIL;
     // Order the ticks by their position along the axis
     for (i = 0; i < NPotTicks; i++) {
@@ -1005,12 +997,12 @@ void eps_plot_ticking_auto(EPSComm *x, pplset_axis *axis, const double UnitMulti
     }
 
     // Make arrays for noting which ticks have been accepted
-    TicksAccepted = (unsigned char *) ppl_memAlloc(NPotTicks);
-    TicksAcceptedNew = (unsigned char *) ppl_memAlloc(NPotTicks);
-    TicksAcceptedNewTF = (unsigned char *) ppl_memAlloc(NPotTicks);
-    TicksAcceptedNew2B = (unsigned char *) ppl_memAlloc(NPotTicks);
-    TicksAcceptedRough = (unsigned char *) ppl_memAlloc(NPotTicks);
-    TicksAcceptedRough2 = (unsigned char *) ppl_memAlloc(NPotTicks);
+    unsigned char *TicksAccepted = (unsigned char *) ppl_memAlloc(NPotTicks);
+    unsigned char *TicksAcceptedNew = (unsigned char *) ppl_memAlloc(NPotTicks);
+    unsigned char *TicksAcceptedNewTF = (unsigned char *) ppl_memAlloc(NPotTicks);
+    unsigned char *TicksAcceptedNew2B = (unsigned char *) ppl_memAlloc(NPotTicks);
+    unsigned char *TicksAcceptedRough = (unsigned char *) ppl_memAlloc(NPotTicks);
+    unsigned char *TicksAcceptedRough2 = (unsigned char *) ppl_memAlloc(NPotTicks);
     if ((TicksAccepted == NULL) || (TicksAcceptedNew == NULL) || (TicksAcceptedNewTF == NULL) ||
         (TicksAcceptedNew2B == NULL) || (TicksAcceptedRough == NULL) || (TicksAcceptedRough2 == NULL))
         goto FAIL;

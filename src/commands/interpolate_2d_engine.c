@@ -88,14 +88,13 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
             *output = 0.0;
             for (i = 0; i < InSize; i++) {
                 const double dist = gsl_pow_2((inX[i] - x) / Xscl) + gsl_pow_2((inY[i] - y) / Yscl);
-                double weight;
                 // If we are on top of a data point, return its value exactly, avoiding an infinite weight
                 if (dist < 1e-200) {
                     *output = inZ[i];
                     WeightSum = 1.0;
                     break;
                 }
-                weight = 1.0 / dist;
+                double weight = 1.0 / dist;
                 *output += weight * inZ[i];
                 WeightSum += weight;
             }
@@ -143,12 +142,11 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
 void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *sg, const dataTable *in,
                        pplset_axis *axis_x, pplset_axis *axis_y, const unsigned char SampleToEdge, int *XSizeOut,
                        int *YSizeOut) {
-    int i, imax, j, jmax, ims, jms, ct, k, tempContext;
-    double *indata, *MinList, *MaxList, *d[USING_ITEMS_MAX + 4];
-    long p, p2, pc, InSize;
-    dataBlock *blk;
-    imax = (sg->SamplesXAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesX;
-    jmax = (sg->SamplesYAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesY;
+    int i, j, ims, jms, ct;
+    double *d[USING_ITEMS_MAX + 4];
+    long p, pc;
+    int imax = (sg->SamplesXAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesX;
+    int jmax = (sg->SamplesYAuto == SW_BOOL_TRUE) ? sg->samples : sg->SamplesY;
     *XSizeOut = imax;
     *YSizeOut = jmax;
 
@@ -159,23 +157,23 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     }
 
     // Create a data table to hold imax x jmax grid points, with the same number of columns as the input
-    k = in->Ncolumns_real;
+    int k = in->Ncolumns_real;
     *output = ppldata_NewDataTable(k, 0, ppl_memAlloc_GetMemContext(), imax * jmax);
     if (*output == NULL) return; // Memory fail
 
     // Mark every row of the output as unsplit and without text labels
-    InSize = in->Nrows;
+    long InSize = in->Nrows;
     (*output)->firstEntries = in->firstEntries;
-    p2 = (*output)->current->blockPosition = (*output)->Nrows = imax * jmax;
+    long p2 = (*output)->current->blockPosition = (*output)->Nrows = imax * jmax;
     for (pc = 0; pc < p2; pc++) (*output)->current->split[pc] = 0;
     for (pc = 0; pc < p2; pc++) (*output)->current->text[pc] = NULL;
     for (pc = 0; pc < p2; pc++) (*output)->current->fileLine_real[pc] = 0;
 
     // Extract data into a temporary array
-    tempContext = ppl_memAlloc_DescendIntoNewContext();
+    int tempContext = ppl_memAlloc_DescendIntoNewContext();
 
     // Space for the data, plus a row of minima and a row of maxima for each column
-    indata = (double *) malloc(k * (InSize + 2) * sizeof(double));
+    double *indata = (double *) malloc(k * (InSize + 2) * sizeof(double));
     // Failure to allocate memory is reported as an error
     if (indata == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory whilst resampling data.");
@@ -184,11 +182,11 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
         return;
     }
     for (ct = 0; ct < k; ct++) d[ct] = indata + ct * InSize;
-    MinList = indata + k * InSize;
-    MaxList = indata + k * (InSize + 1);
+    double *MinList = indata + k * InSize;
+    double *MaxList = indata + k * (InSize + 1);
 
     // Copy input data table into temporary array
-    blk = in->first;
+    dataBlock *blk = in->first;
     // Copy the data from each block of the table, transposing it into one array per column
     while (blk != NULL) {
         for (ct = 0; ct < k; ct++)

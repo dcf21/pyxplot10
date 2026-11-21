@@ -82,7 +82,7 @@ void ppl_withWordsZero(const ppl_context *context, withWords *a) {
 void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserLine *pl, const int *ptab,
                            const int stkbase, withWords *out) {
     pplObj *stk = in->stk + stkbase;
-    int tempint, i, pos, got;
+    int tempint, i;
     double tempdbl;
     char *tempstr;
     pplExpr *tempexp;
@@ -96,8 +96,8 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
                       &out->USEfillcolor1234);
 
     // Other settings
-    pos = ptab[PARSE_INDEX_linetype];
-    got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
+    int pos = ptab[PARSE_INDEX_linetype];
+    int got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
     // A line type given as a number is stored directly; one given as an expression (for each data point) is stored as
     // an expression. The other options below work in the same way.
     if (got) {

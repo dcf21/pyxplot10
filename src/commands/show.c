@@ -214,13 +214,13 @@ static void showColor(ppl_context *c, char *out, const size_t outLen, char *item
 static void showTicks(ppl_context *c, char *out, const size_t outLen, char *itemSet, const int interactive, char *name,
                       char *buf, char *buf2, const pplset_tics *T, const pplset_tics *TD, pplObj *U, const pplObj *UD,
                       const int amLog, const int amLogD, const char axisLetter, const int axisNumber) {
-    int m, n;
+    int n;
     ppl_snprintfTrunc(buf2, FNAME_LENGTH, "Sets where the %s ticks are placed along the %c%d axis, and how they appear",
                       (name[0] == 'm') ? "minor" : "major", axisLetter, axisNumber);
     ppl_snprintfTrunc(
             buf, LSTR_LENGTH, "%s ",
             *(char **) ppl_fetchSettingName(&c->errcontext, T->tickDir, SW_TICDIR_INT, SW_TICDIR_STR, sizeof(char *)));
-    m = strlen(buf);
+    int m = strlen(buf);
     // Write the tick positions: automatic, at regular intervals, or as a list
     if ((!T->tickStepSet) && (T->tickList == NULL)) {
         ppl_strAppendf(buf, LSTR_LENGTH, &m, "autofreq");
@@ -311,15 +311,15 @@ static void showColorRange(ppl_context *c, char *out, const size_t outLen, char 
 static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, const int interactive, pplset_graph *sg,
                                pplarrow_object **al, ppllabel_object **ll, pplset_axis *xa, pplset_axis *ya,
                                pplset_axis *za) {
-    char *out, *buf, *buf2, *bufp, *bufp2, temp1[32], temp2[32];
+    char *bufp, *bufp2, temp1[32], temp2[32];
     int i = 0, p = 0, j, k, l, m;
     unsigned char unchanged;
     unit *ud = c->unit_database;
     int outLen = 8 * LSTR_LENGTH;
 
-    out = (char *) malloc(outLen); // Accumulate our whole output text here
-    buf = (char *) malloc(LSTR_LENGTH); // Put the value of each setting in here
-    buf2 = (char *) malloc(FNAME_LENGTH);
+    char *out = (char *) malloc(outLen); // Accumulate our whole output text here
+    char *buf = (char *) malloc(LSTR_LENGTH); // Put the value of each setting in here
+    char *buf2 = (char *) malloc(FNAME_LENGTH);
 
     // Report a failure to allocate the buffers, and free those that were allocated
     if ((out == NULL) || (buf == NULL) || (buf2 == NULL)) {
@@ -590,14 +590,13 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         pplExpr *exp_current = (pplExpr *) sg->ColMapExpr;
         pplExpr *maskdefault = (pplExpr *) c->set->graph_default.MaskExpr;
         pplExpr *maskcurrent = (pplExpr *) sg->MaskExpr;
-        int k;
         const int unchanged = ((exp_default == NULL) == (exp_current == NULL)) &&
                 ((exp_default == NULL) || (strcmp(exp_default->ascii, exp_current->ascii) == 0)) &&
                 ((maskdefault == NULL) == (maskcurrent == NULL)) &&
                 ((maskdefault == NULL) || (strcmp(maskdefault->ascii, maskcurrent->ascii) == 0));
         if (exp_current != NULL) ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s", exp_current->ascii);
         else ppl_snprintfTrunc(buf, LSTR_LENGTH, "rgb(c1,c1,c1)");
-        k = strlen(buf);
+        int k = strlen(buf);
         if (maskcurrent == NULL) ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, " nomask");
         else ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, " mask %s", maskcurrent->ascii);
         k += strlen(buf + k);
@@ -613,10 +612,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "%d %slabel", sg->ContoursN,
                               (sg->ContoursLabel == SW_ONOFF_ON) ? "" : "no");
         } else {
-            int p, q;
+            int q;
             pplObj v = sg->ContoursUnit;
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "(");
-            p = strlen(buf);
+            int p = strlen(buf);
             // Write each contour level, separated by commas
             for (q = 0; q < sg->ContoursListLen; q++) {
                 // Separate the levels with commas
@@ -1031,9 +1030,8 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     //    i += strlen(out+i) ; p=1;
     //   }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "samples", 1) >= 0)) {
-        int k;
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%d grid ", sg->samples);
-        k = strlen(buf);
+        int k = strlen(buf);
         if (sg->SamplesXAuto == SW_BOOL_TRUE) ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "* x ");
         else ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, "%d x ", sg->SamplesX);
         k += strlen(buf + k);
@@ -2029,7 +2027,6 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
     // Variables pointing to the settings to show, which belong to a multiplot item or to the current settings
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
-    int pos;
     char itemSet[32];
     pplset_graph *sg;
     pplarrow_object **al;
@@ -2050,7 +2047,6 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         itemSet[0] = '\0';
     } else {
         canvas_itemlist *canvas_items = c->canvas_items;
-        canvas_item *ptr;
         int editNo = (int) round(stk[PARSE_show_editno].real);
         // The multiplot item number must be valid
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
@@ -2058,7 +2054,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
-        ptr = canvas_items->first;
+        canvas_item *ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
         // Report a multiplot item which does not exist
         if (ptr == NULL) {
@@ -2078,7 +2074,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
     }
 
     // With no words after show, print help on the show command
-    pos = PARSE_show_0setting_list;
+    int pos = PARSE_show_0setting_list;
     // No words were given
     if ((stk[pos].objType != PPLOBJ_NUM) || (stk[pos].real <= 0)) {
         ppl_error(&c->errcontext, ERR_PREFORMED, -1, -1, ppltxt_show);

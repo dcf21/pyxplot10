@@ -62,11 +62,11 @@
 
 void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
                             const pplset_axis *linkedto) {
-    int i, Nticks_maj, Nticks_min, OutContext;
+    int i, Nticks_maj, Nticks_min;
 
     // Log which algorithm is in use, and note the memory context in which tick labels are to be allocated
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto3()");
-    OutContext = ppl_memAlloc_GetMemContext();
+    int OutContext = ppl_memAlloc_GetMemContext();
 
     // This method only applies to axes linked, without a using expression, to an axis of the same length which has
     // ticks
@@ -92,10 +92,9 @@ void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMult
 
         // Label each tick with this axis's format, using exactly zero for values which straddle zero
         for (i = 0; i < Nticks_maj; i++) {
-            double xtmpA, xtmp, xtmpB;
-            xtmpA = pplaxis_InvGetPosition(axis->TickListPositions[i] - 1e-8, axis) * UnitMultiplier;
-            xtmp = pplaxis_InvGetPosition(axis->TickListPositions[i], axis) * UnitMultiplier;
-            xtmpB = pplaxis_InvGetPosition(axis->TickListPositions[i] + 1e-8, axis) * UnitMultiplier;
+            double xtmpA = pplaxis_InvGetPosition(axis->TickListPositions[i] - 1e-8, axis) * UnitMultiplier;
+            double xtmp = pplaxis_InvGetPosition(axis->TickListPositions[i], axis) * UnitMultiplier;
+            double xtmpB = pplaxis_InvGetPosition(axis->TickListPositions[i] + 1e-8, axis) * UnitMultiplier;
             if ((gsl_finite(xtmpA)) && (gsl_finite(xtmpB)) &&
                 (((xtmpA <= 0.0) && (xtmpB >= 0.0)) || ((xtmpA >= 0.0) && (xtmpB <= 0.0))))
                 xtmp = 0.0;

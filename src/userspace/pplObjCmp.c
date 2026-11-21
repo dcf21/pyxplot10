@@ -414,16 +414,14 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         return 0;
     } else if (t1o == 7) // 7 - list
     {
-        int out;
-        listIterator *lia, *lib;
         pplObj *oba, *obb;
         list *la = (list *) a->auxil;
         list *lb = (list *) b->auxil;
         if (la->length < lb->length) return -1;
         if (la->length > lb->length) return 1;
-        lia = ppl_listIterateInit(la);
-        lib = ppl_listIterateInit(lb);
-        out = 0;
+        listIterator *lia = ppl_listIterateInit(la);
+        listIterator *lib = ppl_listIterateInit(lb);
+        int out = 0;
         while (((oba = ppl_listIterate(&lia)) != NULL) && ((obb = ppl_listIterate(&lib)) != NULL) &&
                ((out = pplObjCmp(NULL, oba, obb, NULL, NULL, NULL, iterDepth + 1)) == 0));
         return out;
@@ -448,17 +446,15 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         return 0;
     } else if ((t1o == 9) || (t1o == 10) || (t1o == 11)) // 9 - dictionary; 10 - instance; 11 - module
     {
-        int out;
-        dictIterator *dia, *dib;
         pplObj *oba, *obb;
         char *keya, *keyb;
         dict *da = (dict *) a->auxil;
         dict *db = (dict *) b->auxil;
         if (da->length < db->length) return -1;
         if (da->length > db->length) return 1;
-        dia = ppl_dictIterateInit(da);
-        dib = ppl_dictIterateInit(db);
-        out = 0;
+        dictIterator *dia = ppl_dictIterateInit(da);
+        dictIterator *dib = ppl_dictIterateInit(db);
+        int out = 0;
         while (((oba = ppl_dictIterate(&dia, &keya)) != NULL) && ((obb = ppl_dictIterate(&dib, &keyb)) != NULL) &&
                ((out = SGN(strcmp(keya, keyb))) == 0) &&
                ((out = pplObjCmp(NULL, oba, obb, NULL, NULL, NULL, iterDepth + 1)) == 0));

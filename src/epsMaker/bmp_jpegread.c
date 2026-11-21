@@ -53,18 +53,18 @@
 void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     // Variables describing the image
     char msg[PPL_MSG_LENGTH];
-    int comps = 0, i, j;
+    int comps = 0, i;
 
     // Buffers for the image data, and for the header segments which are kept
-    unsigned int width = 0, height = 0, save, sos;
+    unsigned int width = 0, height = 0, save;
     unsigned int len, chunk = 64 * 1024;
-    unsigned char *buff, *header, *headp, *headendp, type = 0, comp = 0, *p;
+    unsigned char type = 0, comp = 0, *p;
 
     // Allocate the buffers
-    buff = (unsigned char *) ppl_memAlloc(chunk);
-    header = (unsigned char *) malloc(HEADLEN);
-    headp = header;
-    headendp = header + HEADLEN - 8;
+    unsigned char *buff = (unsigned char *) ppl_memAlloc(chunk);
+    unsigned char *header = (unsigned char *) malloc(HEADLEN);
+    unsigned char *headp = header;
+    unsigned char *headendp = header + HEADLEN - 8;
 
     // Log progress in debugging mode
     if (DEBUG) ppl_log(ec, "Beginning to decode JPEG image file");
@@ -265,7 +265,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
     len = chunk - (headp - header);
     free(header);
     header = NULL;
-    j = fread(buff + i, 1, len, jpeg);
+    int j = fread(buff + i, 1, len, jpeg);
 
     // If the file fitted in the buffer, we are done; otherwise keep doubling the buffer until it does
     if (j < len) {
@@ -296,7 +296,7 @@ void ppl_bmp_jpegread(pplerr_context *ec, FILE *jpeg, bitmap_data *image) {
 
     // Check the structure of the data, skipping the start-of-image marker
     i = 2;
-    sos = 0;
+    unsigned int sos = 0;
 
     // Step through each segment
     while (i < image->data_len) {

@@ -57,9 +57,9 @@ list *ppl_listInit(const int useMalloc) {
 //! \return Zero
 
 int ppl_listFree(list *in) {
-    listItem *ptr, *ptrnext;
+    listItem *ptrnext;
     if ((in == NULL) || (!in->useMalloc)) return 0;
-    ptr = in->first;
+    listItem *ptr = in->first;
     // Free each item in turn, with its data
     while (ptr != NULL) {
         ptrnext = ptr->next;
@@ -99,12 +99,10 @@ static void *listAlloc(const list *in, const int size) {
 //! \return The new list, or NULL if memory allocation failed
 
 list *ppl_listCpy(list *in, const int useMalloc, const int itemSize) {
-    listItem *i;
-    list *out;
     if (in == NULL) return NULL;
-    out = ppl_listInit(useMalloc);
+    list *out = ppl_listInit(useMalloc);
     if (out == NULL) return NULL;
-    i = in->first;
+    listItem *i = in->first;
     // Append a copy of each item's data to the new list
     while (i != NULL) {
         ppl_listAppendCpy(out, i->data, itemSize);
@@ -119,9 +117,8 @@ list *ppl_listCpy(list *in, const int useMalloc, const int itemSize) {
 //! \return Zero on success, or one if memory allocation failed
 
 int ppl_listAppend(list *in, void *item) {
-    listItem *ptrnew;
     if (in == NULL) return 1;
-    ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
+    listItem *ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
     ptrnew->prev = in->last;
     ptrnew->next = NULL;
@@ -140,9 +137,8 @@ int ppl_listAppend(list *in, void *item) {
 //! \return Zero on success, or one if memory allocation failed
 
 int ppl_listAppendCpy(list *in, const void *item, const int size) {
-    listItem *ptrnew;
     if (in == NULL) return 1;
-    ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
+    listItem *ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
     ptrnew->prev = in->last;
     ptrnew->next = NULL;
@@ -174,9 +170,8 @@ int ppl_listAppendCpy(list *in, const void *item, const int size) {
 
 int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
     int i;
-    listItem **ptr, *ptrnew;
     if (in == NULL) return 1;
-    ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
+    listItem *ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
     ptrnew->data = listAlloc(in, size);
     // Allocating space for the data failed: free the new item and give up
@@ -189,7 +184,7 @@ int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
         return 1;
     }
     memcpy(ptrnew->data, item, size);
-    ptr = &in->first;
+    listItem **ptr = &in->first;
     // Find the link which points to the Nth item (or the end of the list), and splice the new item in there
     for (i = 0; ((i < N) && (*ptr != NULL)); i++, ptr = &(*ptr)->next);
     ptrnew->prev = (*ptr == NULL) ? in->last : (*ptr)->prev;
@@ -252,9 +247,8 @@ static void ppl_listRemoveEngine(list *in, listItem *ptr) {
 //! \return Zero if an item was removed, or one if no matching item was found
 
 int ppl_listRemove(list *in, const void *item) {
-    listItem *ptr;
     if (in == NULL) return 1;
-    ptr = in->first;
+    listItem *ptr = in->first;
     // Search for an item with this data pointer
     while (ptr != NULL) {
         // Found it: remove it
@@ -283,10 +277,9 @@ int ppl_listRemoveAll(list *in, void *item) {
 //! \return The data pointer stored in the Nth item, or NULL if the list has fewer than N+1 items
 
 void *ppl_listGetItem(const list *in, const int N) {
-    listItem *ptr;
     int i;
     if (in == NULL) return NULL;
-    ptr = in->first;
+    listItem *ptr = in->first;
     // Walk along the list to the Nth item
     for (i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
     if (ptr == NULL) return NULL;
@@ -298,9 +291,8 @@ void *ppl_listGetItem(const list *in, const int N) {
 //! \return The data pointer stored in the last item, or NULL if the list is empty
 
 void *ppl_listPop(list *in) {
-    void *out;
     if (in->last == NULL) return NULL;
-    out = in->last->data;
+    void *out = in->last->data;
     // Unlink the last item; the item itself is not freed
     if (in->first == in->last) {
         in->first = in->last = NULL;
@@ -318,11 +310,10 @@ void *ppl_listPop(list *in) {
 //! \return The data pointer stored in the Nth item, or NULL if the list has fewer than N+1 items
 
 void *ppl_listPopItem(list *in, const int N) {
-    listItem *ptr;
     void *out = NULL;
     int i;
     if (in == NULL) return NULL;
-    ptr = in->first;
+    listItem *ptr = in->first;
     // Walk along the list to the Nth item
     for (i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
     if (ptr == NULL) return NULL;
@@ -359,9 +350,8 @@ listIterator *ppl_listIterateInit(const list *in) {
 //! \return The data pointer stored in the current item, or NULL if the iterator has reached the end of the list
 
 void *ppl_listIterate(listIterator **in) {
-    void *out;
     if ((in == NULL) || (*in == NULL)) return NULL;
-    out = (*in)->data;
+    void *out = (*in)->data;
     *in = (*in)->next;
     return out;
 }

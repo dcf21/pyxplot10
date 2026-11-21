@@ -460,7 +460,6 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
     // Execute instructions until a RETURN. j is the index of the current instruction; stk points to the slot above the
     // top of the stack.
     while (1) {
-        pplObj *stk;
         const pplExprInstruction *const instruction = &bytecode[j]; // The instruction to execute
         const pplExprOpcode opcode = instruction->opcode;
         int next = j + 1; // The index of the next instruction to execute; changed by instructions which jump
@@ -486,7 +485,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
             goto cleanup_on_error;
         }
-        stk = &context->stack[context->stackPtr];
+        pplObj *stk = &context->stack[context->stackPtr];
 
         // Execute the instruction
         switch (opcode) {
@@ -1238,7 +1237,6 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_DOLLAR: {
-                int t;
                 // The column to fetch is on the top of the stack
                 if (context->stackPtr < 1) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -1246,11 +1244,10 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
-                t = context->stack[context->stackPtr - 1].objType;
+                int t = context->stack[context->stackPtr - 1].objType;
                 // A number is a column number; a string is a column heading
                 if (t == PPLOBJ_NUM) {
                     double num = context->stack[context->stackPtr - 1].real;
-                    int n;
                     // The column number must be in range
                     if ((num < -4) || (num > MAX_DATACOLS) || (!gsl_finite(num))) {
                         ppl_snprintfTrunc(
@@ -1260,7 +1257,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         ppl_tbAddExpr(context, inExpr, ERR_RANGE, charpos, "");
                         goto cleanup_on_error;
                     }
-                    n = (int) round(num);
+                    int n = (int) round(num);
                     ppl_dollarOp_fetchColByNum(context, inExpr, charpos, n);
                     if (context->errStat.status) goto cast_fail;
                 } else if (t == PPLOBJ_STR) {
@@ -1283,10 +1280,9 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_BRANCH_IF_FALSE: {
-                int branch;
                 *lastOpAssign = 0;
                 ppl_castToBool(context, stk - 1);
-                branch = (stk - 1)->real == 0;
+                int branch = (stk - 1)->real == 0;
                 // Jump if the value is false
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
@@ -1298,10 +1294,9 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 break;
             }
             case PPL_BC_BRANCH_IF_TRUE: {
-                int branch;
                 *lastOpAssign = 0;
                 ppl_castToBool(context, stk - 1);
-                branch = (stk - 1)->real != 0;
+                int branch = (stk - 1)->real != 0;
                 // Jump if the value is true
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)

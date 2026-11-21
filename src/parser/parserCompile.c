@@ -184,7 +184,6 @@ static int parse_repeat(ppl_context *c, parserStatus *s, const int writeOut, con
     while (1) {
         const int lineposOld = *linepos;
         const int matchOld = *match;
-        int lineposOld2;
         parserNode *nodeIter = node->firstChild;
 
         // Between repetitions there must be a separator, if the variable name ends in one, e.g. "," in
@@ -202,7 +201,7 @@ static int parse_repeat(ppl_context *c, parserStatus *s, const int writeOut, con
             }
             if (status == 2) goto repCleanup;
         }
-        lineposOld2 = *linepos;
+        int lineposOld2 = *linepos;
         // Test, without writing any output, whether the line contains another repetition
         while (nodeIter != NULL) {
             status = parse_descend(c, s, 0, srcLineN, srcId, srcFname, line, linepos, nodeIter, tabCompNo,
@@ -421,7 +420,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                          (s->eLlinePos <=
                           *linepos)) // Not tab completing, and we haven't matched a {: suggest { as an 'expecting' hint
                 {
-                    int j, k, l;
+                    int j, k;
                     // If this point is further along the line than any previous failure, start a new list of what was
                     // expected here
                     if (s->eLlinePos < *linepos) {
@@ -435,7 +434,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         s->eLPos += strlen(s->expectingList + s->eLPos);
                     }
                     snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
-                    l = strlen(s->expectingList + s->eLPos);
+                    int l = strlen(s->expectingList + s->eLPos);
                     for (j = k = 0; ((j < s->eLPos) && !k); j++)
                         k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
                              0); // Don't repeat ourselves
@@ -456,7 +455,6 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                 char *cmd =
                         (char *) s->pl[blockDepth]->firstAtom->literal->auxil; // THIS ASSUMES DIRECTIVE IS FIRST ATOM
                 const int first = (s->blockDepth < blockDepth + 1);
-                int i;
 
                 // Test for opening brace
                 if (first) {
@@ -481,7 +479,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         status = 0;
                         // Something other than {: add "{" to the list of what was expected at this point
                         if ((s != NULL) && (s->eLlinePos <= *linepos)) {
-                            int j, k, l;
+                            int j, k;
                             // If this point is further along the line than any previous failure, start a new list of
                             // what was expected here
                             if (s->eLlinePos < *linepos) {
@@ -496,7 +494,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                                 s->eLPos += strlen(s->expectingList + s->eLPos);
                             }
                             snprintf(s->expectingList + s->eLPos, sizeof(s->expectingList) - s->eLPos, "\"{\"");
-                            l = strlen(s->expectingList + s->eLPos);
+                            int l = strlen(s->expectingList + s->eLPos);
                             for (j = k = 0; ((j < s->eLPos) && !k); j++)
                                 k = (strncmp(s->expectingList + j, s->expectingList + s->eLPos, l) ==
                                      0); // Don't repeat ourselves
@@ -564,7 +562,7 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                 else if (strcmp(cmd, "subroutine") == 0) strcpy(s->prompt, "subrou");
                 else if (strcmp(cmd, "while") == 0) strcpy(s->prompt, "while");
                 else strcpy(s->prompt, "unknow");
-                i = strlen(s->prompt);
+                int i = strlen(s->prompt);
                 for (; i < 7; i++) s->prompt[i] = first ? '>' : '.';
                 s->prompt[i] = '\0';
                 status = 3;
@@ -789,12 +787,12 @@ static int parse_descend(ppl_context *c, parserStatus *s, const int writeOut, co
                         }
                         case 'c': {
                             char nambuff[64];
-                            int id, i;
+                            int i;
                             for (i = 0; ((i < 63) && ((isalnum(line[*linepos + i])) || (line[*linepos + i] == '(')));
                                  i++)
                                 nambuff[i] = line[*linepos + i];
                             nambuff[i] = '\0';
-                            id = ppl_fetchSettingByName(&c->errcontext, nambuff, SW_COLOR_INT, SW_COLOR_STR);
+                            int id = ppl_fetchSettingByName(&c->errcontext, nambuff, SW_COLOR_INT, SW_COLOR_STR);
                             // %c: a color, which may be the name of a color, or an expression which evaluates to a
                             // color
                             if (id > 0) {
@@ -1217,9 +1215,8 @@ cleanup:
 //! \param [in|out] in - Pointer to the first atom in the list, which is set to NULL
 
 void ppl_parserAtomFree(parserAtom **in) {
-    parserAtom *i;
     if (in == NULL) return;
-    i = *in;
+    parserAtom *i = *in;
     // Free each atom, with its literal value or expression
     while (i != NULL) {
         parserAtom *next = i->next;
@@ -1539,7 +1536,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
 
                         // First, substitute for ` ` expressions
                         if ((quoteChar == '\0') && (line[i] == '`')) {
-                            int is = ++i, status;
+                            int is = ++i;
                             char *key = NULL;
                             FILE *substPipe;
                             for (; ((line[i] != '\0') && (line[i] != '`')); i++); // Find end of ` ` expression
@@ -1590,7 +1587,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
                                     obLen += LSTR_LENGTH;
                                 }
                             }
-                            status = pclose(substPipe);
+                            int status = pclose(substPipe);
                             if (fail) goto shellSubstErr;
 
                             // A shell command which fails is an error
@@ -1753,7 +1750,6 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
     // punctuation, until one matches
     while (1) {
         int match = 0, linepos = 0;
-        parserNode *item;
 
         // Move on to the list of commands which begin with punctuation
         if (cmdIter ==
@@ -1765,7 +1761,7 @@ int ppl_parserCompile(ppl_context *c, parserStatus *s, const int srcLineN, const
         }
 
         // Fetch next item from list of possible commands and try to parse it
-        item = (parserNode *) ppl_listIterate(&cmdIter);
+        parserNode *item = (parserNode *) ppl_listIterate(&cmdIter);
         match = linepos = 0;
         parse_descend(c, s, 1, srcLineN, srcId, srcFname, line, &linepos, item, NULL, -1, NULL, 0, blockDepth, &match);
 
@@ -1869,7 +1865,6 @@ char *ppl_parseAutocomplete(const char *dummy, const int status) {
         // Loop over all of the possible commands that could be intended
         while (1) {
             int match = 0, linepos = 0;
-            parserNode *item;
 
             if (cmdIter == NULL) // Once we've finished cycling through each list, move onto the next one
             {
@@ -1879,7 +1874,7 @@ char *ppl_parseAutocomplete(const char *dummy, const int status) {
             }
 
             // Fetch next item from list of possible commands and try to parse it
-            item = (parserNode *) ppl_listIterate(&cmdIter);
+            parserNode *item = (parserNode *) ppl_listIterate(&cmdIter);
             match = linepos = 0;
             parse_descend(rootContext, NULL, 0, -1, -1, "", line, &linepos, item, &number, start, tabCompTxt, 0, 0,
                           &match);
@@ -1918,14 +1913,12 @@ char *ppl_parseAutocomplete(const char *dummy, const int status) {
 //! \return Array of completions, or NULL to request readline's default filename completion
 
 char **ppl_rl_completion(const char *text, const int start, const int end) {
-    char **matches;
-    char *firstItem;
 
     // Words inside quoted strings are filenames
     if ((start > 0) && ((rl_line_buffer[start - 1] == '\"') || (rl_line_buffer[start - 1] == '\'')))
         return NULL; // Do filename completion
 
-    firstItem = ppl_parseAutocomplete(text, -1 - start); // Setup parse_autocomplete to know what string it's working on
+    char *firstItem = ppl_parseAutocomplete(text, -1 - start); // Setup parse_autocomplete to know what string it's working on
 
     // A first completion of "\n" means that a filename is expected here
     if (firstItem != NULL) {
@@ -1942,7 +1935,7 @@ char **ppl_rl_completion(const char *text, const int start, const int end) {
     }
 
     // Gather all the completions from ppl_parseAutocomplete()
-    matches = rl_completion_matches(text, ppl_parseAutocomplete);
+    char **matches = rl_completion_matches(text, ppl_parseAutocomplete);
     rl_attempted_completion_over = 1; // Make sure that filenames are not completion options
     return matches;
 }

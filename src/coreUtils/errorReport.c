@@ -98,13 +98,13 @@ void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, cons
 static void errorUnlocked(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
     // ApplyHighlighting is set if the terminal supports colour; reverse counts down the characters still to be shown in
     // reverse video; i is the length of the message assembled so far
-    unsigned char ApplyHighlighting, reverse = 0;
+    unsigned char reverse = 0;
     int i = 0, j;
 
     // Count the error, and decide whether to use colour
     if (msg == NULL) msg = "";
     context->errorCount++; // Any error makes Pyxplot exit with non-zero status
-    ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
+    unsigned char ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
     // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);

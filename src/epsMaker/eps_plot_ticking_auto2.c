@@ -178,11 +178,11 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, cons
 void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMultiplier, const unsigned char *AutoTicks,
                             const pplset_axis *linkedto) {
     char msg[PPL_MSG_LENGTH];
-    int i, j, k, N, OutContext, ContextRough = -1, NFactorsTen, LogBase, number_ticks, major, OverlayMatch;
+    int i, j, k, ContextRough = -1, NFactorsTen, number_ticks, major, OverlayMatch;
     unsigned char IsLog = (axis->LogFinal == SW_BOOL_TRUE);
     int FactorsTen[MAX_FACTORS];
-    double OoM, axis_min, axis_max, axis_min_l, axis_max_l, outer_min, outer_max;
-    int TL_best_len, TL_trial_len;
+    double OoM, axis_min_l, axis_max_l, outer_min, outer_max;
+    int TL_trial_len;
     double *TLP, *TL_best = NULL, *TL_trial = NULL;
     char **TLS;
     int NTickSchemes;
@@ -192,24 +192,23 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto2()");
 
     // Make temporary rough workspace
-    OutContext = ppl_memAlloc_GetMemContext();
+    int OutContext = ppl_memAlloc_GetMemContext();
     ContextRough = ppl_memAlloc_DescendIntoNewContext();
 
     // This ticking scheme does not work on axes with non-linear mappings
     if (axis->AxisLinearInterpolation != NULL) goto FAIL;
 
     // Work out factors of log base of axis. In fact, work out factors of log base ** 2, so that ten divides by four.
-    LogBase = IsLog ? axis->tics.logBase : 10;
+    int LogBase = IsLog ? axis->tics.logBase : 10;
     eps_plot_ticking_factorise(pow(10.0, FACTOR_MULTIPLY), FactorsTen, MAX_FACTORS, axis->PhysicalLengthMinor,
                                &NFactorsTen);
 
     // Work out order of magnitude of axis range
-    axis_min = axis->MinFinal * UnitMultiplier;
-    axis_max = axis->MaxFinal * UnitMultiplier;
+    double axis_min = axis->MinFinal * UnitMultiplier;
+    double axis_max = axis->MaxFinal * UnitMultiplier;
     // Make sure the range is the right way around, and not of zero width
     if (axis_min > axis_max) {
-        double temp;
-        temp = axis_min;
+        double temp = axis_min;
         axis_min = axis_max;
         axis_max = temp;
     } else if (axis_min == axis_max) {
@@ -248,7 +247,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     TL_best = (double *) malloc((TICKS_MAXIMUM + 1) * sizeof(double));
     TL_trial = (double *) malloc((TICKS_MAXIMUM + 1) * sizeof(double));
     if ((TL_best == NULL) || (TL_trial == NULL)) goto FAIL;
-    TL_best_len = 0;
+    int TL_best_len = 0;
 
     // Malloc list of tick schemes
     TickSchemes = (TickScheme *) malloc((TICKS_MAXIMUM + 1) * sizeof(TickScheme));
@@ -285,9 +284,8 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                     if (TL_trial_len >= TICKS_MAXIMUM) break;
                     // Each mantissa within each step
                     for (k = 0; k < TickSchemes[i].Nmantissas; k++) {
-                        double x;
                         if (TL_trial_len >= TICKS_MAXIMUM) break;
-                        x = ts_min + j * TickSchemes[i].ticksep;
+                        double x = ts_min + j * TickSchemes[i].ticksep;
                         if (fabs(x) < 1e-6 * TickSchemes[i].ticksep) x = 0;
                         if (IsLog) x = pow(LogBase, x);
                         x *= TickSchemes[i].mantissa[k];
@@ -304,9 +302,8 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                 if (!major) {
                     // Log the scheme in debugging mode
                     if (DEBUG) {
-                        int tmp;
                         ppl_snprintfTrunc(msg, sizeof(msg), "Trying minor tick scheme: ");
-                        tmp = strlen(msg);
+                        int tmp = strlen(msg);
                         TickScheme2_sprintf(msg + tmp, sizeof(msg) - tmp, UnitMultiplier, TL_trial, TL_trial_len);
                         ppl_log(&x->c->errcontext, msg);
                     }
@@ -398,7 +395,7 @@ FAIL:
     if (DEBUG) ppl_log(&x->c->errcontext, "eps_plot_ticking_auto2() has failed");
 
     // A very simple way of putting ticks on axes when clever logic fails
-    N = 1 + axis->PhysicalLengthMajor; // Estimate how many ticks we want
+    int N = 1 + axis->PhysicalLengthMajor; // Estimate how many ticks we want
     if (N < 3) N = 3;
     if (N > 100) N = 100;
 
@@ -414,8 +411,7 @@ FAIL:
     }
     // Place each tick, and label it
     for (i = 0; i < N; i++) {
-        double X;
-        X = ((double) i) / (N - 1);
+        double X = ((double) i) / (N - 1);
         axis->TickListPositions[i] = X;
         X = pplaxis_InvGetPosition(X, axis);
         if (axis->format == NULL)

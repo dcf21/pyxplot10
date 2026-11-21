@@ -109,7 +109,6 @@ double Lcdm_age(const double H, const double OmegaM, const double OmegaL) {
 
 double Lcdm_DA(const double z, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
-    gsl_integration_workspace *ws;
     gsl_function fn;
     double result, error;
 
@@ -119,7 +118,7 @@ double Lcdm_DA(const double z, const double H, const double OmegaM, const double
     p.OmegaL = OmegaL;
 
     // Integrate numerically, with GSL's workspace for up to 1000 subintervals
-    ws = gsl_integration_workspace_alloc(1000);
+    gsl_integration_workspace *ws = gsl_integration_workspace_alloc(1000);
     fn.function = &__Lcdm_DA_integrand;
     fn.params = &p;
     gsl_integration_qags(&fn, 1e-8, z, 0, 1e-7, 1000, ws, &result, &error);
@@ -139,7 +138,6 @@ double Lcdm_DA(const double z, const double H, const double OmegaM, const double
 
 double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const double OmegaL) {
     Lcdm_comm p;
-    gsl_integration_workspace *ws;
     gsl_function fn;
     double result, error;
 
@@ -149,7 +147,7 @@ double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const 
     p.OmegaL = OmegaL;
 
     // Integrate numerically, with GSL's workspace for up to 1000 subintervals
-    ws = gsl_integration_workspace_alloc(1000);
+    gsl_integration_workspace *ws = gsl_integration_workspace_alloc(1000);
     fn.function = &__Lcdm_t_integrand;
     fn.params = &p;
     gsl_integration_qags(&fn, 1e-8, z, 0, 1e-7, 1000, ws, &result, &error);

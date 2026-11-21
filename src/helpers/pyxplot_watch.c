@@ -51,10 +51,9 @@ int cancellationFlag = 0;
 void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     char msg[PPL_MSG_LENGTH];
     char LineBuffer[LSTR_LENGTH];
-    int interactive, status;
 
     // Progress messages are only shown in an interactive terminal, unless the user asked for quiet output
-    interactive = ((isatty(STDIN_FILENO) == 1) && (context->session_default.splash == SW_ONOFF_ON));
+    int interactive = ((isatty(STDIN_FILENO) == 1) && (context->session_default.splash == SW_ONOFF_ON));
 
     // Announce that the script is being run
     if (interactive) {
@@ -66,7 +65,7 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     // Run Pyxplot on the script, passing on the user's choice of coloured output
     ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "%s -q %s %s", PPLBINARY,
                       (context->session_default.color == SW_ONOFF_ON) ? "-c" : "-m", fname);
-    status = system(LineBuffer);
+    int status = system(LineBuffer);
 
     // In a non-interactive session, report scripts which failed; in an interactive session, Pyxplot's own error
     // messages suffice
@@ -97,16 +96,14 @@ int main(const int argc, char **argv) {
     struct timespec waitperiod, waitedperiod; // A time.h timespec specifier; used for sleeping
     char init_string[LSTR_LENGTH], help_string[LSTR_LENGTH], version_string[FNAME_LENGTH],
             version_string_underline[FNAME_LENGTH];
-    int i, j, HaveFilenames, DoneWork;
+    int i, j, DoneWork;
     glob_t GlobData;
-    pplerr_context *context;
 
     // A dictionary of the stat() information of each file, recording when each was last modified
-    dict *StatInfodict;
     struct stat StatInfo, *StatInfoPtr;
 
     // Initialise sub-modules
-    context = malloc(sizeof(pplerr_context));
+    pplerr_context *context = malloc(sizeof(pplerr_context));
     // Set up the error-reporting context, with no input file being processed
     if (context == NULL) {
         printf("malloc fail.");
@@ -120,7 +117,7 @@ int main(const int argc, char **argv) {
     // Start the memory management system, and create the dictionary of file modification times
     if (DEBUG) ppl_log(context, "Initialising Pyxplot Watch.");
     ppl_memAlloc_MemoryInit(context, &ppl_error, &ppl_log);
-    StatInfodict = ppl_dictInit(1);
+    dict *StatInfodict = ppl_dictInit(1);
 
     // Set up default session settings
     context->session_default.splash = SW_ONOFF_ON;
@@ -166,7 +163,7 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
                       VERSION, DATE);
 
     // Scan command-line options for any switches
-    HaveFilenames = 0;
+    int HaveFilenames = 0;
     // Process each command-line argument in turn
     for (i = 1; i < argc; i++) {
         if (strlen(argv[i]) == 0) continue;

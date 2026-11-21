@@ -54,7 +54,6 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     char msg[PPL_MSG_LENGTH];
     int i = 0, j = 0;
     int unit_pos = 0;
-    unit *unit_database;
 
     // Allocate the database
     context->unit_database = (unit *) malloc(UNITS_MAX * sizeof(unit));
@@ -64,7 +63,7 @@ void ppl_makeDefaultUnits(ppl_context *context) {
                   "Out of memory error whilst trying to malloc units database.");
         exit(1);
     }
-    unit_database = context->unit_database;
+    unit *unit_database = context->unit_database;
 
     // The lists of units which the user prefers, set with "set unit preferred"
     context->unit_PreferredUnits = ppl_listInit(1);

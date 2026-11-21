@@ -112,7 +112,7 @@ static int ThreeDimBuffer_qsort_slave(const void *x, const void *y) {
 
 int ThreeDimBuffer_Deactivate(EPSComm *x) {
     // Variables for sorting the buffer
-    int Nitems, i, j;
+    int i, j;
     struct DepthArrayEntry *DepthArray;
     ThreeDimBufferItem *item;
     listIterator *ListIter;
@@ -122,7 +122,7 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         ThreeDimBuffer_Reset(x);
         return 0;
     }
-    Nitems = ppl_listLen(ThreeDimBuffer_buffer);
+    int Nitems = ppl_listLen(ThreeDimBuffer_buffer);
     ThreeDimBuffer_ACTIVE = 0;
     // Write out the buffered items, if there are any
     if (Nitems > 0) {

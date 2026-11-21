@@ -296,7 +296,7 @@ static long ppl_floorMod(const long a, const long b) { return a - b * ppl_floorD
 //! \param [out] day - The day of the month (optional)
 
 static void ppl_dayNumberToCalendar(const long a, const int gregorian, int *year, int *month, int *day) {
-    long b, c, d, e, f;
+    long b, c;
     // Meeus's algorithm: count the days from a March 1, so that leap days fall at the end of each year
     if (!gregorian) {
         // c = the day number, offset so that it counts from a March 1 before the start of the Julian period
@@ -307,9 +307,9 @@ static void ppl_dayNumberToCalendar(const long a, const int gregorian, int *year
         b = (long) floor((a - 1867216.25) / 36524.25);
         c = a + b - ppl_floorDiv(b, 4) + 1525;
     }
-    d = (long) floor((c - 122.1) / 365.25); // Number of 365.25 day periods, starting the year at the start of March
-    e = (long) floor(365.25 * d);           // Number of days accounted for by these
-    f = (long) floor((c - e) / 30.6001);    // Number of 30.6001 day periods (a.k.a. months) in the remainder
+    long d = (long) floor((c - 122.1) / 365.25); // Number of 365.25 day periods, starting the year at the start of March
+    long e = (long) floor(365.25 * d);           // Number of days accounted for by these
+    long f = (long) floor((c - e) / 30.6001);    // Number of 30.6001 day periods (a.k.a. months) in the remainder
     if (day != NULL) *day = (int) (c - e - (long) floor(30.6001 * f));
     *month = (int) (f - 1 - 12 * (f >= 14));
     if (year != NULL) *year = (int) (d - 4715 - (*month >= 3));
@@ -391,7 +391,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
                             const int sec, int *status, char *errText) {
     int i;
     int YearNumbers[3], YearTypes[3];
-    double JD, DayFraction, JDs[3];
+    double JDs[3];
 
     // Hebrew years have up to 13 months
     if ((month < 1) || (month > 13)) {
@@ -410,7 +410,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
 
     // Start at the new year, and add the lengths of the months before the one requested
     ppl_getHebrewNewYears(ct, year - 3760, YearNumbers, JDs, YearTypes);
-    JD = JDs[0];
+    double JD = JDs[0];
     for (i = 0; i < month - 1; i++) JD += hebrewMonthLengths[YearTypes[0]][i];
     // The day must exist in that month
     if (day > hebrewMonthLengths[YearTypes[0]][i]) {
@@ -422,7 +422,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
     }
     JD += day - 1;
     JD = 86400.0 * (JD - 2440587.5);
-    DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
+    double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
     return JD + DayFraction;
 }
 
@@ -437,7 +437,7 @@ double ppl_hebrewToUnixTime(ppl_context *ct, int year, int month, const int day,
 
 void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
                             char *errText) {
-    int i, j;
+    int j;
     int JulMon, JulYr;
     int YearNumbers[3], YearTypes[3];
     double JDs[3];
@@ -457,7 +457,7 @@ void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *mo
 
     // Find the Hebrew new years either side of the date, and count through the months of the year in which it falls
     ppl_getHebrewNewYears(ct, JulYr, YearNumbers, JDs, YearTypes);
-    i = (JD < JDs[1]) ? 0 : 1;
+    int i = (JD < JDs[1]) ? 0 : 1;
     JD -= JDs[i];
     for (j = 0; j < 13; j++)
         if (JD >= hebrewMonthLengths[YearTypes[i]][j]) JD -= hebrewMonthLengths[YearTypes[i]][j];
@@ -484,8 +484,6 @@ void ppl_hebrewFromUnixTime(ppl_context *ct, const double UT, int *year, int *mo
 
 double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, const int day, const int hour,
                              const int min, const int sec, int *status, char *errText) {
-    long N, Q, R, A, W, Q1, Q2, G, K, E, J, X;
-    double DayFraction;
 
     // Islamic years have 12 months
     if ((month < 1) || (month > 12)) {
@@ -505,18 +503,18 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
     // The algorithm of Jean Meeus, Astronomical Algorithms, for the Julian date of an Islamic date: N is the day of the
     // Islamic year; the calendar repeats every 30 years, of which 11 are leap years; X is the Julian year and J the day
     // within it
-    N = day + (long) (29.5001 * (month - 1) + 0.99);
-    Q = year / 30;
-    R = year % 30;
-    A = (long) ((11 * R + 3) / 30);
-    W = 404 * Q + 354 * R + 208 + A;
-    Q1 = W / 1461;
-    Q2 = W % 1461;
-    G = 621 + 4 * ((long) (7 * Q + Q1));
-    K = Q2 / 365.2422;
-    E = 365.2422 * K;
-    J = Q2 - E + N - 1;
-    X = G + K;
+    long N = day + (long) (29.5001 * (month - 1) + 0.99);
+    long Q = year / 30;
+    long R = year % 30;
+    long A = (long) ((11 * R + 3) / 30);
+    long W = 404 * Q + 354 * R + 208 + A;
+    long Q1 = W / 1461;
+    long Q2 = W % 1461;
+    long G = 621 + 4 * ((long) (7 * Q + Q1));
+    long K = Q2 / 365.2422;
+    long E = 365.2422 * K;
+    long J = Q2 - E + N - 1;
+    long X = G + K;
 
     // Wrap past the end of a Julian year
     if ((J > 366) && (X % 4 == 0)) {
@@ -529,7 +527,7 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
 
     // Julian day number of midnight at the start of the requested day, computed in double precision
     const double JDmidnight = floor(365.25 * (X - 1)) + 1721423 + J - 0.5;
-    DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
+    double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
     return 86400.0 * (JDmidnight - 2440587.5) + DayFraction;
 }
 
@@ -544,10 +542,8 @@ double ppl_islamicToUnixTime(const ppl_context *ct, const int year, int month, c
 
 void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, int *month, int *day, int *status,
                              char *errText) {
-    long d;
     int JulDay, JulMon, JulYr;
-    long W, N, A, B, C, C2, D, Q, R, J, K, O, H, JJ, CL, DL, S, m;
-    double C1;
+    long CL, DL;
     const double JD = (UT / 86400.0) + 2440587.5;
 
     // Dates before AH 1 Muharram 1 cannot be expressed in the Islamic calendar
@@ -566,26 +562,26 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
     // and C split them into four-year cycles; D is then a day count from the start of the Islamic calendar, which
     // repeats every 10631 days (30 years); Q counts these cycles, J the years within one, and K the day within that
     // year
-    W = 2 - (JulYr % 4 == 0);
-    N = ((long) ((275 * JulMon) / 9)) - W * ((long) ((JulMon + 9) / 12)) + JulDay - 30;
-    A = JulYr - 623;
-    B = A / 4;
-    C = A % 4;
-    C1 = 365.2501 * C;
-    C2 = C1;
+    long W = 2 - (JulYr % 4 == 0);
+    long N = ((long) ((275 * JulMon) / 9)) - W * ((long) ((JulMon + 9) / 12)) + JulDay - 30;
+    long A = JulYr - 623;
+    long B = A / 4;
+    long C = A % 4;
+    double C1 = 365.2501 * C;
+    long C2 = C1;
 
     // Round to the nearest day
     if (C1 - C2 > 0.5) C2++;
 
     // H is the Islamic year and JJ the day within it
-    D = 1461 * B + 170 + C2;
-    Q = D / 10631;
-    R = D % 10631;
-    J = R / 354;
-    K = R % 354;
-    O = (11 * J + 14) / 30;
-    H = 30 * Q + J + 1;
-    JJ = K - O + N - 1;
+    long D = 1461 * B + 170 + C2;
+    long Q = D / 10631;
+    long R = D % 10631;
+    long J = R / 354;
+    long K = R % 354;
+    long O = (11 * J + 14) / 30;
+    long H = 30 * Q + J + 1;
+    long JJ = K - O + N - 1;
 
     // Correct for days which run past the end of a 354-day year, or of a 355-day leap year
     if (JJ > 354) {
@@ -607,9 +603,9 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
     }
 
     // Months alternate between 30 and 29 days, so the month and day follow from the day of the year
-    S = (JJ - 1) / 29.5;
-    m = 1 + S;
-    d = JJ - 29.5 * S;
+    long S = (JJ - 1) / 29.5;
+    long m = 1 + S;
+    long d = JJ - 29.5 * S;
 
     // The leap day is the 30th of the last month
     if (JJ == 355) {
@@ -640,7 +636,7 @@ void ppl_islamicFromUnixTime(const ppl_context *ct, const double UT, int *year, 
 
 double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const int hour, const int min, const int sec,
                       int *status, char *errText) {
-    double JD, DayFraction, LastJulian, FirstGregorian, ReqDate;
+    double LastJulian, FirstGregorian;
     int b;
 
     // Check that each component of the date is in range
@@ -689,7 +685,7 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
 
     // Decide whether the date falls in the Julian or Gregorian part of the calendar, comparing dates as YYYYMMDD
     ppl_switchOverCalDate(ct, &LastJulian, &FirstGregorian);
-    ReqDate = 10000.0 * year + 100 * month + day;
+    double ReqDate = 10000.0 * year + 100 * month + day;
 
     // Count the year from March, so that leap days fall at its end
     if (month <= 2) {
@@ -716,9 +712,9 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
     }
 
     // The Modified Julian Date of the day (as in Meeus's algorithm), converted to a Julian Date and then to a unix time
-    JD = 365.0 * year - 679004.0 + 2400000.5 + b + floor(30.6001 * (month + 1)) + day;
+    double JD = 365.0 * year - 679004.0 + 2400000.5 + b + floor(30.6001 * (month + 1)) + day;
     JD = 86400.0 * (JD - 2440587.5);
-    DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
+    double DayFraction = fabs(hour) * 3600 + fabs(min) * 60 + fabs(sec);
     return JD + DayFraction;
 }
 
@@ -736,8 +732,6 @@ double ppl_toUnixTime(ppl_context *ct, int year, int month, const int day, const
 
 void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, int *day, int *hour, int *min,
                       double *sec, int *status, char *errText) {
-    long a;
-    double DayFraction;
     int temp;
     const double JD = (UT / 86400.0) + 2440587.5;
     if (month == NULL) month = &temp; // Dummy placeholder, since we need month later in the calculation
@@ -751,7 +745,7 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
 
     // Work out hours, minutes and seconds. Julian days begin at noon, so days begin at midnight on JD+0.5. The time
     // of day is worked out from the unix time, which is more precise than the Julian date (which is a large number).
-    DayFraction = UT - 86400.0 * floor(UT / 86400.0); // Seconds since midnight
+    double DayFraction = UT - 86400.0 * floor(UT / 86400.0); // Seconds since midnight
     if (hour != NULL) *hour = (int) floor(DayFraction / 3600);
     if (min != NULL) *min = (int) floor(fmod(DayFraction / 60, 60));
     if (sec != NULL) *sec = fmod(DayFraction, 60);
@@ -764,7 +758,7 @@ void ppl_fromUnixTime(ppl_context *ct, const double UT, int *year, int *month, i
 
     // a = the number of the day (the Julian Date at noon on that day), counted from midnight so that it matches the
     // time of day worked out above
-    a = (long) floor(UT / 86400.0) + 2440588;
+    long a = (long) floor(UT / 86400.0) + 2440588;
     ppl_dayNumberToCalendar(a, a >= ppl_switchOverJD(ct), year, month, day);
     return;
 }
@@ -886,14 +880,13 @@ void ppl_dateString(ppl_context *ct, char *out, const size_t outLen, double UT, 
 void ppl_timeDiffStr(const ppl_context *ct, char *out, const size_t outLen, const double UT1, const double UT2,
                      const char *format, int *status, char *errText) {
     int j = 0, k = 0;
-    long gapYears, gapDays, gapHours, gapMinutes, gapSeconds;
 
     // The interval in each unit, truncated to whole units; years are taken to have 365 days
-    gapYears = (UT2 - UT1) / 365 / 3600 / 24;
-    gapDays = (UT2 - UT1) / 3600 / 24;
-    gapHours = (UT2 - UT1) / 3600;
-    gapMinutes = (UT2 - UT1) / 60;
-    gapSeconds = (UT2 - UT1);
+    long gapYears = (UT2 - UT1) / 365 / 3600 / 24;
+    long gapDays = (UT2 - UT1) / 3600 / 24;
+    long gapHours = (UT2 - UT1) / 3600;
+    long gapMinutes = (UT2 - UT1) / 60;
+    long gapSeconds = (UT2 - UT1);
 
     // Loop through format string making substitutions
     for (j = 0; format[j] != '\0'; j++) {

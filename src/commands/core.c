@@ -96,15 +96,12 @@ static void versionError(ppl_context *c, const parserLine *pl, const parserOutpu
 void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutput *in) {
     // Read the parameters of the command
     pplObj *stk = in->stk;
-    int lt;
-    char *txt, *version;
-    pplObj *val;
 
     // The optional message, version requirement and expression
-    txt = (stk[PARSE_assert_message].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_message].auxil : NULL;
-    version = (stk[PARSE_assert_version].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_version].auxil : NULL;
-    val = &stk[PARSE_assert_expr];
-    lt = (stk[PARSE_assert_lt].objType == PPLOBJ_STR);
+    char *txt = (stk[PARSE_assert_message].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_message].auxil : NULL;
+    char *version = (stk[PARSE_assert_version].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_version].auxil : NULL;
+    pplObj *val = &stk[PARSE_assert_expr];
+    int lt = (stk[PARSE_assert_lt].objType == PPLOBJ_STR);
 
     // If an expression was given, it must be true
     if (val->objType != PPLOBJ_ZOM) {
@@ -121,12 +118,12 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
     // If a version requirement was given, compare it with this version of Pyxplot, one component at a time; sgn
     // reverses the comparisons for a requirement that the version be older
     if (version != NULL) {
-        int i = 0, j = 0, sgn, pass = 0;
+        int i = 0, j = 0, pass = 0;
         char txtauto[64];
         ppl_snprintfTrunc(txtauto, sizeof(txtauto), "This script requires a%s version of Pyxplot (%s %s)",
                           (!lt) ? " newer" : "n older", (!lt) ? ">=" : "<", version);
         if (txt == NULL) txt = txtauto;
-        sgn = (!lt) ? 1 : -1;
+        int sgn = (!lt) ? 1 : -1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '\0') return;
         // Read the major version number required
@@ -227,10 +224,10 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
 
     // Walk the linked list of directory names on the parser stack
     while (stk[pos].objType == PPLOBJ_NUM) {
-        char *raw, dirName[FNAME_LENGTH];
+        char dirName[FNAME_LENGTH];
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
-        raw = (char *) stk[pos + PARSE_cd_directory_path].auxil;
+        char *raw = (char *) stk[pos + PARSE_cd_directory_path].auxil;
         // Escape spaces in the name before passing it to wordexp
         ppl_strEscapeSpaces(raw, dirName, FNAME_LENGTH);
 
@@ -315,7 +312,6 @@ void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput
 void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                           const int iterDepth) {
     pplObj *stk = in->stk;
-    int pos;
 
     // Global variables can only be declared inside a subroutine or module
     if (c->ns_ptr < 2) {
@@ -326,17 +322,14 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
     }
 
     // Declare each variable named as global
-    pos = PARSE_global_var_names;
+    int pos = PARSE_global_var_names;
     // Walk the linked list of variable names on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        int om, rc;
-        char *varname;
-        pplObj *obj;
 
         // Look up the variable in the local namespace
         pos = (int) round(stk[pos].real);
-        varname = (char *) stk[pos + PARSE_global_var_name_var_names].auxil;
-        obj = (pplObj *) ppl_dictLookup(c->namespaces[c->ns_ptr], varname);
+        char *varname = (char *) stk[pos + PARSE_global_var_name_var_names].auxil;
+        pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[c->ns_ptr], varname);
         // If it does not exist locally, create it
         if ((obj == NULL) && (!c->namespaces[c->ns_ptr]->immutable)) {
             pplObj out;
@@ -359,8 +352,8 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
             return;
         }
         if (obj->objType == PPLOBJ_GLOB) return;
-        om = obj->amMalloced;
-        rc = obj->refCount;
+        int om = obj->amMalloced;
+        int rc = obj->refCount;
         obj->amMalloced = 0;
         obj->refCount = 1;
         ppl_garbageObject(obj);
@@ -379,11 +372,11 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
 void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOutput *in) {
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
-    int start = 0, endpos, k;
+    int start = 0, k;
     HIST_ENTRY **history_data;
 
     // Fetch readline's history
-    endpos = where_history();
+    int endpos = where_history();
     history_data = history_list();
 
     // Show only the requested number of lines, if specified
@@ -472,7 +465,6 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
 void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
     pplObj *stk = in->stk;
-    int pos;
 
     // Local variables can only be declared inside a subroutine or module
     if (c->ns_ptr < 2) {
@@ -483,15 +475,14 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
     }
 
     // Make each variable named local again
-    pos = PARSE_local_var_names;
+    int pos = PARSE_local_var_names;
     // Walk the linked list of variable names on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        char *varname;
         pplObj *obj;
 
         // Look up the variable
         pos = (int) round(stk[pos].real);
-        varname = (char *) stk[pos + PARSE_local_var_name_var_names].auxil;
+        char *varname = (char *) stk[pos + PARSE_local_var_name_var_names].auxil;
 
         // Look up requested variable
         ppl_contextVarLookup(c, varname, &obj, 1);
@@ -539,12 +530,11 @@ void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutpu
     // set ans
     if (gotItems) {
         pplObj *optr, dummyTemp;
-        int am, rc;
         ppl_contextGetVarPointer(c, "ans", &optr, &dummyTemp);
         dummyTemp.amMalloced = 0;
         ppl_garbageObject(&dummyTemp);
-        am = optr->amMalloced;
-        rc = optr->refCount;
+        int am = optr->amMalloced;
+        int rc = optr->refCount;
         optr->amMalloced = 0;
         ppl_garbageObject(optr);
         pplObjCpy(optr, stk + pos + PARSE_print_expression_0print_list, 0, 0, 1);
@@ -568,7 +558,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
     int pos = PARSE_save_filename;
-    int start = 0, endpos, k;
+    int start = 0, k;
     long x;
     char *outfname = "";
     FILE *outfile = NULL;
@@ -592,7 +582,7 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     fprintf(outfile, "# User: %s\n\n", ppl_unixGetIRLName(&c->errcontext));
 
     // Fetch readline's history
-    endpos = history_length;
+    int endpos = history_length;
     history_data = history_list();
 
     // Save only the lines typed since the last save
@@ -729,10 +719,9 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         obj->immutable = 0;
     } else // regular expression
     {
-        int i, fstdin, fstdout, trialNumber;
+        int fstdin, fstdout;
         sigset_t sigs;
         fd_set readable;
-        int rel;
         char *re = NULL, *outstr = NULL;
         char *in = (char *) rgx->auxil;
         char *instr = (char *) obj->auxil;
@@ -745,7 +734,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         }
 
         // Append 's' to the beginning of the regular expression
-        rel = (strlen(in) + 8) * 8;
+        int rel = (strlen(in) + 8) * 8;
         re = (char *) malloc(rel);
         // Failure to allocate memory is reported as an error
         if (re == NULL) {
@@ -765,7 +754,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         close(fstdin);
 
         // Wait for sed process's stdout to become readable. Get bored if this takes more than a second.
-        trialNumber = 1;
+        int trialNumber = 1;
         // Retry the wait up to three times if it is interrupted by a signal
         while (1) {
             struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
@@ -800,10 +789,9 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
 
         // Read data back from sed process, until it closes the pipe. The output may be longer than the regular
         // expression buffer, and may arrive in several pieces, so grow the buffer as needed.
-        i = 0;
+        int i = 0;
         // Read all of sed's output, growing the buffer as needed
         while (1) {
-            ssize_t n;
             // Double the size of the buffer when it is full
             if (i >= rel - 1) {
                 char *grown = (char *) realloc(re, rel * 2);
@@ -819,7 +807,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
                 re = grown;
                 rel *= 2;
             }
-            n = read(fstdout, re + i, rel - 1 - i);
+            ssize_t n = read(fstdout, re + i, rel - 1 - i);
             if ((n < 0) && (errno == EINTR)) continue;
             // Report a failure to read from the pipe
             if (n < 0) {

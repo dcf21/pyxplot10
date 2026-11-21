@@ -48,10 +48,7 @@
 void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     // Variables describing the image
     char msg[PPL_MSG_LENGTH];
-    unsigned char buff[8], flags, len, *rawz;
-    int gcm, ncols, interlaced;
-    long lxoff, lyoff, lw, lh, lzwcs;
-    unsigned long datalen, rawzLen, width, height;
+    unsigned char buff[8], flags, len;
     static unsigned char trans;
 
     // Log progress in debugging mode
@@ -79,8 +76,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
         return;
     }
-    width = ((unsigned) buff[1] << 8) + buff[0];
-    height = ((unsigned) buff[3] << 8) + buff[2];
+    unsigned long width = ((unsigned) buff[1] << 8) + buff[0];
+    unsigned long height = ((unsigned) buff[3] << 8) + buff[2];
 
     // Log the size in debugging mode
     if (DEBUG) {
@@ -111,8 +108,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // Whether there is a global color map, and its length
-    gcm = ((flags & 0x80) >> 7);
-    ncols = 2 << (flags & 0x7);
+    int gcm = ((flags & 0x80) >> 7);
+    int ncols = 2 << (flags & 0x7);
 
     // Log the number of colors in debugging mode
     if (DEBUG) {
@@ -233,8 +230,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
         return;
     }
-    lxoff = ((unsigned) buff[1] << 8) + buff[0];
-    lyoff = ((unsigned) buff[3] << 8) + buff[2];
+    long lxoff = ((unsigned) buff[1] << 8) + buff[0];
+    long lyoff = ((unsigned) buff[3] << 8) + buff[2];
 
     // Log the offset in debugging mode
     if (DEBUG) {
@@ -247,8 +244,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
         return;
     }
-    lw = ((unsigned) buff[1] << 8) + buff[0];
-    lh = ((unsigned) buff[3] << 8) + buff[2];
+    long lw = ((unsigned) buff[1] << 8) + buff[0];
+    long lh = ((unsigned) buff[3] << 8) + buff[2];
 
     // Log the size in debugging mode
     if (DEBUG) {
@@ -292,7 +289,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // Whether the rows are interlaced
-    interlaced = flags & 0x40;
+    int interlaced = flags & 0x40;
 
     // Log interlacing in debugging mode
     if (interlaced && DEBUG) {
@@ -313,7 +310,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
         return;
     }
-    lzwcs = flags + 1;
+    long lzwcs = flags + 1;
     // Log the code size in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Initial code size=%ld", lzwcs);
@@ -321,8 +318,8 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // A buffer for the compressed data, which is enlarged as needed
-    rawzLen = (width * height * 3) / 2 + 1024;
-    rawz = (unsigned char *) malloc(rawzLen);
+    unsigned long rawzLen = (width * height * 3) / 2 + 1024;
+    unsigned char *rawz = (unsigned char *) malloc(rawzLen);
     // Failure to allocate memory is reported as an error
     if (rawz == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -331,7 +328,7 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 
     // The compressed data come in sub-blocks of up to 255 bytes, each preceded by its length, and ending with an empty
     // one
-    datalen = 0;
+    unsigned long datalen = 0;
     // Read the length of the first sub-block
     if (fread(&len, 1, 1, in) != 1) {
         ppl_error(ec, ERR_FILE, -1, -1, "This GIF image file appears to be corrupted");
@@ -435,10 +432,9 @@ void ppl_bmp_gifread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
     // Interlaced GIFs store every 8th row, then the rows halfway between them, then the quarter rows, then the odd rows
     int i, j;
-    unsigned char *out, *in, *outp;
 
     // Allocate the reordered image
-    out = (unsigned char *) ppl_memAlloc(image->height * image->width);
+    unsigned char *out = (unsigned char *) ppl_memAlloc(image->height * image->width);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -446,10 +442,10 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
     }
 
     // Copy the rows in the order they were stored
-    in = image->data;
+    unsigned char *in = image->data;
 
     // First pass is eights
-    outp = out;
+    unsigned char *outp = out;
     // Rows 0, 8, 16, ...
     for (i = 0; i < image->height; i += 8) {
         for (j = 0; j < image->width; j++) *outp++ = *in++;
@@ -499,17 +495,16 @@ int ppl_bmp_de_gifinterlace(pplerr_context *ec, bitmap_data *image) {
 unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsigned long buffLen, unsigned char *out,
                              const unsigned long len, int cs) {
     char msg[PPL_MSG_LENGTH];
-    unsigned char store[256], *start, *end;
-    unsigned int off, tpos, eoi, clr;
+    unsigned char store[256];
     struct str {
         unsigned char *s;
         unsigned len;
     } table[1 << MAXCS];
-    int tmax = (1 << MAXCS) - 1, ccs, i, j;
+    int tmax = (1 << MAXCS) - 1, i, j;
 
     // The start and end of the output buffer
-    start = out;
-    end = out + len;
+    unsigned char *start = out;
+    unsigned char *end = out + len;
 
     // Codes may be no longer than MAXCS bits
     if (cs > MAXCS) {
@@ -521,11 +516,11 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsi
     }
 
     // Init table
-    off = 0;
-    ccs = cs;
-    clr = (1 << (cs - 1));
-    eoi = clr + 1;
-    tpos = clr + 2;
+    unsigned int off = 0;
+    int ccs = cs;
+    unsigned int clr = (1 << (cs - 1));
+    unsigned int eoi = clr + 1;
+    unsigned int tpos = clr + 2;
 
     // The first entries of the string table are the single pixel values
     for (i = 0; i < clr; i++) {
@@ -610,11 +605,10 @@ unsigned long ppl_bmp_de_lzw(pplerr_context *ec, unsigned char *buff, const unsi
 //! \return The code
 
 unsigned int ppl_bmp_de_lzw_bits(const pplerr_context *ec, unsigned char *c, const int st, const int len) {
-    unsigned tmp, mask;
 
     // Read three bytes, which contain the code, and extract it
-    tmp = ((unsigned) (*(c + 2)) << 16) + ((unsigned) (*(c + 1)) << 8) + *(c);
-    mask = ((1 << len) - 1) << st;
+    unsigned tmp = ((unsigned) (*(c + 2)) << 16) + ((unsigned) (*(c + 1)) << 8) + *(c);
+    unsigned mask = ((1 << len) - 1) << st;
     tmp &= mask;
     return (tmp >> st);
 }

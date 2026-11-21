@@ -66,17 +66,15 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     // The parser's output stack holds the function's name, argument names, ranges and definition
     pplObj *stk = in->stk;
     pplFunc *f = NULL;
-    int i, j, nArgs = 0, pos, posR, argListLen = 0;
+    int nArgs = 0, argListLen = 0;
     int needToStoreNan = 0, nullDefn = 0;
-    pplObj *tmpObj;
 
     // Count number of arguments
-    pos = PARSE_func_set_0argument_list;
+    int pos = PARSE_func_set_0argument_list;
     // Walk the linked list of argument names on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        char *name;
         pos = (int) round(stk[pos].real);
-        name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
+        char *name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
         nArgs++;
         argListLen += strlen(name) + 1;
     }
@@ -127,22 +125,20 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
 
     // Put ranges and argument names into structures
     pos = PARSE_func_set_0argument_list;
-    posR = PARSE_func_set_0range_list;
-    i = 0;
-    j = 0;
+    int posR = PARSE_func_set_0range_list;
+    int i = 0;
+    int j = 0;
     // For each argument, store its name, and the range over which this definition applies, if any
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        char *name;
         pos = (int) round(stk[pos].real);
-        name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
+        char *name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
         strcpy(f->argList + i, name);
         i += strlen(name) + 1;
         // This argument has a range specified
         if ((stk[posR].objType == PPLOBJ_NUM) && (stk[posR].real > 0)) {
-            pplObj *min, *max;
             posR = (int) round(stk[posR].real);
-            min = &stk[posR + PARSE_func_set_min_0range_list];
-            max = &stk[posR + PARSE_func_set_max_0range_list];
+            pplObj *min = &stk[posR + PARSE_func_set_min_0range_list];
+            pplObj *max = &stk[posR + PARSE_func_set_max_0range_list];
 
             // Check that the specified minimum is not complex
             if (min->objType != PPLOBJ_NUM) {
@@ -201,7 +197,8 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     }
 
     // Look up function or variable we are superseding
-    tmpObj = ppl_lookupAssignable(c, pl, in, PARSE_func_set_function_names, PARSE_func_set_function_name_function_names);
+    pplObj *tmpObj = ppl_lookupAssignable(c, pl, in, PARSE_func_set_function_names,
+                                          PARSE_func_set_function_name_function_names);
     if (tmpObj == NULL) goto fail;
 
     // If not a function, we delete it and supersede it

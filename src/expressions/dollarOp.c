@@ -155,10 +155,9 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
         int j = -1;
         if ((!ppl_validFloat(s, &j)) || (j < 1) ||
             ((s[j] != '\0') && (s[j] != ',') && ((unsigned char) s[j - 1] > ' '))) {
-            char *str;
             int j = 0;
             while (((unsigned char) s[j] > ' ') && (s[j] != ',')) j++;
-            str = (char *) malloc(j + 1);
+            char *str = (char *) malloc(j + 1);
             if (str == NULL) return;
             strncpy(str, s, j);
             str[j] = '\0';

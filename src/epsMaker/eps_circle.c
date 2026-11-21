@@ -42,7 +42,7 @@ void eps_circ_RenderEPS(EPSComm *x) {
     // Variables for the shape and style of the circle
     int lt;
     unsigned char filled = 0, stroked = 0;
-    double lw, lw_scale, xpos, ypos, r, start = 0, end = 360, theta;
+    double lw_scale, start = 0, end = 360, theta;
     withWords ww;
 
     // Print label at top of postscript description of circle
@@ -50,9 +50,9 @@ void eps_circ_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate position of centre of circle and its radius in TeX points
-    xpos = x->current->xpos * M_TO_PS;
-    ypos = x->current->ypos * M_TO_PS;
-    r = x->current->xpos2 * M_TO_PS;
+    double xpos = x->current->xpos * M_TO_PS;
+    double ypos = x->current->ypos * M_TO_PS;
+    double r = x->current->xpos2 * M_TO_PS;
 
     // If this is an arc, set start and end points
     if (x->current->xfset) {
@@ -89,7 +89,7 @@ void eps_circ_RenderEPS(EPSComm *x) {
     // Set linewidth and linetype of outline
     if (ww.USElinewidth) lw_scale = ww.linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;

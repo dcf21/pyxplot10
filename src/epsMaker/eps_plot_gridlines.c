@@ -151,10 +151,9 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
                                 // direction
                                 for (m = 0; m < 2; m++) {
                                     double ap[3];
-                                    int n, o;
                                     ap[j] = TLP[l];
-                                    n = (j != 0) ? 0 : 1;
-                                    o = (j != 2) ? 2 : 1;
+                                    int n = (j != 0) ? 0 : 1;
+                                    int o = (j != 2) ? 2 : 1;
                                     // Swap the roles of the other two directions for the second face
                                     if (m) {
                                         const int t = n;

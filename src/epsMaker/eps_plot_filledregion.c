@@ -66,8 +66,7 @@ FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *
                                       const int yrn, const int zrn, pplset_graph *sg, const unsigned char ThreeDim,
                                       const double origin_x, const double origin_y, const double width,
                                       const double height, const double zdepth) {
-    FilledRegionHandle *output;
-    output = (FilledRegionHandle *) ppl_memAlloc(sizeof(FilledRegionHandle));
+    FilledRegionHandle *output = (FilledRegionHandle *) ppl_memAlloc(sizeof(FilledRegionHandle));
     if (output == NULL) return NULL;
     output->x = x;
     output->xa = xa;
@@ -177,11 +176,10 @@ static int frac_sorter(const void *av, const void *bv) {
 
 static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, double Y, const int dir_x,
                                      const int dir_y) {
-    unsigned char inside;
     double x_intersect, y_intersect;
-    int i, n, Npoints;
-    listItem *li1, *li2;
-    FilledRegionPoint *p1, *p2;
+    int i, n;
+    listItem *li1;
+    FilledRegionPoint *p1;
 
     // Move fractionally off test point
     if (dir_x == -1) X -= fabs(1e-15 * X);
@@ -191,9 +189,9 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
 
     // Count how many segments of the outline cross a ray from the point in the chosen direction; an odd number means
     // the point is inside
-    Npoints = fr->points->length;
-    li2 = fr->points->first;
-    p2 = (FilledRegionPoint *) (li2->data);
+    int Npoints = fr->points->length;
+    listItem *li2 = fr->points->first;
+    FilledRegionPoint *p2 = (FilledRegionPoint *) (li2->data);
 
     // Loop around perimeter of region which we are going to fill
     for (i = n = 0; i < Npoints; i++) {
@@ -222,7 +220,7 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
             }
         }
     }
-    inside = (n % 2); // If were an even number of segments, we are outside. If there were an odd number, we are inside.
+    unsigned char inside = (n % 2); // If were an even number of segments, we are outside. If there were an odd number, we are inside.
     return inside;
 }
 
@@ -507,20 +505,17 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
 void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int linetype, const double linewidth,
                          const unsigned char StrokeOutline) {
     unsigned char f1, f2, first_point = 1, first_subpath = 1;
-    int i, j, k, kn, l, NCrossings, i1, i2;
-    double lastx, lasty, lastxap, lastyap;
+    int i, j, k, kn, NCrossings, i1, i2;
     double cx1, cy1, cz1, cx2, cy2, cz2, ap1, ap2;
-    listItem *li;
-    FilledRegionPoint *p, *last_p;
-    FilledRegionAxisCrossing *CrossPointList;
+    FilledRegionPoint *p;
     double ct_y_m1, ct_y_c1, ct_x_m1, ct_x_c1, ct_y_m2, ct_y_c2, ct_x_m2, ct_x_c2, ct_xi, ct_yi;
     listItem *ct_li;
     FilledRegionPoint *ct_pA, *ct_pB;
     const EPSComm *x = fr->x; // Makes if (eps_core_isVisible(x)) macro work
 
     // Variables for finding where the outline crosses the edges of the graph, and where it crosses itself
-    l = fr->points->length;
-    li = fr->points->first;
+    int l = fr->points->length;
+    listItem *li = fr->points->first;
     if (l < 2) return; // No points on outline to stroke
     if (!fr->EverInside) return; // Path never ventures within clip region
     eps_core_WritePSColor(fr->x);
@@ -562,15 +557,15 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
     p = (FilledRegionPoint *) (li->data);
     FilledRegion_Point(fr->x, fr, p->xa, p->ya); // Add first point to end of point list
     l = fr->points->length;
-    lastx = p->x;
-    lasty = p->y;
-    lastxap = p->xap;
-    lastyap = p->yap;
-    last_p = p;
+    double lastx = p->x;
+    double lasty = p->y;
+    double lastxap = p->xap;
+    double lastyap = p->yap;
+    FilledRegionPoint *last_p = p;
     li = li->next;
 
     // Malloc a structure to hold the positions of all of the points where we cross the boundary of the clip region
-    CrossPointList =
+    FilledRegionAxisCrossing *CrossPointList =
             (FilledRegionAxisCrossing *) ppl_memAlloc(fr->Naxiscrossings * 2 * sizeof(FilledRegionAxisCrossing));
     if (CrossPointList == NULL) return;
     // Find where each segment of the outline crosses the edges of the graph, and where it crosses earlier segments

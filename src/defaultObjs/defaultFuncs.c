@@ -1083,11 +1083,8 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     // call(f, a) calls the function f with the arguments in the list a
     char *FunctionDescription = "call(f,a)";
     const int stkLevelOld = c->stackPtr;
-    list *argList;
     pplExpr dummy;
-    pplFunc *fi;
     pplObj *item;
-    listIterator *li;
 
     // The first argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
@@ -1096,7 +1093,7 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    fi = (pplFunc *) in[0].auxil;
+    pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1112,8 +1109,8 @@ void pplfunc_call(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
                 FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
-    argList = (list *) in[1].auxil;
-    li = ppl_listIterateInit(argList);
+    list *argList = (list *) in[1].auxil;
+    listIterator *li = ppl_listIterateInit(argList);
 
     // Calling the function needs room on the stack for its arguments
     ppl_stackMustHave(c, argList->length);
@@ -1184,9 +1181,8 @@ void pplfunc_ceil(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
 void pplfunc_chr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chr(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    char *out;
     if (ppl_funcCheckInt(&call, &in[0], "s", "function can only evaluate integer ASCII codes")) return;
-    out = (char *) malloc(2);
+    char *out = (char *) malloc(2);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         *status = 1;
@@ -1391,7 +1387,6 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     char *FunctionDescription = "cross(a,b)";
     int t1 = in[0].objType;
     int t2 = in[1].objType;
-    gsl_vector *va, *vb, *vo;
     // The first argument must be a vector
     if (t1 != PPLOBJ_VEC) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1406,8 +1401,8 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
                 FunctionDescription, pplObjTypeNames[t2]);
         return;
     }
-    va = ((pplVector *) in[0].auxil)->v;
-    vb = ((pplVector *) in[1].auxil)->v;
+    gsl_vector *va = ((pplVector *) in[0].auxil)->v;
+    gsl_vector *vb = ((pplVector *) in[1].auxil)->v;
     // The first vector must have three elements
     if (va->size != 3) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -1427,7 +1422,7 @@ void pplfunc_cross(ppl_context *c, pplObj *in, const int nArgs, int *status, int
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
-    vo = ((pplVector *) (OUTPUT.auxil))->v;
+    gsl_vector *vo = ((pplVector *) (OUTPUT.auxil))->v;
     gsl_vector_set(vo, 0,
                    gsl_vector_get(va, 1) * gsl_vector_get(vb, 2) - gsl_vector_get(vb, 1) * gsl_vector_get(va, 2));
     gsl_vector_set(vo, 1,
@@ -1612,15 +1607,13 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     // eval(s) compiles and evaluates the expression in the string s
     const int stkLevelOld = c->stackPtr;
     int explen = -1, errPos = -1, lastOpAssign;
-    char *exp;
     pplExpr *e;
-    pplObj *output;
     // The argument must be a string
     if (in[0].objType != PPLOBJ_STR) {
         ppl_funcError(status, errType, errText, ERR_TYPE, "The eval() function requires a string argument.");
         return;
     }
-    exp = (char *) in[0].auxil;
+    char *exp = (char *) in[0].auxil;
     explen = strlen(exp);
     ppl_error_setstreaminfo(&c->errcontext, 1, "evaluated expression");
     ppl_expCompile(c, c->errcontext.error_input_linenumber, c->errcontext.error_input_sourceId,
@@ -1640,7 +1633,7 @@ void pplfunc_eval(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
         e = NULL;
         return;
     }
-    output = ppl_expEval(c, e, &lastOpAssign, 1, 1);
+    pplObj *output = ppl_expEval(c, e, &lastOpAssign, 1, 1);
     pplExpr_free(e);
     e = NULL;
     // The expression could not be evaluated
@@ -1728,7 +1721,6 @@ void pplfunc_expint(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 
 void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj v;
-    list *l;
     int i, n = (int) in[0].real;
     char *FunctionDescription = "factors(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
@@ -1739,7 +1731,7 @@ void pplfunc_factors(ppl_context *c, pplObj *in, const int nArgs, int *status, i
         return;
     }
     v.refCount = 1;
-    l = (list *) OUTPUT.auxil;
+    list *l = (list *) OUTPUT.auxil;
     // Add every number up to n/2 which divides n, and then n itself
     for (i = 1; i <= n / 2; i++) {
         if ((n % i) != 0) continue;
@@ -1814,13 +1806,13 @@ void pplfunc_gamma(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 void pplfunc_gcd(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gcd(x,...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    int i, out;
+    int i;
     // Every argument must be a positive integer; non-positive ones are set to -1 so that the check reports them
     for (i = 0; i < nArgs; i++) {
         if (round(in[i].real) < 1) in[i].real = -1;
         if (ppl_funcCheckInt(&call, &in[i], "x", "function's requires arguments to be")) return;
     }
-    out = ppl_gcd((int) round(in[0].real), (int) round(in[1].real));
+    int out = ppl_gcd((int) round(in[0].real), (int) round(in[1].real));
     for (i = 2; i < nArgs; i++) out = ppl_gcd(out, (int) round(in[i].real));
     OUTPUT.real = out;
     if (ppl_funcCheckOutput(&call)) return;
@@ -1986,7 +1978,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
     char *FunctionDescription = "hypot(...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     int i;
-    double acc = 0, *buffer;
+    double acc = 0;
     // With no arguments, the result is zero
     if (nArgs < 1) {
         pplObjNum(&OUTPUT, 0, 0, 0);
@@ -2001,7 +1993,7 @@ void pplfunc_hypot(ppl_context *c, pplObj *in, int nArgs, int *status, int *errT
                     ppl_printUnit(c, &in[i], NULL, NULL, 1, 1, 0));
             return;
         }
-    buffer = (double *) malloc(nArgs * sizeof(double));
+    double *buffer = (double *) malloc(nArgs * sizeof(double));
     // Failure to allocate memory is reported as an error
     if (buffer == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -2162,8 +2154,7 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
     // an int
     char *FunctionDescription = "lcm(x,...)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    int i, gcd, lcm_i, zero = 0;
-    double lcm;
+    int i, zero = 0;
     // Every argument must be an integer; if any is zero or negative, the result is zero
     for (i = 0; i < nArgs; i++) {
         if (round(in[i].real) < 1) zero = 1;
@@ -2174,8 +2165,8 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
         OUTPUT.real = 0;
         return;
     }
-    gcd = ppl_gcd((int) round(in[0].real), (int) round(in[1].real));
-    lcm = 1.0 / ((double) gcd) * round(in[0].real) * round(in[1].real);
+    int gcd = ppl_gcd((int) round(in[0].real), (int) round(in[1].real));
+    double lcm = 1.0 / ((double) gcd) * round(in[0].real) * round(in[1].real);
     // Report an overflow, or return NaN if errors are switched off
     if (lcm > INT_MAX) {
         // Report the overflow
@@ -2190,7 +2181,7 @@ void pplfunc_lcm(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
             }
         }
     }
-    lcm_i = (int) round(lcm);
+    int lcm_i = (int) round(lcm);
     // Combine each further argument with the result so far
     for (i = 2; i < nArgs; i++) {
         gcd = ppl_gcd(lcm_i, (int) round(in[i].real));
@@ -2364,11 +2355,10 @@ void pplfunc_logn(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     char *FunctionDescription = "logn(z,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     gsl_complex z;
-    pplObj base;
     GSL_SET_COMPLEX(&z, in[1].real, in[1].imag);
     z = gsl_complex_log(z);
     ppl_funcSetComplexOutput(&OUTPUT, z);
-    base = OUTPUT;
+    pplObj base = OUTPUT;
     GSL_SET_COMPLEX(&z, in[0].real, in[0].imag);
     z = gsl_complex_log(z);
     ppl_funcSetComplexOutput(&OUTPUT, z);
@@ -2391,7 +2381,7 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     // and the factor between values, and n the number of values
     char *FunctionDescription = "lrange([f],l,[s])";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    double start, end, step, n;
+    double start, end, step;
     int i;
     if (nArgs > 1) {
         if (ppl_funcCheckDimensionsMatch(&call)) return;
@@ -2417,7 +2407,7 @@ void pplfunc_lrange(ppl_context *c, pplObj *in, const int nArgs, int *status, in
         end = in[1].real;
         step = in[2].real;
     }
-    n = ceil(log(end / start) / log(step));
+    double n = ceil(log(end / start) / log(step));
     // The step must give a sensible number of values
     if ((!gsl_finite(n)) || (n > INT_MAX)) {
         ppl_funcError(status, errType, errText, ERR_NUMERICAL, "%s", "Invalid step size.");
@@ -2610,7 +2600,6 @@ void pplfunc_mod(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    FILE *f;
     char *mode;
     // The arguments are the filename, and optionally the mode, e.g. "w"
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -2624,7 +2613,7 @@ void pplfunc_open(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
     }
     if (nArgs > 1) mode = (char *) in[1].auxil;
     else mode = "r";
-    f = fopen((char *) in[0].auxil, mode);
+    FILE *f = fopen((char *) in[0].auxil, mode);
     // Report a failure to open the file
     if (f == NULL) {
         ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
@@ -2669,14 +2658,13 @@ void pplfunc_ord(ppl_context *c, pplObj *in, const int nArgs, int *status, int *
 void pplfunc_ordinal(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "ordinal(n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    char *out;
     int n = (int) ceil(fabs(log10(in[0].real)));
     int i = (int) in[0].real;
     if (in[0].real < 0) in[0].real = GSL_NAN;
     if (n < 2) n = 2;
     if (n > 64) in[0].real = GSL_NAN;
     if (ppl_funcCheckInt(&call, &in[0], "n", "function's input must be an integer")) return;
-    out = (char *) malloc(n + 8);
+    char *out = (char *) malloc(n + 8);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -2754,7 +2742,6 @@ void pplfunc_prime(ppl_context *c, pplObj *in, const int nArgs, int *status, int
 void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // primeFactors(x) lists the prime factors of x, with repeats
     pplObj v;
-    list *l;
     int i, n = (int) in[0].real;
     char *FunctionDescription = "primeFactors(x)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
@@ -2780,7 +2767,7 @@ void pplfunc_primefactors(ppl_context *c, pplObj *in, const int nArgs, int *stat
         return;
     }
     v.refCount = 1;
-    l = (list *) OUTPUT.auxil;
+    list *l = (list *) OUTPUT.auxil;
     // Try dividing by each prime up to the square root of what remains of n
     for (i = 2; i <= sqrt(n); i++) {
         int prime = 1;
@@ -2887,7 +2874,7 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
     // and the step, and n the number of values
     char *FunctionDescription = "range([f],l,[s])";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    double start, end, step, n;
+    double start, end, step;
     int i;
     if (nArgs > 1) {
         if (ppl_funcCheckDimensionsMatch(&call)) return;
@@ -2913,7 +2900,7 @@ void pplfunc_range(ppl_context *c, pplObj *in, const int nArgs, int *status, int
         end = in[1].real;
         step = in[2].real;
     }
-    n = ceil((end - start) / step);
+    double n = ceil((end - start) / step);
     // The step must give a sensible number of values
     if ((!gsl_finite(n)) || (n > INT_MAX)) {
         ppl_funcError(status, errType, errText, ERR_NUMERICAL, "%s", "Invalid step size.");
@@ -2978,8 +2965,7 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
     char *h[] = {"", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"};
     char *t[] = {"", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"};
     char *o[] = {"", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"};
-    char *out;
-    int n, p = 0;
+    int p = 0;
     if (ppl_funcCheckInt(&call, &in[0], "n", "function's input must be an integer")) return;
     // The number must be between 1 and 10000
     if ((in[0].real < 1) || (in[0].real > 10000)) {
@@ -2987,13 +2973,13 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
                 "Argument to %s must be in the range 0<n<=10000.", FunctionDescription);
         return;
     }
-    out = (char *) malloc(32);
+    char *out = (char *) malloc(32);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
-    n = (int) in[0].real;
+    int n = (int) in[0].real;
     // One M for each thousand
     while (n >= 1000) {
         out[p++] = 'M';
@@ -3022,7 +3008,7 @@ void pplfunc_romanNum(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 
 void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // root(z, n) is the nth root of z; negative real numbers have real odd roots
-    pplObj x1, x2;
+    pplObj x2;
     double tmpdbl;
     char *FunctionDescription = "root(z,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
@@ -3045,7 +3031,7 @@ void pplfunc_root(ppl_context *c, pplObj *in, const int nArgs, int *status, int 
             }
         }
     }
-    x1 = in[0];
+    pplObj x1 = in[0];
     // Take the root of the negated number, and fix the sign afterwards
     if (x1.real < 0.0) {
         negated = 1;
@@ -3440,7 +3426,6 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
     // texify(e) converts the expression in the string e into LaTeX
     char *FunctionDescription = "texify(e)";
     char *instr = (char *) in[0].auxil;
-    char *outstr;
     int inlen = 0;
     // Exactly one argument is needed
     if (nArgs != 1) {
@@ -3456,7 +3441,7 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    outstr = (char *) malloc(LSTR_LENGTH);
+    char *outstr = (char *) malloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (outstr == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -3487,7 +3472,6 @@ void pplfunc_texify(ppl_context *c, pplObj *in, int nArgs, int *status, int *err
 void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "texifyText(s)";
     char *instr = (char *) in[0].auxil;
-    char *outstr;
     // Exactly one argument is needed
     if (nArgs != 1) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -3502,7 +3486,7 @@ void pplfunc_texifyText(ppl_context *c, pplObj *in, int nArgs, int *status, int 
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    outstr = (char *) malloc(LSTR_LENGTH);
+    char *outstr = (char *) malloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (outstr == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");

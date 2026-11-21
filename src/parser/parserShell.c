@@ -88,7 +88,6 @@
 void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
     // d is the name of the command, as stored by the parser in the first slot of the output stack
     char msg[PPL_MSG_LENGTH];
-    int contextNew;
     pplObj *stk = in->stk;
     char *d = (char *) stk[PARSE_arc_directive].auxil;
 
@@ -117,12 +116,11 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
         // set ans
         {
             pplObj *optr, dummyTemp;
-            int am, rc;
             ppl_contextGetVarPointer(c, "ans", &optr, &dummyTemp);
             dummyTemp.amMalloced = 0;
             ppl_garbageObject(&dummyTemp);
-            am = optr->amMalloced;
-            rc = optr->refCount;
+            int am = optr->amMalloced;
+            int rc = optr->refCount;
             optr->amMalloced = 0;
             ppl_garbageObject(optr);
             pplObjCpy(optr, val, 0, 0, 1);
@@ -144,7 +142,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     }
 
     // Descend into a new memory context
-    contextNew = ppl_memAlloc_DescendIntoNewContext();
+    int contextNew = ppl_memAlloc_DescendIntoNewContext();
 
     // Directive is a string
     if (strcmp(d, "var_set") == 0) ppl_directive_varset(c, pl, in, interactive, iterDepth);

@@ -184,7 +184,7 @@ int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, cons
     char s[64];
     int err;
     dviStackState *postPos, *dviPos; // Current positions in dvi and postscript code
-    double width, height, depth, italic, size[4];
+    double size[4];
 
     // Move to the current position before typesetting, if the postscript position differs from it
     postPos = interp->output->currentPosition;
@@ -200,10 +200,10 @@ int dviNonAsciiChar(pplerr_context *ec, dviInterpreterState *interp, int c, cons
 
     // Update bounding box
     dviGetCharSize(ec, interp, (char) c, size);
-    width = size[0] / interp->scale; // Convert back into dvi units
-    height = size[1] / interp->scale;
-    depth = size[2] / interp->scale;
-    italic = size[3] / interp->scale;
+    double width = size[0] / interp->scale; // Convert back into dvi units
+    double height = size[1] / interp->scale;
+    double depth = size[2] / interp->scale;
+    double italic = size[3] / interp->scale;
     // Log the size in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "DVI: width of glyph %g height of glyph %g", width, height);
@@ -239,7 +239,6 @@ int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
     // The character to typeset
     int charToTypeset = op->op;
     int err;
-    char *s;
 
     // Typeset non-printable characters separately
     if ((charToTypeset < 48) || ((charToTypeset > 57) && (charToTypeset < 65)) ||
@@ -275,7 +274,7 @@ int dviInOpChar(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
         interp->currentStrlen = SSTR_LENGTH;
     }
     // Write the character to the string
-    s = interp->currentString + strlen(interp->currentString); // s now points to the \0
+    char *s = interp->currentString + strlen(interp->currentString); // s now points to the \0
     if (charToTypeset == 40) snprintf(s, 3, "%s", "\\(");
     else if (charToTypeset == 41) snprintf(s, 3, "%s", "\\)");
     else snprintf(s, 2, "%c", charToTypeset);
@@ -383,8 +382,7 @@ int dviInOpNop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
 
 int dviInOpBop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Generate a new page
-    postscriptPage *p;
-    p = dviNewPostscriptPage(ec);
+    postscriptPage *p = dviNewPostscriptPage(ec);
     if (p == NULL) return DVIE_MEMORY;
     ppl_listAppend(interp->output->pages, (void *) p);
     interp->output->currentPage = p;
@@ -425,11 +423,10 @@ int dviInOpBop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
 int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Variables for the page's bounding box
     char msg[PPL_MSG_LENGTH];
-    double *bb;
 
     // Set appropriate postscript bounding box from dvi bb
     // left bottom right top
-    bb = interp->boundingBox;
+    double *bb = interp->boundingBox;
     // If we have not typeset anything then the bounding box will be empty.
     if (bb == NULL) {
         bb = (double *) ppl_memAlloc(4 * sizeof(double));
@@ -504,8 +501,7 @@ int dviInOpEop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op)
 
 int dviInOpPush(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Push the current state on to the stack
-    dviStackState *new;
-    new = dviCloneInterpState(ec, interp->state);
+    dviStackState *new = dviCloneInterpState(ec, interp->state);
     if (new == NULL) return DVIE_MEMORY;
     ppl_listAppend(interp->stack, (void *) new);
     return 0;
@@ -519,8 +515,7 @@ int dviInOpPush(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op
 
 int dviInOpPop(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // Pop the previous state off the stack
-    dviStackState *new;
-    new = (dviStackState *) ppl_listPop(interp->stack);
+    dviStackState *new = (dviStackState *) ppl_listPop(interp->stack);
     // Report a pop from an empty stack
     if (new == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "corrupt dvi file -- attempt to pop off empty stack");
@@ -655,8 +650,7 @@ int dviInOpZ1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *o
 //! \return Zero on success, or a DVIE_* error code
 
 int dviInOpFnt(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
-    int fn;
-    fn = op->op - DVI_FNTNUMMIN;
+    int fn = op->op - DVI_FNTNUMMIN;
     return dviChngFnt(ec, interp, fn);
 }
 
@@ -680,8 +674,7 @@ int dviInOpFnt1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator 
 
 int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     char msg[PPL_MSG_LENGTH];
-    int spesh;
-    spesh = op->op - DVI_SPECIAL1234 + 1;
+    int spesh = op->op - DVI_SPECIAL1234 + 1;
     interp->special = spesh;
     interp->specialLen = op->ul[0];
     interp->spString = (char *) ppl_memAlloc(SSTR_LENGTH);
@@ -710,11 +703,10 @@ int dviInOpSpecial1234(pplerr_context *ec, dviInterpreterState *interp, DVIOpera
 int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     // XXX Should perhaps check that we're not re-defining an existing font here
     // XXX Could check that we're not after POST and hence that we need to do this
-    dviFontDetails *font;
     int i;
 
     // Allocate a record for the font
-    font = (dviFontDetails *) ppl_memAlloc(sizeof(dviFontDetails));
+    dviFontDetails *font = (dviFontDetails *) ppl_memAlloc(sizeof(dviFontDetails));
     // Failure to allocate memory is reported as an error
     if (font == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -757,11 +749,10 @@ int dviInOpFntdef1234(pplerr_context *ec, dviInterpreterState *interp, DVIOperat
 
 int dviInOpPre(pplerr_context *ec, dviInterpreterState *interp, DVIOperator *op) {
     char msg[PPL_MSG_LENGTH];
-    unsigned long i, num, den, mag;
-    i = op->ul[0];
-    num = op->ul[1];
-    den = op->ul[2];
-    mag = op->ul[3];
+    unsigned long i = op->ul[0];
+    unsigned long num = op->ul[1];
+    unsigned long den = op->ul[2];
+    unsigned long mag = op->ul[3];
     // Only version 2 of the dvi format is supported
     if (i != 2) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Error interpreting dvi file: not dvi version 2");
@@ -809,8 +800,7 @@ int dviInOpPostPost(pplerr_context *ec, dviInterpreterState *interp, DVIOperator
 //! \return Zero on success, or a DVIE_* error code
 
 int dviSpecialChar(const pplerr_context *ec, const dviInterpreterState *interp, DVIOperator *op) {
-    char *s;
-    s = interp->spString + strlen(interp->spString);
+    char *s = interp->spString + strlen(interp->spString);
     snprintf(s, SSTR_LENGTH, "%c", op->op);
     return 0;
 }
@@ -915,10 +905,9 @@ int dviSpecialColourCommand(pplerr_context *ec, dviInterpreterState *interp, cha
 
 int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
-    char *item;
 
     // Lop last colour off the end of the colour stack
-    item = (char *) ppl_listPop(interp->colStack);
+    char *item = (char *) ppl_listPop(interp->colStack);
     // Warn about popping from an empty color stack
     if (item == NULL) {
         ppl_warning(ec, ERR_INTERNAL, "dvi colour pop from empty stack");
@@ -945,12 +934,11 @@ int dviSpecialColourStackPop(pplerr_context *ec, dviInterpreterState *interp) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviSpecialColourStackPush(pplerr_context *ec, dviInterpreterState *interp, char *psText) {
-    char *s;
-    int len, err = 0;
+    int err = 0;
 
     // Stick the string onto the stack
-    len = strlen(psText) + 1;
-    s = (char *) ppl_memAlloc(len);
+    int len = strlen(psText) + 1;
+    char *s = (char *) ppl_memAlloc(len);
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -974,8 +962,7 @@ int dviSpecialColourStackPush(pplerr_context *ec, dviInterpreterState *interp, c
 
 dviInterpreterState *dviNewInterpreter(pplerr_context *ec) {
     // The interpreter, allocated in the current memory context
-    dviInterpreterState *interp;
-    interp = (dviInterpreterState *) ppl_memAlloc(sizeof(dviInterpreterState));
+    dviInterpreterState *interp = (dviInterpreterState *) ppl_memAlloc(sizeof(dviInterpreterState));
     // Failure to allocate memory is reported as an error
     if (interp == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -1087,8 +1074,7 @@ int dviDeleteInterpreter(pplerr_context *ec, dviInterpreterState *interp) {
 //! \return The copy, or NULL if memory allocation failed
 
 dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *orig) {
-    void *clone;
-    clone = ppl_memAlloc(sizeof(dviStackState));
+    void *clone = ppl_memAlloc(sizeof(dviStackState));
     if (clone != NULL) memcpy(clone, (void *) orig, sizeof(dviStackState));
     return (dviStackState *) clone;
 }
@@ -1102,8 +1088,7 @@ dviStackState *dviCloneInterpState(const pplerr_context *ec, dviStackState *orig
 //! \return The new page, or NULL if memory allocation failed
 
 postscriptPage *dviNewPostscriptPage(pplerr_context *ec) {
-    postscriptPage *page;
-    page = (postscriptPage *) ppl_memAlloc(sizeof(postscriptPage));
+    postscriptPage *page = (postscriptPage *) ppl_memAlloc(sizeof(postscriptPage));
     // Failure to allocate memory is reported as an error
     if (page == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -1165,12 +1150,10 @@ int dviDeletePostscriptState(const pplerr_context *ec, postscriptState *state) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, const char *new) {
-    char *s; // A temporary string pointer
-    int len;
 
     // Grab the new string and copy it into place
-    len = strlen(new) + 1;
-    s = (char *) ppl_memAlloc(len);
+    int len = strlen(new) + 1;
+    char *s = (char *) ppl_memAlloc(len); // A temporary string pointer
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -1190,9 +1173,8 @@ int dviPostscriptAppend(pplerr_context *ec, const dviInterpreterState *interp, c
 int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
-    double x, y;
-    x = interp->state->h * interp->scale;
-    y = 765 - interp->state->v * interp->scale;
+    double x = interp->state->h * interp->scale;
+    double y = 765 - interp->state->v * interp->scale;
     snprintf(s, SSTR_LENGTH, "newpath\n%f %f moveto\n", x, y);
     if ((err = dviPostscriptAppend(ec, interp, s)) != 0) return err;
 
@@ -1216,9 +1198,8 @@ int dviPostscriptMoveto(pplerr_context *ec, dviInterpreterState *interp) {
 int dviPostscriptLineto(pplerr_context *ec, dviInterpreterState *interp) {
     int err = 0;
     char s[SSTR_LENGTH];
-    double x, y;
-    x = interp->state->h * interp->scale;
-    y = 765 - interp->state->v * interp->scale;
+    double x = interp->state->h * interp->scale;
+    double y = 765 - interp->state->v * interp->scale;
     snprintf(s, SSTR_LENGTH, "%f %f lineto\n", x, y);
     if ((err = dviPostscriptAppend(ec, interp, s)) != 0) return err;
 
@@ -1268,10 +1249,8 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
     char msg[PPL_MSG_LENGTH];
     // This subroutine does the bulk of the actual postscript work, typesetting runs of characters
     dviStackState *postPos, *dviPos; // Current positions in dvi and postscript code
-    char *s;
-    double width, height, depth, italic;
     double size[4]; // Width, height, depth
-    int chars, err = 0;
+    int err = 0;
 
     // Move to the current position before typesetting, if the postscript position differs from it
     postPos = interp->output->currentPosition;
@@ -1287,11 +1266,11 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
     }
 
     // Measure the run of characters: its total width, and its greatest height and depth
-    s = interp->currentString;
-    width = 0.0;
-    height = 0.0;
-    depth = 0.0;
-    italic = 0.0;
+    char *s = interp->currentString;
+    double width = 0.0;
+    double height = 0.0;
+    double depth = 0.0;
+    double italic = 0.0;
     // Add the width of each character
     while (*s != '\0') {
         if ((err = dviGetCharSize(ec, interp, (unsigned char) *s, size)) != 0) return err;
@@ -1317,7 +1296,7 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
     if ((err = dviUpdateBoundingBox(ec, interp, width + italic, height, depth)) != 0) return err;
 
     // Count the number of characters to write to the ps string
-    chars = strlen(interp->currentString) + 9;
+    int chars = strlen(interp->currentString) + 9;
     s = (char *) ppl_memAlloc(chars);
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
@@ -1348,18 +1327,14 @@ int dviTypeset(pplerr_context *ec, dviInterpreterState *interp) {
 int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
     // Variables for selecting the font
     char msg[PPL_MSG_LENGTH];
-    listIterator *listIter;
-    int len, err = 0;
-    char *s;
-    dviFontDetails *font;
-    double size;
+    int err = 0;
 
     // Record the font number
     interp->f = fn;
 
     // Find the font in the list
     interp->curFnt = NULL;
-    listIter = ppl_listIterateInit(interp->fonts);
+    listIterator *listIter = ppl_listIterateInit(interp->fonts);
     // Find the font with this number among those defined
     while (listIter != NULL) {
         // This is the font
@@ -1377,15 +1352,15 @@ int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
     }
 
     // Produce an appropriate postscript command
-    font = (dviFontDetails *) listIter->data;
-    len = strlen(font->psName) + 20;
-    s = (char *) ppl_memAlloc(len);
+    dviFontDetails *font = (dviFontDetails *) listIter->data;
+    int len = strlen(font->psName) + 20;
+    char *s = (char *) ppl_memAlloc(len);
     // Failure to allocate memory is reported as an error
     if (s == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
     }
-    size = font->useSize * interp->scale;
+    double size = font->useSize * interp->scale;
     // Log the font size in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "DVI: Font useSize %d size %g changed to %d", font->useSize, size,
@@ -1409,19 +1384,14 @@ int dviChngFnt(pplerr_context *ec, dviInterpreterState *interp, const int fn) {
 int dviGetCharSize(pplerr_context *ec, dviInterpreterState *interp, unsigned char s, double *size) {
     // Variables for looking up the character in the font metrics
     char msg[PPL_MSG_LENGTH];
-    dviTFM *tfm; // Details of this font
-    int chnum; // Character number in this font
-    TFMcharInfo *chin; // Character info for this character
     int wi, hi, di, ii; // Indices
-    dviFontDetails *font; // Font information (for tfm and use size)
-    double scale; // Font use size * unit scaling
 
     // Find the character's entry in the font's metrics
-    font = (dviFontDetails *) interp->curFnt;
-    tfm = font->tfm;
-    chnum = s - tfm->bc;
-    chin = tfm->charInfo + chnum;
-    scale = font->useSize * interp->scale;
+    dviFontDetails *font = (dviFontDetails *) interp->curFnt; // Font information (for tfm and use size)
+    dviTFM *tfm = font->tfm; // Details of this font
+    int chnum = s - tfm->bc; // Character number in this font
+    TFMcharInfo *chin = tfm->charInfo + chnum; // Character info for this character
+    double scale = font->useSize * interp->scale; // Font use size * unit scaling
 
     // Look up its width, height, depth and italic correction, scaled to the font's size in postscript points
     wi = (int) chin->wi;

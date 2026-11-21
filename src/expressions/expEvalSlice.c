@@ -72,8 +72,6 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
     // Dictionaries, modules and class instances are indexed by string keys
     if ((t == PPLOBJ_DICT) || (t == PPLOBJ_MOD) || (t == PPLOBJ_USER)) {
         dict *din = (dict *) called.auxil;
-        char *key;
-        pplObj *obj;
         // The key must be a string
         if (args->objType != PPLOBJ_STR) {
             *errType = ERR_TYPE;
@@ -81,7 +79,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
                               pplObjTypeNames[args->objType]);
             goto fail;
         }
-        key = (char *) args[0].auxil;
+        char *key = (char *) args[0].auxil;
         // The key does not exist
         if (!ppl_dictContains(din, key)) {
             // When assigning, create a new item with the key; otherwise the missing key is an error
@@ -95,7 +93,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
                 goto fail;
             }
         }
-        obj = (pplObj *) ppl_dictLookup(din, key);
+        pplObj *obj = (pplObj *) ppl_dictLookup(din, key);
         pplObjCpy(out, obj, 1, 0, 1);
         out->immutable = out->immutable || din->immutable;
         goto cleanup;
@@ -138,7 +136,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             const char *in = (char *) called.auxil;
             const int inl = ppl_utf8Length(in); // Strings are indexed by character, not byte
             char *outstr;
-            int p = args[0].real, start, len;
+            int p = args[0].real;
             if (p < 0) p += inl;
             // The character must exist
             if ((p < 0) || (p >= inl)) {
@@ -151,8 +149,8 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
                 goto fail;
             }
             // A character may be several bytes long
-            start = ppl_utf8ByteOffset(in, p);
-            len = ppl_utf8ByteOffset(in, p + 1) - start;
+            int start = ppl_utf8ByteOffset(in, p);
+            int len = ppl_utf8ByteOffset(in, p + 1) - start;
             // Copy the character, which may occupy several bytes of UTF-8, into a new string
             if ((outstr = (char *) malloc(len + 1)) == NULL) {
                 ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -167,7 +165,6 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             list *lin = (list *) called.auxil;
             const int linl = lin->length;
             int p = args[0].real;
-            pplObj *obj;
             if (p < 0) p += linl;
             // Assigning to the item just past the end of a list appends a new item
             if (getPtr && (p == linl) && (!lin->immutable)) {
@@ -182,7 +179,7 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
                     goto fail;
                 }
             }
-            obj = (pplObj *) ppl_listGetItem(lin, p);
+            pplObj *obj = (pplObj *) ppl_listGetItem(lin, p);
             pplObjCpy(out, obj, 1, 0, 1);
             out->immutable = out->immutable || lin->immutable;
             break;
@@ -191,14 +188,13 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             gsl_vector *vin = ((pplVector *) called.auxil)->v;
             const int vinl = vin->size;
             int p = args[0].real;
-            double *obj;
             if (p < 0) p += vinl;
             // The element must exist
             if ((p < 0) || (p >= vinl)) {
                 ppl_funcError(status, errType, errText, ERR_RANGE, "Vector index out of range.");
                 goto fail;
             }
-            obj = gsl_vector_ptr(vin, p);
+            double *obj = gsl_vector_ptr(vin, p);
             pplObjNum(out, 0, *obj, 0);
             ppl_unitsDimCpy(out, &called);
             if ((out->self_lval = called.self_lval) != NULL) { __sync_add_and_fetch(&out->self_lval->refCount, 1); }
@@ -211,14 +207,13 @@ void ppl_sliceItem(ppl_context *context, const int getPtr, int *status, int *err
             gsl_matrix *min = mob->m;
             const int minl = mob->sliceNext ? min->size1 : min->size2;
             int p = args[0].real;
-            pplVector *vo;
             if (p < 0) p += minl;
             // The row must exist
             if ((p < 0) || (p >= minl)) {
                 ppl_funcError(status, errType, errText, ERR_RANGE, "Matrix index out of range.");
                 goto fail;
             }
-            vo = (pplVector *) malloc(sizeof(pplVector));
+            pplVector *vo = (pplVector *) malloc(sizeof(pplVector));
             // A row of a matrix is a vector which views the matrix's storage, so that changing it changes the matrix
             if (vo == NULL) {
                 ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -297,7 +292,6 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
         case PPLOBJ_STR: {
             const char *in = (char *) called.auxil;
             const int inl = ppl_utf8Length(in); // Strings are sliced by character, not byte
-            int outlen, byteMin;
             char *outstr;
             if (!minset) min = 0;
             else if (min < 0) min += inl;
@@ -309,8 +303,8 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
                 goto fail;
             }
             // Convert the range of characters into a range of bytes
-            byteMin = ppl_utf8ByteOffset(in, min);
-            outlen = ppl_utf8ByteOffset(in, max) - byteMin;
+            int byteMin = ppl_utf8ByteOffset(in, min);
+            int outlen = ppl_utf8ByteOffset(in, max) - byteMin;
             if (outlen < 0) outlen = 0;
             // Copy the characters in the range into a new string
             if ((outstr = (char *) malloc(outlen + 1)) == NULL) {
@@ -324,10 +318,8 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
         }
         case PPLOBJ_LIST: {
             list *lin = (list *) called.auxil;
-            list *lout;
             const int inl = lin->length;
             int i;
-            listIterator *li;
             pplObj obj, *objptr;
             if (!minset) min = 0;
             else if (min < 0) min += inl;
@@ -343,9 +335,9 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
                 ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
                 goto fail;
             }
-            lout = (list *) out->auxil;
+            list *lout = (list *) out->auxil;
             obj.refCount = 1;
-            li = ppl_listIterateInit(lin);
+            listIterator *li = ppl_listIterateInit(lin);
             for (i = 0; ((objptr = (pplObj *) ppl_listIterate(&li)) != NULL); i++)
                 // Copy the items in the range into the new list
                 if ((i >= min) && (i < max)) {
@@ -358,7 +350,6 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             pplVector *vob = (pplVector *) called.auxil;
             gsl_vector *vecin = vob->v;
             const int vinl = vecin->size;
-            pplVector *vo;
             if (!minset) min = 0;
             else if (min < 0) min += vinl;
             if (!maxset) max = vinl;
@@ -373,7 +364,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
                 ppl_funcError(status, errType, errText, ERR_RANGE, "Cannot create a vector of zero size.");
                 goto fail;
             }
-            vo = (pplVector *) malloc(sizeof(pplVector));
+            pplVector *vo = (pplVector *) malloc(sizeof(pplVector));
             // The slice is a vector which views the original's storage, so that changing it changes the original
             if (vo == NULL) {
                 ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -403,7 +394,6 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
             pplMatrix *mob = (pplMatrix *) called.auxil;
             gsl_matrix *matin = mob->m;
             const int minl = mob->sliceNext ? matin->size1 : matin->size2;
-            pplMatrix *mo;
             if (!minset) min = 0;
             else if (min < 0) min += minl;
             if (!maxset) max = minl;
@@ -418,7 +408,7 @@ void ppl_sliceRange(ppl_context *context, const int minset, int min, const int m
                 ppl_funcError(status, errType, errText, ERR_RANGE, "Cannot create a matrix of zero size.");
                 goto fail;
             }
-            mo = (pplMatrix *) malloc(sizeof(pplMatrix));
+            pplMatrix *mo = (pplMatrix *) malloc(sizeof(pplMatrix));
             // The slice is a matrix which views the original's storage
             if (mo == NULL) {
                 ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");

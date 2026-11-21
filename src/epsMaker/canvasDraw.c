@@ -78,10 +78,9 @@
 static int filecopy(EPSComm *x, const char *in, const char *out) {
     char msg[PPL_MSG_LENGTH];
     int status = 0, n;
-    FILE *fi, *fo;
     ppl_createBackupIfRequired(x->c, out);
-    fi = fopen(in, "rb");
-    fo = fopen(out, "wb");
+    FILE *fi = fopen(in, "rb");
+    FILE *fo = fopen(out, "wb");
     if ((fo == NULL) || (fi == NULL)) status = 1;
     while ((!status) && ((n = fread((void *) msg, 1, FNAME_LENGTH, fi)) > 0))
         if (fwrite((void *) msg, 1, n, fo) < n) status = 1;
@@ -541,13 +540,10 @@ static void fprintfLineCount(FILE *output, const char *text, int *linecount) {
 void canvas_CallLaTeX(EPSComm *x) {
     // Variables for running LaTeX and reading its output, which is parsed to find any error messages
     char msg[LSTR_LENGTH];
-    int linecount = 1, i, j, pid, LatexStatus, LatexStdIn, LatexOut;
-    char filename[FNAME_LENGTH], *str_buffer;
-    FILE *output;
-    listIterator *ListIter;
+    int linecount = 1, i, j, pid, LatexStdIn, LatexOut;
+    char filename[FNAME_LENGTH];
     CanvasTextItem *TempTextItem, *SuspectTextItem = NULL;
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
-    unsigned char FirstIter;
     fd_set readable;
     sigset_t sigs;
 
@@ -579,7 +575,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     }
 
     // Make string buffer
-    str_buffer = (char *) malloc(LSTR_LENGTH);
+    char *str_buffer = (char *) malloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (str_buffer == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (y).");
@@ -589,7 +585,7 @@ void canvas_CallLaTeX(EPSComm *x) {
 
     // Start writing LaTeX document
     ppl_snprintfTrunc(filename, sizeof(filename), "%s.tex", x->TeXFilename);
-    output = fopen(filename, "w");
+    FILE *output = fopen(filename, "w");
     // Report a failure to create the document
     if (output == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Could not create temporary LaTeX document");
@@ -603,7 +599,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     fprintfLineCount(output, TextHeader2, &linecount);
 
     // Sequentially print out text strings
-    ListIter = ppl_listIterateInit(x->TextItems);
+    listIterator *ListIter = ppl_listIterateInit(x->TextItems);
     // Write each text item, noting which lines of the document it occupies, so that errors can be traced back to it
     while (ListIter != NULL) {
         TempTextItem = (CanvasTextItem *) ListIter->data;
@@ -623,8 +619,8 @@ void canvas_CallLaTeX(EPSComm *x) {
     pplcsp_forkLaTeX(x->c, filename, &pid, &LatexStdIn, &LatexOut);
 
     // Wait for latex process's stdout to become readable. Get bored if this takes too long.
-    FirstIter = 1;
-    LatexStatus = 0;
+    unsigned char FirstIter = 1;
+    int LatexStatus = 0;
     // Read LaTeX's output until it finishes, or stops responding, which happens when it waits for input after an error
     while (1) {
         // Wait for output, retrying up to three times if interrupted by a signal
@@ -869,9 +865,8 @@ void canvas_EPSWrite(EPSComm *x) {
     // Variables for writing the output file
     char msg[PPL_MSG_LENGTH];
     int i;
-    double PAGEwidth, PAGEheight, margin_left, margin_top, margin_bottom;
     FILE *epsout, *PFAfile;
-    char LandscapifyText[FNAME_LENGTH], EnlargementText[FNAME_LENGTH], *PaperName, *PFAfilename;
+    char LandscapifyText[FNAME_LENGTH], EnlargementText[FNAME_LENGTH], *PFAfilename;
     listIterator *ListIter;
 
     // Check that we have a bounding box
@@ -885,7 +880,7 @@ void canvas_EPSWrite(EPSComm *x) {
 
 
     // Work out name to call papersize
-    PaperName = x->c->set->term_current.PaperName;
+    char *PaperName = x->c->set->term_current.PaperName;
     if (strcmp(PaperName, "User-defined papersize") == 0) PaperName = "CustomPageSize";
     // Return to user's current working directory
     if (chdir(x->c->errcontext.session_default.cwd) < 0) {
@@ -893,13 +888,13 @@ void canvas_EPSWrite(EPSComm *x) {
     }
 
     // Work out some sensible margins for page
-    PAGEwidth = x->c->set->term_current.PaperWidth.real;
-    PAGEheight = x->c->set->term_current.PaperHeight.real;
-    margin_left = PAGEwidth / 14;
-    margin_top = PAGEheight / 14;
+    double PAGEwidth = x->c->set->term_current.PaperWidth.real;
+    double PAGEheight = x->c->set->term_current.PaperHeight.real;
+    double margin_left = PAGEwidth / 14;
+    double margin_top = PAGEheight / 14;
     margin_left *= M_TO_PS;
     margin_top *= M_TO_PS;
-    margin_bottom = margin_top;
+    double margin_bottom = margin_top;
 
     // Open output postscript file for writing
     if ((epsout = fopen(x->EPSFilename, "w")) == NULL) {
@@ -1111,13 +1106,11 @@ void canvas_EPSWrite(EPSComm *x) {
 void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos, double ypos, const int halign,
                               const int valign, char *colstr, double fontsize, double rotate, double *width,
                               double *height) {
-    postscriptPage *dviPage;
-    listIterator *ListIter;
-    char *cptr, *out;
+    char *cptr;
     static char *buffer = NULL;
     const long BUFLEN = 131072;
     long bufpos = 0;
-    double bb_left, bb_right, bb_top, bb_bottom, xanchor, yanchor;
+    double xanchor, yanchor;
     double ab_left, ab_right, ab_top,
             ab_bottom; // The align box is different from the bounding box in that it gives the baseline height of the lowest line of text and the cap height of the highest line of text
 
@@ -1127,7 +1120,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     // Write output to text buffer initially
     if (buffer == NULL) buffer = malloc(BUFLEN); // memory leak here!
     if (buffer == NULL) return;
-    out = buffer;
+    char *out = buffer;
 
     // Text cannot be drawn before LaTeX has typeset it
     if (x->dvi == NULL) {
@@ -1137,17 +1130,17 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     }
 
     // Fetch requested page of postscript
-    dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
+    postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
     // Report text which LaTeX did not typeset
     if (dviPage == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Not all text items were rendered by LaTeX");
         *(x->status) = 1;
         return;
     }
-    bb_left = dviPage->boundingBox[0];
-    bb_bottom = dviPage->boundingBox[1];
-    bb_right = dviPage->boundingBox[2];
-    bb_top = dviPage->boundingBox[3];
+    double bb_left = dviPage->boundingBox[0];
+    double bb_bottom = dviPage->boundingBox[1];
+    double bb_right = dviPage->boundingBox[2];
+    double bb_top = dviPage->boundingBox[3];
     ab_left = dviPage->textSizeBox[0];
     ab_bottom = dviPage->textSizeBox[1];
     ab_right = dviPage->textSizeBox[2];
@@ -1217,7 +1210,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     bufpos += strlen(out + bufpos);
 
     // Copy postscript description of page out of dvi buffer
-    ListIter = ppl_listIterateInit(dviPage->text);
+    listIterator *ListIter = ppl_listIterateInit(dviPage->text);
     // Copy each fragment of postscript
     while (ListIter != NULL) {
         cptr = (char *) ListIter->data;
@@ -1249,9 +1242,8 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
 //! \param [out] transform - Character buffer into which to write the postscript coordinate transformation
 
 void canvas_EPSLandscapify(EPSComm *x, char *transform) {
-    double width, height;
-    width = x->bb_right - x->bb_left;
-    height = x->bb_top - x->bb_bottom;
+    double width = x->bb_right - x->bb_left;
+    double height = x->bb_top - x->bb_bottom;
     sprintf(transform, "90 rotate\n%f %f translate\n", -x->bb_left, -x->bb_top);
     x->bb_left = 0.0;
     x->bb_bottom = 0.0;
@@ -1266,37 +1258,32 @@ void canvas_EPSLandscapify(EPSComm *x, char *transform) {
 //! \param [out] transform - Character buffer into which to write the postscript coordinate transformation
 
 void canvas_EPSEnlarge(EPSComm *x, char *transform) {
-    // Variables for the transformation
-    double EPSwidth, EPSheight, PAGEwidth, PAGEheight;
-    double margin_left, margin_right, margin_top, margin_bottom;
-    double scaling_x, scaling_y, translate_x, translate_y;
-
     // Read dimensions of page
-    PAGEwidth = x->c->set->term_current.PaperWidth.real;
-    PAGEheight = x->c->set->term_current.PaperHeight.real;
+    double PAGEwidth = x->c->set->term_current.PaperWidth.real;
+    double PAGEheight = x->c->set->term_current.PaperHeight.real;
 
     // Calculate dimensions of EPS image
-    EPSwidth = x->bb_right - x->bb_left;
-    EPSheight = x->bb_top - x->bb_bottom;
+    double EPSwidth = x->bb_right - x->bb_left;
+    double EPSheight = x->bb_top - x->bb_bottom;
     if ((EPSwidth <= 0.0) || (EPSheight <= 0.0)) return; // Don't attempt to enlarge pages of size zero
 
     // Work out some sensible margins for page
-    margin_left = PAGEwidth / 14;
-    margin_top = PAGEheight / 14;
+    double margin_left = PAGEwidth / 14;
+    double margin_top = PAGEheight / 14;
     if (margin_left > 15e-3) margin_left = 15e-3; // mm
     if (margin_top > 15e-3) margin_top = 15e-3; // mm
-    margin_right = margin_left;
-    margin_bottom = margin_top;
+    double margin_right = margin_left;
+    double margin_bottom = margin_top;
 
     // Work out what scaling factors will make page fit
-    scaling_x = (PAGEwidth - margin_left - margin_right) / EPSwidth * M_TO_PS;
-    scaling_y = (PAGEheight - margin_top - margin_bottom) / EPSheight * M_TO_PS;
+    double scaling_x = (PAGEwidth - margin_left - margin_right) / EPSwidth * M_TO_PS;
+    double scaling_y = (PAGEheight - margin_top - margin_bottom) / EPSheight * M_TO_PS;
     if ((!gsl_finite(scaling_x)) || (!gsl_finite(scaling_y))) return; // Don't attempt to enlarge pages of size zero
     if (scaling_y < scaling_x) scaling_x = scaling_y; // Lowest scaling factor is biggest enlargement we can do
 
     // Work out how to translate origin to (0,0)
-    translate_x = margin_left * M_TO_PS - x->bb_left * scaling_x;
-    translate_y = PAGEheight * M_TO_PS - margin_top * M_TO_PS - x->bb_top * scaling_x;
+    double translate_x = margin_left * M_TO_PS - x->bb_left * scaling_x;
+    double translate_y = PAGEheight * M_TO_PS - margin_top * M_TO_PS - x->bb_top * scaling_x;
 
     // Write out transformation
     sprintf(transform, "%f %f translate\n%f %f scale\n", translate_x, translate_y, scaling_x, scaling_x);

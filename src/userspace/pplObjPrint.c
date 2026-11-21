@@ -58,7 +58,6 @@
 void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const int outlen, const int internal,
                  const int modIterDepth) {
     char msg[SSTR_LENGTH];
-    int t;
     const int NSigFigs = c->set->term_current.SignificantFigures;
     const int typeable = c->set->term_current.NumDisplay;
 
@@ -67,7 +66,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
         ppl_snprintfTrunc(out, outlen, "%s", "<null>");
         return;
     }
-    t = o->objType;
+    int t = o->objType;
     // Render each type of object
     switch (t) {
         case PPLOBJ_NUM:

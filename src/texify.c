@@ -313,13 +313,12 @@ static int markupMatch(const char *text, const char *markup) {
 void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, char *out, const int outlen, int *mm_in,
                         int *tr_in) {
     char msg[PPL_MSG_LENGTH];
-    pplTokenCode *tokenBuff;
     const int allowCommaOperator = (inlen < 0);
     const int equalsAllowed = 1;
     const int dollarAllowed = 1;
     int errPos = -1, errType, tlen;
     char errbuff[LSTR_LENGTH];
-    int *stkpos, i, k, lastOpMultDiv = 0;
+    int i, lastOpMultDiv = 0;
 
     // Math mode and roman type are tracked in the caller's variables if supplied, so that nested calls can share them
     int mm = 0, tr = 0;
@@ -343,7 +342,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     }
 
     // Backup tokenised version
-    tokenBuff = (pplTokenCode *) malloc(tlen * sizeof(pplTokenCode));
+    pplTokenCode *tokenBuff = (pplTokenCode *) malloc(tlen * sizeof(pplTokenCode));
     // Give up if memory cannot be allocated
     if (tokenBuff == NULL) {
         *end = 0;
@@ -353,7 +352,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     if (inlen >= 0) tlen = ppl_min(tlen, inlen);
 
     // Malloc buffer for storing stack positions of numerical constants
-    stkpos = (int *) malloc(tlen * sizeof(int));
+    int *stkpos = (int *) malloc(tlen * sizeof(int));
     // Give up if memory cannot be allocated
     if (stkpos == NULL) {
         *end = 0;
@@ -362,7 +361,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     for (i = 0; i < tlen; i++) stkpos[i] = -1;
 
     // Evaluate numerical constants
-    k = c->stackPtr;
+    int k = c->stackPtr;
     for (i = 0; i < tlen; i++)
         // Each numeric literal is pushed onto the stack, and every character of it is noted as belonging to that stack
         // entry
@@ -387,7 +386,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         if ((tokenBuff[i].state == (unsigned char) 'G') &&
             ((i < 1) ||
              ((tokenBuff[i - 1].state != (unsigned char) 'R') && (tokenBuff[i - 1].state != (unsigned char) 'G')))) {
-            int ei = i, upos, p, q = 0, errpos = -1;
+            int ei = i, p, q = 0, errpos = -1;
             pplObj val;
             ppl_stackMustHave(c, 4);
             // Give up if the stack is full
@@ -405,7 +404,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             for (p = i + 4; p < ei; p++)
                 if ((isalnum(in[p])) || (in[p] == '_')) break;
             if (p < ei) continue; // function has trailing matter
-            upos = ei + 1; // position of unit name
+            int upos = ei + 1; // position of unit name
             val.refCount = 1;
             val.amMalloced = 0;
             ppl_unitsStringEvaluate(c, in + upos, &val, &q, &errpos, msg);
@@ -430,10 +429,10 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         if ((tokenBuff[i].state == (unsigned char) 'I') && ((i < 1) || (tokenBuff[i - 1].state != (unsigned char) 'I')))
             // Fold a minus sign into the following literal
             if (in[i] == '-') {
-                int ei = i, sp;
+                int ei = i;
                 while ((tokenBuff[ei].state == (unsigned char) 'I') && (ei < tlen)) { ei++; } // ffw over minus sign
                 if ((ei >= tlen) || (stkpos[ei] < 0)) continue; // right argument is not literal or unit() function
-                sp = stkpos[ei];
+                int sp = stkpos[ei];
                 c->stack[sp].real *= -1;
                 if (c->stack[sp].flagComplex) c->stack[sp].imag *= -1;
                 for (; i < ei; i++) { stkpos[i] = sp; }
@@ -445,14 +444,14 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             (stkpos[i - 1] >= 0))
             // Fold a unit raised to a literal power into a single value
             if ((in[i] == '*') && (in[i + 1] == '*')) {
-                int ei = i, sp1, sp2, stat = 0, errpos = -1;
+                int ei = i, stat = 0, errpos = -1;
                 pplObj val;
                 while ((tokenBuff[ei].state == (unsigned char) 'J') && (ei < tlen)) {
                     ei++;
                 } // ffw over binary operator
                 if ((ei >= tlen) || (stkpos[ei] < 0)) continue; // right argument is not a literal
-                sp1 = stkpos[i - 1];
-                sp2 = stkpos[ei];
+                int sp1 = stkpos[i - 1];
+                int sp2 = stkpos[ei];
                 val.refCount = 1;
                 val.amMalloced = 0;
                 pplObjNum(&val, 0, 0, 0);
@@ -468,17 +467,17 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         if ((tokenBuff[i].state == (unsigned char) 'J') && (i > 0) && (stkpos[i - 1] >= 0))
             // Fold a literal multiplied or divided by a unit into a single value
             if (((in[i] == '*') && (in[i + 1] != '*')) || (in[i] == '/')) {
-                int ei = i, sp1, sp2, stat = 0, errpos = -1, gotUnit;
+                int ei = i, stat = 0, errpos = -1;
                 pplObj val;
-                gotUnit = (tokenBuff[i - 1].state == (unsigned char) 'P');
+                int gotUnit = (tokenBuff[i - 1].state == (unsigned char) 'P');
                 while ((tokenBuff[ei].state == (unsigned char) 'J') && (ei < tlen)) {
                     ei++;
                 } // ffw over binary operator
                 if ((ei >= tlen) || (stkpos[ei] < 0)) continue; // right argument is not a literal
                 gotUnit = gotUnit || (tokenBuff[ei].state == (unsigned char) 'G');
                 if (!gotUnit) continue; // neither side is a unit()
-                sp1 = stkpos[i - 1];
-                sp2 = stkpos[ei];
+                int sp1 = stkpos[i - 1];
+                int sp2 = stkpos[ei];
                 val.refCount = 1;
                 val.amMalloced = 0;
                 pplObjNum(&val, 0, 0, 0);
@@ -514,10 +513,10 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             while ((i < tlen) && (stkpos[i] >= 0)) { i++; }
         } else if (o == 'B') // Process a string literal
         {
-            int ei, l;
+            int ei;
             const char quoteType = in[i];
             for (ei = i; ((ei < tlen) && (tokenBuff[ei].state == o)); ei++);
-            l = ei - i;
+            int l = ei - i;
             while ((l > 1) && (in[i + l - 1] >= '\0') && ((unsigned char) in[i + l - 1] <= ' '))
                 l--; // Strip trailing spaces
             // Strip the quotes from quoted strings
@@ -579,23 +578,21 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             // been redefined
             if ((o == 'G') && ((i < 1) || (tokenBuff[i - 1].state != 'R'))) {
                 int j, bi, cp[16], ncp, cbp;
-                char dummyVar[FNAME_LENGTH], dummyVarGreek[FNAME_LENGTH], *fname, *latex;
+                char dummyVar[FNAME_LENGTH], dummyVarGreek[FNAME_LENGTH];
                 dictItem *dptr;
-                pplFunc *fnobj;
-                void *ldptr;
                 if ((ei >= tlen) || ((tokenBuff[ei].state != 'P') && (tokenBuff[ei].state != 'B')))
                     goto variableName; // function not called with () afterwards; int_d is followed by B, not P
                 if ((tokenBuff[ei].state == 'P') && (in[ei] != '(')) goto variableName;
                 ppl_dictLookupWithWildcard(c->namespaces[0], in + i, dummyVar, FNAME_LENGTH, &dptr);
                 if (dptr == NULL) goto variableName; // function was not in the default namespace
-                fname = dptr->key;
-                ldptr = ppl_dictLookup(c->namespaces[c->ns_ptr], fname);
+                char *fname = dptr->key;
+                void *ldptr = ppl_dictLookup(c->namespaces[c->ns_ptr], fname);
                 if (ldptr != NULL) goto variableName; // function redefined locally
                 ldptr = ppl_dictLookup(c->namespaces[1], fname);
                 if (ldptr != NULL) goto variableName; // function redefined globally
-                fnobj = (pplFunc *) ((pplObj *) dptr->data)->auxil;
+                pplFunc *fnobj = (pplFunc *) ((pplObj *) dptr->data)->auxil;
                 if (fnobj == NULL) goto variableName;
-                latex = fnobj->LaTeX;
+                char *latex = fnobj->LaTeX;
                 if (latex == NULL) goto variableName; // no latex model supplied
 
                 // Find ( at beginning of function arguments

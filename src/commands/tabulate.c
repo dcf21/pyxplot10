@@ -69,10 +69,9 @@
 static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data, const int *minSet, const double *min,
                                    const int *maxSet, const double *max, pplObj *unit, char *format) {
     char msg[PPL_MSG_LENGTH];
-    dataBlock *blk;
     char *cptr, tmpchr = '\0';
     double tmpdbl, multiplier[USING_ITEMS_MAX];
-    int inRange, split, allInts[USING_ITEMS_MAX], allSmall[USING_ITEMS_MAX];
+    int inRange, allInts[USING_ITEMS_MAX], allSmall[USING_ITEMS_MAX];
     long i, k;
     int j, l, pos;
     double val;
@@ -117,7 +116,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
 
     // Iterate over columns of data in this data grid, working out which columns of data are all ints, and which are all %f-able data
     for (j = 0; j < Ncolumns; j++) { allInts[j] = allSmall[j] = 1; }
-    blk = data->first;
+    dataBlock *blk = data->first;
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Loop over the rows in each block
@@ -149,7 +148,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
 
     // Write out each row of data which falls within the ranges, in the best format for each column or the user's format
     blk = data->first;
-    split = 0;
+    int split = 0;
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Loop over the rows in each block; splits in the data are written as blank lines
@@ -278,8 +277,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
     int pos;
     pplObj *stk = in->stk;
     FILE *output = NULL;
-    long j;
-    char *filename, filenameTemp[FNAME_LENGTH];
+    char filenameTemp[FNAME_LENGTH];
     parserLine *spool = NULL, **dataSpool = &spool;
     pplObj unit[USING_ITEMS_MAX];
     int minSet[USING_ITEMS_MAX], maxSet[USING_ITEMS_MAX];
@@ -308,7 +306,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
     }
 
     // Work out filename for output file
-    filename = c->set->term_current.output;
+    char *filename = c->set->term_current.output;
     if ((filename == NULL) || (filename[0] == '\0')) filename = "pyxplot.txt";
 
     // Perform expansion of shell filename shortcuts such as ~
@@ -344,7 +342,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
 
     // Loop over datasets being tabulated
     pos = PARSE_tabulate_0tabulate_list;
-    j = 0; // Index blocks are numbered from zero, as they are by the index modifier when the data are read back
+    long j = 0; // Index blocks are numbered from zero, as they are by the index modifier when the data are read back
     // Walk the linked list of the items to tabulate on the parser stack
     while (stk[pos].objType == PPLOBJ_NUM) {
         char *format, datafname[FNAME_LENGTH] = "";

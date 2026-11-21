@@ -290,7 +290,6 @@ static double fitResidual(fitComm *p) {
     ppl_context *c = p->c;
     char *errText = p->errtext; // A buffer of LSTR_LENGTH bytes
     const long nBlocks = (p->NDataPoints + FIT_BLOCK_POINTS - 1) / FIT_BLOCK_POINTS;
-    double accumulator, *blockSums;
     long b, failIndex;
     int i;
 
@@ -314,7 +313,7 @@ static double fitResidual(fitComm *p) {
     }
 
     // The sum of the residuals in each block of data points
-    blockSums = (double *) malloc(((nBlocks > 0) ? nBlocks : 1) * sizeof(double));
+    double *blockSums = (double *) malloc(((nBlocks > 0) ? nBlocks : 1) * sizeof(double));
     // Failure to allocate memory is reported as an error
     if (blockSums == NULL) {
         strcpy(errText, "Out of memory in the fit command.");
@@ -359,7 +358,7 @@ static double fitResidual(fitComm *p) {
     }
 
     // Add up the sums of the blocks, in order
-    accumulator = 0.0;
+    double accumulator = 0.0;
     for (b = 0; b < nBlocks; b++) accumulator += blockSums[b];
     free(blockSums);
     return accumulator;
@@ -374,11 +373,10 @@ static double fitResidual(fitComm *p) {
 //! \return The residual
 
 static double GetHessian_diff2(const double x, void *p_void) {
-    double tmp, output;
     fitComm *p = (fitComm *) p_void;
-    tmp = gsl_vector_get(p->paramValsHessian, p->diff2); // Replace old parameter with x
+    double tmp = gsl_vector_get(p->paramValsHessian, p->diff2); // Replace old parameter with x
     gsl_vector_set(p->paramValsHessian, p->diff2, x);
-    output = fitResidual(p); // Evaluate residual
+    double output = fitResidual(p); // Evaluate residual
     gsl_vector_set(p->paramValsHessian, p->diff2, tmp); // Restore old parameter value
     return output;
 }
@@ -390,7 +388,7 @@ static double GetHessian_diff2(const double x, void *p_void) {
 //! \return The derivative of the residual with respect to the second free parameter
 
 static double GetHessian_diff1(const double x, void *p_void) {
-    double tmp, output, output_error;
+    double output, output_error;
     gsl_function fn;
     fitComm *p = (fitComm *) p_void;
 
@@ -398,7 +396,7 @@ static double GetHessian_diff1(const double x, void *p_void) {
     fn.function = &GetHessian_diff2;
     fn.params = p_void;
 
-    tmp = gsl_vector_get(p->paramValsHessian, p->diff1); // Replace old parameter with x
+    double tmp = gsl_vector_get(p->paramValsHessian, p->diff1); // Replace old parameter with x
     gsl_vector_set(p->paramValsHessian, p->diff1, x);
     gsl_deriv_central(&fn, gsl_vector_get(p->paramValsHessian, p->diff2), p->diff2step, &output,
                       &output_error); // Differentiate residual a second time
@@ -413,7 +411,6 @@ static double GetHessian_diff1(const double x, void *p_void) {
 
 static gsl_matrix *GetHessian(fitComm *p) {
     // Variables for computing the Hessian matrix
-    gsl_matrix *out;
     int i, j;
     double output, output_error;
     gsl_function fn;
@@ -423,7 +420,7 @@ static gsl_matrix *GetHessian(fitComm *p) {
     for (i = 0; i < p->NParams; i++) gsl_vector_set(p->paramValsHessian, i, gsl_vector_get(p->bestFitParamVals, i));
     p->paramVals = p->paramValsHessian;
 
-    out = gsl_matrix_alloc(p->NParams, p->NParams); // Allocate memory for Hessian matrix
+    gsl_matrix *out = gsl_matrix_alloc(p->NParams, p->NParams); // Allocate memory for Hessian matrix
     if (out == NULL) return NULL;
 
     // Each element is a second derivative of the residual, found by nesting two numerical differentiations
@@ -469,27 +466,24 @@ static double ResidualMinimiserSlave(const gsl_vector *x, void *p_void) {
 //! \return Minus the log of the evidence
 
 static double FitsigmaData(const gsl_vector *x, void *p_void) {
-    double term1, term2, term3;
     int sgn;
-    gsl_matrix *hessian;
-    gsl_permutation *perm;
 
     // Evaluate the negative log-evidence for the best-fit parameters, assuming error bars of size sigmaData on every
     // data point
     fitComm *p = (fitComm *) p_void;
     p->sigmaData = gsl_vector_get(x, 0);
     p->paramVals = p->bestFitParamVals;
-    term1 = fitResidual(p); // Likelihood for the best-fit set of parameters, without the Gaussian normalisation factor
-    term2 = -(p->NDataPoints * log(1.0 / sqrt(2 * M_PI) / p->sigmaData)); // Gaussian normalisation factor
+    double term1 = fitResidual(p); // Likelihood for the best-fit set of parameters, without the Gaussian normalisation factor
+    double term2 = -(p->NDataPoints * log(1.0 / sqrt(2 * M_PI) / p->sigmaData)); // Gaussian normalisation factor
 
     // term3 is the Occam Factor, which equals the determinant of -H
-    hessian = GetHessian(p);
+    gsl_matrix *hessian = GetHessian(p);
     gsl_matrix_scale(hessian, -1.0); // Want the determinant of -H
     // Generate the LU decomposition of the Hessian matrix
-    perm = gsl_permutation_alloc(p->NParams);
+    gsl_permutation *perm = gsl_permutation_alloc(p->NParams);
     gsl_linalg_LU_decomp(hessian, perm, &sgn); // Hessian matrix is overwritten here, but we don't need it again
     // Calculate the determinant of the Hessian matrix
-    term3 = gsl_linalg_LU_lndet(hessian) * 0.5; // -log(1/sqrt(det))
+    double term3 = gsl_linalg_LU_lndet(hessian) * 0.5; // -log(1/sqrt(det))
     gsl_matrix_free(hessian);
     hessian = NULL;
     gsl_permutation_free(perm);
@@ -519,14 +513,13 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
     const gsl_multimin_fminimizer_type *T =
             gsl_multimin_fminimizer_nmsimplex; // We don't use nmsimplex2 here because it was new in gsl 1.12
     gsl_multimin_fminimizer *s;
-    gsl_vector *x, *ss;
     gsl_multimin_function fn;
 
     // When fitting the size of the error bars, there is only one parameter to vary
     if (!FittingsigmaData) NParams = commlink->NParams;
     else NParams = 1;
-    x = gsl_vector_alloc(NParams);
-    ss = gsl_vector_alloc(NParams);
+    gsl_vector *x = gsl_vector_alloc(NParams);
+    gsl_vector *ss = gsl_vector_alloc(NParams);
 
     // Describe the function to minimise to GSL
     fn.n = NParams;
@@ -639,26 +632,24 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Variables for reading the data, fitting it and reporting the results
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
-    int status = 0, Nargs, Nvars, NExpect, Nusing;
-    char *fnName, *scratchPad;
-    long int i, j, k, NDataPoints;
+    int status = 0, Nvars, NExpect, Nusing;
+    char *scratchPad;
+    long int i, j, k;
     int sigmaPos; // Position in scratchPad when building the names of fitted variables
-    int contextLocalVec, contextDataTab, errCount = DATAFILE_NERRS;
+    int errCount = DATAFILE_NERRS;
     char *fitVars[USING_ITEMS_MAX];
     pplObj unit[USING_ITEMS_MAX];
     int minSet[USING_ITEMS_MAX], maxSet[USING_ITEMS_MAX];
     double min[USING_ITEMS_MAX], max[USING_ITEMS_MAX];
     pplObj firstVals[USING_ITEMS_MAX], *varObj[USING_ITEMS_MAX];
     dataTable *data;
-    dataBlock *blk;
     parserLine *spool = NULL, **dataSpool = &spool;
-    double *localDataTable, val;
+    double val;
     gsl_vector *bestFitParamVals;
     gsl_matrix *hessian, *hessian_lu, *hessian_inv;
     int sgn;
     double stdDev[2 * USING_ITEMS_MAX], tmp1, tmp2, tmp3;
     fitComm dataComm; // Structure which we fill with variables we need to pass to the minimiser
-    pplFunc *funcDef;
     pplObj *funcObj;
     gsl_permutation *perm;
 
@@ -708,7 +699,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     }
 
     // Get name of function to fit
-    fnName = (char *) stk[PARSE_fit_fit_function].auxil;
+    char *fnName = (char *) stk[PARSE_fit_fit_function].auxil;
     ppl_contextVarLookup(c, fnName, &funcObj, 0);
     // The function to fit must exist
     if (funcObj == NULL) {
@@ -724,7 +715,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[PARSE_fit_fit_function], "");
         return;
     }
-    funcDef = (pplFunc *) funcObj->auxil;
+    pplFunc *funcDef = (pplFunc *) funcObj->auxil;
     // Magic functions such as diff_d() cannot be fitted directly
     if (funcDef->functionType == PPL_FUNC_MAGIC) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -733,7 +724,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         return;
     }
     __sync_add_and_fetch(&funcDef->refCount, 1);
-    Nargs = funcDef->minArgs;
+    int Nargs = funcDef->minArgs;
 
     // Count length of using list
     {
@@ -786,8 +777,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     }
 
     // Allocate a new memory context for the data file we're about to read
-    contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
-    contextDataTab = ppl_memAlloc_DescendIntoNewContext();
+    int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
+    int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
 
     // Read data from file
     ppldata_fromCmd(c, &data, pl, in, 0, NULL, dataSpool, PARSE_TABLE_fit_, 0, NExpect, 0, min, minSet, max, maxSet,
@@ -817,8 +808,8 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
 
     // Work out how many data points we have within the specified ranges
-    NDataPoints = 0;
-    blk = data->first;
+    long int NDataPoints = 0;
+    dataBlock *blk = data->first;
     // Count the data points which fall within the ranges
     while (blk != NULL) {
         int j;
@@ -840,7 +831,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     }
 
     // Copy data into a new table and apply the specified ranges to it
-    localDataTable = (double *) ppl_memAlloc_incontext(NDataPoints * NExpect * sizeof(double), contextLocalVec);
+    double *localDataTable = (double *) ppl_memAlloc_incontext(NDataPoints * NExpect * sizeof(double), contextLocalVec);
     // Failure to allocate memory is reported as an error
     if (localDataTable == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");

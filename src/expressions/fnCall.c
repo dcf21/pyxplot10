@@ -134,7 +134,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
     pplObj *out = &context->stack[context->stackPtr - 1 - nArgs];
     pplObj *args = context->stack + context->stackPtr - nArgs;
     pplObj called;
-    pplFunc *fn;
     int i;
     int t = out->objType;
     // The stack must hold the function and its arguments
@@ -424,8 +423,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         pplObjDeepCpy(out, &args[0], 0, 0, 1);
                         goto cleanup;
                     } else if (args[0].objType == PPLOBJ_NUM) {
-                        gsl_vector *v;
-                        long i, len;
+                        long i;
                         // The length must be a real, dimensionless, positive integer
                         if (!args[0].dimensionless) {
                             ppl_snprintfTrunc(
@@ -450,7 +448,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_tbAddExpr(context, inExpr, ERR_RANGE, inExprCharPos, "");
                             goto cleanup;
                         }
-                        len = floor(args[0].real);
+                        long len = floor(args[0].real);
                         // Make a vector of zeros
                         if (pplObjVector(out, 0, 1, len) == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -458,7 +456,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
-                        v = ((pplVector *) out->auxil)->v;
+                        gsl_vector *v = ((pplVector *) out->auxil)->v;
                         for (i = 0; i < len; i++) { gsl_vector_set(v, i, 0); }
                         goto cleanup;
                     } else if (args[0].objType == PPLOBJ_LIST) {
@@ -519,8 +517,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     pplObjDeepCpy(out, &args[0], 0, 0, 1);
                     goto cleanup;
                 } else if (args[0].objType == PPLOBJ_NUM) {
-                    int s1, s2, i, j;
-                    gsl_matrix *m;
+                    int i, j;
                     // matrix(rows, columns) needs two real, dimensionless, positive integers
                     if (nArgs != 2) {
                         ppl_snprintfTrunc(
@@ -565,8 +562,8 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                         goto cleanup;
                     }
-                    s1 = args[0].real;
-                    s2 = args[1].real;
+                    int s1 = args[0].real;
+                    int s2 = args[1].real;
                     // Both sizes must be positive
                     if ((s1 < 1) || (s1 > INT_MAX)) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -587,7 +584,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
-                    m = ((pplMatrix *) out->auxil)->m;
+                    gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                     for (i = 0; i < s1; i++)
                         for (j = 0; j < s2; j++) { gsl_matrix_set(m, i, j, 0); }
                     goto cleanup;
@@ -595,19 +592,17 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     long i;
                     const long s1 = ((pplVector *) args[0].auxil)->v->size;
                     const long s2 = nArgs;
-                    gsl_matrix *m;
                     // matrix(v1, v2, ...): each vector becomes a column of the matrix
                     if (pplObjMatrix(out, 0, 1, s1, s2) == NULL) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
                         ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
-                    m = ((pplMatrix *) out->auxil)->m;
+                    gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                     ppl_unitsDimCpy(out, &args[0]);
                     // Copy each vector into a column
                     for (i = 0; i < s2; i++) {
                         long j;
-                        gsl_vector *v;
                         // Every argument must be a vector
                         if (args[i].objType != PPLOBJ_VEC) {
                             ppl_snprintfTrunc(
@@ -617,7 +612,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                             goto cleanup;
                         }
-                        v = ((pplVector *) args[i].auxil)->v;
+                        gsl_vector *v = ((pplVector *) args[i].auxil)->v;
                         // All the vectors must have the same length
                         if (v->size != s1) {
                             ppl_snprintfTrunc(
@@ -643,7 +638,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     list *listin = (list *) args[0].auxil;
                     listIterator *li = ppl_listIterateInit(listin);
                     const long len = listin->length;
-                    pplObj *item;
                     // matrix([...], [...], ...): each list becomes a row of the matrix
                     if (len == 0) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -651,13 +645,12 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                         goto cleanup;
                     }
-                    item = (pplObj *) listin->first->data;
+                    pplObj *item = (pplObj *) listin->first->data;
                     // Lists of numbers
                     if (item->objType == PPLOBJ_NUM) {
                         long i;
                         const long s1 = len;
                         const long s2 = nArgs;
-                        gsl_matrix *m;
                         for (i = 0; i < s2; i++)
                             // Every argument must be a list
                             if (args[i].objType != PPLOBJ_LIST) {
@@ -675,7 +668,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
-                        m = ((pplMatrix *) out->auxil)->m;
+                        gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                         ppl_unitsDimCpy(out, item);
                         // Copy each list into a row
                         for (i = 0; i < s2; i++) {
@@ -729,7 +722,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         long i;
                         const long s1 = ((pplVector *) item->auxil)->v->size;
                         const long s2 = len;
-                        gsl_matrix *m;
                         // matrix([v1, v2, ...]): a single list of vectors, each of which becomes a column
                         if (nArgs != 1) {
                             ppl_snprintfTrunc(
@@ -746,13 +738,12 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
-                        m = ((pplMatrix *) out->auxil)->m;
+                        gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                         ppl_unitsDimCpy(out, item);
                         // Copy each vector into a column
                         for (i = 0; i < s2; i++) {
                             long j;
                             pplObj *item = (pplObj *) ppl_listIterate(&li);
-                            gsl_vector *v;
                             // Every item must be a vector
                             if (item->objType != PPLOBJ_VEC) {
                                 ppl_snprintfTrunc(
@@ -762,7 +753,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                                 ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                                 goto cleanup;
                             }
-                            v = ((pplVector *) item->auxil)->v;
+                            gsl_vector *v = ((pplVector *) item->auxil)->v;
                             // All the vectors must have the same length
                             if (v->size != s1) {
                                 ppl_snprintfTrunc(
@@ -789,7 +780,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                         long i;
                         const long s1 = ((list *) item->auxil)->length;
                         const long s2 = len;
-                        gsl_matrix *m;
                         // matrix([[...], [...], ...]): a single list of lists, each of which becomes a row
                         if (nArgs != 1) {
                             ppl_snprintfTrunc(
@@ -813,7 +803,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                             ppl_tbAddExpr(context, inExpr, ERR_MEMORY, inExprCharPos, "");
                             goto cleanup;
                         }
-                        m = ((pplMatrix *) out->auxil)->m;
+                        gsl_matrix *m = ((pplMatrix *) out->auxil)->m;
                         ppl_unitsDimCpy(out, ((pplObj *) ((list *) item->auxil)->first->data));
                         // Copy each list into a row
                         for (i = 0; i < s2; i++) {
@@ -898,7 +888,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
         ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
         goto cleanup;
     }
-    fn = (pplFunc *) called.auxil;
+    pplFunc *fn = (pplFunc *) called.auxil;
 
     // Magic functions take their arguments as unevaluated text: unit(), diff_dx() and int_dx(), told apart by their
     // minimum number of arguments
@@ -929,7 +919,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
             }
         } else if (fn->minArgs == 2) // diff_d()
         {
-            pplObj v, *step, *xpos;
+            pplObj v, *step;
             int k;
             for (k = inExprCharPos; ((inExpr->ascii[k] != '(') && (inExpr->ascii[k] != '\0')); k++);
             if (inExpr->ascii[k] == '(') k++;
@@ -976,7 +966,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 ppl_tbAddExpr(context, inExpr, ERR_TYPE, inExprCharPos, "");
                 goto cleanup;
             }
-            xpos = &args[2];
+            pplObj *xpos = &args[2];
             memcpy(&v, xpos, sizeof(pplObj));
             v.imag = 0;
             v.real = hypot(xpos->real, xpos->imag) * 1e-6;
@@ -1280,7 +1270,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     int k, lastOpAssign = 0, stkp = context->stackPtr, ns_ptr = context->ns_ptr;
                     const int setSelf = (called.self_this != NULL) &&
                             ((called.self_this->objType == PPLOBJ_USER) || (called.self_this->objType == PPLOBJ_MOD));
-                    pplObj *output;
 
                     // If function definition is null, result is NAN
                     if (f->functionPtr == NULL) {
@@ -1339,7 +1328,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                     }
 
                     // Evaluate function
-                    output = ppl_expEval(context, (pplExpr *) f->functionPtr, &lastOpAssign, dollarAllowed,
+                    pplObj *output = ppl_expEval(context, (pplExpr *) f->functionPtr, &lastOpAssign, dollarAllowed,
                                          iterDepth + 1);
 
                     // Take arguments out of namespace dictionary
@@ -1370,7 +1359,6 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 break;
             }
             case PPL_FUNC_SUBROUTINE: {
-                dict *d;
                 int j, k, ns_ptr = context->ns_ptr;
                 const int shellReturnableOld = context->shellReturnable;
                 const int stkLevelOld = context->stackPtr;
@@ -1383,7 +1371,7 @@ void ppl_fnCall(ppl_context *context, pplExpr *inExpr, const int inExprCharPos, 
                 }
 
                 // Enter a new namespace
-                d = ppl_dictInit(1);
+                dict *d = ppl_dictInit(1);
                 // Failure to allocate memory is reported as an error
                 if (d == NULL) {
                     strcpy(context->errStat.errBuff, "Out of memory.");

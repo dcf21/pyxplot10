@@ -49,12 +49,9 @@
 void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     // Variables describing the image
     char msg[PPL_MSG_LENGTH];
-    int depth, ncols, ntrans, png_colour_type, i, j;
-    unsigned width, height, row_bytes;
+    int ncols, ntrans, i, j;
     static unsigned char index[3];
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytep *row_ptrs, trans_colours;
+    png_bytep trans_colours;
     png_color_16p trans_val;
     png_color_16p backgndp;
     png_color_16 background;
@@ -64,7 +61,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     if (DEBUG) ppl_log(ec, "Beginning to decode PNG image file");
 
     // Initialise libpng data structures
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     // Failure to allocate memory is reported as an error
     if (png_ptr == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -72,7 +69,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // Create libpng's description of the image
-    info_ptr = png_create_info_struct(png_ptr);
+    png_infop info_ptr = png_create_info_struct(png_ptr);
     // Failure to allocate memory is reported as an error
     if (info_ptr == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -93,10 +90,10 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     png_read_info(png_ptr, info_ptr);
 
     // Read the size and type of the image
-    width = png_get_image_width(png_ptr, info_ptr);
-    height = png_get_image_height(png_ptr, info_ptr);
-    depth = png_get_bit_depth(png_ptr, info_ptr);
-    png_colour_type = png_get_color_type(png_ptr, info_ptr);
+    unsigned width = png_get_image_width(png_ptr, info_ptr);
+    unsigned height = png_get_image_height(png_ptr, info_ptr);
+    int depth = png_get_bit_depth(png_ptr, info_ptr);
+    int png_colour_type = png_get_color_type(png_ptr, info_ptr);
 
     // Log the size in debugging mode
     if (DEBUG) {
@@ -173,7 +170,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     png_read_update_info(png_ptr, info_ptr);
 
     // Now rowbytes will reflect what we will get, not what we had originally
-    row_bytes = png_get_rowbytes(png_ptr, info_ptr);
+    unsigned row_bytes = png_get_rowbytes(png_ptr, info_ptr);
 
     // Allocate block of memory for uncompressed image
     image->data = (unsigned char *) ppl_memAlloc(row_bytes * height);
@@ -187,7 +184,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     memset(image->data, 0, row_bytes * height);
 
     // libpng requires a separate pointer to each row of image
-    row_ptrs = (png_bytep *) ppl_memAlloc(height * sizeof(png_bytep));
+    png_bytep *row_ptrs = (png_bytep *) ppl_memAlloc(height * sizeof(png_bytep));
     // Failure to allocate memory is reported as an error
     if (row_ptrs == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");

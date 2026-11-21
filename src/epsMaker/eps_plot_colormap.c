@@ -247,24 +247,23 @@ static void graphExtent(const EPSComm *x, pplset_graph *sg, const double origin_
 
 void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph *sg, canvas_plotdesc *pd) {
     // Variables for finding the range of c1, and the size of the color scale
-    dataBlock *blk;
     const int XSize = pd->GridXSize;
     const int YSize = pd->GridYSize;
-    int l, Ncol;
-    double CMin, CMax, PhysicalLength, PhysicalLengthMajor, PhysicalLengthMinor;
-    double origin_x, origin_y, width, height, zdepth;
+    int l;
+    double CMin, CMax;
+    double height, zdepth;
     double xmin, xmax, ymin, ymax;
-    unsigned char CLog, horizontal;
+    unsigned char CLog;
 
     // Check that we have some data
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
-    Ncol = data->Ncolumns_real;
-    blk = data->first;
+    int Ncol = data->Ncolumns_real;
+    dataBlock *blk = data->first;
 
     // Calculate positions of the four corners of graph
-    origin_x = x->current->settings.OriginX.real * M_TO_PS;
-    origin_y = x->current->settings.OriginY.real * M_TO_PS;
-    width = x->current->settings.width.real * M_TO_PS;
+    double origin_x = x->current->settings.OriginX.real * M_TO_PS;
+    double origin_y = x->current->settings.OriginY.real * M_TO_PS;
+    double width = x->current->settings.width.real * M_TO_PS;
     if (x->current->settings.AutoAspect == SW_ONOFF_ON) height = width * 2.0 / (1.0 + sqrt(5));
     else height = width * x->current->settings.aspect;
     if (x->current->settings.AutoZAspect == SW_ONOFF_ON) zdepth = width * 2.0 / (1.0 + sqrt(5));
@@ -277,10 +276,10 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     graphExtent(x, sg, origin_x, origin_y, width, height, zdepth, &xmin, &xmax, &ymin, &ymax);
 
     // The color scale runs along the side of the graph it is on, and its ticks are spaced as for an axis of that length
-    horizontal = ((sg->ColKeyPos == SW_COLKEYPOS_T) || (sg->ColKeyPos == SW_COLKEYPOS_B));
-    PhysicalLength = fabs(horizontal ? (xmax - xmin) : (ymax - ymin)) / M_TO_PS;
-    PhysicalLengthMinor = PhysicalLength / 0.004;
-    PhysicalLengthMajor = PhysicalLength / (horizontal ? 0.025 : 0.015);
+    unsigned char horizontal = ((sg->ColKeyPos == SW_COLKEYPOS_T) || (sg->ColKeyPos == SW_COLKEYPOS_B));
+    double PhysicalLength = fabs(horizontal ? (xmax - xmin) : (ymax - ymin)) / M_TO_PS;
+    double PhysicalLengthMinor = PhysicalLength / 0.004;
+    double PhysicalLengthMajor = PhysicalLength / (horizontal ? 0.025 : 0.015);
 
     // Set up axis object
     pd->C1Axis = x->c->set->axis_default;
@@ -345,13 +344,12 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
 
 static void hsbToRgb(double comp[4]) {
     // Convert hue, saturation and brightness to red, green and blue
-    double h2, ch, xc, m;
-    int h2i;
+    double h2;
     clipComponents(comp);
-    ch = comp[1] * comp[2]; // Chroma
-    h2i = (int) (h2 = comp[0] * 6); // Sextant of the colour wheel
-    xc = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
-    m = comp[2] - ch;
+    double ch = comp[1] * comp[2]; // Chroma
+    int h2i = (int) (h2 = comp[0] * 6); // Sextant of the colour wheel
+    double xc = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
+    double m = comp[2] - ch;
     // Each sixth of the color wheel blends two primary colors
     switch (h2i) {
         case 0:
@@ -516,9 +514,6 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
 //! \param [in,out] img - The bitmap image
 
 static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
-    uLongf zlen; // Length of buffer passed to zlib
-    unsigned char *imagez;
-    int status;
 
     // Consider converting RGB data into a paletted image
     if ((img->depth == 24) && (img->type == BMP_COLOUR_BMP))
@@ -531,8 +526,8 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
     // Apply compression to image data
     if (img->TargetCompression != BMP_ENCODING_FLATE) return;
 
-    zlen = img->data_len * 1.01 + 12; // Nasty guess at size of buffer needed
-    imagez = (unsigned char *) ppl_memAlloc(zlen);
+    uLongf zlen = img->data_len * 1.01 + 12; // Nasty guess at size of buffer needed // Length of buffer passed to zlib
+    unsigned char *imagez = (unsigned char *) ppl_memAlloc(zlen);
     // Failure to allocate memory is reported as an error
     if (imagez == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (m).");
@@ -540,7 +535,7 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
         return;
     }
     if (DEBUG) { ppl_log(&x->c->errcontext, "Calling zlib to compress image data."); }
-    status = compress2(imagez, &zlen, img->data, img->data_len, 9); // Call zlib to do deflation
+    int status = compress2(imagez, &zlen, img->data, img->data_len, 9); // Call zlib to do deflation
 
     // If zlib fails, write the image uncompressed
     if (status != 0) {
@@ -645,28 +640,26 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                       const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                       const double origin_y, const double width, const double height, const double zdepth) {
     char msg[PPL_MSG_LENGTH];
-    dataBlock *blk;
     int XSize = pd->GridXSize;
     int YSize = pd->GridYSize;
-    int i, j, c, cmax, Ncol_real, Ncol_obj, NcolsData;
+    int i, j, c, NcolsData;
     long p;
     double xo, yo, Lx, Ly, ThetaX, ThetaY, CMin[4], CMax[4];
     pplObj *CVar[4], *C1Var, CDummy[4];
     unsigned char CMinAuto[4], CMaxAuto[4], CLog[4];
-    char *errtext;
     unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
     bitmap_data img;
 
     if ((data == NULL) || (data->Nrows < 1)) return 0; // No data present
-    Ncol_real = data->Ncolumns_real;
-    Ncol_obj = data->Ncolumns_obj;
+    int Ncol_real = data->Ncolumns_real;
+    int Ncol_obj = data->Ncolumns_obj;
     if (eps_plot_WithWordsCheckUsingItemsDimLess(x->c, &pd->ww_final, data->firstEntries, Ncol_real, Ncol_obj,
                                                  &NcolsData))
         return 1;
-    blk = data->first;
+    dataBlock *blk = data->first;
 
     // A buffer for error messages
-    errtext = ppl_memAlloc(LSTR_LENGTH);
+    char *errtext = ppl_memAlloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (errtext == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (k).");
@@ -753,7 +746,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
             ppl_log(&x->c->errcontext, msg);
         }
     }
-    cmax = c - 1;
+    int cmax = c - 1;
 
     // Check that variables c1...c4 has appropriate units
     for (c = 0; c <= cmax; c++)
@@ -837,16 +830,14 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double origin_y, const double width,
                                  const double height, const double zdepth) {
     char msg[PPL_MSG_LENGTH];
-    int i, j, k;
+    int i, j;
     long p;
     double xmin, xmax, ymin, ymax;
-    char *errtext;
-    canvas_plotdesc *pd;
     pplset_graph *sg = &x->current->settings;
     withWords ww;
 
     // A buffer for error messages
-    errtext = ppl_memAlloc(LSTR_LENGTH);
+    char *errtext = ppl_memAlloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if (errtext == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (n).");
@@ -861,8 +852,8 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
     graphExtent(x, sg, origin_x, origin_y, width, height, zdepth, &xmin, &xmax, &ymin, &ymax);
 
     // Loop over all datasets
-    pd = x->current->plotitems;
-    k = 0;
+    canvas_plotdesc *pd = x->current->plotitems;
+    int k = 0;
     while (pd != NULL) // loop over all datasets
     {
         dataTable *data = x->current->plotdata[k];
@@ -871,9 +862,8 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             double XSize = 1024, YSize = 1; // Dimensions of bitmap image
             unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
             char v[3] = "c1";
-            double x1, y1, x2, y2, x3, y3, x4, y4, theta, dummy, CMin, CMax;
+            double x1, y1, x2, y2, x3, y3, x4, y4, theta, dummy;
             double Lx, Ly, ThetaX, ThetaY;
-            unsigned char CLog;
             const double MARGIN = EPS_COLORSCALE_MARGIN * M_TO_PS;
             const double WIDTH = EPS_COLORSCALE_WIDTH * M_TO_PS;
             const unsigned char Lr = (sg->ColKeyPos == SW_COLKEYPOS_B) || (sg->ColKeyPos == SW_COLKEYPOS_R);
@@ -966,9 +956,9 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             }
 
             // Set CMin, CMax
-            CMin = pd->CMinFinal;
-            CMax = pd->CMaxFinal;
-            CLog = (sg->Clog[0] == SW_BOOL_TRUE);
+            double CMin = pd->CMinFinal;
+            double CMax = pd->CMaxFinal;
+            unsigned char CLog = (sg->Clog[0] == SW_BOOL_TRUE);
 
             // Get pointer to variable c1 in the user's variable space
             ppl_contextGetVarPointer(x->c, v, &CVar, &CDummy);

@@ -43,14 +43,13 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_text_YieldUpText(EPSComm *x) {
-    CanvasTextItem *i;
 
     // Record where this item's text starts in the list of text items
     x->current->FirstTextID = x->NTextItems;
     if (x->current->text[0] == '\0') return;
 
     // Add the text to the list of text to typeset
-    i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+    CanvasTextItem *i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
     // Failure to allocate memory is reported as an error
     if (i == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
@@ -70,11 +69,9 @@ void eps_text_YieldUpText(EPSComm *x) {
 void eps_text_RenderEPS(EPSComm *x) {
     // Variables for the style and position of the text
     withWords def, merged;
-    double xgap, ygap, xgap2, ygap2;
-    int pageno;
 
     // This item's text is on the page of the typeset text which was recorded in eps_text_YieldUpText()
-    pageno = x->LaTeXpageno = x->current->FirstTextID;
+    int pageno = x->LaTeXpageno = x->current->FirstTextID;
     x->LaTeXpageno++;
 
     // Empty text items draw nothing
@@ -97,12 +94,12 @@ void eps_text_RenderEPS(EPSComm *x) {
     eps_core_SetColor(x, &merged, 1);
 
     // Render text item to eps
-    xgap = -(x->current->settings.TextHAlign - SW_HALIGN_CENT) * x->current->xpos2;
-    ygap = (x->current->settings.TextVAlign - SW_VALIGN_CENT) * x->current->xpos2;
+    double xgap = -(x->current->settings.TextHAlign - SW_HALIGN_CENT) * x->current->xpos2;
+    double ygap = (x->current->settings.TextVAlign - SW_VALIGN_CENT) * x->current->xpos2;
 
     // Rotate the gap with the text
-    xgap2 = xgap * cos(x->current->rotation) - ygap * sin(x->current->rotation);
-    ygap2 = xgap * sin(x->current->rotation) + ygap * cos(x->current->rotation);
+    double xgap2 = xgap * cos(x->current->rotation) - ygap * sin(x->current->rotation);
+    double ygap2 = xgap * sin(x->current->rotation) + ygap * cos(x->current->rotation);
 
     // Draw the typeset text
     canvas_EPSRenderTextItem(x, NULL, pageno, x->current->xpos + xgap2, x->current->ypos + ygap2,

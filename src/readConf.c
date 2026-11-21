@@ -104,13 +104,12 @@ static int readConfigCrangeFlag(ppl_context *c, const char *setvalue, int *out) 
 
 static int readConfigCrangeLimit(const char *setvalue, pplObj *limit, int *limitAuto) {
     int nChars;
-    double fl;
     // The limit may be auto, or a finite number
     if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
         *limitAuto = SW_BOOL_TRUE;
         return 0;
     }
-    fl = ppl_getFloat(setvalue, &nChars);
+    double fl = ppl_getFloat(setvalue, &nChars);
     if ((!gsl_finite(fl)) || (nChars != strlen(setvalue))) return -1;
     limit->real = fl;
     *limitAuto = SW_BOOL_FALSE;

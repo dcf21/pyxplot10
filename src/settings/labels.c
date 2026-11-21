@@ -72,15 +72,12 @@ static int sameValue(const pplObj *a, const pplObj *b) {
 
 void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
     // The coordinate system of each coordinate, the label's text, rotation and gap, and the record of the label
-    int i, system_x, system_y, system_z, gotTempstr, gotGap, gotAng, gotFontsize;
-    char *tempstr, *label;
-    double gap, ang, fontsize;
     ppllabel_object *out;
 
     // Read the coordinate system of each coordinate
-    system_x = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x_system);
-    system_y = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y_system);
-    system_z = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z_system);
+    int system_x = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x_system);
+    int system_y = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y_system);
+    int system_z = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z_system);
 
     // Check the units of each coordinate
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x, system_x);
@@ -92,8 +89,8 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_y_axis)) return;
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z_axis)) return;
 
-    tempstr = (char *) in->stk[ptab[PARSE_INDEX_label_text]].auxil; // Read label text
-    label = (char *) malloc(strlen(tempstr) + 1);
+    char *tempstr = (char *) in->stk[ptab[PARSE_INDEX_label_text]].auxil; // Read label text
+    char *label = (char *) malloc(strlen(tempstr) + 1);
     // Failure to allocate memory is reported as an error
     if (label == NULL) {
         ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
@@ -101,15 +98,15 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     }
     strcpy(label, tempstr);
 
-    ang = in->stk[ptab[PARSE_INDEX_rotation]].real; // Check for rotation modifier
-    gotAng = (in->stk[ptab[PARSE_INDEX_rotation]].objType == PPLOBJ_NUM);
-    gap = in->stk[ptab[PARSE_INDEX_gap]].real; // Check for gap modifier
-    gotGap = (in->stk[ptab[PARSE_INDEX_gap]].objType == PPLOBJ_NUM);
+    double ang = in->stk[ptab[PARSE_INDEX_rotation]].real; // Check for rotation modifier
+    int gotAng = (in->stk[ptab[PARSE_INDEX_rotation]].objType == PPLOBJ_NUM);
+    double gap = in->stk[ptab[PARSE_INDEX_gap]].real; // Check for gap modifier
+    int gotGap = (in->stk[ptab[PARSE_INDEX_gap]].objType == PPLOBJ_NUM);
 
     // See if fontsize is specified. Font sizes must be positive and finite; this is checked before any existing label
     // with this ID is changed.
-    gotFontsize = (in->stk[ptab[PARSE_INDEX_fontsize]].objType == PPLOBJ_NUM);
-    fontsize = in->stk[ptab[PARSE_INDEX_fontsize]].real;
+    int gotFontsize = (in->stk[ptab[PARSE_INDEX_fontsize]].objType == PPLOBJ_NUM);
+    double fontsize = in->stk[ptab[PARSE_INDEX_fontsize]].real;
     if (gotFontsize) {
         // Reject negative font sizes
         if (fontsize < 0) {
@@ -128,7 +125,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     }
 
     // Look up ID number of the label we are adding and find appropriate place for it in label list
-    i = (int) round(in->stk[ptab[PARSE_INDEX_label_id]].real);
+    int i = (int) round(in->stk[ptab[PARSE_INDEX_label_id]].real);
     while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
     // Reuse an existing label with this ID, or insert a new one
     if ((*inlist != NULL) && ((*inlist)->id == i)) {
@@ -151,7 +148,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
 
     // Check for halign or valign modifiers
     tempstr = (char *) in->stk[ptab[PARSE_INDEX_halign]].auxil;
-    gotTempstr = (in->stk[ptab[PARSE_INDEX_halign]].objType == PPLOBJ_STR);
+    int gotTempstr = (in->stk[ptab[PARSE_INDEX_halign]].objType == PPLOBJ_STR);
     if (gotTempstr) out->HAlign = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_HALIGN_INT, SW_HALIGN_STR);
     else out->HAlign = context->set->graph_current.TextHAlign;
     tempstr = (char *) in->stk[ptab[PARSE_INDEX_valign]].auxil;
@@ -196,12 +193,10 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
 void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutput *in, const parserLine *pl,
                      const int *ptab, const int quiet) {
     char msg[PPL_MSG_LENGTH];
-    int pos;
-    ppllabel_object **first;
 
     // pos is the position in the parser's output stack of the list of label IDs
-    first = inlist;
-    pos = ptab[PARSE_INDEX_0label_list];
+    ppllabel_object **first = inlist;
+    int pos = ptab[PARSE_INDEX_0label_list];
 
     // With no IDs, remove every label
     if ((in->stk[pos].objType != PPLOBJ_NUM) || (in->stk[pos].real <= 0))
@@ -210,10 +205,9 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
     else {
         // Each item in the parser's list holds the position of the next item, or zero at the end of the list
         while (in->stk[pos].objType == PPLOBJ_NUM) {
-            int i;
             pos = (int) round(in->stk[pos].real);
             if (pos <= 0) break;
-            i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
+            int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
             inlist = first;
             while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
             // Unlink and free the label, or warn that it does not exist
@@ -243,13 +237,10 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
 void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
+    ppllabel_remove(context, inlist, in, pl, ptab, 1); // First of all, remove any labels which we are unsetting
+    ppllabel_object **first = inlist;
     // pos is the position in the parser's output stack of the list of label IDs
-    int pos;
-    ppllabel_object **first;
-
-    ppllabel_remove(context, inlist, in, pl, ptab, 1); // First of all, remove any arrows which we are unsetting
-    first = inlist;
-    pos = ptab[PARSE_INDEX_0label_list];
+    int pos = ptab[PARSE_INDEX_0label_list];
 
     // With no IDs, replace all labels with a copy of the default list
     if ((in->stk[pos].objType != PPLOBJ_NUM) || (in->stk[pos].real <= 0)) {
@@ -262,21 +253,18 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
         // Otherwise restore the default definition of each listed label. Each item in the parser's list holds the
         // position of the next item, or zero at the end of the list.
         while (in->stk[pos].objType == PPLOBJ_NUM) {
-            int i;
-            ppllabel_object *obj;
             pos = (int) round(in->stk[pos].real);
             if (pos <= 0) break;
-            i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
+            int i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
 
             // Look for the label in the list of defaults
-            obj = context->set->ppllabel_list_default;
+            ppllabel_object *obj = context->set->ppllabel_list_default;
             while ((obj != NULL) && (obj->id < i)) obj = (obj->next);
             // If it has a default definition, insert a copy of it into the list in the right place
             if ((obj != NULL) && (obj->id == i)) {
-                ppllabel_object *new;
                 inlist = first;
                 while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
-                new = (ppllabel_object *) malloc(sizeof(ppllabel_object));
+                ppllabel_object *new = (ppllabel_object *) malloc(sizeof(ppllabel_object));
                 // Failure to allocate memory is reported as an error
                 if (new == NULL) {
                     ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
@@ -354,10 +342,10 @@ void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_ob
 //! \param [in|out] inlist - Pointer to the head of the list to free, which is set to NULL
 
 void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
-    ppllabel_object *obj, **first;
+    ppllabel_object *obj;
 
     // Free each label in turn, with its style and text
-    first = inlist;
+    ppllabel_object **first = inlist;
     // Unlink the first label, and free it
     while (*inlist != NULL) {
         obj = *inlist;
@@ -380,9 +368,8 @@ void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
 
 void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const size_t outLen) {
     // Describe the label's text, and the coordinate system, axis number (if any) and value of each coordinate
-    int i;
     ppl_strEscapify(in->text, out, outLen);
-    i = strlen(out);
+    int i = strlen(out);
     ppl_strAppendf(out, outLen, &i, " at %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));

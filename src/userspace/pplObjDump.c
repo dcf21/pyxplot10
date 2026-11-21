@@ -69,7 +69,6 @@ static void pplObjDump_escaped(FILE *output, const char *str, const char *suffix
 void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
     // Numbers are written with 17 significant figures, enough to recreate any double exactly
     char msg[SSTR_LENGTH];
-    int t;
     const int NSigFigs = 17;
 
     // Stop if the user has pressed Ctrl-C
@@ -79,7 +78,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
         fprintf(output, "types.null()");
         return;
     }
-    t = o->objType;
+    int t = o->objType;
     // Write each type of object in the syntax which recreates it
     switch (t) {
         case PPLOBJ_NUM:

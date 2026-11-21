@@ -76,21 +76,17 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     // Variables for reading the data
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int j, status = 0, errCount = DATAFILE_NERRS, NExpect = 1, Ncolumns;
+    int j, status = 0, errCount = DATAFILE_NERRS, NExpect = 1;
     canvas_plotdesc *pd = x->current->plotitems;
     pplExpr *LabelExpr;
-    pplExpr **UsingList;
     unsigned char autoUsingList = 0;
-    int NUsing;
     int nObjs = 0;
     withWords ww_default;
-    double *ordinate_raster, acc;
-    dataBlock *blk;
 
     // There is nothing to draw without a data source
     if (pd == NULL) return;
-    NUsing = pd->NUsing;
-    UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
+    int NUsing = pd->NUsing;
+    pplExpr **UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
     // Failure to allocate memory is reported as an error
     if (UsingList == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (A)");
@@ -116,7 +112,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     pd->ww_final.linespoints = SW_STYLE_LINES; // In case FuncStyle is something bonkers like contourplot
 
     // Make raster on which to evaluate parametric functions
-    ordinate_raster = (double *) ppl_memAlloc(x->current->settings.samples * sizeof(double));
+    double *ordinate_raster = (double *) ppl_memAlloc(x->current->settings.samples * sizeof(double));
     if (x->current->settings.Tlog == SW_BOOL_TRUE)
         ppl_logRaster(ordinate_raster, x->current->settings.Tmin.real, x->current->settings.Tmax.real,
                       x->current->settings.samples);
@@ -204,9 +200,9 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
 
     // Work out sum of all pie segment sizes
     if (x->current->plotdata[0] == NULL) return;
-    Ncolumns = x->current->plotdata[0]->Ncolumns_real;
-    blk = x->current->plotdata[0]->first;
-    acc = 0.0;
+    int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
+    dataBlock *blk = x->current->plotdata[0]->first;
+    double acc = 0.0;
     // Add up the sizes of all the wedges
     while (blk != NULL) {
         for (j = 0; j < blk->blockPosition; j++) { acc += fabs(blk->data_real[0 + Ncolumns * j]); }
@@ -237,10 +233,9 @@ void eps_pie_YieldUpText(EPSComm *x) {
     // Variables for evaluating the labels
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int j, Ncolumns, errCount = DATAFILE_NERRS;
+    int j, errCount = DATAFILE_NERRS;
     pplExpr *formatExpr;
     canvas_plotdesc *pd;
-    dataBlock *blk;
     pplObj DummyTemp_l, DummyTemp_p, DummyTemp_w;
     pplObj *var_l, *var_p, *var_w;
 
@@ -276,8 +271,8 @@ void eps_pie_YieldUpText(EPSComm *x) {
     }
 
     // Labels of pie wedges
-    Ncolumns = x->current->plotdata[0]->Ncolumns_real;
-    blk = x->current->plotdata[0]->first;
+    int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
+    dataBlock *blk = x->current->plotdata[0]->first;
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Evaluate the label of each wedge
@@ -286,7 +281,6 @@ void eps_pie_YieldUpText(EPSComm *x) {
             const int stkLevelOld = c->stackPtr;
             int lOp = 0;
             char *tmp;
-            pplObj *o;
 
             // Get pointers to the variables [percentage, label, wedgesize]
             ppl_contextGetVarPointer(c, "label", &var_l, &DummyTemp_l);
@@ -297,7 +291,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
             var_w->amMalloced = var_w->auxilMalloced = 0;
             var_w->real = blk->data_real[0 + Ncolumns * j];
             pplObjNum(var_p, 0, var_w->real / pd->PieChart_total * 100.0, 0);
-            o = ppl_expEval(c, formatExpr, &lOp, 1, x->iterDepth + 1);
+            pplObj *o = ppl_expEval(c, formatExpr, &lOp, 1, x->iterDepth + 1);
             // Warn about a format expression which fails, or which does not return a string
             if (c->errStat.status || (c->dollarStat.warntxt[0] != '\0') || (o == NULL)) {
                 if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
@@ -356,10 +350,9 @@ void eps_pie_YieldUpText(EPSComm *x) {
 static double labelMargin(const double X, const double Y, const double a, const double size, const double rad) {
     const double r = hypot(X, Y);
     double theta = fmod(atan2(X, Y) - a, 2 * M_PI);
-    double margin;
     if (theta < -M_PI) theta += 2 * M_PI;
     if (theta > M_PI) theta -= 2 * M_PI;
-    margin = theta + size / 2; // Margin from the anticlockwise edge of the wedge
+    double margin = theta + size / 2; // Margin from the anticlockwise edge of the wedge
     margin = fmin(margin, size / 2 - theta); // Margin from the clockwise edge
     margin = fmin(margin, r / rad); // Margin from the centre of the pie
     margin = fmin(margin, (rad - r) / rad); // Margin from the rim of the pie
@@ -373,11 +366,10 @@ static double labelMargin(const double X, const double Y, const double a, const 
 void eps_pie_RenderEPS(EPSComm *x) {
     // Variables for drawing the pie chart
     ppl_context *c = x->c;
-    int j, Ncolumns, lt, WedgeNumber, l, m;
-    double xpos, ypos, rad, angle, size, vtitle;
+    int j, lt, l, m;
+    double size;
     canvas_plotdesc *pd;
-    dataBlock *blk;
-    double lw, lw_scale;
+    double lw_scale;
     withWords ww, ww_txt;
 
     // There is nothing to draw without data
@@ -390,19 +382,19 @@ void eps_pie_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate position of centre of piechart, and its radius
-    xpos = x->current->settings.OriginX.real * M_TO_PS;
-    ypos = x->current->settings.OriginY.real * M_TO_PS;
-    rad = x->current->settings.width.real * M_TO_PS / 2;
-    vtitle = ypos + rad;
+    double xpos = x->current->settings.OriginX.real * M_TO_PS;
+    double ypos = x->current->settings.OriginY.real * M_TO_PS;
+    double rad = x->current->settings.width.real * M_TO_PS / 2;
+    double vtitle = ypos + rad;
 
     // Expand any numbered styles which may appear in the with words we are passed
     ppl_withWordsMerge(c, &ww, &x->current->with_data, NULL, NULL, NULL, NULL, 1);
 
     // Fill piechart segments
-    Ncolumns = x->current->plotdata[0]->Ncolumns_real;
-    blk = x->current->plotdata[0]->first;
-    angle = 0.0;
-    WedgeNumber = 0;
+    int Ncolumns = x->current->plotdata[0]->Ncolumns_real;
+    dataBlock *blk = x->current->plotdata[0]->first;
+    double angle = 0.0;
+    int WedgeNumber = 0;
     // Loop over the blocks of the data table
     while (blk != NULL) {
         // Fill each wedge with the next color from the palette, going clockwise from the top
@@ -446,7 +438,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     // Set linewidth and linetype of outline
     if (ww.USElinewidth) lw_scale = ww.linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
@@ -501,14 +493,14 @@ void eps_pie_RenderEPS(EPSComm *x) {
     // Write the labels, unless they are invisible
     if (eps_core_isVisible(x)) {
         int ItemNo = 0;
-        double *TextWidth, *TextHeight, TotalHeight = 0.0;
+        double TotalHeight = 0.0;
         double height1, height2, bb_top, bb_bottom, ab_left, ab_right, ab_top, ab_bottom;
         double label_rpos, best_label_rpos, best_label_margin, min_margin, key_vpos = 0.0;
         postscriptPage *dviPage;
 
         // Calculate dimensions of text items
-        TextWidth = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
-        TextHeight = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
+        double *TextWidth = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
+        double *TextHeight = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
         if ((TextWidth == NULL) || (TextHeight == NULL)) goto END_LABEL_PRINTING;
         blk = x->current->plotdata[0]->first;
         // Loop over the blocks of the data table
@@ -551,7 +543,6 @@ void eps_pie_RenderEPS(EPSComm *x) {
                 size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 2 * M_PI; // Angular size of wedge
                 // Wedges with no label are skipped
                 if (blk->text[j] != NULL) {
-                    int ArrowType;
                     double a = angle + size / 2; // Central angle of wedge
 
                     // Test different radii where label can be placed
@@ -586,7 +577,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                     }
 
                     // Work out whether label will go inside, outside or in a key
-                    ArrowType = x->current->ArrowType;
+                    int ArrowType = x->current->ArrowType;
                     if (ArrowType == SW_PIEKEYPOS_AUTO)
                         ArrowType = (best_label_margin < 0.0) ? SW_PIEKEYPOS_OUTSIDE : SW_PIEKEYPOS_INSIDE;
 

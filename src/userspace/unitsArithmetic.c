@@ -136,11 +136,10 @@ unsigned char ppl_tempTypeMatch(const unsigned char a, const unsigned char b) {
 void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     // exponent is the power to which a is raised; DimLess is cleared if the result has any units
     int i;
-    double exponent;
     gsl_complex ac, bc;
     unsigned char DimLess = 1;
 
-    exponent = b->real; // We may overwrite this when we set o->real, so store a copy
+    double exponent = b->real; // We may overwrite this when we set o->real, so store a copy
 
     // An exponent with units is an error, unless errors are switched off, in which case the result is NaN. The same
     // pattern follows every check below.
@@ -266,14 +265,14 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     // tmp is workspace for complex multiplication; DimLess is cleared if the result has any units
     int i;
-    double tmp, areal, breal, aimag, bimag;
+    double tmp;
     unsigned char DimLess = 1;
 
     // Copy the operands, since o may be the same object as a or b
-    areal = a->real;
-    aimag = a->imag;
-    breal = b->real;
-    bimag = b->imag;
+    double areal = a->real;
+    double aimag = a->imag;
+    double breal = b->real;
+    double bimag = b->imag;
 
     // Two inputs have conflicting temperature units. This is only allowed in the special case of oC/oF and friends, when temperature conversion happens.
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
@@ -380,14 +379,14 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
     // mag and tmp are workspace for complex division; DimLess is cleared if the result has any units
     int i;
-    double mag, tmp, areal, breal, aimag, bimag;
+    double mag, tmp;
     unsigned char DimLess = 1;
 
     // Copy the operands, since o may be the same object as a or b
-    areal = a->real;
-    aimag = a->imag;
-    breal = b->real;
-    bimag = b->imag;
+    double areal = a->real;
+    double aimag = a->imag;
+    double breal = b->real;
+    double bimag = b->imag;
 
     // Two inputs have conflicting temperature units. This is only allowed in the special case of oC/oF and friends, when temperature conversion happens.
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {

@@ -117,8 +117,8 @@ void fastmalloc_freeall(const int context) {
 //! \param [in] context - The allocation context to free
 
 void fastmalloc_free(const int context) {
-    void *ptr, *ptr2;
-    ptr = _fastmalloc_firstblocklist[context];
+    void *ptr2;
+    void *ptr = _fastmalloc_firstblocklist[context];
     // Free the chain of blocks; the first word of each block points to the next block in the chain
     while (ptr != NULL) {
         ptr2 = *((void **) ptr);
@@ -409,7 +409,6 @@ void ppl_memAlloc_Free(int context) {
 //! \return Pointer to the allocated memory, or NULL on failure
 
 void *ppl_memAlloc(int size) {
-    void *out;
 
     // Check that there is a valid current context
     if ((ppl_memAlloc_mem_context < 0) || (ppl_memAlloc_mem_context >= PPL_MAX_CONTEXTS)) {
@@ -425,7 +424,7 @@ void *ppl_memAlloc(int size) {
                           size, ppl_memAlloc_mem_context);
         (*mem_log)(errcontext, temp_merr_string);
     }
-    out = fastmalloc(ppl_memAlloc_mem_context, size);
+    void *out = fastmalloc(ppl_memAlloc_mem_context, size);
     // Report failure to allocate memory
     if (out == NULL) {
         (*mem_error)(errcontext, 100, -1, -1, "Out of memory.");
@@ -441,7 +440,6 @@ void *ppl_memAlloc(int size) {
 //! \return Pointer to the allocated memory, or NULL on failure
 
 void *ppl_memAlloc_incontext(int size, int context) {
-    void *out;
 
     // Check that the context number is valid
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
@@ -457,7 +455,7 @@ void *ppl_memAlloc_incontext(int size, int context) {
                           size, context);
         (*mem_log)(errcontext, temp_merr_string);
     }
-    out = fastmalloc(context, size);
+    void *out = fastmalloc(context, size);
     // Report failure to allocate memory
     if (out == NULL) {
         (*mem_error)(errcontext, 100, -1, -1, "Out of memory.");

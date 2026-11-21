@@ -73,12 +73,10 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
     // The parser stores the parts of a dotted name as a list on its output stack, in which each item holds the position
     // of the next. Walk along the list, descending into a dictionary, module or class instance at each step.
     while (stk[pos].objType == PPLOBJ_NUM) {
-        int last;
-        char *name;
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
-        last = (stk[pos].objType != PPLOBJ_NUM);
-        name = (char *) stk[pos + offset].auxil;
+        int last = (stk[pos].objType != PPLOBJ_NUM);
+        char *name = (char *) stk[pos + offset].auxil;
         // The first part of a name with several parts must be an existing variable which has members
         if (first && !last) {
             ppl_contextVarLookup(c, name, out, 0);

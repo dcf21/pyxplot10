@@ -205,9 +205,8 @@ void pplfunc_osGetUid(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetHome(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *out, *tmp;
-    tmp = ppl_unixGetHomeDir(&c->errcontext);
-    out = (char *) malloc(strlen(tmp) + 1);
+    char *tmp = ppl_unixGetHomeDir(&c->errcontext);
+    char *out = (char *) malloc(strlen(tmp) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -229,8 +228,7 @@ void pplfunc_osGetHome(ppl_context *c, pplObj *in, const int nArgs, int *status,
 
 void pplfunc_osGetHost(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const int outlen = FNAME_LENGTH;
-    char *out;
-    out = (char *) malloc(outlen);
+    char *out = (char *) malloc(outlen);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -253,9 +251,8 @@ void pplfunc_osGetHost(ppl_context *c, pplObj *in, const int nArgs, int *status,
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetLogin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *out, *tmp;
-    tmp = getlogin();
-    out = (char *) malloc(strlen(tmp) + 1);
+    char *tmp = getlogin();
+    char *out = (char *) malloc(strlen(tmp) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -276,9 +273,8 @@ void pplfunc_osGetLogin(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osGetRealName(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    char *out, *tmp;
-    tmp = ppl_unixGetIRLName(&c->errcontext);
-    out = (char *) malloc(strlen(tmp) + 1);
+    char *tmp = ppl_unixGetIRLName(&c->errcontext);
+    char *out = (char *) malloc(strlen(tmp) + 1);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -306,7 +302,6 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
     wordexp_t w;
     glob_t g;
     pplObj v;
-    list *l;
     char *tmp;
     char escaped[FNAME_LENGTH], *raw = (char *) in[0].auxil;
     int i, j;
@@ -321,7 +316,7 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
         return;
     }
     v.refCount = 1;
-    l = (list *) OUTPUT.auxil;
+    list *l = (list *) OUTPUT.auxil;
     // Escape spaces in the pattern, so that wordexp() does not split it into several words
     ppl_strEscapeSpaces(raw, escaped, FNAME_LENGTH);
     if (wordexp(escaped, &w, 0) != 0) return; // No matches; return empty list
@@ -351,7 +346,6 @@ void pplfunc_osGlob(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
-    FILE *f;
     char *mode;
     // The arguments are the command, and optionally the mode ("r" or "w")
     if ((nArgs < 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -365,7 +359,7 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
     }
     if (nArgs > 1) mode = (char *) in[1].auxil;
     else mode = "r";
-    f = popen((char *) in[0].auxil, mode);
+    FILE *f = popen((char *) in[0].auxil, mode);
     // Report a failure to start the command
     if (f == NULL) {
         ppl_funcError(status, errType, errText, ERR_FILE, "%s", strerror(errno));
@@ -387,8 +381,7 @@ void pplfunc_osPopen(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // permissions is filled in like the output of ls -l
     pplFuncCall call = {c, in, status, errType, errText, "pplfunc_osStat()"};
-    char *tmp, permissions[] = "---------";
-    dict *d;
+    char permissions[] = "---------";
     pplObj v;
     struct stat s;
     // The argument must be a single string, the filename
@@ -402,13 +395,13 @@ void pplfunc_osStat(ppl_context *c, pplObj *in, const int nArgs, int *status, in
         return;
     }
     v.refCount = 1;
-    tmp = (char *) malloc(LSTR_LENGTH);
+    char *tmp = (char *) malloc(LSTR_LENGTH);
     // The output is a dictionary of the file's properties
     if (pplObjDict(&OUTPUT, 0, 1, NULL) == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
-    d = (dict *) OUTPUT.auxil;
+    dict *d = (dict *) OUTPUT.auxil;
     pplObjDate(&v, 1, s.st_atime);
     ppl_dictAppendCpy(d, "atime", &v, sizeof(v));
     pplObjNum(&v, 1, s.st_gid, 0);
@@ -510,8 +503,6 @@ void pplfunc_osTmpfile(ppl_context *c, pplObj *in, const int nArgs, int *status,
 void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The output is a dictionary of the fields returned by uname()
     pplFuncCall call = {c, in, status, errType, errText, "pplfunc_osUname()"};
-    char *tmp;
-    dict *d;
     pplObj v;
     struct utsname u;
     // Report a failure of uname()
@@ -520,13 +511,13 @@ void pplfunc_osUname(ppl_context *c, pplObj *in, const int nArgs, int *status, i
         return;
     }
     v.refCount = 1;
-    tmp = (char *) malloc(LSTR_LENGTH);
+    char *tmp = (char *) malloc(LSTR_LENGTH);
     // The output is a new dictionary
     if (pplObjDict(&OUTPUT, 0, 1, NULL) == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
         return;
     }
-    d = (dict *) OUTPUT.auxil;
+    dict *d = (dict *) OUTPUT.auxil;
     if ((tmp = ppl_funcStrdup(&call, u.sysname)) == NULL) return;
     pplObjStr(&v, 1, 1, tmp);
     ppl_dictAppendCpy(d, "sysname", &v, sizeof(v));
@@ -579,7 +570,6 @@ void pplfunc_osPathExists(ppl_context *c, pplObj *in, const int nArgs, int *stat
 
 void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
-    int st;
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -587,7 +577,7 @@ void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *st
                 "The os.path.filesize() function requires a single string argument.");
         return;
     }
-    st = stat((char *) in[0].auxil, &buffer);
+    int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return its size, in bits
     if (st) {
         pplObjNull(&OUTPUT, 0);
@@ -609,7 +599,6 @@ void pplfunc_osPathFilesize(ppl_context *c, pplObj *in, const int nArgs, int *st
 
 void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
-    int st;
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -617,7 +606,7 @@ void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 "The os.path.atime() function requires a single string argument.");
         return;
     }
-    st = stat((char *) in[0].auxil, &buffer);
+    int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return the time it was last accessed
     if (st) {
         pplObjNull(&OUTPUT, 0);
@@ -638,7 +627,6 @@ void pplfunc_osPathATime(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
-    int st;
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -646,7 +634,7 @@ void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 "The os.path.ctime() function requires a single string argument.");
         return;
     }
-    st = stat((char *) in[0].auxil, &buffer);
+    int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return the time its status last changed
     if (st) {
         pplObjNull(&OUTPUT, 0);
@@ -667,7 +655,6 @@ void pplfunc_osPathCTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     struct stat buffer;
-    int st;
 
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
@@ -675,7 +662,7 @@ void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 "The os.path.mtime() function requires a single string argument.");
         return;
     }
-    st = stat((char *) in[0].auxil, &buffer);
+    int st = stat((char *) in[0].auxil, &buffer);
     // A file which cannot be examined returns null; otherwise return the time it was last modified
     if (st) {
         pplObjNull(&OUTPUT, 0);
@@ -696,14 +683,13 @@ void pplfunc_osPathMTime(ppl_context *c, pplObj *in, const int nArgs, int *statu
 
 void pplfunc_osPathExpandUser(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     const int outlen = LSTR_LENGTH;
-    char *out;
     // The argument must be a single string, the filename
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
                 "The os.path.expanduser() function requires a single string argument.");
         return;
     }
-    out = (char *) malloc(outlen);
+    char *out = (char *) malloc(outlen);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -767,7 +753,6 @@ static int osPathJoinAppend(char **out, int *outLen, int *j, const char *item, c
 void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // The path is built up in out, of length outLen, with j characters used so far
     int outLen = FNAME_LENGTH, j = 0, i = 0;
-    char *out;
     if (nArgs < 1) return;
     // The arguments are either a single list of strings, or one or more strings
     if ((in[0].objType == PPLOBJ_LIST) && (nArgs > 1)) {
@@ -775,7 +760,7 @@ void pplfunc_osPathJoin(ppl_context *c, pplObj *in, const int nArgs, int *status
                 "The os.path.join() function must be called with a single list of strings.");
         return;
     }
-    out = (char *) malloc(outLen);
+    char *out = (char *) malloc(outLen);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");

@@ -77,9 +77,9 @@ void ppl_dictFreeTree(dictHash *i) {
 //! \return Zero
 
 int ppl_dictFree(dict *in) {
-    dictItem *ptr, *ptrnext;
+    dictItem *ptrnext;
     if ((in == NULL) || (!in->useMalloc)) return 0;
-    ptr = in->first;
+    dictItem *ptr = in->first;
     // Free each item in turn, with its key and data
     while (ptr != NULL) {
         ptrnext = ptr->next;
@@ -336,12 +336,11 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
     // ptr scans through the list; prev is the item before it; cpy is the copy of the data; cmp records the comparison
     // of keys
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
-    void *cpy;
     int cmp = -1, hash;
 
     // Copy the data
     if (key == NULL) return 1;
-    cpy = dictAlloc(in, size);
+    void *cpy = dictAlloc(in, size);
     if (cpy == NULL) return 1;
     memcpy(cpy, item, size);
 
@@ -409,9 +408,8 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
 //! \return The data pointer stored under <key>, or NULL if it was not found
 
 void *ppl_dictLookup(dict *in, const char *key) {
-    int hash;
     if (key == NULL) return NULL;
-    hash = ppl_dictHash(key, -1);
+    int hash = ppl_dictHash(key, -1);
     return ppl_dictLookupHash(in, key, hash);
 }
 
@@ -423,14 +421,13 @@ void *ppl_dictLookup(dict *in, const char *key) {
 
 void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
     int clash;
-    dictItem *ptr;
 
     // Nothing can be found in a missing dictionary, or under a missing key
     if (key == NULL) return NULL;
     if (in == NULL) { return NULL; }
 
     // Check hash table
-    ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
+    dictItem *ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
     // Without a clash, the hash tree gives the definitive answer
     if (!clash) {
         if (ptr == NULL) return NULL;
@@ -460,9 +457,8 @@ void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
 
 void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int SubsMaxLen, dictItem **ptrout) {
     // The names of functions which may be followed by the name of a dummy variable, e.g. int_dx
-    int hash, clash, i, k, keylen;
+    int clash, i, k;
     char *magicFns[] = {"diff_d", "int_d", NULL};
-    dictItem *ptr;
 
     // Nothing can be found under a missing key, or in a missing dictionary
     if (key == NULL) {
@@ -478,9 +474,9 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
 
     // Check hash table
     for (k = 0; (isalnum(key[k]) || (key[k] == '_')); k++);
-    keylen = k;
-    hash = ppl_dictHash(key, keylen);
-    ptr = ppl_dictHashLookup(in, key, keylen, hash, &clash);
+    int keylen = k;
+    int hash = ppl_dictHash(key, keylen);
+    dictItem *ptr = ppl_dictHashLookup(in, key, keylen, hash, &clash);
     // The hash tree found the name
     if (ptr != NULL) {
         *ptrout = ptr;
@@ -539,14 +535,13 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
 //! \return One if the key is present, zero otherwise
 
 int ppl_dictContains(dict *in, const char *key) {
-    int hash, clash;
-    dictItem *ptr;
+    int clash;
     if (key == NULL) return 0;
     if (in == NULL) return 0;
 
     // Check hash table
-    hash = ppl_dictHash(key, -1);
-    ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
+    int hash = ppl_dictHash(key, -1);
+    dictItem *ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
     if (!clash) return (ptr != NULL);
 
     // Hash table clash; need to exhaustively search dictionary
@@ -566,16 +561,15 @@ int ppl_dictContains(dict *in, const char *key) {
 
 int ppl_dictRemoveKey(dict *in, const char *key) {
     // ptr is the item removed from the hash tree, or the item found by searching the list
-    int hash, clash;
-    dictItem *ptr;
+    int clash;
 
     // Nothing can be removed under a missing key, or from a missing dictionary
     if (key == NULL) return 1;
     if (in == NULL) return 1;
 
     // Check hash table
-    hash = ppl_dictHash(key, -1);
-    ptr = ppl_dictHashRemove(in, key, hash, &clash);
+    int hash = ppl_dictHash(key, -1);
+    dictItem *ptr = ppl_dictHashRemove(in, key, hash, &clash);
     if ((ptr == NULL) && (!clash)) return 1; // Key not present
     // The hash tree identified the item: unlink it from the list
     if (!clash) {
@@ -603,9 +597,8 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
 //! \return Zero if an item was removed, or one if no matching item was found
 
 int ppl_dictRemove(dict *in, const void *item) {
-    dictItem *ptr;
     if (in == NULL) return 1;
-    ptr = in->first;
+    dictItem *ptr = in->first;
     // Search for an item with this data pointer, and remove it by its key
     while (ptr != NULL) {
         if (ptr->data == item) { return ppl_dictRemoveKey(in, ptr->key); }
@@ -671,10 +664,9 @@ dictIterator *ppl_dictIterateInit(const dict *in) {
 //! \return The data pointer stored in the current item, or NULL if the iterator has reached the end
 
 void *ppl_dictIterate(dictIterator **in, char **key) {
-    void *out;
     if ((in == NULL) || (*in == NULL)) return NULL;
     *key = (*in)->key;
-    out = (*in)->data;
+    void *out = (*in)->data;
     *in = (*in)->next;
     return out;
 }

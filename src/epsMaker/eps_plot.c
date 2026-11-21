@@ -360,9 +360,8 @@ static double SortByAzimuthXCentre, SortByAzimuthYCentre;
 static int SortByAzimuth(const void *x, const void *y) {
     const double *xd = (const double *) x;
     const double *yd = (const double *) y;
-    double ax, ay;
-    ax = atan2(xd[0] - SortByAzimuthXCentre, xd[1] - SortByAzimuthYCentre);
-    ay = atan2(yd[0] - SortByAzimuthXCentre, yd[1] - SortByAzimuthYCentre);
+    double ax = atan2(xd[0] - SortByAzimuthXCentre, xd[1] - SortByAzimuthYCentre);
+    double ay = atan2(yd[0] - SortByAzimuthXCentre, yd[1] - SortByAzimuthYCentre);
     if (ax > ay) return 1;
     if (ax < ay) return -1;
     return 0;
@@ -422,9 +421,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
     // Variables for reading the datasets
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int i, j, k, Ndatasets, Ccounter = 0, LTcounter = 0, PTcounter = 0;
-    canvas_plotdesc *pd;
-    canvas_plotrange *pr;
+    int i, j, Ccounter = 0, LTcounter = 0, PTcounter = 0;
     pplset_axis *axis, *axissets[3];
     withWords ww_default;
     double *ordinate_raster, *ordinate2_raster, size[3], ScreenSize[3], ScreenBearing[3];
@@ -506,15 +503,14 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
     }
 
     // Transfer range information from plot [foo:bar] to HardMin and HardMax variables in axes
-    pr = x->current->plotranges;
-    k = 0;
+    canvas_plotrange *pr = x->current->plotranges;
+    int k = 0;
     // Copy ranges given in the plot command, e.g. plot [0:1][0:2], to the axes they apply to, which run x1, y1, (z1),
     // x2, y2, ...
     while (pr != NULL) {
-        int Ndirs, xyz, axis_n;
-        Ndirs = x->current->ThreeDim ? 3 : 2;
-        xyz = (k % Ndirs);
-        axis_n = 1 + k / Ndirs;
+        int Ndirs = x->current->ThreeDim ? 3 : 2;
+        int xyz = (k % Ndirs);
+        int axis_n = 1 + k / Ndirs;
         if (axis_n > MAX_AXES) axis_n = 0;
         axis = &axissets[xyz][axis_n];
 
@@ -587,8 +583,8 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
     }
 
     // Count number of datasets which we are plotting
-    pd = x->current->plotitems;
-    Ndatasets = 0;
+    canvas_plotdesc *pd = x->current->plotitems;
+    int Ndatasets = 0;
     // Count the datasets
     while (pd != NULL) {
         pd = pd->next;
@@ -686,7 +682,6 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
 
         // If plotting a datafile, can read in data now, so do so
         if ((pd->function == 0) || (pd->parametric == 1)) {
-            pplExpr **UsingList;
             unsigned char autoUsingList = 0;
             int NUsing = pd->NUsing;
             int nObjs = 0;
@@ -695,7 +690,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
             int NExpect = eps_plot_styles_NDataColumns(&c->errcontext, pd->ww_final.linespoints, x->current->ThreeDim);
 
             // Space for the using items, including the extra items needed for style expressions
-            UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
+            pplExpr **UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
             // Failure to allocate memory is reported as an error
             if (UsingList == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
@@ -732,12 +727,12 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                     }
                     // Read the data file, unless the data are held in a persistent table
                     if (pd->PersistentDataTable == NULL) {
-                        char *fnameFinal, tmp[FNAME_LENGTH] = "";
+                        char tmp[FNAME_LENGTH] = "";
                         ppldata_fromFile(c, x->current->plotdata + i, pd->filename, 0, tmp, NULL, pd->index, UsingList,
                                          autoUsingList, NExpect, nObjs, pd->label, pd->SelectCriterion, NULL,
                                          pd->UsingRowCols, pd->EveryList, pd->continuity, 0, &status, msg, &errCount,
                                          x->iterDepth + 1);
-                        fnameFinal = (char *) ppl_memAlloc(strlen(tmp) + 1);
+                        char *fnameFinal = (char *) ppl_memAlloc(strlen(tmp) + 1);
                         if (fnameFinal != NULL) strcpy(fnameFinal, tmp);
                         pd->filenameFinal = fnameFinal;
                     } else x->current->plotdata[i] = pd->PersistentDataTable;
@@ -753,12 +748,12 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
                                         pd->continuity, &status, msg, &errCount, x->iterDepth + 1);
                 }
             } else {
-                int Nsamples, Nsamples2, USE_T_or_uv;
+                int Nsamples, Nsamples2;
                 pplObj *raster_unit, *raster2_unit;
 
                 // Parametric functions are sampled in t, or in u and v; a range given in the plot command overrides the
                 // global one
-                USE_T_or_uv = x->current->settings.USE_T_or_uv;
+                int USE_T_or_uv = x->current->settings.USE_T_or_uv;
                 if (pd->TRangeSet) USE_T_or_uv = !pd->VRangeSet;
 
                 // Sample in t, or in u and v
@@ -813,8 +808,7 @@ void eps_plot_ReadAccessibleData(EPSComm *x) {
 
                 // Use a raster over the dataset's own range of v, if one was given
                 if ((special_raster2 == ordinate2_raster) && (pd->VRangeSet)) {
-                    int N;
-                    N = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
+                    int N = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                             : x->current->settings.SamplesY;
                     special_raster2 = (double *) ppl_memAlloc(N * sizeof(double));
                     // Failure to allocate memory is reported as an error
@@ -904,8 +898,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
     // Variables for sampling functions
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
-    int a, i, j, OrdinateRasterLen, Nsamples, OrdinateRasterLen2;
-    canvas_plotdesc *pd;
+    int a, j, OrdinateRasterLen, Nsamples, OrdinateRasterLen2;
     pplset_axis *OrdinateAxis, *OrdinateAxis2, *axissets[3];
     unsigned char prev_RangeFinalised, prev_TickListFinalised;
     char errbuffer[LSTR_LENGTH];
@@ -919,8 +912,8 @@ void eps_plot_SampleFunctions(EPSComm *x) {
     axissets[2] = x->current->ZAxes;
 
     // Loop through all datasets
-    pd = x->current->plotitems;
-    i = 0;
+    canvas_plotdesc *pd = x->current->plotitems;
+    int i = 0;
     // Sample each non-parametric function
     while (pd != NULL) {
         // Only functions which are not parametric
@@ -931,7 +924,6 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             int NUsing = pd->NUsing;
             int nObjs = 0;
             unsigned char autoUsingList = 0;
-            pplExpr **UsingList;
 
             // The function is sampled along its first axis; remember whether its range was already decided, so this can
             // be undone afterwards
@@ -940,7 +932,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
             prev_TickListFinalised = axissets[pd->axis1xyz][pd->axis1].TickListFinalised;
 
             // Space for the using items, including the extra items needed for style expressions
-            UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
+            pplExpr **UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
             // Failure to allocate memory is reported as an error
             if (UsingList == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
@@ -1009,9 +1001,9 @@ void eps_plot_SampleFunctions(EPSComm *x) {
                 if ((pd->ww_final.linespoints == SW_STYLE_BOXES) || (pd->ww_final.linespoints == SW_STYLE_HISTEPS)) {
                     // boxes and histeps plot styles have their own special rasters
                     int k;
-                    double left, right, left2 = GSL_NAN, right2 = GSL_NAN, width;
-                    left = pplaxis_InvGetPosition(0.0, *_OrdinateAxis);
-                    right = pplaxis_InvGetPosition(1.0, *_OrdinateAxis);
+                    double left2 = GSL_NAN, right2 = GSL_NAN, width;
+                    double left = pplaxis_InvGetPosition(0.0, *_OrdinateAxis);
+                    double right = pplaxis_InvGetPosition(1.0, *_OrdinateAxis);
                     if (x->current->settings.BoxWidth.real > 0) width = x->current->settings.BoxWidth.real;
                     else width = fabs(left - right) / (x->current->settings.samples);
                     left += width / 2 * ((right > left) ? 1.0 : -1.0);
@@ -1136,8 +1128,7 @@ void eps_plot_SampleFunctions(EPSComm *x) {
 
 void eps_plot_YieldUpText(EPSComm *x) {
     // Variables for collecting text
-    int j, k, l;
-    canvas_plotdesc *pd;
+    int j, l;
     dataBlock *blk;
     pplset_axis *axes;
 
@@ -1145,8 +1136,8 @@ void eps_plot_YieldUpText(EPSComm *x) {
     x->current->FirstTextID = x->NTextItems;
 
     // Labels attached to data points
-    pd = x->current->plotitems;
-    k = 0;
+    canvas_plotdesc *pd = x->current->plotitems;
+    int k = 0;
     while (pd != NULL) // loop over all datasets
     {
         pd->CRangeDisplay = 0;
@@ -1218,7 +1209,7 @@ void eps_plot_RenderEPS(EPSComm *x) {
     // Variables for drawing the graph
     ppl_context *c = x->c;
     int i, j, status, xyzaxis[3];
-    double origin_x, origin_y, width, height, zdepth;
+    double height, zdepth;
     canvas_plotdesc *pd;
     pplset_axis *a1, *a2, *a3, *axissets[3];
 
@@ -1234,9 +1225,9 @@ void eps_plot_RenderEPS(EPSComm *x) {
     fprintf(x->epsbuffer, "%% Canvas item %d [plot]\n", x->current->id);
 
     // Calculate positions of the four corners of graph
-    origin_x = x->current->settings.OriginX.real * M_TO_PS;
-    origin_y = x->current->settings.OriginY.real * M_TO_PS;
-    width = x->current->settings.width.real * M_TO_PS;
+    double origin_x = x->current->settings.OriginX.real * M_TO_PS;
+    double origin_y = x->current->settings.OriginY.real * M_TO_PS;
+    double width = x->current->settings.width.real * M_TO_PS;
     if (x->current->settings.AutoAspect == SW_ONOFF_ON) height = width * 2.0 / (1.0 + sqrt(5));
     else height = width * x->current->settings.aspect;
     if (x->current->settings.AutoZAspect == SW_ONOFF_ON) zdepth = width * 2.0 / (1.0 + sqrt(5));

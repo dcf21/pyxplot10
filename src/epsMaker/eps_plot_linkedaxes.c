@@ -78,9 +78,7 @@
 void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
     // Variables for following the chain of links
     char msg[PPL_MSG_LENGTH];
-    int IterDepth;
     pplset_axis *target;
-    canvas_item *item;
 
     // Log progress in debugging mode
     if (DEBUG) {
@@ -88,10 +86,10 @@ void eps_plot_LinkedAxisBackPropagate(EPSComm *x, pplset_axis *source) {
                           source->axis_n, source->canvas_id);
         ppl_log(&x->c->errcontext, msg);
     }
-    item = x->current;
+    canvas_item *item = x->current;
 
     // Propagating MinUsed and MaxUsed variables along links between axes
-    IterDepth = 0;
+    int IterDepth = 0;
     while (1) // loop over as many iterations of linkage as may be necessary
     {
         if (IterDepth++ > 100) return;
@@ -202,14 +200,13 @@ void eps_plot_DecideAxisRanges(EPSComm *x) {
 void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode) {
     // Variables for following the chain of links
     char msg[PPL_MSG_LENGTH];
-    int IterDepth, OriginalMode = mode;
-    pplset_axis *source, *target, *target2;
-    canvas_item *item;
+    int OriginalMode = mode;
+    pplset_axis *target2;
 
     // Propagate MinUsed and MaxUsed variables along links
-    IterDepth = 0;
-    target = axis;
-    item = x->current;
+    int IterDepth = 0;
+    pplset_axis *target = axis;
+    canvas_item *item = x->current;
 
     while (1) // loop over as many iterations of linkage as may be necessary to find MinFinal and MaxFinal at the bottom
     {
@@ -274,7 +271,7 @@ void eps_plot_LinkedAxisForwardPropagate(EPSComm *x, pplset_axis *axis, int mode
         if (*x->status) return;
     }
     IterDepth -= 2;
-    source = target;
+    pplset_axis *source = target;
     for (; IterDepth >= 0; IterDepth--) // loop over as many iterations of linkage as may be necessary
     {
         int k;
@@ -531,7 +528,6 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
     char msg[PPL_MSG_LENGTH];
     int i, lOP;
     double output;
-    pplObj *outVal;
     LAUComm *data = (LAUComm *) params;
     const int stkLevelOld = data->x->c->stackPtr;
 
@@ -549,7 +545,7 @@ double eps_plot_LAUSlave(const gsl_vector *x, void *params) {
             data->VarValue->dimensionless = 0;
             break;
         }
-    outVal = ppl_expEval(data->x->c, data->expr, &lOP, 0, data->x->iterDepth + 1);
+    pplObj *outVal = ppl_expEval(data->x->c, data->expr, &lOP, 0, data->x->iterDepth + 1);
 
     // If a numerical error happened; ignore it for now, but return NAN
     if (data->x->c->errStat.status) {
@@ -605,7 +601,6 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
     const gsl_multimin_fminimizer_type *T =
             gsl_multimin_fminimizer_nmsimplex; // We don't use nmsimplex2 here because it was new in gsl 1.12
     gsl_multimin_fminimizer *s;
-    gsl_vector *x, *ss;
     gsl_multimin_function fn;
 
     // Describe the function to minimise to GSL
@@ -614,8 +609,8 @@ void eps_plot_LAUFitter(LAUComm *commlink) {
     fn.params = (void *) commlink;
 
     // The position of the minimiser, and its initial step size
-    x = gsl_vector_alloc(1);
-    ss = gsl_vector_alloc(1);
+    gsl_vector *x = gsl_vector_alloc(1);
+    gsl_vector *ss = gsl_vector_alloc(1);
 
     // Restart the minimiser several times, transforming the variable differently on each pass, until the result stops
     // improving; when fitting the exponents of units, a single pass suffices

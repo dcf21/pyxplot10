@@ -71,10 +71,9 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
     int pos = ptab[fillColor ? PARSE_INDEX_fillcolor : PARSE_INDEX_color];
     pplObj *col = &in->stk[stkbase + pos];
     char msg[PPL_MSG_LENGTH];
-    int s;
     if (pos < 0) return 0;
-    s = ppl_colorFromObj(c, col, outcol, outcolspace, EXPoutcol, outcol1, outcol2, outcol3, outcol4, USEcol, USEcol1234,
-                         msg);
+    int s = ppl_colorFromObj(c, col, outcol, outcolspace, EXPoutcol, outcol1, outcol2, outcol3, outcol4, USEcol,
+                             USEcol1234, msg);
     if (s) ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, msg);
     return s;
 }
@@ -105,24 +104,23 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
             return 0;
         case PPLOBJ_NUM: // color specified as palette index
         {
-            int j, k1, k2, palette_index1, palette_index2;
-            double w1, w2;
+            int j;
             // A number refers to a color in the palette, counting from 1 and wrapping around at the end of the palette.
             // A fractional number mixes the two palette colors either side of it; e.g. 1.5 is halfway between colors 1
             // and 2. j is the length of the palette.
             for (j = 1; j < PALETTE_LENGTH; j++)
                 if (c->set->palette_current[j] == -1) break;
-            k1 = (int) floor(col->real);
+            int k1 = (int) floor(col->real);
             if (k1 > INT_MAX - 8) k1 = INT_MAX - 8;
             if (k1 < INT_MIN + 8) k1 = INT_MIN + 8;
-            k2 = k1 + 1; // Mix color indexes k1 and k2
-            w2 = col->real - k1; // weights for two colors
+            int k2 = k1 + 1; // Mix color indexes k1 and k2
+            double w2 = col->real - k1; // weights for two colors
             if (w2 <= 0) w2 = 0;
             if (w2 >= 1) w2 = 1;
-            w1 = 1 - w2;
-            palette_index1 = (k1 - 1) % j;
+            double w1 = 1 - w2;
+            int palette_index1 = (k1 - 1) % j;
             while (palette_index1 < 0) palette_index1 += j;
-            palette_index2 = (k2 - 1) % j;
+            int palette_index2 = (k2 - 1) % j;
             while (palette_index2 < 0) palette_index2 += j;
 
             {

@@ -50,15 +50,15 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     // Variables describing the image; off2 counts the bytes read so far
     char msg[PPL_MSG_LENGTH];
     unsigned char buff[60], encode, *p, c;
-    unsigned width, height, depth, dw, excess;
-    unsigned long offset, off2, size;
-    int i, j, ncols, os2, rle;
+    unsigned width, height, depth, excess;
+    unsigned long size;
+    int i, j, ncols, os2;
 
     // Log progress in debugging mode
     if (DEBUG) ppl_log(ec, "Beginning to decode BMP image file");
 
     // The first three bytes of the file have already been read to identify it
-    off2 = 3;
+    unsigned long off2 = 3;
 
     // Read rest of first header
     if (fread(buff, 11, 1, in) != 1) {
@@ -74,7 +74,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // The offset of the pixel data from the start of the file
-    offset = buff[7] + (buff[8] << 8) + (buff[9] << 16) + (buff[10] << 24);
+    unsigned long offset = buff[7] + (buff[8] << 8) + (buff[9] << 16) + (buff[10] << 24);
 
     // Read info header
     if (fread(buff, 12, 1, in) != 1) {
@@ -152,7 +152,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     }
 
     // Only RLE8 for 8-bit images, RLE4 for 4-bit images, and bit fields for 16-bit images are supported
-    rle = 0;
+    int rle = 0;
     // Check the compression type
     if (encode != 0) {
         if ((encode == 1) && (depth == 8)) rle = 8;
@@ -243,7 +243,7 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     image->width = width;
 
     // The number of bytes per row
-    dw = (width * depth + 7) / 8;
+    unsigned dw = (width * depth + 7) / 8;
     image->data_len = dw * height;
     image->depth = depth;
 
@@ -330,14 +330,14 @@ void ppl_bmp_bmpread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitmap_data *image) {
     // Variables for decoding each pixel
     unsigned char *palette;
-    unsigned char *rowptr, *ptr;
-    unsigned int width, height, colour;
-    int is15, i, j;
+    unsigned char *ptr;
+    unsigned int colour;
+    int i, j;
 
     // Assume 5 bits per component unless the bit masks say otherwise
-    is15 = 1;
-    width = image->width;
-    height = image->height;
+    int is15 = 1;
+    unsigned int width = image->width;
+    unsigned int height = image->height;
 
     if (header[16] == 3) // Read "palette" and check correct
     { // Palette can be 7c00 03e0 001f (15 bit)
@@ -377,7 +377,7 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
     }
 
     // A buffer for one row of input
-    rowptr = malloc(2 * width);
+    unsigned char *rowptr = malloc(2 * width);
     // Failure to allocate memory is reported as an error
     if (rowptr == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -435,14 +435,14 @@ void ppl_bmp_bmp16read(pplerr_context *ec, FILE *in, unsigned char *header, bitm
 int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, const unsigned long len) {
     // Variables for decoding
     char msg[PPL_MSG_LENGTH];
-    unsigned char *out, *c_in, *c_out, code, *end, odd, even, *inEnd;
-    unsigned long i, j, delta, size, height, width;
-    int eol, rle;
+    unsigned char code, *end, odd, even;
+    unsigned long i, j, delta;
+    int eol;
 
     // The decoded image has one byte per pixel
-    height = image->height;
-    width = image->width;
-    rle = image->depth;
+    unsigned long height = image->height;
+    unsigned long width = image->width;
+    int rle = image->depth;
     // Only 4-bit and 8-bit images can be run-length encoded
     if ((rle != 4) && (rle != 8)) {
         ppl_error(ec, ERR_FILE, -1, -1, "This bitmap file has an impossible MSRLE image depth");
@@ -456,11 +456,11 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
 
     // The output has one byte per pixel
     image->depth = 8;
-    size = height * width;
+    unsigned long size = height * width;
     image->data_len = size;
 
     // Allocate the output
-    out = (unsigned char *) ppl_memAlloc(image->data_len);
+    unsigned char *out = (unsigned char *) ppl_memAlloc(image->data_len);
     // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -471,9 +471,9 @@ int ppl_bmp_demsrle(pplerr_context *ec, bitmap_data *image, unsigned char *in, c
     memset(out, 0, image->data_len);
 
     // Pointers into the input and output
-    c_in = in;
-    c_out = out;
-    inEnd = in + len;
+    unsigned char *c_in = in;
+    unsigned char *c_out = out;
+    unsigned char *inEnd = in + len;
 
     // Decode each row, from the bottom of the image up. Rows are stored from the top down, so row i starts at
     // out + (height - i) * width.

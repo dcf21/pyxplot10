@@ -198,7 +198,7 @@ static int clipArrowEnd(double *pos[6], const double grad[3][6], const int xyz, 
 
 void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origin_y, const double width,
                            const double height, const double zdepth) {
-    int pageno, hal, val;
+    int hal, val;
     char ItemName[64];
     pplarrow_object *ai;
     ppllabel_object *li;
@@ -212,7 +212,7 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
     ww_default.linetype = ww_default.linewidth = 1.0;
 
     // The labels' text was typeset in order, starting from this page
-    pageno = x->LaTeXpageno = x->current->SetLabelTextID;
+    int pageno = x->LaTeXpageno = x->current->SetLabelTextID;
 
     // Loop through all arrows, rendering them in turn
     for (ai = x->current->arrow_list; ai != NULL; ai = ai->next) {
@@ -375,7 +375,6 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                     for (yrn = 0; yrn <= ((ya != NULL) ? ya->AxisValueTurnings : 0); yrn++)
                         for (zrn = 0; zrn <= ((x->current->ThreeDim && (za != NULL)) ? za->AxisValueTurnings : 0);
                              zrn++) {
-                            double xgap, ygap, xgap2, ygap2;
                             eps_plot_GetPosition(&xpos_, &ypos_, &depth, &xap, &yap, &zap, &theta_x, &theta_y, &theta_z,
                                                  x->current->ThreeDim, xin, yin, zin, xa, ya, za, xrn, yrn, zrn,
                                                  &x->current->settings, origin_x, origin_y, width, height, zdepth, 0);
@@ -388,10 +387,10 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                             else hal = x->current->settings.TextHAlign;
                             if (li->VAlign != 0) val = li->VAlign;
                             else val = x->current->settings.TextVAlign;
-                            xgap = -(hal - SW_HALIGN_CENT) * li->gap;
-                            ygap = (val - SW_VALIGN_CENT) * li->gap;
-                            xgap2 = xgap * cos(li->rotation) - ygap * sin(li->rotation);
-                            ygap2 = xgap * sin(li->rotation) + ygap * cos(li->rotation);
+                            double xgap = -(hal - SW_HALIGN_CENT) * li->gap;
+                            double ygap = (val - SW_VALIGN_CENT) * li->gap;
+                            double xgap2 = xgap * cos(li->rotation) - ygap * sin(li->rotation);
+                            double ygap2 = xgap * sin(li->rotation) + ygap * cos(li->rotation);
                             ppl_withWordsMerge(x->c, &ww, &li->style, &ww_default, NULL, NULL, NULL, 1);
                             eps_core_SetColor(x, &ww, 0);
                             if (eps_core_isVisible(x))

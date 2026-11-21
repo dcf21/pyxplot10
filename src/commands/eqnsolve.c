@@ -175,7 +175,7 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
     pplObj output1, output2, *tmp;
     int i, lastOpAssign;
     unsigned char squareroot = 0;
-    double accumulator = 0.0, output;
+    double accumulator = 0.0;
     MMComm *data = (MMComm *) params;
     ppl_context *c = data->context;
 
@@ -287,7 +287,7 @@ static double MultiMinSlave(const gsl_vector *x, void *params) {
         }
     }
     if (squareroot) accumulator = sqrt(accumulator);
-    output = accumulator * data->sign;
+    double output = accumulator * data->sign;
     // If the score is not finite, return a score which is worse than any seen so far, which steers the minimiser away
     if ((!gsl_finite(output)) && (data->WorstScore > WORSTSCORE_INIT)) {
         data->WorstScore *= 1.1;
@@ -311,16 +311,15 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     // Variables for driving the GSL minimiser
     ppl_context *c = commlink->context;
     size_t iter = 0, iter2 = 0;
-    int i, Nparams, status = 0;
+    int i, status = 0;
     double size = 0, sizelast = 0, sizelast2 = 0;
     const gsl_multimin_fminimizer_type *T =
             gsl_multimin_fminimizer_nmsimplex; // We don't use nmsimplex2 here because it was new in gsl 1.12
     gsl_multimin_fminimizer *s = NULL;
-    gsl_vector *x, *ss;
     gsl_multimin_function fn;
 
     // With complex arithmetic, each variable has two components to vary
-    Nparams = commlink->Nfitvars * ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) ? 1 : 2);
+    int Nparams = commlink->Nfitvars * ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) ? 1 : 2);
 
     // Describe the function to minimise to GSL
     fn.n = Nparams;
@@ -328,8 +327,8 @@ static void multiMinIterate(MMComm *commlink, const parserLine *pl) {
     fn.params = (void *) commlink;
 
     // The position of the minimiser, and its initial step sizes
-    x = gsl_vector_alloc(Nparams);
-    ss = gsl_vector_alloc(Nparams);
+    gsl_vector *x = gsl_vector_alloc(Nparams);
+    gsl_vector *ss = gsl_vector_alloc(Nparams);
 
     // Restart the minimiser several times, transforming the variables differently on each pass, until the result stops
     // improving
@@ -453,7 +452,7 @@ cleanup:
 
 static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive, const int iterDepth,
                      const double sign) {
-    pplObj *stk = in->stk, *pos;
+    pplObj *stk = in->stk;
     MMComm commlink;
     char *varName;
     pplObj dummyTemp;
@@ -467,7 +466,7 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
     commlink.Nexprs = 1;
 
     // Fetch the names of the variables which we are fitting
-    pos = &stk[PARSE_minimise_fit_variables];
+    pplObj *pos = &stk[PARSE_minimise_fit_variables];
     // Walk the linked list of the free variables on the parser stack
     while ((pos->objType == PPLOBJ_NUM) && (pos->real > 0)) {
         pos = &stk[(int) round(pos->real)];
@@ -534,7 +533,6 @@ static void minOrMax(ppl_context *c, parserLine *pl, const parserOutput *in, con
 void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in, const int interactive,
                          const int iterDepth) {
     pplObj *stk = in->stk;
-    int pos;
     MMComm commlink;
     char *varName;
     pplObj dummyTemp;
@@ -548,7 +546,7 @@ void ppl_directive_solve(ppl_context *c, parserLine *pl, const parserOutput *in,
     commlink.Nexprs = 0;
 
     // Fetch the names of the variables which we are fitting
-    pos = PARSE_solve_fit_variables;
+    int pos = PARSE_solve_fit_variables;
     // Walk the linked list of the free variables on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         pos = (int) round(stk[pos].real);

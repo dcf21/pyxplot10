@@ -39,11 +39,10 @@
 //! if the current user has no entry
 
 struct passwd *UnixGetPwEntry(const pplerr_context *context) {
-    int uid;
     struct passwd *ptr;
 
     // Search the password database for an entry with the current user's ID
-    uid = getuid();
+    int uid = getuid();
     setpwent(); // Memory leak which valgrind reveals here is probably okay; getpwent sets up a static variable with malloc
     while ((ptr = getpwent()) != NULL)
         if (ptr->pw_uid == uid) break;
@@ -58,9 +57,8 @@ struct passwd *UnixGetPwEntry(const pplerr_context *context) {
 
 char *ppl_unixGetHomeDir(pplerr_context *context) {
     char msg[PPL_MSG_LENGTH];
-    struct passwd *ptr;
     static char *failover = NULL;
-    ptr = UnixGetPwEntry(context);
+    struct passwd *ptr = UnixGetPwEntry(context);
     // If the user has no entry, guess that their home directory is /home/<login name>, and warn about it once
     if (ptr == NULL) {
         if (failover != NULL) return failover;
@@ -101,9 +99,8 @@ char *ppl_unixGetUserHomeDir(const pplerr_context *context, const char *username
 
 char *ppl_unixGetIRLName(pplerr_context *context) {
     static char name[FNAME_LENGTH];
-    struct passwd *ptr;
     int i;
-    ptr = UnixGetPwEntry(context);
+    struct passwd *ptr = UnixGetPwEntry(context);
     if (ptr == NULL) return getlogin(); // In case of failure, return user's login.
     snprintf(name, FNAME_LENGTH, "%s", ptr->pw_gecos);
     for (i = 0; name[i] != '\0'; i++)

@@ -126,42 +126,38 @@ static double cie_color_match[N_CIE_STEPS][3] = {
 
 static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const double yc, const double zc, double *r,
                        double *g, double *b) {
-    double xr, yr, zr, xg, yg, zg, xb, yb, zb;
-    double xw, yw, zw;
-    double rx, ry, rz, gx, gy, gz, bx, by, bz;
-    double rw, gw, bw;
 
     // The chromaticity coordinates of the primaries of the color system, with z = 1 - x - y
-    xr = cs->xRed;
-    yr = cs->yRed;
-    zr = 1 - (xr + yr);
-    xg = cs->xGreen;
-    yg = cs->yGreen;
-    zg = 1 - (xg + yg);
-    xb = cs->xBlue;
-    yb = cs->yBlue;
-    zb = 1 - (xb + yb);
+    double xr = cs->xRed;
+    double yr = cs->yRed;
+    double zr = 1 - (xr + yr);
+    double xg = cs->xGreen;
+    double yg = cs->yGreen;
+    double zg = 1 - (xg + yg);
+    double xb = cs->xBlue;
+    double yb = cs->yBlue;
+    double zb = 1 - (xb + yb);
 
     // The chromaticity of the white point
-    xw = cs->xWhite;
-    yw = cs->yWhite;
-    zw = 1 - (xw + yw);
+    double xw = cs->xWhite;
+    double yw = cs->yWhite;
+    double zw = 1 - (xw + yw);
 
     // xyz -> rgb matrix, before scaling to white
-    rx = (yg * zb) - (yb * zg);
-    ry = (xb * zg) - (xg * zb);
-    rz = (xg * yb) - (xb * yg);
-    gx = (yb * zr) - (yr * zb);
-    gy = (xr * zb) - (xb * zr);
-    gz = (xb * yr) - (xr * yb);
-    bx = (yr * zg) - (yg * zr);
-    by = (xg * zr) - (xr * zg);
-    bz = (xr * yg) - (xg * yr);
+    double rx = (yg * zb) - (yb * zg);
+    double ry = (xb * zg) - (xg * zb);
+    double rz = (xg * yb) - (xb * yg);
+    double gx = (yb * zr) - (yr * zb);
+    double gy = (xr * zb) - (xb * zr);
+    double gz = (xb * yr) - (xr * yb);
+    double bx = (yr * zg) - (yg * zr);
+    double by = (xg * zr) - (xr * zg);
+    double bz = (xr * yg) - (xg * yr);
 
     // White scaling factors. Dividing by yw scales the white luminance to unity, as conventional.
-    rw = ((rx * xw) + (ry * yw) + (rz * zw)) / yw;
-    gw = ((gx * xw) + (gy * yw) + (gz * zw)) / yw;
-    bw = ((bx * xw) + (by * yw) + (bz * zw)) / yw;
+    double rw = ((rx * xw) + (ry * yw) + (rz * zw)) / yw;
+    double gw = ((gx * xw) + (gy * yw) + (gz * zw)) / yw;
+    double bw = ((bx * xw) + (by * yw) + (bz * zw)) / yw;
 
     // xyz -> rgb matrix, correctly scaled to white
     rx = rx / rw;
@@ -199,10 +195,9 @@ static int inside_gamut(const double r, const double g, const double b) {
 //! \return One if the color was modified, zero if it was already within the gamut
 
 static int constrain_rgb(double *r, double *g, double *b) {
-    double w;
 
     // Amount of white needed is w = - min(0, *r, *g, *b)
-    w = (0 < *r) ? 0 : *r;
+    double w = (0 < *r) ? 0 : *r;
     w = (w < *g) ? w : *g;
     w = (w < *b) ? w : *b;
     w = -w;
@@ -265,8 +260,6 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     // entries either side of it, with weights wi and wj
     char *FunctionDescription = "wavelength(lambda,norm)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
-    double p0, wi, wj, x, y, z, norm;
-    int i, j;
 
     // The wavelength must have units of length, and the normalisation must be dimensionless
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a wavelength", UNIT_LENGTH, 1)) return;
@@ -280,26 +273,26 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
 
     // Wavelengths outside the table (in nm) give black
-    norm = in[1].real;
-    p0 = ((in[0].real * 1e9) - CIE_WLEN_MIN) / CIE_WLEN_STEPSIZE;
+    double norm = in[1].real;
+    double p0 = ((in[0].real * 1e9) - CIE_WLEN_MIN) / CIE_WLEN_STEPSIZE;
     // Outside the table
     if ((!gsl_finite(p0)) || (p0 < 0) || (p0 >= N_CIE_STEPS - 1)) {
         pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
         return;
     } // Black
-    i = (int) floor(p0);
+    int i = (int) floor(p0);
     if (i < 0) i = 0;
     if (i > N_CIE_STEPS - 2) i = N_CIE_STEPS - 2;
-    j = i + 1;
-    wi = (j - p0);
+    int j = i + 1;
+    double wi = (j - p0);
     if (wi < 0) wi = 0;
     if (wi > 1) wi = 1;
-    wj = 1 - wi;
+    double wj = 1 - wi;
 
     // Interpolate the color-matching functions at the wavelength, to get the XYZ coordinates
-    x = cie_color_match[i][0] * wi + cie_color_match[j][0] * wj;
-    y = cie_color_match[i][1] * wi + cie_color_match[j][1] * wj;
-    z = cie_color_match[i][2] * wi + cie_color_match[j][2] * wj;
+    double x = cie_color_match[i][0] * wi + cie_color_match[j][0] * wj;
+    double y = cie_color_match[i][1] * wi + cie_color_match[j][1] * wj;
+    double z = cie_color_match[i][2] * wi + cie_color_match[j][2] * wj;
 
     xyzToColor(x, y, z, norm, &OUTPUT);
 }
@@ -319,9 +312,8 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
 void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     // x, y and z accumulate the XYZ coordinates of the spectrum
     char *FunctionDescription = "spectrum(spec,norm)";
-    pplFunc *fi;
     const int stkLevelOld = c->stackPtr;
-    double x = 0, y = 0, z = 0, norm;
+    double x = 0, y = 0, z = 0;
     int i;
 
     // The first argument must be a function
@@ -331,7 +323,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
-    fi = (pplFunc *) in[0].auxil;
+    pplFunc *fi = (pplFunc *) in[0].auxil;
     // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         ppl_funcError(status, errType, errText, ERR_TYPE,
@@ -349,7 +341,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
 
     // The normalisation, which scales the brightness of the result
-    norm = in[1].real;
+    double norm = in[1].real;
 
     // Check there's enough space on the stack
     ppl_stackMustHave(c, 4);
@@ -362,7 +354,6 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     // Evaluate the spectrum at each wavelength in the table, and weight it by the color-matching functions
     for (i = 0; i < N_CIE_STEPS; i++) {
         const double wlen = (CIE_WLEN_MIN + i * CIE_WLEN_STEPSIZE) * 1e-9;
-        double w;
         pplExpr dummy;
 
         // Dummy expression object with dummy line number information
@@ -402,7 +393,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         }
 
         // Get number back and clean stack
-        w = fabs(c->stack[c->stackPtr - 1].real) / N_CIE_STEPS;
+        double w = fabs(c->stack[c->stackPtr - 1].real) / N_CIE_STEPS;
         if (!gsl_finite(w)) w = 0;
         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
 

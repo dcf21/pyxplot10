@@ -463,9 +463,9 @@ char *ppl_strUnderline(const char *in, char *out) {
 //! \return Pointer to <out>, which is an empty string if <in> did not contain a complete line
 
 char *ppl_strRemoveCompleteLine(char *in, char *out) {
-    char *scan, *scan2, *scanout;
-    scan = scan2 = in;
-    scanout = out;
+    char *scan2;
+    char *scan = scan2 = in;
+    char *scanout = out;
     while ((*scan != '\0') && (*scan != '\n')) scan++; // Find first carriage-return in text buffer
     if (*scan != '\0')
         while (scan2 < scan) *scanout++ = *scan2++; // If one is found, copy up to this point into temporary buffer
@@ -875,10 +875,9 @@ char *ppl_strEscapify(const char *in, char *out, const size_t outLen) {
 
 int ppl_strAppendf(char *out, const size_t outLen, int *pos, const char *format, ...) {
     va_list args;
-    int n;
     if ((*pos < 0) || ((size_t) *pos + 1 >= outLen)) return 0;
     va_start(args, format);
-    n = vsnprintf(out + *pos, outLen - *pos, format, args);
+    int n = vsnprintf(out + *pos, outLen - *pos, format, args);
     va_end(args);
     // vsnprintf() always terminates the string, but this guarantees it even if the buffer was filled exactly
     out[outLen - 1] = '\0';
@@ -1057,7 +1056,7 @@ int ppl_utf8IsDigit(const long codePoint) {
 int ppl_strWildcardTest(const char *test, const char *wildcard) {
     // i is the position reached in both strings; j is the end of the run of wildcard characters; mineat and maxeat are
     // the fewest and most characters which that run may match
-    int i = 0, j, k, mineat = 0, maxeat = 0;
+    int i = 0, k, mineat = 0, maxeat = 0;
 
     // Match the literal characters before the first wildcard character
     while ((wildcard[i] != '\0') && (wildcard[i] != '?') && (wildcard[i] != '*')) {
@@ -1068,7 +1067,7 @@ int ppl_strWildcardTest(const char *test, const char *wildcard) {
 
     // Measure the run of wildcard characters which follows: each ? matches exactly one character, and any * makes the
     // number of characters unlimited
-    j = i;
+    int j = i;
     // Count the wildcard characters
     while ((wildcard[j] == '?') || (wildcard[j] == '*')) {
         // A ? consumes one character; a * consumes any number
@@ -1103,10 +1102,9 @@ int ppl_strWildcardTest(const char *test, const char *wildcard) {
 
 int ppl_snprintfTrunc(char *out, const size_t size, const char *format, ...) {
     va_list args;
-    int n;
     if (size == 0) return 0;
     va_start(args, format);
-    n = vsnprintf(out, size, format, args);
+    int n = vsnprintf(out, size, format, args);
     va_end(args);
     out[size - 1] = '\0';
     return n;

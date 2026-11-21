@@ -117,11 +117,10 @@ void ppl_makeDefaultVars(ppl_context *out) {
     // Default variables
     {
         pplObj v, m;
-        dict *d, *d2, *d3;
         int i;
         m.refCount = v.refCount = 1;
         ppl_dictAppendCpy(out->namespaces[1], "defaults", pplObjModule(&m, 1, 1, 1), sizeof(v));
-        d = (dict *) m.auxil;
+        dict *d = (dict *) m.auxil;
         out->namespaces[0] = d;
 
         // Root namespace
@@ -152,7 +151,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
 
         // types module
         ppl_dictAppendCpy(d, "types", pplObjModule(&m, 1, 1, 1), sizeof(v));
-        d2 = (dict *) m.auxil;
+        dict *d2 = (dict *) m.auxil;
         for (i = 0; i <= PPLOBJ_USER; i++)
             // Every type which users can see has a type object in the types module, e.g. types.string
             if ((i != PPLOBJ_GLOB) && (i != PPLOBJ_ZOM) && (i != PPLOBJ_EXP) && (i != PPLOBJ_BYT)) {
@@ -368,7 +367,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         ppl_addSystemFunc(d2, "uname", 0, 0, 1, 1, 1, 1, (void *) &pplfunc_osUname, "uname()", "\\mathrm{uname}@<@>",
                           "uname() returns a dictionary of information about the operating system");
         ppl_dictAppendCpy(d2, "path", pplObjModule(&m, 1, 1, 1), sizeof(v));
-        d3 = (dict *) m.auxil;
+        dict *d3 = (dict *) m.auxil;
         ppl_addSystemFunc(
                 d3, "atime", 1, 1, 0, 0, 0, 0, (void *) &pplfunc_osPathATime, "atime(x)", "\\mathrm{atime}@<@0@>",
                 "atime(x) returns a date object representing the time of the last access of the file with pathname x");

@@ -206,10 +206,9 @@ int SW_PIEKEYPOS_ACL[] = {1, 1, 1, 1, -1};
 void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, void *name_list,
                            const int name_list_size) {
     char msg[PPL_MSG_LENGTH];
-    int first;
     static int latch = 0;
     static char *dummyout = "";
-    first = *id_list;
+    int first = *id_list;
     // Step through the two tables in parallel until we find <id>
     while (1) {
         if (*id_list == id) return name_list;

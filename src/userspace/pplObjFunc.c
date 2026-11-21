@@ -182,11 +182,10 @@ pplFunc *pplObjFuncCpy(pplFunc *f) {
     // Only user-defined functions can be copied
     pplFunc *o;
     int i, j;
-    int Nargs;
     if (f->functionType != PPL_FUNC_USERDEF) return NULL;
 
     // Find the length of the list of argument names, which are stored one after another, each null-terminated
-    Nargs = f->maxArgs;
+    int Nargs = f->maxArgs;
     for (j = 0, i = 0; i < Nargs; i++)
         while (f->argList[j++] != '\0');
 

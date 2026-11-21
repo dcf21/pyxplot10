@@ -65,22 +65,21 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
                                           const double *min, const double *max, const pplObj *unit, double **raster,
                                           int *rasterLen) {
     char msg[LSTR_LENGTH];
-    int i, j, pos, commaPos = 0, bracketLevel = 0, containsOperator = 0, containsDummy = 0, NWords = 0, outputContext,
+    int i, j, pos, commaPos = 0, bracketLevel = 0, containsOperator = 0, containsDummy = 0, NWords = 0,
                    contextRough = -1;
     int dummyArgNo = 0;
     char newWord = 1, fail = 0;
     char c;
     char *buf = msg;
     char *currentFnName = "", *dummyInFunction = NULL;
-    list *bracketStack, *bracketCommaPos;
     pplObj *funcObjPtr = NULL;
     pplFunc *funcPtr = NULL;
 
     // Make temporary rough workspace
-    outputContext = ppl_memAlloc_GetMemContext();
+    int outputContext = ppl_memAlloc_GetMemContext();
     contextRough = ppl_memAlloc_DescendIntoNewContext();
-    bracketStack = ppl_listInit(0);
-    bracketCommaPos = ppl_listInit(0);
+    list *bracketStack = ppl_listInit(0);
+    list *bracketCommaPos = ppl_listInit(0);
 
     // Parse each expression, to check that the dummy variable appears only as a bare argument of a single function
     for (i = 0; i < fnlist_len; i++) {
@@ -170,13 +169,12 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
     // Make custom raster
     if (funcPtr->functionType == PPL_FUNC_HISTOGRAM) {
         histogramDescriptor *desc = (histogramDescriptor *) funcPtr->functionPtr;
-        double *outputRaster;
         int rasterCount = 0;
         long NInput = desc->Nbins - 1;
         if (NInput < 1) NInput = 1;
 
         // Allocate the raster in the caller's memory context
-        outputRaster = (double *) ppl_memAlloc_incontext(NInput * sizeof(double), outputContext);
+        double *outputRaster = (double *) ppl_memAlloc_incontext(NInput * sizeof(double), outputContext);
         if (outputRaster == NULL) goto CLEANUP;
 
         // Sample at the centre of each bin within the plot range, using geometric centres for logarithmic bins
@@ -192,12 +190,12 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         *rasterLen = rasterCount;
     } else if (funcPtr->functionType == PPL_FUNC_FFT) {
         FFTDescriptor *desc = (FFTDescriptor *) funcPtr->functionPtr;
-        double *outputRaster;
         int rasterCount = 0;
 
         // The dummy variable must be one of the transform's arguments
         if (dummyArgNo >= desc->Ndims) goto CLEANUP;
-        outputRaster = (double *) ppl_memAlloc_incontext(desc->XSize[dummyArgNo] * sizeof(double), outputContext);
+        double *outputRaster = (double *) ppl_memAlloc_incontext(desc->XSize[dummyArgNo] * sizeof(double),
+                                outputContext);
         if (outputRaster == NULL) goto CLEANUP;
 
         // Sample at each grid point within the plot range

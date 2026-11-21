@@ -66,16 +66,14 @@ typedef struct lineClip {
 static void clipAgainstFace(lineClip *lc, const double a1, const double a2, const double b1, const double b2,
                             const double c1, const double c2, const double pos, const double sgn,
                             const unsigned char face) {
-    double fr, bCross, cCross;
-    int n;
     if (a2 == a1) return; // The segment is parallel to the face
-    fr = (pos - a1) / (a2 - a1); // Fractional position along the segment where it meets the plane of the face
+    double fr = (pos - a1) / (a2 - a1); // Fractional position along the segment where it meets the plane of the face
     if (!((fr >= 0) && (fr <= 1))) return; // Written this way so that NaN is rejected
-    bCross = b1 + (b2 - b1) * fr;
-    cCross = c1 + (c2 - c1) * fr;
+    double bCross = b1 + (b2 - b1) * fr;
+    double cCross = c1 + (c2 - c1) * fr;
     if (!((bCross >= 0.0) && (bCross <= 1.0) && (cCross >= 0.0) && (cCross <= 1.0))) return;
     // A segment entering the graph through this face records the crossing as its first; one leaving, as its second
-    n = ((a1 * sgn) < (a2 * sgn)) ? 0 : 1;
+    int n = ((a1 * sgn) < (a2 * sgn)) ? 0 : 1;
     *lc->cx[n] = lc->x1 + (lc->x2 - lc->x1) * fr;
     *lc->cy[n] = lc->y1 + (lc->y2 - lc->y1) * fr;
     *lc->cz[n] = lc->z1 + (lc->z2 - lc->z1) * fr;
@@ -167,8 +165,7 @@ LineDrawHandle *LineDraw_Init(EPSComm *x, pplset_axis *xa, pplset_axis *ya, ppls
                               const int yrn, const int zrn, pplset_graph *sg, const unsigned char ThreeDim,
                               const double origin_x, const double origin_y, const double width, const double height,
                               const double zdepth) {
-    LineDrawHandle *output;
-    output = (LineDrawHandle *) ppl_memAlloc(sizeof(LineDrawHandle));
+    LineDrawHandle *output = (LineDrawHandle *) ppl_memAlloc(sizeof(LineDrawHandle));
     if (output == NULL) return NULL;
     output->x = x;
     output->xa = xa;

@@ -45,7 +45,6 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_arrow_RenderEPS(EPSComm *x) {
-    double x1, x2, y1, y2;
     withWords ww;
 
     // Print label at top of postscript description of arrow
@@ -53,10 +52,10 @@ void eps_arrow_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate positions of start and end of arrow
-    x1 = x->current->xpos * M_TO_PS; // Start of arrow
-    y1 = x->current->ypos * M_TO_PS;
-    x2 = (x->current->xpos2 + x->current->xpos) * M_TO_PS; // End of arrow
-    y2 = (x->current->ypos2 + x->current->ypos) * M_TO_PS;
+    double x1 = x->current->xpos * M_TO_PS; // Start of arrow
+    double y1 = x->current->ypos * M_TO_PS;
+    double x2 = (x->current->xpos2 + x->current->xpos) * M_TO_PS; // End of arrow
+    double y2 = (x->current->ypos2 + x->current->ypos) * M_TO_PS;
 
     // Expand any numbered styles which may appear in the with words we are passed
     ppl_withWordsMerge(x->c, &ww, &x->current->with_data, NULL, NULL, NULL, NULL, 1);
@@ -119,7 +118,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                          const double *z2, withWords *with_data) {
     char msg[PPL_MSG_LENGTH];
     int lt;
-    double lw, lw_scale, xstart, ystart, xend, yend, direction;
+    double lw_scale, xstart, ystart, xend, yend, direction;
     const unsigned char ThreeDim = (z1 != NULL) && (z2 != NULL);
     char *last_colstr = NULL;
 
@@ -135,7 +134,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
     // Set linewidth and linetype
     if (with_data->USElinewidth) lw_scale = with_data->linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (with_data->USElinetype) lt = with_data->linetype;

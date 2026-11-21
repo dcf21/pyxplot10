@@ -209,7 +209,6 @@ void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *
     // Run the body of the loop, then evaluate the condition, repeating while it is true
     do {
         int lastOpAssign, dollarAllowed = 1;
-        pplObj *val;
         ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
         // Add this statement to the traceback of any error
         if (c->errStat.status) {
@@ -225,7 +224,7 @@ void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *
             continue;
         }
         if ((c->shellBroken) || (c->shellContinued) || (c->shellReturned) || (c->shellExiting)) break;
-        val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+        pplObj *val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
         // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
@@ -365,8 +364,7 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             // Evaluate the condition, if any, and stop when it becomes false
             if (condGot) {
                 int lastOpAssign, dollarAllowed = 1, criterion = 1;
-                pplObj *val;
-                val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+                pplObj *val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
                 // Add this statement to the traceback of any error
                 if (c->errStat.status) {
                     strcpy(c->errStat.errBuff, "");
@@ -686,7 +684,6 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
             for (k = 0; ((k < Nvars) && inRange); k++) {
                 pplObj *obj = &blk->data_obj[k + j * Nvars];
                 const int numeric = obj->objType == unit[k].objType;
-                int om, rc;
 
                 // Fetch variable pointer
                 ppl_contextGetVarPointer(c, varname[k], &varObj[k], &vartmp[k]);
@@ -720,8 +717,8 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
                     if (maxSet[k] && (obj->real > max[k])) inRange = 0;
                 }
                 if ((obj->objType == PPLOBJ_STR) && (obj->auxil == NULL)) { inRange = 0; } // NULL strings are bad
-                om = varObj[k]->amMalloced;
-                rc = varObj[k]->refCount;
+                int om = varObj[k]->amMalloced;
+                int rc = varObj[k]->refCount;
                 varObj[k]->amMalloced = 0;
                 ppl_garbageObject(varObj[k]);
                 pplObjCpy(varObj[k], obj, 0, 0, 1);
@@ -792,13 +789,12 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
     parserLine *pl_else = (parserLine *) stk[PARSE_if_code_else].auxil;
     const int gotelse = (stk[PARSE_if_code_else].objType == PPLOBJ_BYT);
     pplExpr *cond = (pplExpr *) stk[PARSE_if_criterion].auxil;
-    pplObj *val;
-    int lastOpAssign, dollarAllowed = 1, criterion;
+    int lastOpAssign, dollarAllowed = 1;
     int pos = PARSE_if_0elifs;
     const int stkLevelOld = c->stackPtr;
 
     // Test criterion
-    val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+    pplObj *val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
     // Add this statement to the traceback of any error
     if (c->errStat.status) {
         strcpy(c->errStat.errBuff, "");
@@ -806,7 +802,7 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
         return;
     }
     ppl_castToBool(c, val);
-    criterion = (val->real != 0);
+    int criterion = (val->real != 0);
     ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
     // If the condition is true, run the if block, and stop
     if (criterion) {
@@ -825,13 +821,12 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
     while (stk[pos].objType == PPLOBJ_NUM) {
         parserLine *pl_elif = NULL;
         pplExpr *cond_elif = NULL;
-        pplObj *val;
-        int lastOpAssign, dollarAllowed = 1, criterion;
+        int lastOpAssign, dollarAllowed = 1;
         pos = (int) round(stk[pos].real);
         pl_elif = (parserLine *) stk[pos + PARSE_if_code_elif_0elifs].auxil;
         cond_elif = (pplExpr *) stk[pos + PARSE_if_criterion_0elifs].auxil;
         if (pos <= 0) break;
-        val = ppl_expEval(c, cond_elif, &lastOpAssign, dollarAllowed, iterDepth + 1);
+        pplObj *val = ppl_expEval(c, cond_elif, &lastOpAssign, dollarAllowed, iterDepth + 1);
         // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
@@ -839,7 +834,7 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
             return;
         }
         ppl_castToBool(c, val);
-        criterion = (val->real != 0);
+        int criterion = (val->real != 0);
         ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
         // If this condition is true, run its block, and stop
         if (criterion) {
@@ -881,17 +876,15 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
                          const int iterDepth) {
     pplObj *stk = in->stk;
     parserLine *plsub = (parserLine *) stk[PARSE_subroutine_code].auxil;
-    int pos, nArgs = 0, argListLen = 0, i, om, rc;
+    int nArgs = 0, argListLen = 0;
     pplFunc *f = NULL;
-    pplObj *tmpObj;
 
     // Count number of arguments
-    pos = PARSE_subroutine_0argument_list;
+    int pos = PARSE_subroutine_0argument_list;
     // Walk the linked list of argument names on the parser stack, counting them
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        char *name;
         pos = (int) round(stk[pos].real);
-        name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
+        char *name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
         nArgs++;
         argListLen += strlen(name) + 1;
     }
@@ -938,23 +931,23 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
 
     // Put argument names into structure
     pos = PARSE_subroutine_0argument_list;
-    i = 0;
+    int i = 0;
     // Store the argument names one after another, each followed by a zero byte
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        char *name;
         pos = (int) round(stk[pos].real);
-        name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
+        char *name = (char *) stk[pos + PARSE_subroutine_argument_name_0argument_list].auxil;
         strcpy(f->argList + i, name);
         i += strlen(name) + 1;
     }
 
     // Look up function or variable we are superseding
-    tmpObj = ppl_lookupAssignable(c, pl, in, PARSE_subroutine_subroutine_names, PARSE_subroutine_subroutine_name_subroutine_names);
+    pplObj *tmpObj = ppl_lookupAssignable(c, pl, in, PARSE_subroutine_subroutine_names,
+                                          PARSE_subroutine_subroutine_name_subroutine_names);
     if (tmpObj == NULL) goto fail;
 
     // Replace the variable's old value with the subroutine, keeping its reference count and storage
-    om = tmpObj->amMalloced;
-    rc = tmpObj->refCount;
+    int om = tmpObj->amMalloced;
+    int rc = tmpObj->refCount;
     tmpObj->amMalloced = 0;
     tmpObj->refCount = 1;
     ppl_garbageObject(tmpObj);
@@ -1003,8 +996,7 @@ void ppl_directive_while(ppl_context *c, const parserLine *pl, const parserOutpu
     // presses control-C
     while (!cancellationFlag) {
         int lastOpAssign, dollarAllowed = 1;
-        pplObj *val;
-        val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+        pplObj *val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
         // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
@@ -1057,7 +1049,6 @@ void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput
     pplObj *stk = in->stk;
     parserLine *pl2 = (parserLine *) stk[PARSE_with_code].auxil;
     pplObj *obj = &stk[PARSE_with_namespace];
-    dict *d;
     const int stkLevelOld = c->stackPtr;
 
     // Check that there's enough space on the stack
@@ -1074,7 +1065,7 @@ void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput
         ppl_tbAddLine(c, pl, ERR_TYPE, 0, "");
         return;
     }
-    d = (dict *) obj->auxil;
+    dict *d = (dict *) obj->auxil;
 
     // Enter a new namespace
     d->refCount++;

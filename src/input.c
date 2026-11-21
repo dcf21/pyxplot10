@@ -121,8 +121,7 @@ void ppl_interactiveSession(ppl_context *context) {
             ppl_error_setstreaminfo(&context->errcontext, -1, "");
 #ifdef HAVE_READLINE
             {
-                int len;
-                char *line_ptr, prompt[32];
+                char prompt[32];
                 // After a line ending with a backslash, show a continuation prompt
                 if (context->inputLineAddBuffer != NULL) {
                     strcpy(prompt, ".......> ");
@@ -137,12 +136,12 @@ void ppl_interactiveSession(ppl_context *context) {
                 // On SIGINT, readline is abandoned and a new prompt is shown
                 if (sigsetjmp(sigint_destination, 1) != 0) { printf("\n"); }
                 sigint_longjmp = 1;
-                line_ptr = readline(prompt);
+                char *line_ptr = readline(prompt);
                 sigint_longjmp = 0;
                 if (line_ptr == NULL) break;
                 add_history(line_ptr);
                 context->historyNLinesWritten++;
-                len = strlen(line_ptr) + 1;
+                int len = strlen(line_ptr) + 1;
                 // Shrink the buffer back to its usual size after a long line
                 if ((context->inputLineBufferLen > LSTR_LENGTH) && (len < LSTR_LENGTH)) {
                     free(context->inputLineBuffer);

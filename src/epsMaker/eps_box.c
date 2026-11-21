@@ -43,7 +43,7 @@ void eps_box_RenderEPS(EPSComm *x) {
     // Variables for the shape and style of the box
     int lt;
     unsigned char filled = 0, stroked = 0;
-    double lw, lw_scale, x1, x2, y1, y2, xo, yo, r;
+    double lw_scale, xo, yo;
     withWords ww;
 
     // Print label at top of postscript description of box
@@ -51,11 +51,11 @@ void eps_box_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate positions of two opposite corners of box
-    x1 = x->current->xpos * M_TO_PS; // First corner
-    y1 = x->current->ypos * M_TO_PS;
-    x2 = (x->current->xpos2 + x->current->xpos) * M_TO_PS; // Second corner
-    y2 = (x->current->ypos2 + x->current->ypos) * M_TO_PS;
-    r = x->current->rotation;
+    double x1 = x->current->xpos * M_TO_PS; // First corner
+    double y1 = x->current->ypos * M_TO_PS;
+    double x2 = (x->current->xpos2 + x->current->xpos) * M_TO_PS; // Second corner
+    double y2 = (x->current->ypos2 + x->current->ypos) * M_TO_PS;
+    double r = x->current->rotation;
 
     // Expand any numbered styles which may appear in the with words we are passed
     ppl_withWordsMerge(x->c, &ww, &x->current->with_data, NULL, NULL, NULL, NULL, 1);
@@ -94,7 +94,7 @@ void eps_box_RenderEPS(EPSComm *x) {
     // Set linewidth and linetype of outline
     if (ww.USElinewidth) lw_scale = ww.linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;

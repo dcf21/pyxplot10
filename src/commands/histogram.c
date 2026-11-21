@@ -79,19 +79,14 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     dataTable *data;
-    dataBlock *blk;
     long int i = 0, j, k;
-    int contextLocalVec, contextDataTab, errCount = DATAFILE_NERRS;
-    int gotBinList, logAxis;
-    pplFunc *funcPtr;
+    int errCount = DATAFILE_NERRS;
     pplObj v, firstEntry;
     char filenameOut[FNAME_LENGTH] = "";
     pplObj unit[USING_ITEMS_MAX];
     int minSet[USING_ITEMS_MAX], maxSet[USING_ITEMS_MAX];
     double min[USING_ITEMS_MAX], max[USING_ITEMS_MAX];
-    double *xdata;
     parserLine *spool = NULL, **dataSpool = &spool;
-    histogramDescriptor *output;
 
     // Read ranges
     {
@@ -116,8 +111,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     }
 
     // Allocate a new memory context for the data file we're about to read
-    contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
-    contextDataTab = ppl_memAlloc_DescendIntoNewContext();
+    int contextLocalVec = ppl_memAlloc_DescendIntoNewContext();
+    int contextDataTab = ppl_memAlloc_DescendIntoNewContext();
 
     // Read input data
     {
@@ -163,7 +158,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     }
 
     // Transfer data from multiple data tables into a single vector
-    xdata = (double *) ppl_memAlloc_incontext(data->Nrows * sizeof(double), contextLocalVec);
+    double *xdata = (double *) ppl_memAlloc_incontext(data->Nrows * sizeof(double), contextLocalVec);
 
     // Failure to allocate memory is reported as an error
     if (xdata == NULL) {
@@ -173,7 +168,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     }
 
     // Copy data table into an array of x values
-    blk = data->first;
+    dataBlock *blk = data->first;
     i = 0;
     // Loop over the blocks of the data table
     while (blk != NULL) {
@@ -188,8 +183,8 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     qsort((void *) xdata, i, sizeof(double), hcompare);
 
     // Work out whether we are constructing histogram in linear space or log space
-    gotBinList = (stk[PARSE_histogram_bin_list].objType == PPLOBJ_NUM);
-    logAxis = ((!gotBinList) && (c->set->XAxes[1].log == SW_BOOL_TRUE)); // Read from axis x1
+    int gotBinList = (stk[PARSE_histogram_bin_list].objType == PPLOBJ_NUM);
+    int logAxis = ((!gotBinList) && (c->set->XAxes[1].log == SW_BOOL_TRUE)); // Read from axis x1
 
     // Filter out any values of x which are out-of-range
     for (j = k = 0; j < i; j++) {
@@ -231,7 +226,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     }
 
     // Make histogramDescriptor data structure
-    output = (histogramDescriptor *) malloc(sizeof(histogramDescriptor));
+    histogramDescriptor *output = (histogramDescriptor *) malloc(sizeof(histogramDescriptor));
     // Failure to allocate memory is reported as an error
     if (output == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
@@ -253,7 +248,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
     // Now need to work out what bins we're going to use
     if (gotBinList) {
-        int binListLen = 0, j;
+        int binListLen = 0;
         int pos = PARSE_histogram_bin_list;
         // Count the bins in the list supplied
         while (stk[pos].objType == PPLOBJ_NUM) {
@@ -272,14 +267,13 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
             output = NULL;
             return;
         }
-        j = 0;
+        int j = 0;
         pos = PARSE_histogram_bin_list;
         // Copy the bin boundaries supplied, rejecting any with the wrong units
         while (stk[pos].objType == PPLOBJ_NUM) {
-            pplObj *val;
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
-            val = &stk[pos + PARSE_histogram_x_bin_list];
+            pplObj *val = &stk[pos + PARSE_histogram_x_bin_list];
             // Warn about bin boundaries with the wrong units, and skip them
             if (!ppl_unitsDimEqual(&firstEntry, val)) {
                 ppl_snprintfTrunc(
@@ -298,11 +292,11 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
     } else {
         pplObj *BinWidth, *BinOrigin, tempValObj;
         int BinOriginSet;
-        double BinOriginDbl = 0, BinWidthDbl, xbinmin, xbinmax;
+        double BinOriginDbl = 0, BinWidthDbl;
         pplObj *inbinWidth = &stk[PARSE_histogram_binwidth];
         pplObj *inbinOrigin = &stk[PARSE_histogram_binorigin];
-        xbinmin = xdata[0];
-        xbinmax = xdata[k - 1];
+        double xbinmin = xdata[0];
+        double xbinmax = xdata[k - 1];
         if (minSet[0]) xbinmin = logAxis ? log(min[0]) : min[0];
         if (maxSet[0]) xbinmax = logAxis ? log(max[0]) : max[0];
         // Make sure the range is the right way around
@@ -581,7 +575,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
         }
 
     // Make a new function descriptor
-    funcPtr = (pplFunc *) malloc(sizeof(pplFunc));
+    pplFunc *funcPtr = (pplFunc *) malloc(sizeof(pplFunc));
     // Failure to allocate memory is reported as an error
     if (funcPtr == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -637,8 +631,7 @@ void ppl_directive_histogram(ppl_context *c, parserLine *pl, parserOutput *in, c
 
 void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor *desc, pplObj *in, pplObj *out,
                             int *status, char *errout) {
-    long i, Nsteps, len, ss, pos;
-    double dblin;
+    long i, ss, pos;
 
     // The argument must have the same units as the data
     if (!ppl_unitsDimEqual(in, &desc->unit)) {
@@ -675,7 +668,7 @@ void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor 
     }
 
     // The result has the units of one over those of the data, and is zero outside the histogram
-    dblin = in->real;
+    double dblin = in->real;
 
     *out = desc->unit;
     out->imag = 0.0;
@@ -687,8 +680,8 @@ void ppl_histogram_evaluate(ppl_context *c, char *FuncName, histogramDescriptor 
         return; // Query is outside range of histogram
 
     // Find the bin containing the argument by a binary search of the bin boundaries
-    len = desc->Nbins;
-    Nsteps = (long) ceil(log(len) / log(2));
+    long len = desc->Nbins;
+    long Nsteps = (long) ceil(log(len) / log(2));
     // Take steps of halving size, so long as they do not pass the argument
     for (pos = i = 0; i < Nsteps; i++) {
         ss = 1 << (Nsteps - 1 - i);

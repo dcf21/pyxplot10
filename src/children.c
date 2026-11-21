@@ -79,7 +79,7 @@ static int PyxplotRunning = 1; // Flag which we drop in the CSP when the main pr
 
 void pplcsp_init(ppl_context *context) {
     // Variables for creating the CSP
-    int pid, fail, i;
+    int pid, i;
     struct stat statinfo;
 
     // Create empty lists for storing lists of GhostView processes
@@ -127,7 +127,7 @@ void pplcsp_init(ppl_context *context) {
                     "Failed to set process group ID."); // Make into a process group leader so that we won't catch SIGINT
 
     // Make temporary working directory
-    fail = 0;
+    int fail = 0;
     if ((mkdir(context->errcontext.session_default.tempdir, 0700) != 0) || // Create temporary working directory
         (access(context->errcontext.session_default.tempdir, F_OK) != 0)) {
         fail = 1;
@@ -170,12 +170,10 @@ void pplcsp_init(ppl_context *context) {
 void pplcsp_checkForGvOutput(ppl_context *context) {
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
-    int pos, TrialNumber;
-    ssize_t nread;
     char linebuffer[SSTR_LENGTH];
 
     // Check whether the pipe from the CSP is readable, retrying up to three times if interrupted by a signal
-    TrialNumber = 1;
+    int TrialNumber = 1;
     // Retry if interrupted by a signal
     while (1) {
         waitperiod.tv_sec = waitperiod.tv_nsec = 0;
@@ -196,8 +194,8 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
     if (!FD_ISSET(PipeCSP2MAIN[0], &readable)) return; // select tells us that pipe from CSP is not readable
 
     // Read what is waiting, and report it line by line
-    pos = strlen(PipeOutputBuffer);
-    nread = read(PipeCSP2MAIN[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
+    int pos = strlen(PipeOutputBuffer);
+    ssize_t nread = read(PipeCSP2MAIN[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
     // read() does not terminate the string, so terminate it after the new bytes
     if (nread > 0) PipeOutputBuffer[pos + nread] = '\0';
     if (nread > 0)
@@ -322,12 +320,10 @@ void pplcsp_checkForChildExits(const int signo) {
 void pplcsp_checkForNewCommands(ppl_context *context) {
     struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
     fd_set readable;
-    int pos, TrialNumber;
-    ssize_t nread;
     char linebuffer[SSTR_LENGTH];
 
     // Check whether the pipe from the main process is readable, retrying up to three times if interrupted by a signal
-    TrialNumber = 1;
+    int TrialNumber = 1;
     // Retry if interrupted by a signal
     while (1) {
         waitperiod.tv_sec = waitperiod.tv_nsec = 0;
@@ -348,8 +344,8 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
     if (!FD_ISSET(PipeMAIN2CSP[0], &readable)) return; // select tells us that pipe from main process is not readable
 
     // Read what is waiting, and process it command by command
-    pos = strlen(PipeOutputBuffer);
-    nread = read(PipeMAIN2CSP[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
+    int pos = strlen(PipeOutputBuffer);
+    ssize_t nread = read(PipeMAIN2CSP[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5);
     // read() does not terminate the string, so terminate it after the new bytes
     if (nread > 0) PipeOutputBuffer[pos + nread] = '\0';
     if (nread > 0)

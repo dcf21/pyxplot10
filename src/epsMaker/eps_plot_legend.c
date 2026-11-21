@@ -69,9 +69,8 @@ static double SortByAzimuthXCentre, SortByAzimuthYCentre, SortByAzimuthTarget;
 static int SortByAzimuthProximity(const void *x, const void *y) {
     const double *xd = (const double *) x;
     const double *yd = (const double *) y;
-    double ax, ay;
-    ax = fabs(atan2(xd[0] - SortByAzimuthXCentre, xd[1] - SortByAzimuthYCentre) - SortByAzimuthTarget);
-    ay = fabs(atan2(yd[0] - SortByAzimuthXCentre, yd[1] - SortByAzimuthYCentre) - SortByAzimuthTarget);
+    double ax = fabs(atan2(xd[0] - SortByAzimuthXCentre, xd[1] - SortByAzimuthYCentre) - SortByAzimuthTarget);
+    double ay = fabs(atan2(yd[0] - SortByAzimuthXCentre, yd[1] - SortByAzimuthYCentre) - SortByAzimuthTarget);
     while (ax > 2 * M_PI) ax -= 2 * M_PI;
     if (ax > M_PI) ax = 2 * M_PI - ax;
     while (ay > 2 * M_PI) ay -= 2 * M_PI;
@@ -90,9 +89,8 @@ static int SortByAzimuthProximity(const void *x, const void *y) {
 //! \return Zero on success, or nonzero if memory ran out (in which case an error is reported and <x->status> set)
 
 int eps_yieldTextItem(EPSComm *x, char *text) {
-    CanvasTextItem *i;
     if ((text == NULL) || (text[0] == '\0')) return 0;
-    i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+    CanvasTextItem *i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
     // Failure to allocate memory is reported as an error
     if (i == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (q).");
@@ -130,7 +128,6 @@ int eps_yieldTextItemCopy(EPSComm *x, const char *text) {
 
 void GraphLegend_YieldUpText(EPSComm *x) {
     // Variables for building automatic titles
-    canvas_plotdesc *pd;
     char *cptr, *buffer;
     int j, k, inlen;
 
@@ -138,7 +135,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
     if (x->current->settings.key != SW_ONOFF_ON) return;
 
     // Collect the title of each dataset in turn
-    pd = x->current->plotitems;
+    canvas_plotdesc *pd = x->current->plotitems;
     while (pd != NULL) // loop over all datasets
     {
         // Datasets with notitle have no entry in the legend
@@ -335,7 +332,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     double height1, height2, bb_top, bb_bottom, ab_left, ab_right, ab_top, ab_bottom;
     unsigned char hfixed = 0, vfixed = 0;
     canvas_plotdesc *pd;
-    int pageno, j, kp = x->current->settings.KeyPos;
+    int j, kp = x->current->settings.KeyPos;
     postscriptPage *dviPage;
     withWords ww;
 
@@ -343,7 +340,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     if (x->current->settings.key != SW_ONOFF_ON) return;
 
     // Loop over all legend items to calculate their individual heights and widths, as well as the combined height of all of them
-    pageno = x->LaTeXpageno = x->current->LegendTextID;
+    int pageno = x->LaTeXpageno = x->current->LegendTextID;
     {
         int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
         for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
@@ -622,7 +619,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
         for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
              pd = titledDataset(pd->next, &iDataSet)) {
             int xyzaxis[3];
-            pplset_axis *a1, *a2, *a3, *axissets[3];
+            pplset_axis *axissets[3];
             dataTable *data = x->current->plotdata[iDataSet];
             // Datasets with no data have no icon
             if ((data == NULL) || (data->Nrows < 1)) {
@@ -632,9 +629,9 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
             axissets[0] = x->current->XAxes;
             axissets[1] = x->current->YAxes;
             axissets[2] = x->current->ZAxes;
-            a1 = &axissets[pd->axis1xyz][pd->axis1];
-            a2 = &axissets[pd->axis2xyz][pd->axis2];
-            a3 = &axissets[pd->axis3xyz][pd->axis3];
+            pplset_axis *a1 = &axissets[pd->axis1xyz][pd->axis1];
+            pplset_axis *a2 = &axissets[pd->axis2xyz][pd->axis2];
+            pplset_axis *a3 = &axissets[pd->axis3xyz][pd->axis3];
             xyzaxis[pd->axis1xyz] = 0;
             xyzaxis[pd->axis2xyz] = 1;
             xyzaxis[pd->axis3xyz] = 2;

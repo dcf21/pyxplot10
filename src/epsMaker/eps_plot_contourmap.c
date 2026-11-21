@@ -109,25 +109,23 @@ static int ContourCmp(const void *xv, const void *yv) {
 
 void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const pplset_graph *sg, canvas_plotdesc *pd) {
     // Variables for finding the range of c1
-    dataBlock *blk;
     const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesX;
     const int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesY;
-    int k, Ncol;
-    double CMin, CMax, min_prelim, max_prelim, OoM, UnitMultiplier;
-    unsigned char CMinAuto, CMaxAuto, CLog;
-    char *UnitString;
+    int k;
+    double CMin, CMax, UnitMultiplier;
+    unsigned char CLog;
 
     // Check that we have some data
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
-    Ncol = data->Ncolumns_real;
-    blk = data->first;
+    int Ncol = data->Ncolumns_real;
+    dataBlock *blk = data->first;
 
     // Work out normalisation of variable c1
     if (!eps_plot_colormap_findCRange(sg, 0, blk, Ncol, XSize, YSize, &CMin, &CMax, &CLog)) return; // No data present
-    CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
-    CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
+    unsigned char CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
+    unsigned char CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
 
     // If there's no spread of data, make a spread up
     if ((fabs(CMax) <= fabs(CMin)) || (fabs(CMin - CMax) <= fabs(1e-14 * CMax))) {
@@ -147,13 +145,13 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     pd->CRangeUnit.flagComplex = 0;
     pd->CRangeUnit.imag = 0.0;
     pd->CRangeUnit.real = CLog ? (CMin * sqrt(CMax / CMin)) : ((CMin + CMax) / 2);
-    UnitString = ppl_printUnit(x->c, &pd->CRangeUnit, &UnitMultiplier, NULL, 0, 0, SW_DISPLAY_L);
+    char *UnitString = ppl_printUnit(x->c, &pd->CRangeUnit, &UnitMultiplier, NULL, 0, 0, SW_DISPLAY_L);
     UnitMultiplier /= pd->CRangeUnit.real;
     if (!gsl_finite(UnitMultiplier)) UnitMultiplier = 1.0;
 
     // Round range outwards to round endpoints
-    min_prelim = CMin * UnitMultiplier;
-    max_prelim = CMax * UnitMultiplier;
+    double min_prelim = CMin * UnitMultiplier;
+    double max_prelim = CMax * UnitMultiplier;
 
     // Work with logarithms on logarithmic scales
     if (CLog) {
@@ -162,7 +160,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     }
 
     // Round each end of the range to a multiple of a power of ten, about a fifth of the range
-    OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
+    double OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
     min_prelim = floor(min_prelim / OoM) * OoM;
     max_prelim = ceil(max_prelim / OoM) * OoM;
 
@@ -450,11 +448,10 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
         double grad;
         // Measure the gradient of each segment on the page, ignoring vertical ones
         if (xpos != xold) {
-            double x0, y0, x1, y1;
-            x0 = Lx * xold / (XSize - 1) * sin(ThetaX) + Ly * yold / (YSize - 1) * sin(ThetaY);
-            y0 = Lx * xold / (XSize - 1) * cos(ThetaX) + Ly * yold / (YSize - 1) * cos(ThetaY);
-            x1 = Lx * xpos / (XSize - 1) * sin(ThetaX) + Ly * ypos / (YSize - 1) * sin(ThetaY);
-            y1 = Lx * xpos / (XSize - 1) * cos(ThetaX) + Ly * ypos / (YSize - 1) * cos(ThetaY);
+            double x0 = Lx * xold / (XSize - 1) * sin(ThetaX) + Ly * yold / (YSize - 1) * sin(ThetaY);
+            double y0 = Lx * xold / (XSize - 1) * cos(ThetaX) + Ly * yold / (YSize - 1) * cos(ThetaY);
+            double x1 = Lx * xpos / (XSize - 1) * sin(ThetaX) + Ly * ypos / (YSize - 1) * sin(ThetaY);
+            double y1 = Lx * xpos / (XSize - 1) * cos(ThetaX) + Ly * ypos / (YSize - 1) * cos(ThetaY);
             grad = fabs((y1 - y0) / (x1 - x0));
             // Remember the flattest segment, where the label will go
             if (grad < grad_flatest) {
@@ -539,19 +536,17 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
                         const int zn, pplset_graph *sg, canvas_plotdesc *pd, const int pdn, const double origin_x,
                         const double origin_y, const double width, const double height, const double zdepth) {
     char msg[PPL_MSG_LENGTH];
-    dataBlock *blk;
     const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesX;
     const int YSize = (x->current->settings.SamplesYAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesY;
     int i, j, k, cn, pass, face, xcell, ycell;
-    double xo, yo, Lx, Ly, ThetaX, ThetaY, CMin, CMax, xpos, ypos;
+    double xo, yo, Lx, Ly, ThetaX, ThetaY, xpos, ypos;
     double col = GSL_NAN, col1 = -1, col2 = -1, col3 = -1, col4 = -1, fc = GSL_NAN, fc1 = -1, fc2 = -1, fc3 = -1,
            fc4 = -1;
-    unsigned char CLog, CMinAuto, CMaxAuto, CRenorm, *flags;
-    char *errtext, c1name[] = "c1";
+    unsigned char *flags;
+    char c1name[] = "c1";
     pplObj *CVar = NULL, CDummy;
-    ContourDesc *clist;
     int cpos = 0;
     // int         Ncol_real, Ncol_obj;
 
@@ -559,11 +554,11 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     // Ncol_real = data->Ncolumns_real;
     // Ncol_obj  = data->Ncolumns_obj;
     // if (eps_plot_WithWordsCheckUsingItemsDimLess(&pd->ww_final, data->firstEntries, Ncol_real, NULL, Ncol_obj)) return 1;
-    blk = data->first;
+    dataBlock *blk = data->first;
 
     // A list of the contours traced, and a buffer for error messages
-    clist = (ContourDesc *) ppl_memAlloc(MAX_CONTOUR_PATHS * sizeof(ContourDesc));
-    errtext = ppl_memAlloc(LSTR_LENGTH);
+    ContourDesc *clist = (ContourDesc *) ppl_memAlloc(MAX_CONTOUR_PATHS * sizeof(ContourDesc));
+    char *errtext = ppl_memAlloc(LSTR_LENGTH);
     // Failure to allocate memory is reported as an error
     if ((clist == NULL) || (errtext == NULL)) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (p).");
@@ -575,12 +570,12 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
                                   &Ly, &ThetaX, &ThetaY);
 
     // Look up normalisation of variable c1
-    CLog = (sg->Clog[0] == SW_BOOL_TRUE);
-    CMin = pd->CMinFinal;
-    CMax = pd->CMaxFinal;
-    CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
-    CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
-    CRenorm = (sg->Crenorm[0] == SW_BOOL_TRUE);
+    unsigned char CLog = (sg->Clog[0] == SW_BOOL_TRUE);
+    double CMin = pd->CMinFinal;
+    double CMax = pd->CMaxFinal;
+    unsigned char CMinAuto = (sg->Cminauto[0] == SW_BOOL_TRUE);
+    unsigned char CMaxAuto = (sg->Cmaxauto[0] == SW_BOOL_TRUE);
+    unsigned char CRenorm = (sg->Crenorm[0] == SW_BOOL_TRUE);
 
     // If no data present, stop now
     if ((CMin == 0) && (CMax == 0)) return 0;
@@ -842,15 +837,13 @@ GOT_CONTOURS:
                     int *flagA[] = {&pd->ww_final.AUTOlinetype,  NULL, NULL, NULL,
                                     &pd->ww_final.AUTOpointtype, NULL, NULL, NULL};
                     unsigned char clip[] = {0, 0, 0, 0, 0, 0, 0, 2};
-                    pplObj *outval;
-                    double dbl;
 
                     // Stop at the end of the list of expressions
                     if (clip[i] > 1) break;
                     if (expr[i] == NULL) continue;
 
                     // Evaluate the expression
-                    outval = ppl_expEval(x->c, expr[i], &lOP, 1, x->iterDepth + 1);
+                    pplObj *outval = ppl_expEval(x->c, expr[i], &lOP, 1, x->iterDepth + 1);
 
                     // Report an expression which could not be evaluated, followed by the traceback of the error
                     if (x->c->errStat.status) {
@@ -887,7 +880,7 @@ GOT_CONTOURS:
                         ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
-                    dbl = outval->real;
+                    double dbl = outval->real;
 
                     // Store the result in the style
                     if (outD[i] != NULL) *outD[i] = dbl;
@@ -926,10 +919,10 @@ GOT_CONTOURS:
 
                 // A color given as a number selects a color from the palette
                 if (gsl_finite(col)) {
-                    int j, palette_index;
+                    int j;
                     for (j = 1; j < PALETTE_LENGTH; j++)
                         if (x->c->set->palette_current[j] == -1) break;
-                    palette_index = (((int) col) - 1) % j;
+                    int palette_index = (((int) col) - 1) % j;
                     while (palette_index < 0) palette_index += j;
                     pd->ww_final.color = x->c->set->palette_current[palette_index];
                     pd->ww_final.Col1234Space = x->c->set->paletteS_current[palette_index];
@@ -943,10 +936,10 @@ GOT_CONTOURS:
                 }
                 // A fill color given as a number selects a color from the palette
                 if (gsl_finite(fc)) {
-                    int j, palette_index;
+                    int j;
                     for (j = 1; j < PALETTE_LENGTH; j++)
                         if (x->c->set->palette_current[j] == -1) break;
-                    palette_index = (((int) fc) - 1) % j;
+                    int palette_index = (((int) fc) - 1) % j;
                     while (palette_index < 0) palette_index += j;
                     pd->ww_final.fillcolor = x->c->set->palette_current[palette_index];
                     pd->ww_final.FillCol1234Space = x->c->set->paletteS_current[palette_index];
@@ -960,10 +953,10 @@ GOT_CONTOURS:
 
                 // Advance automatic plot styles
                 if (pd->ww_final.AUTOcolor) {
-                    int i, j;
+                    int j;
                     for (j = 0; j < PALETTE_LENGTH; j++)
                         if (x->c->set->palette_current[j] == -1) break; // j now contains length of palette
-                    i = ((pd->ww_final.AUTOcolor + clist[cn].i) - 5) % j; // i is now the palette color number to use
+                    int i = ((pd->ww_final.AUTOcolor + clist[cn].i) - 5) % j; // i is now the palette color number to use
                     while (i < 0) i += j;
                     // A named color, or one given by its components
                     if (x->c->set->palette_current[i] > 0) {
@@ -1014,26 +1007,24 @@ GOT_CONTOURS:
                             (clist[cn].posdata[2 * ((i) % n) + 0] + clist[cn].posdata[2 * ((i + 1) % n) + 0]) / 2;
                     const double ylab0 =
                             (clist[cn].posdata[2 * ((i) % n) + 1] + clist[cn].posdata[2 * ((i + 1) % n) + 1]) / 2;
-                    double xlab, ylab, wlab, hlab;
-                    double bb_top, bb_bottom, ab_left, ab_right;
-                    postscriptPage *dviPage;
+                    double xlab, ylab;
                     const contourProjection proj = {xo, yo, Lx, Ly, ThetaX, ThetaY, XSize, YSize};
 
                     // Find where the label goes on the page, and how big it is
                     contourToPostscript(&proj, xlab0, ylab0, &xlab, &ylab);
                     if (x->dvi == NULL) { continue; }
-                    dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, page + 1);
+                    postscriptPage *dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, page + 1);
                     if (dviPage == NULL) { continue; }
                     //bb_left   = dviPage->boundingBox[0];
-                    bb_bottom = dviPage->boundingBox[1];
+                    double bb_bottom = dviPage->boundingBox[1];
                     //bb_right  = dviPage->boundingBox[2];
-                    bb_top = dviPage->boundingBox[3];
-                    ab_left = dviPage->textSizeBox[0];
+                    double bb_top = dviPage->boundingBox[3];
+                    double ab_left = dviPage->textSizeBox[0];
                     //ab_bottom = dviPage->textSizeBox[1];
-                    ab_right = dviPage->textSizeBox[2];
+                    double ab_right = dviPage->textSizeBox[2];
                     //ab_top    = dviPage->textSizeBox[3];
-                    hlab = (fabs(bb_top - bb_bottom) + 2) * x->current->settings.FontSize;
-                    wlab = (fabs(ab_right - ab_left) + 2) * x->current->settings.FontSize;
+                    double hlab = (fabs(bb_top - bb_bottom) + 2) * x->current->settings.FontSize;
+                    double wlab = (fabs(ab_right - ab_left) + 2) * x->current->settings.FontSize;
 
                     // Set a clipping path which excludes the label's box, using the even-odd rule
                     fprintf(x->epsbuffer,

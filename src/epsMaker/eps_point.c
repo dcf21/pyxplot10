@@ -77,12 +77,11 @@ void eps_point_YieldUpText(EPSComm *x) {
 void eps_point_RenderEPS(EPSComm *x) {
     // Variables for the style of the point
     int pt, lt;
-    double lw, lw_scale, xpos, ypos;
+    double lw, lw_scale;
     withWords ww, ww_default;
-    int pageno;
 
     // This item's label is on the page of the typeset text which was recorded in eps_point_YieldUpText()
-    pageno = x->LaTeXpageno = x->current->FirstTextID;
+    int pageno = x->LaTeXpageno = x->current->FirstTextID;
     x->LaTeXpageno++;
 
     // Print label at top of postscript description of box
@@ -90,8 +89,8 @@ void eps_point_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Look up position of point
-    xpos = x->current->xpos * M_TO_PS;
-    ypos = x->current->ypos * M_TO_PS;
+    double xpos = x->current->xpos * M_TO_PS;
+    double ypos = x->current->ypos * M_TO_PS;
 
     // Expand any numbered styles which may appear in the with words we are passed
     eps_withwords_default(x, &ww_default, &x->current->settings, 0, 0, 0, 0, 0);

@@ -74,7 +74,6 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
     const double logmin = 1e-10;
     double UnitMultiplier = 1.0;
     char *UnitString = NULL;
-    pplObj CentralValue;
     unsigned char AutoTicks[2] = {0, 0};
 
     // Axes which are not in use have no range or ticks
@@ -153,7 +152,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
             pplObjNum(&axis->DataUnit, 0, 0, 0);
         }
     }
-    CentralValue = axis->DataUnit;
+    pplObj CentralValue = axis->DataUnit;
     CentralValue.flagComplex = 0;
     CentralValue.imag = 0.0;
     CentralValue.real = (axis->format == NULL) ? pplaxis_InvGetPosition(0.5, axis) : 1.0;
@@ -164,11 +163,10 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 
     // Round the range outwards to round numbers, unless the user set the limits
     if (!axis->RangeFinalised) {
-        double min_prelim, max_prelim, OoM;
 
         // If axis does not have a user-specified range, round it outwards towards a round endpoint
-        min_prelim = axis->MinFinal * UnitMultiplier;
-        max_prelim = axis->MaxFinal * UnitMultiplier;
+        double min_prelim = axis->MinFinal * UnitMultiplier;
+        double max_prelim = axis->MaxFinal * UnitMultiplier;
 
         // Work with the logarithms of the limits on logarithmic axes
         if (axis->LogFinal == SW_BOOL_TRUE) {
@@ -177,7 +175,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         }
 
         // Round each limit to a multiple of a power of ten, about a fifth of the range
-        OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
+        double OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
         min_prelim = floor(min_prelim / OoM) * OoM;
         max_prelim = ceil(max_prelim / OoM) * OoM;
 
@@ -222,8 +220,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 
         // Flip axis range if it is reversed
         if (axis->RangeReversed) {
-            double swap;
-            swap = axis->MinFinal;
+            double swap = axis->MinFinal;
             axis->MinFinal = axis->MaxFinal;
             axis->MaxFinal = swap;
         }
@@ -234,7 +231,6 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
 
     // Secondly, decide what ticks to place on this axis
     if (!axis->TickListFinalised) {
-        int OutContext;
 
         // If ticks have been manually specified, check that units are right
         if ((!ppl_unitsDimEqual(&axis->unit, &axis->DataUnit)) &&
@@ -256,7 +252,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
         }
 
         // Tick labels are allocated in the caller's memory context
-        OutContext = ppl_memAlloc_GetMemContext();
+        int OutContext = ppl_memAlloc_GetMemContext();
 
         // Finalise the label to be placed on the axis, quoting a physical unit as necessary
         if ((axis->DataUnit.dimensionless) || (axis->format != NULL)) {
@@ -347,7 +343,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                     }
                 (*TickListStrings)[j] = NULL; // null terminate list
             } else if (TickStepSet) {
-                double TMin, TStep, TMax, tmp;
+                double TMin, TMax, tmp;
                 unsigned char inverted = 0;
                 *TickListPositions = (double *) ppl_memAlloc(102 * (axis->AxisValueTurnings + 1) * sizeof(double));
                 *TickListStrings = (char **) ppl_memAlloc(102 * (axis->AxisValueTurnings + 1) * sizeof(char *));
@@ -357,7 +353,7 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                     *TickListStrings = NULL;
                     return;
                 }
-                TStep = TickStep;
+                double TStep = TickStep;
                 // A negative step means ticks run from the end of the range towards the start
                 if (TStep < 0) {
                     TStep = -TStep;
@@ -376,10 +372,9 @@ void eps_plot_ticking(EPSComm *x, pplset_axis *axis, const int AxisUnitStyle, pp
                 for (xrn = j = 0; xrn <= axis->AxisValueTurnings; xrn++) {
                     // On an axis whose mapping is tabulated, the ticks run over the section's range of values
                     if (axis->AxisLinearInterpolation != NULL) {
-                        double RegionMin, RegionMax, first;
-                        first = axis->AxisLinearInterpolation[axis->AxisTurnings[0]];
-                        RegionMin = axis->AxisLinearInterpolation[axis->AxisTurnings[xrn]];
-                        RegionMax = axis->AxisLinearInterpolation[axis->AxisTurnings[xrn + 1]];
+                        double first = axis->AxisLinearInterpolation[axis->AxisTurnings[0]];
+                        double RegionMin = axis->AxisLinearInterpolation[axis->AxisTurnings[xrn]];
+                        double RegionMax = axis->AxisLinearInterpolation[axis->AxisTurnings[xrn + 1]];
                         // Make sure the section's range is the right way around
                         if (RegionMax < RegionMin) {
                             tmp = RegionMin;
@@ -502,25 +497,23 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
     // Variables for formatting the label
     char msg[PPL_MSG_LENGTH];
     int SF = X->c->set->term_current.SignificantFigures;
-    double ApproxMargin;
 
     // Labels are compared with round numbers to within the precision displayed
-    ApproxMargin = pow(10, -SF + 1);
+    double ApproxMargin = pow(10, -SF + 1);
     if (ApproxMargin < 1e-15) ApproxMargin = 1e-15;
 
     // Moderate numbers are written in full; others as a mantissa times a power of the axis's logarithmic base
     if ((fabs(x) < DBL_MIN * 100) || ((fabs(x) > 1e-3) && (fabs(x) < 1e5))) {
         ppl_snprintfTrunc(msg, sizeof(msg), "%s", ppl_numericDisplay(x, X->c->numdispBuff[0], SF, 1));
     } else {
-        double e, m;
         unsigned char sgn = 0;
         // Write the sign separately
         if (x < 0) {
             sgn = 1;
             x = -x;
         }
-        e = floor(log(x) / log(log_base));
-        m = x / pow(log_base, e);
+        double e = floor(log(x) / log(log_base));
+        double m = x / pow(log_base, e);
         // Round mantissas which are almost equal to the base up to the next power
         if (fabs(m - log_base) < ApproxMargin) {
             e++;
@@ -553,9 +546,8 @@ void TickLabelAutoGen(EPSComm *X, char **output, double x, double log_base, int 
 void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const double x, const pplObj *xunit,
                          const int xyz, int OutContext) {
     char msg[PPL_MSG_LENGTH];
-    int lOP, rc;
+    int lOP;
     const int stkLevelOld = X->c->stackPtr;
-    pplObj *outval;
     char *VarName, *tmp_string;
     pplObj DummyTemp, *VarVal;
 
@@ -569,7 +561,7 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     ppl_contextGetVarPointer(X->c, VarName, &VarVal, &DummyTemp);
 
     // Set value of x (or y/z)
-    rc = VarVal->refCount;
+    int rc = VarVal->refCount;
     *VarVal = *xunit;
     VarVal->refCount = rc;
     VarVal->imag = 0.0;
@@ -577,7 +569,7 @@ void TickLabelFromFormat(EPSComm *X, char **output, pplExpr *FormatExp, const do
     VarVal->real = x;
 
     // Generate tick string
-    outval = ppl_expEval(X->c, FormatExp, &lOP, 0, X->iterDepth + 1);
+    pplObj *outval = ppl_expEval(X->c, FormatExp, &lOP, 0, X->iterDepth + 1);
     // If the expression fails, or does not return a string, report an error and label the tick with a question mark
     if (X->c->errStat.status) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst using format string: %s", FormatExp->ascii);

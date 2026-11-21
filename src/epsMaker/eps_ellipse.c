@@ -43,8 +43,7 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     // Variables for the shape and style of the ellipse
     int lt;
     unsigned char filled = 0, stroked = 0;
-    double lw, lw_scale, xc, yc, a, b, r;
-    double a_inv, b_inv;
+    double lw_scale;
     withWords ww;
 
     // Print label at top of postscript description of ellipse
@@ -52,11 +51,11 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     eps_core_clear(x);
 
     // Calculate position of centre of elipse and its major/minor axes in TeX points
-    xc = x->current->xpos * M_TO_PS;
-    yc = x->current->ypos * M_TO_PS;
-    a = x->current->xpos2 * M_TO_PS;
-    b = x->current->ypos2 * M_TO_PS;
-    r = x->current->rotation;
+    double xc = x->current->xpos * M_TO_PS;
+    double yc = x->current->ypos * M_TO_PS;
+    double a = x->current->xpos2 * M_TO_PS;
+    double b = x->current->ypos2 * M_TO_PS;
+    double r = x->current->rotation;
 
     // Expand any numbered styles which may appear in the with words we are passed
     ppl_withWordsMerge(x->c, &ww, &x->current->with_data, NULL, NULL, NULL, NULL, 1);
@@ -67,7 +66,7 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     // Set linewidth and linetype of outline
     if (ww.USElinewidth) lw_scale = ww.linewidth;
     else lw_scale = x->current->settings.LineWidth;
-    lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
+    double lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
     // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
@@ -110,9 +109,9 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     }
 
     // Undo scaling of axes so that linewidths come out right
-    a_inv = (a < 1e-8) ? 1e8 : 1.0 / a;
+    double a_inv = (a < 1e-8) ? 1e8 : 1.0 / a;
     // Avoid dividing by a semi-minor axis of zero
-    b_inv = (b < 1e-8) ? 1e8 : 1.0 / b;
+    double b_inv = (b < 1e-8) ? 1e8 : 1.0 / b;
     fprintf(x->epsbuffer, "%f %f scale\n", a_inv, b_inv);
 
     // Now we can stroke the path of the ellipse

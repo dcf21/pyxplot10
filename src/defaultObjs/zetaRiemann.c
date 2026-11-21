@@ -54,13 +54,12 @@
 
 void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *status, const char *errText) {
     // a is the argument; b is a - 1; g is |a - 1|
-    gsl_complex a, am, b, c, d, e;
-    double g, h;
-    int j, n, m, sign;
+    gsl_complex c, d, e;
+    int j;
 
-    a = gsl_complex_rect(x, y); /* the argument to zeta */
-    b = gsl_complex_sub_real(a, 1);
-    g = gsl_complex_abs(b);
+    gsl_complex a = gsl_complex_rect(x, y); /* the argument to zeta */
+    gsl_complex b = gsl_complex_sub_real(a, 1);
+    double g = gsl_complex_abs(b);
 
     // Near the pole at z = 1, use the Laurent series about the pole, whose coefficients are the Stieltjes constants
     if (g < 0.01) {
@@ -89,13 +88,13 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
 
     // Use Peter Borwein's method.
     // This is Algorithm 3 from his 2000 Canadian Math. Soc. Proc. paper.
-    n = (int) (2.1 + 1.2 * DECIMAL_PLACES + 0.76 * fabs(y) + 0.25 * log(1 + (y * y / (x * x))));
-    m = n;
-    am = gsl_complex_negative(a);
+    int n = (int) (2.1 + 1.2 * DECIMAL_PLACES + 0.76 * fabs(y) + 0.25 * log(1 + (y * y / (x * x))));
+    int m = n;
+    gsl_complex am = gsl_complex_negative(a);
     e = GSL_COMPLEX_ZERO;
-    sign = 1;
+    int sign = 1;
     g = 1.0;
-    h = 0.0;
+    double h = 0.0;
 
     // Accumulate the first sum of Borwein's method; h accumulates the binomial coefficients g, and the sum and
     // coefficients are halved whenever they grow large, to avoid overflow, with m counting the halvings left
@@ -154,13 +153,12 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
 
 void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char *errText) {
     // x and y are the real and imaginary parts of the argument
-    double x, y;
     gsl_complex b, c;
     gsl_sf_result dr, dt;
 
     // Deal first with the special points, and with arguments which would take too long or overflow
-    x = GSL_REAL(in);
-    y = GSL_IMAG(in);
+    double x = GSL_REAL(in);
+    double y = GSL_IMAG(in);
 
     // The pole at z = 1
     if ((x == 1.0) && (y == 0.0)) {

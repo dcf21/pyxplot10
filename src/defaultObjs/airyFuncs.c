@@ -45,11 +45,10 @@
 
 gsl_complex airy_series_y1(gsl_complex z) {
     int i;
-    gsl_complex c, d;
-    c = gsl_complex_mul(z, z);
+    gsl_complex c = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
     c = GSL_COMPLEX_ONE;
-    d = GSL_COMPLEX_ZERO;
+    gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
     for (i = 0; i <= 45; i += 3) {
@@ -66,11 +65,10 @@ gsl_complex airy_series_y1(gsl_complex z) {
 
 gsl_complex airy_series_y1_diff(gsl_complex z) {
     int i;
-    gsl_complex c, d;
-    c = gsl_complex_mul(z, z);
+    gsl_complex c = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
     c = gsl_complex_div_real(c, 2.0);
-    d = GSL_COMPLEX_ZERO;
+    gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
     for (i = 0; i <= 45; i += 3) {
@@ -88,11 +86,10 @@ gsl_complex airy_series_y1_diff(gsl_complex z) {
 
 gsl_complex airy_series_y2(gsl_complex z) {
     int i;
-    gsl_complex c, d;
-    c = z;
+    gsl_complex c = z;
     z = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
-    d = GSL_COMPLEX_ZERO;
+    gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
     for (i = 0; i <= 45; i += 3) {
@@ -109,12 +106,11 @@ gsl_complex airy_series_y2(gsl_complex z) {
 
 gsl_complex airy_series_y2_diff(gsl_complex z) {
     int i;
-    gsl_complex c, d;
-    c = z;
+    gsl_complex c = z;
     z = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
     c = GSL_COMPLEX_ONE;
-    d = GSL_COMPLEX_ZERO;
+    gsl_complex d = GSL_COMPLEX_ZERO;
     // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
     // factorial terms
     for (i = 0; i <= 45; i += 3) {
@@ -784,10 +780,9 @@ static void airyAddTerm(gsl_complex *dp, gsl_complex *dq, const gsl_complex f, c
 
 void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_complex z0, const double k) {
     // If k=0, compute Ai or Bi; if k=1, compute Ai' or Bi'.
-    gsl_complex c, f, g, z2, z3;
-    c = GSL_COMPLEX_ONE;
-    z2 = gsl_complex_mul(z0, z0);
-    z3 = gsl_complex_mul(z2, z0);
+    gsl_complex c = GSL_COMPLEX_ONE;
+    gsl_complex z2 = gsl_complex_mul(z0, z0);
+    gsl_complex z3 = gsl_complex_mul(z2, z0);
     *dp = GSL_COMPLEX_ZERO;
     if (k < 0.5) {
         *dp = c;
@@ -803,8 +798,8 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
     *dq = gsl_complex_add(*dq, gsl_complex_mul(z0, c));
     c = gsl_complex_mul(c, zd);
     c = gsl_complex_div_real(c, 4.0 - k);
-    f = z2;
-    g = gsl_complex_rect(2.0, 0.0);
+    gsl_complex f = z2;
+    gsl_complex g = gsl_complex_rect(2.0, 0.0);
     airyAddTerm(dp, dq, f, g, &c, zd);
     c = gsl_complex_div_real(c, 5.0 - k);
     f = gsl_complex_mul_real(z0, 4.0);
@@ -1175,10 +1170,9 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int max;
-    double mod, arg;
     gsl_complex c, d, dp, dq, zah;
-    mod = gsl_complex_abs(in);
-    arg = gsl_complex_arg(in);
+    double mod = gsl_complex_abs(in);
+    double arg = gsl_complex_arg(in);
     // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
     if (mod < 3.2 && (mod < 2.0 || arg > 1.05 || arg < -1.05)) {
         d = gsl_complex_mul_real(airy_series_y1(in), 0.355028053887817239);
@@ -1247,10 +1241,9 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int max;
-    double mod, arg;
     gsl_complex a, b, c, d, dp, dq, zah;
-    mod = gsl_complex_abs(in);
-    arg = gsl_complex_arg(in);
+    double mod = gsl_complex_abs(in);
+    double arg = gsl_complex_arg(in);
     // Small inputs: use the Maclaurin series
     if (mod < 3.2) {
         d = gsl_complex_mul_real(airy_series_y1(in), 0.614926627446000735);
@@ -1331,10 +1324,9 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int max;
-    double mod, arg;
     gsl_complex c, d, dp, dq, zah;
-    mod = gsl_complex_abs(in);
-    arg = gsl_complex_arg(in);
+    double mod = gsl_complex_abs(in);
+    double arg = gsl_complex_arg(in);
     // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
     if (mod < 3.2 && (mod < 2.0 || arg > 1.05 || arg < -1.05)) {
         d = gsl_complex_mul_real(airy_series_y1_diff(in), 0.355028053887817239);
@@ -1403,10 +1395,9 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
     // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
     // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int max;
-    double mod, arg;
     gsl_complex a, b, c, d, dp, dq, zah;
-    mod = gsl_complex_abs(in);
-    arg = gsl_complex_arg(in);
+    double mod = gsl_complex_abs(in);
+    double arg = gsl_complex_arg(in);
     // Small inputs: use the Maclaurin series
     if (mod < 3.2) {
         d = gsl_complex_mul_real(airy_series_y1_diff(in), 0.614926627446000735);

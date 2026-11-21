@@ -69,8 +69,6 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
     // data carries the expression, the dummy variable, and which part of the result is wanted, from GSL into this
     // callback
     int lastOpAssign;
-    double r, i;
-    pplObj *output;
     calculusComm *data = (calculusComm *) params;
 
     if (data->context->errStat.status) return GSL_NAN; // We've previously had an error... so don't do any more work
@@ -88,7 +86,7 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
     }
 
     // Evaluate the expression; any error is returned as NaN, and recorded in the context
-    output = ppl_expEval(data->context, data->expr, &lastOpAssign, data->dollarAllowed, data->iterDepth + 1);
+    pplObj *output = ppl_expEval(data->context, data->expr, &lastOpAssign, data->dollarAllowed, data->iterDepth + 1);
     if (data->context->errStat.status) return GSL_NAN;
 
     // Check that integrand is a number
@@ -118,8 +116,8 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
     }
 
     // Take the result, and pop it from the stack
-    r = output->real;
-    i = output->imag;
+    double r = output->real;
+    double i = output->imag;
     ppl_garbageObject(&data->context->stack[--data->context->stackPtr]); // trash and pop output from stack
 
     // Integrand was complex, but complex arithmetic is turned off
@@ -151,7 +149,6 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
     calculusComm commlink;
     pplObj *dummyVar;
     pplObj dummyTemp;
-    gsl_integration_workspace *ws;
     gsl_function fn;
     pplExpr *expr2;
     int explen;
@@ -221,7 +218,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
     commlink.dummyImag = dummyVar->imag;
 
     // GSL's workspace, with room for 1000 subintervals
-    ws = gsl_integration_workspace_alloc(1000);
+    gsl_integration_workspace *ws = gsl_integration_workspace_alloc(1000);
     fn.function = &ppl_expEvalCalculusSlave;
     fn.params = &commlink;
 

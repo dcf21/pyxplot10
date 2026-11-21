@@ -630,7 +630,6 @@ pplObj *pplObjUser(pplObj *in, const unsigned char amMalloced, unsigned char aux
 pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsigned char outMalloced,
                   const unsigned char useMalloc) {
     const int rc = (out == NULL) ? 1 : out->refCount;
-    int t;
 
     // Nothing to copy
     if (in == NULL) return NULL;
@@ -644,7 +643,7 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsig
 
     // Start with a shallow copy, keeping the destination's own reference count. If the copy is an lvalue, it remembers
     // the variable it came from, so that methods can modify that variable.
-    t = in->objType;
+    int t = in->objType;
     memcpy(out, in, sizeof(pplObj));
     // Keep a reference to the original variable
     if (lval) {
@@ -753,13 +752,12 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsig
 
 pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned char outMalloced,
                       unsigned char useMalloc) {
-    int t, rc;
 
     // Nothing to copy
     if (in == NULL) return NULL;
-    t = in->objType;
+    int t = in->objType;
     // Like pplObjCpy(), the copy keeps the reference count of the destination, or starts with one if it is new
-    rc = (out == NULL) ? 1 : out->refCount;
+    int rc = (out == NULL) ? 1 : out->refCount;
 
     // If no destination is given, allocate one
     if (out == NULL) {

@@ -79,9 +79,8 @@ void eps_eps_RenderEPS(EPSComm *x) {
     FILE *inf;
     char filename[FNAME_LENGTH];
     double bb_left = 0.0, bb_right = 0.0, bb_top = 0.0, bb_bottom = 0.0;
-    double xscale, yscale, r;
-    double xanchor = 0, yanchor = 0, xbotleft, ybotleft;
-    unsigned char GotBBox;
+    double xscale, yscale;
+    double xanchor = 0, yanchor = 0;
 
     // Label the item in the postscript, and expand the filename
     fprintf(x->epsbuffer, "%% Canvas item %d [eps image]\n", x->current->id);
@@ -90,7 +89,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
     if (eps_eps_expandFilename(x, filename)) return;
 
     // Work out bounding box of EPS image
-    GotBBox = 0;
+    unsigned char GotBBox = 0;
     if (!x->current->calcbbox) // Read bounding box from headers of EPS file
     {
         inf = fopen(filename, "r");
@@ -165,7 +164,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
     }
 
     // Work out position of bottom-left corner
-    r = x->current->rotation;
+    double r = x->current->rotation;
     if (x->current->settings.TextHAlign == SW_HALIGN_LEFT) xanchor = 0;
     else if (x->current->settings.TextHAlign == SW_HALIGN_CENT) xanchor = (xscale) / 2;
     else if (x->current->settings.TextHAlign == SW_HALIGN_RIGHT) xanchor = (xscale);
@@ -174,8 +173,8 @@ void eps_eps_RenderEPS(EPSComm *x) {
     else if (x->current->settings.TextVAlign == SW_VALIGN_BOT) yanchor = 0;
     xanchor *= (bb_right - bb_left);
     yanchor *= (bb_top - bb_bottom);
-    xbotleft = x->current->xpos * M_TO_PS - (xanchor * cos(r) - yanchor * sin(r));
-    ybotleft = x->current->ypos * M_TO_PS - (xanchor * sin(r) + yanchor * cos(r));
+    double xbotleft = x->current->xpos * M_TO_PS - (xanchor * cos(r) - yanchor * sin(r));
+    double ybotleft = x->current->ypos * M_TO_PS - (xanchor * sin(r) + yanchor * cos(r));
 
     // Begin encapsulation of EPS file
     fprintf(x->epsbuffer, "BeginEPSF\n");

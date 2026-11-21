@@ -122,7 +122,6 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
     // A closing ] may be followed by storage information, ]@varname@value@ACL@stackpos@listlen, saying where the
     // repeated items are stored
     if (cmdText[j] == '@') {
-        int k, l;
         // Only [ ] structures can carry storage information
         if (type != PN_TYPE_REP) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Unexpected storage information after non [ ] data structure.");
@@ -158,7 +157,7 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
-        k = (int) ppl_getFloat(cmdText + j, NULL);
+        int k = (int) ppl_getFloat(cmdText + j, NULL);
         while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->outStackPos = k;
         // Read the length of the stack used by each repeated item
@@ -166,7 +165,7 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
-        l = (int) ppl_getFloat(cmdText + j, NULL);
+        int l = (int) ppl_getFloat(cmdText + j, NULL);
         while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->listLen = l;
         while ((cmdText[j] != '\0') && (cmdText[j] != '\n') && ((unsigned char) cmdText[j] < ' '))
@@ -213,14 +212,14 @@ int ppl_parserInit(ppl_context *c) {
 
     // Loop over instructions in command list
     while (1) {
-        int stackPos = 0, cmdLetter, rootStackLen, nc = 0;
+        int stackPos = 0, cmdLetter, nc = 0;
         parserNode *defnStack[16];
 
         // Each command's definition is on one line, which begins with the length of the stack of variables which the
         // command produces. The first letter of the command decides which list it is stored in.
         while ((ppl_cmdList[inPos] != '\0') && ((unsigned char) ppl_cmdList[inPos] <= ' '))
             inPos++; // Ignore whitespace
-        rootStackLen =
+        int rootStackLen =
                 (int) ppl_getFloat(ppl_cmdList + inPos,
                                    &nc); // Each line of command list begins with the length of the root stack namespace
         inPos += nc;
@@ -313,8 +312,7 @@ int ppl_parserInit(ppl_context *c) {
 
             // Non-punctuation items which match strings and expressions
             else if (ppl_cmdList[inPos] == '@') {
-                int strStart, k, l, m;
-                parserNode *newNode, **target;
+                parserNode *newNode;
                 inPos++;
                 if (defnStack[stackPos - 1]->type != PN_TYPE_SEQ)
                     ppl_parserStartNode(e, defnStack, &stackPos,
@@ -333,7 +331,7 @@ int ppl_parserInit(ppl_context *c) {
 
                 // Read the text to match. The special items DATABLOCK and CODEBLOCK match inline data and { } blocks of
                 // code.
-                strStart = inPos;
+                int strStart = inPos;
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
                     inPos++; // FFW over match string
                 newNode->matchString = (char *) malloc((inPos - strStart + 1) * sizeof(char));
@@ -396,7 +394,7 @@ int ppl_parserInit(ppl_context *c) {
                 }
 
                 // Read the minimum number of characters which an abbreviation of the match string must have
-                k = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
+                int k = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->acLevel = k;
                 // Read the position on the output stack where the match is stored
@@ -404,7 +402,7 @@ int ppl_parserInit(ppl_context *c) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
-                l = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
+                int l = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->outStackPos = l;
                 // Read the length of the output stack, for items which hold lists
@@ -413,20 +411,20 @@ int ppl_parserInit(ppl_context *c) {
                                       "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
-                m = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
+                int m = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->listLen = m;
                 while ((ppl_cmdList[inPos] != '\0') && (ppl_cmdList[inPos] != '\n') &&
                        ((unsigned char) ppl_cmdList[inPos] < ' '))
                     inPos++; // FFW over trailing whitespace
 
-                target = &(defnStack[stackPos - 1]->firstChild); // Pointer to where first child of parent is linked
+                parserNode **target = &(defnStack[stackPos - 1]->firstChild); // Pointer to where first child of parent is linked
                 while (*target != NULL)
                     target = &((*target)->nextSibling); // If not first child of parent, traverse linked list to end
                 *target =
                         newNode; // Add new node into hierarchy, either as first child of parent, or into linked list of siblings
             } else if (ppl_cmdList[inPos] == '=') {
-                parserNode *newNode, **target;
+                parserNode *newNode;
                 // An = marks the point beyond which a failure to match the rest of the command is a syntax error,
                 // rather than a sign that a different command was meant
                 if ((newNode = (parserNode *) calloc(1, sizeof(parserNode))) == NULL) {
@@ -434,7 +432,7 @@ int ppl_parserInit(ppl_context *c) {
                     exit(1);
                 }
                 newNode->type = PN_TYPE_CONFIRM;
-                target = &(defnStack[stackPos - 1]->firstChild); // Pointer to where first child of parent is linked
+                parserNode **target = &(defnStack[stackPos - 1]->firstChild); // Pointer to where first child of parent is linked
                 while (*target != NULL)
                     target = &((*target)->nextSibling); // If not first child of parent, traverse linked list to end
                 *target =

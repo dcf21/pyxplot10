@@ -64,12 +64,12 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     char defaultpagerName[] = "less";
     char *pagerName;
     char *Ncolumns_text;
-    int i, j, Ncolumns, Nchildren, strlen_version, strlen_date;
+    int j, Ncolumns, strlen_version, strlen_date;
     FILE *pagerHandle;
 
     // Start with a title line, then copy the text of the page
     ppl_snprintfTrunc(textBuffer, sizeof(textBuffer), "\\\\**** Help Topic: %s****\\\\", PageName);
-    i = strlen(textBuffer);
+    int i = strlen(textBuffer);
     for (cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
         // Copy each text node, substituting the version number and date for $VERSION and $DATE
         if (cur_node->type == XML_TEXT_NODE) {
@@ -95,7 +95,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     // End the page text with a blank line
     sprintf(textBuffer + i, "\\\\\\\\\\\\");
     // Insert information about children
-    Nchildren = 0;
+    int Nchildren = 0;
     for (cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
         // Each child element is a subtopic; list their names, separated by commas
         if (cur_node->type == XML_ELEMENT_NODE) {

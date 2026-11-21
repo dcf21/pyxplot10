@@ -77,8 +77,8 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     // Variables for freeing the item
     int i;
     canvas_itemlist *canvas_items = c->canvas_items;
-    canvas_plotrange *pr, *pr2;
-    canvas_plotdesc *pd, *pd2;
+    canvas_plotrange *pr2;
+    canvas_plotdesc *pd2;
 
     // Free the points of a polygon
     free(ptr->polygonPoints);
@@ -117,7 +117,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     ppl_withWordsDestroy(c, &(ptr->with_data));
 
     // Delete range structures
-    pr = ptr->plotranges;
+    canvas_plotrange *pr = ptr->plotranges;
     // Free the list of ranges given in a plot command
     while (pr != NULL) {
         pr2 = pr->next;
@@ -126,7 +126,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     }
 
     // Delete plot item descriptors
-    pd = ptr->plotitems;
+    canvas_plotdesc *pd = ptr->plotitems;
     // Free each dataset of a plot
     while (pd != NULL) {
         pd2 = pd->next;
@@ -200,13 +200,12 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
 
 static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, canvas_item **output, int *id,
                                const unsigned char includeAxes) {
-    canvas_itemlist *canvas_items;
-    canvas_item *ptr, *next, *prev, **insertpointA, **insertpointB;
-    int i, editNo, gotEditNo;
+    canvas_item *next, *prev, **insertpointA, **insertpointB;
+    int i, editNo;
 
     // If we're not in multiplot mode, clear the canvas now
     if (c->set->term_current.multiplot == SW_ONOFF_OFF) ppl_directive_clear(c, NULL, NULL, 0);
-    canvas_items = c->canvas_items;
+    canvas_itemlist *canvas_items = c->canvas_items;
 
     // Ensure that multiplot canvas list is initialised before trying to use it
     if (canvas_items == NULL) {
@@ -222,15 +221,14 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
     }
 
     // With no item number given, the item is added after the last one; otherwise it replaces the item with that number
-    gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
+    int gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
     // Number the item after the last item on the canvas
     if (!gotEditNo) {
-        int prevId;
         insertpointA = &(canvas_items->last);
         next = NULL;
         prev = (*insertpointA == NULL) ? NULL : canvas_items->last;
         insertpointB = (*insertpointA == NULL) ? &(canvas_items->first) : &(canvas_items->last->next);
-        prevId = (*insertpointA == NULL) ? 0 : canvas_items->last->id;
+        int prevId = (*insertpointA == NULL) ? 0 : canvas_items->last->id;
         editNo = prevId + 1;
         // There is a fixed limit on the number of items
         if (editNo >= MULTIPLOT_MAXINDEX) {
@@ -269,7 +267,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
             insertpointA = &(next->prev);
         }
     }
-    ptr = (canvas_item *) malloc(sizeof(canvas_item));
+    canvas_item *ptr = (canvas_item *) malloc(sizeof(canvas_item));
     // Failure to allocate memory is reported as an error
     if (ptr == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
@@ -343,11 +341,11 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
 
 int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
     canvas_itemlist *canvas_items = c->canvas_items;
-    canvas_item *ptr, *next;
+    canvas_item *next;
 
     // There is nothing to clear if the canvas has never been used
     if (canvas_items == NULL) return 0;
-    ptr = canvas_items->first;
+    canvas_item *ptr = canvas_items->first;
     // Free each item
     while (ptr != NULL) {
         next = ptr->next;
@@ -519,12 +517,11 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         ppl_strAppendf(output, outLen, &i, " rotate %s", ppl_numericDisplayDefault(c, ptr->rotation * 180 / M_PI, 2));
     } else if (ptr->type == CANVAS_PIE) // Produce textual representations of piechart commands
     {
-        canvas_plotdesc *pd;
 
         // A piechart command, followed by the description of its data
         ppl_snprintfTrunc(output, outLen, "piechart item %d", ptr->id);
         i = strlen(output);
-        pd = ptr->plotitems;
+        canvas_plotdesc *pd = ptr->plotitems;
         // Describe the dataset, if there is one
         if (pd != NULL) {
             // Data from a file or vectors, or from functions
@@ -579,8 +576,6 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         }
     } else if (ptr->type == CANVAS_PLOT) // Produce textual representations of plot commands
     {
-        canvas_plotrange *pr;
-        canvas_plotdesc *pd;
         pplObj v;
         unsigned char pr_first = 1, pd_first = 1;
 
@@ -589,7 +584,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         i = strlen(output);
         if (ptr->ThreeDim) ppl_strAppendf(output, outLen, &i, "%s", " 3d");
         i += strlen(output + i);
-        pr = ptr->plotranges; // Print out plot ranges
+        canvas_plotrange *pr = ptr->plotranges; // Print out plot ranges
         // Write each range
         while (pr != NULL) {
             // Separate the ranges with spaces
@@ -619,7 +614,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             ppl_strAppendf(output, outLen, &i, "%s", "]");
             pr = pr->next;
         }
-        pd = ptr->plotitems; // Print out plotted items one by one
+        canvas_plotdesc *pd = ptr->plotitems; // Print out plotted items one by one
         // Write each dataset, separated by commas
         while (pd != NULL) {
             // Separate the datasets with commas
@@ -773,12 +768,11 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
     char msg[LSTR_LENGTH];
     canvas_itemlist *canvas_items = c->canvas_items;
     int i;
-    canvas_item *ptr;
 
     // There is nothing to list if the canvas has never been used
     ppl_report(&c->errcontext, "# ID   Command");
     if (canvas_items == NULL) return 0;
-    ptr = canvas_items->first;
+    canvas_item *ptr = canvas_items->first;
     // List each item, marking those which have been deleted
     while (ptr != NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "%5d  %s", ptr->id, (ptr->deleted) ? "[deleted] " : "");
@@ -853,7 +847,6 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
                          const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
-    int pos;
 
     // Report a canvas which has never been used
     if (canvas_items == NULL) {
@@ -864,12 +857,11 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
     }
 
     // Delete each item named
-    pos = PARSE_delete_deleteno;
+    int pos = PARSE_delete_deleteno;
     // Walk the linked list of item numbers on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        int id;
         pos = (int) round(stk[pos].real);
-        id = (int) round(stk[pos + PARSE_delete_number_deleteno].real);
+        int id = (int) round(stk[pos + PARSE_delete_number_deleteno].real);
         canvas_delete(c, id);
     }
 
@@ -892,9 +884,6 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
 
-    // Variables for restoring items
-    int pos;
-
     // Report a canvas which has never been used
     if (canvas_items == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
@@ -904,14 +893,12 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     }
 
     // Restore each item named
-    pos = PARSE_undelete_undeleteno;
+    int pos = PARSE_undelete_undeleteno;
     // Walk the linked list of item numbers on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
-        canvas_item *ptr;
-        int id;
         pos = (int) round(stk[pos].real);
-        id = (int) round(stk[pos + PARSE_undelete_number_undeleteno].real);
-        ptr = canvas_items->first;
+        int id = (int) round(stk[pos + PARSE_undelete_number_undeleteno].real);
+        canvas_item *ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != id)) ptr = ptr->next;
         // Report an item which does not exist
         if (ptr == NULL) {
@@ -941,10 +928,6 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
-    int moveno, gotRotation;
-    double x, y, rotation;
-    unsigned char rotatable;
-    canvas_item *ptr;
 
     // Report a canvas which has never been used
     if (canvas_items == NULL) {
@@ -955,14 +938,14 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     }
 
     // Read the item number and its new position and rotation
-    moveno = (int) round(stk[PARSE_move_moveno].real);
-    x = stk[PARSE_move_p].real;
-    y = stk[PARSE_move_p + 1].real;
-    rotation = stk[PARSE_move_rotation].real;
-    gotRotation = (stk[PARSE_move_rotation].objType == PPLOBJ_NUM);
+    int moveno = (int) round(stk[PARSE_move_moveno].real);
+    double x = stk[PARSE_move_p].real;
+    double y = stk[PARSE_move_p + 1].real;
+    double rotation = stk[PARSE_move_rotation].real;
+    int gotRotation = (stk[PARSE_move_rotation].objType == PPLOBJ_NUM);
 
     // Find the item
-    ptr = canvas_items->first;
+    canvas_item *ptr = canvas_items->first;
     while ((ptr != NULL) && (ptr->id != moveno)) ptr = ptr->next;
     // Report an item which does not exist
     if (ptr == NULL) {
@@ -971,7 +954,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
         ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
         return 1;
     }
-    rotatable = ((ptr->type != CANVAS_ARROW) && (ptr->type != CANVAS_CIRC) && (ptr->type != CANVAS_PIE) &&
+    unsigned char rotatable = ((ptr->type != CANVAS_ARROW) && (ptr->type != CANVAS_CIRC) && (ptr->type != CANVAS_PIE) &&
                  (ptr->type != CANVAS_PLOT) && (ptr->type != CANVAS_POINT));
     // Warn that items such as plots cannot be rotated
     if (gotRotation && !rotatable) {
@@ -1033,8 +1016,6 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
                        const int iterDepth) {
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
-    int item1, item2;
-    canvas_item **ptr1, **ptr2, *temp;
 
     // Report a canvas which has never been used
     if (canvas_items == NULL) {
@@ -1045,11 +1026,11 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     }
 
     // Read the ID numbers of the items to be swapped
-    item1 = (int) round(stk[PARSE_swap_item1].real);
-    item2 = (int) round(stk[PARSE_swap_item2].real);
+    int item1 = (int) round(stk[PARSE_swap_item1].real);
+    int item2 = (int) round(stk[PARSE_swap_item2].real);
 
     // Seek the first item to be swapped
-    ptr1 = &canvas_items->first;
+    canvas_item **ptr1 = &canvas_items->first;
     while ((*ptr1 != NULL) && ((*ptr1)->id != item1)) ptr1 = &((*ptr1)->next);
     // Report an item which does not exist
     if (*ptr1 == NULL) {
@@ -1060,7 +1041,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     }
 
     // Seek the second item to be swapped
-    ptr2 = &canvas_items->first;
+    canvas_item **ptr2 = &canvas_items->first;
     while ((*ptr2 != NULL) && ((*ptr2)->id != item2)) ptr2 = &((*ptr2)->next);
     // Report an item which does not exist
     if (*ptr2 == NULL) {
@@ -1073,7 +1054,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     // Do swap
     (*ptr1)->id = item2;
     (*ptr2)->id = item1;
-    temp = *ptr1;
+    canvas_item *temp = *ptr1;
     *ptr1 = *ptr2;
     *ptr2 = temp;
     temp = (*ptr1)->next;
@@ -1096,15 +1077,13 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
     // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
-    int id, gotTempstr;
-    double x1, x2, y1, y2;
-    char *tempstr, *tempstr2;
+    int id;
 
     // Look up the start and end point of the arrow, and ensure that they are either dimensionless or in units of length
-    x1 = stk[PARSE_arrow_p1].real;
-    y1 = stk[PARSE_arrow_p1 + 1].real;
-    x2 = stk[PARSE_arrow_p2].real;
-    y2 = stk[PARSE_arrow_p2 + 1].real;
+    double x1 = stk[PARSE_arrow_p1].real;
+    double y1 = stk[PARSE_arrow_p1 + 1].real;
+    double x2 = stk[PARSE_arrow_p2].real;
+    double y2 = stk[PARSE_arrow_p2 + 1].real;
 
     // Add this arrow to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_ARROW, &ptr, &id, 0)) { return 1; }
@@ -1117,9 +1096,9 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
     ppl_withWordsFromDict(c, in, pl, PARSE_TABLE_arrow_, 0, &ptr->with_data);
 
     // Work out whether this arrow is in the 'head', 'nohead' or 'twoway' style
-    tempstr = (char *) stk[PARSE_arrow_arrow_style].auxil;
-    gotTempstr = (stk[PARSE_arrow_arrow_style].objType == PPLOBJ_STR);
-    tempstr2 = (char *) stk[PARSE_arrow_directive].auxil;
+    char *tempstr = (char *) stk[PARSE_arrow_arrow_style].auxil;
+    int gotTempstr = (stk[PARSE_arrow_arrow_style].objType == PPLOBJ_STR);
+    char *tempstr2 = (char *) stk[PARSE_arrow_directive].auxil;
     if (gotTempstr)
         ptr->ArrowType = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ARROWTYPE_INT, SW_ARROWTYPE_STR);
     else ptr->ArrowType = (strcmp(tempstr2, "arrow") == 0) ? SW_ARROWTYPE_HEAD : SW_ARROWTYPE_NOHEAD;
@@ -1140,23 +1119,22 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
     // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
-    int id, gotx2, gotWidth, gotHeight, gotAng;
-    double x1, x2, x3, y1, y2, y3, ang, width, height;
+    int id;
 
     // Look up the positions of the two corners of the box
-    x1 = stk[PARSE_box_p1].real;
-    y1 = stk[PARSE_box_p1 + 1].real;
-    x2 = stk[PARSE_box_p2].real;
-    gotx2 = (stk[PARSE_box_p2].objType == PPLOBJ_NUM);
-    y2 = stk[PARSE_box_p2 + 1].real;
-    x3 = stk[PARSE_box_p3].real;
-    y3 = stk[PARSE_box_p3 + 1].real;
-    ang = stk[PARSE_box_rotation].real;
-    gotAng = (stk[PARSE_box_rotation].objType == PPLOBJ_NUM);
-    width = stk[PARSE_box_width].real;
-    gotWidth = (stk[PARSE_box_width].objType == PPLOBJ_NUM);
-    height = stk[PARSE_box_height].real;
-    gotHeight = (stk[PARSE_box_height].objType == PPLOBJ_NUM);
+    double x1 = stk[PARSE_box_p1].real;
+    double y1 = stk[PARSE_box_p1 + 1].real;
+    double x2 = stk[PARSE_box_p2].real;
+    int gotx2 = (stk[PARSE_box_p2].objType == PPLOBJ_NUM);
+    double y2 = stk[PARSE_box_p2 + 1].real;
+    double x3 = stk[PARSE_box_p3].real;
+    double y3 = stk[PARSE_box_p3 + 1].real;
+    double ang = stk[PARSE_box_rotation].real;
+    int gotAng = (stk[PARSE_box_rotation].objType == PPLOBJ_NUM);
+    double width = stk[PARSE_box_width].real;
+    int gotWidth = (stk[PARSE_box_width].objType == PPLOBJ_NUM);
+    double height = stk[PARSE_box_height].real;
+    int gotHeight = (stk[PARSE_box_height].objType == PPLOBJ_NUM);
 
     if ((!gotx2) && ((!gotWidth) || (!gotHeight))) // If box is specified in width/height format, both must be specified
     {
@@ -1209,19 +1187,17 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
     // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
-    int id, gota1, amArc;
-    double x, y, r, a1, a2;
-    char *tempstr;
+    int id;
 
     // Look up the position of the centre of the circle and its radius
-    tempstr = (char *) stk[PARSE_circle_directive].auxil;
-    amArc = (strcmp(tempstr, "arc") == 0);
-    x = stk[PARSE_circle_p].real;
-    y = stk[PARSE_circle_p + 1].real;
-    r = stk[PARSE_circle_r].real;
-    a1 = stk[PARSE_arc_angle1].real;
-    gota1 = amArc && (stk[PARSE_arc_angle1].objType == PPLOBJ_NUM);
-    a2 = stk[PARSE_arc_angle2].real;
+    char *tempstr = (char *) stk[PARSE_circle_directive].auxil;
+    int amArc = (strcmp(tempstr, "arc") == 0);
+    double x = stk[PARSE_circle_p].real;
+    double y = stk[PARSE_circle_p + 1].real;
+    double r = stk[PARSE_circle_r].real;
+    double a1 = stk[PARSE_arc_angle1].real;
+    int gota1 = amArc && (stk[PARSE_arc_angle1].objType == PPLOBJ_NUM);
+    double a2 = stk[PARSE_arc_angle2].real;
 
     // Add this circle to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_CIRC, &ptr, &id, 0)) { return 1; }
@@ -1259,43 +1235,41 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int e = 0, r = 0, p = 0, id;
-    int gotAng, gotX1, gotXc, gotXf, gotA2, gotB2, gotA, gotB, gotSlr, gotLr, gotEcc, gotarc;
-    double ang, x1, x2, y1, y2, xc, yc, xf, yf, a2, b2, a, b, slr, lr, ecc, arcfrom, arcto;
     double ratio;
 
     // Look up the input parameters which define the ellipse
-    ang = stk[PARSE_ellipse_rotation].real;
-    gotAng = (stk[PARSE_ellipse_rotation].objType == PPLOBJ_NUM);
-    x1 = stk[PARSE_ellipse_p1].real;
-    gotX1 = (stk[PARSE_ellipse_p1].objType == PPLOBJ_NUM);
-    y1 = stk[PARSE_ellipse_p1 + 1].real;
-    x2 = stk[PARSE_ellipse_p2].real;
-    y2 = stk[PARSE_ellipse_p2 + 1].real;
-    xc = stk[PARSE_ellipse_center].real;
-    gotXc = (stk[PARSE_ellipse_center].objType == PPLOBJ_NUM);
-    yc = stk[PARSE_ellipse_center + 1].real;
-    xf = stk[PARSE_ellipse_focus].real;
-    gotXf = (stk[PARSE_ellipse_focus].objType == PPLOBJ_NUM);
-    yf = stk[PARSE_ellipse_focus + 1].real;
-    a2 = stk[PARSE_ellipse_majoraxis].real;
-    gotA2 = (stk[PARSE_ellipse_majoraxis].objType == PPLOBJ_NUM);
-    b2 = stk[PARSE_ellipse_minoraxis].real;
-    gotB2 = (stk[PARSE_ellipse_minoraxis].objType == PPLOBJ_NUM);
-    a = stk[PARSE_ellipse_semimajoraxis].real;
-    gotA = (stk[PARSE_ellipse_semimajoraxis].objType == PPLOBJ_NUM);
-    b = stk[PARSE_ellipse_semiminoraxis].real;
-    gotB = (stk[PARSE_ellipse_semiminoraxis].objType == PPLOBJ_NUM);
-    slr = stk[PARSE_ellipse_slr].real;
-    gotSlr = (stk[PARSE_ellipse_slr].objType == PPLOBJ_NUM);
-    lr = stk[PARSE_ellipse_lr].real;
-    gotLr = (stk[PARSE_ellipse_lr].objType == PPLOBJ_NUM);
-    ecc = stk[PARSE_ellipse_eccentricity].real;
-    gotEcc = (stk[PARSE_ellipse_eccentricity].objType == PPLOBJ_NUM);
+    double ang = stk[PARSE_ellipse_rotation].real;
+    int gotAng = (stk[PARSE_ellipse_rotation].objType == PPLOBJ_NUM);
+    double x1 = stk[PARSE_ellipse_p1].real;
+    int gotX1 = (stk[PARSE_ellipse_p1].objType == PPLOBJ_NUM);
+    double y1 = stk[PARSE_ellipse_p1 + 1].real;
+    double x2 = stk[PARSE_ellipse_p2].real;
+    double y2 = stk[PARSE_ellipse_p2 + 1].real;
+    double xc = stk[PARSE_ellipse_center].real;
+    int gotXc = (stk[PARSE_ellipse_center].objType == PPLOBJ_NUM);
+    double yc = stk[PARSE_ellipse_center + 1].real;
+    double xf = stk[PARSE_ellipse_focus].real;
+    int gotXf = (stk[PARSE_ellipse_focus].objType == PPLOBJ_NUM);
+    double yf = stk[PARSE_ellipse_focus + 1].real;
+    double a2 = stk[PARSE_ellipse_majoraxis].real;
+    int gotA2 = (stk[PARSE_ellipse_majoraxis].objType == PPLOBJ_NUM);
+    double b2 = stk[PARSE_ellipse_minoraxis].real;
+    int gotB2 = (stk[PARSE_ellipse_minoraxis].objType == PPLOBJ_NUM);
+    double a = stk[PARSE_ellipse_semimajoraxis].real;
+    int gotA = (stk[PARSE_ellipse_semimajoraxis].objType == PPLOBJ_NUM);
+    double b = stk[PARSE_ellipse_semiminoraxis].real;
+    int gotB = (stk[PARSE_ellipse_semiminoraxis].objType == PPLOBJ_NUM);
+    double slr = stk[PARSE_ellipse_slr].real;
+    int gotSlr = (stk[PARSE_ellipse_slr].objType == PPLOBJ_NUM);
+    double lr = stk[PARSE_ellipse_lr].real;
+    int gotLr = (stk[PARSE_ellipse_lr].objType == PPLOBJ_NUM);
+    double ecc = stk[PARSE_ellipse_eccentricity].real;
+    int gotEcc = (stk[PARSE_ellipse_eccentricity].objType == PPLOBJ_NUM);
 
     // Read the angles of an arc, if given
-    arcfrom = stk[PARSE_ellipse_arcfrom].real;
-    gotarc = (stk[PARSE_ellipse_arcfrom].objType == PPLOBJ_NUM);
-    arcto = stk[PARSE_ellipse_arcto].real;
+    double arcfrom = stk[PARSE_ellipse_arcfrom].real;
+    int gotarc = (stk[PARSE_ellipse_arcfrom].objType == PPLOBJ_NUM);
+    double arcto = stk[PARSE_ellipse_arcto].real;
 
     // Count number of input parameters that have been supplied, to make sure we have a suitable set
     if (gotAng) {
@@ -1624,11 +1598,10 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id;
-    double x, y;
 
     // Look up the position of the point, and ensure that it is either dimensionless or in units of length
-    x = stk[PARSE_point_p].real;
-    y = stk[PARSE_point_p + 1].real;
+    double x = stk[PARSE_point_p].real;
+    double y = stk[PARSE_point_p + 1].real;
 
     // Add this point to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_POINT, &ptr, &id, 0)) { return 1; }
@@ -1670,9 +1643,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     canvas_item *ptr;
-    int id, Npts, i;
-    double *ptList;
-    list *ptListObj;
+    int id, i;
 
     // Count how many points have been supplied
     if (stk[PARSE_polygon_pointlist].objType != PPLOBJ_LIST) {
@@ -1682,9 +1653,9 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
         ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
         return 1;
     }
-    ptListObj = (list *) stk[PARSE_polygon_pointlist].auxil;
-    Npts = ppl_listLen(ptListObj);
-    ptList = (double *) malloc(2 * Npts * sizeof(double));
+    list *ptListObj = (list *) stk[PARSE_polygon_pointlist].auxil;
+    int Npts = ppl_listLen(ptListObj);
+    double *ptList = (double *) malloc(2 * Npts * sizeof(double));
     // Failure to allocate memory is reported as an error
     if (ptList == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (J).");
@@ -1820,23 +1791,21 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
-    int id, gotX, gotY, gotAng, gotGap, gotTempstr;
-    double x, y, ang, gap;
-    char *tempstr, *text;
+    int id;
 
     // Look up the position of the text item
-    x = stk[PARSE_text_p].real;
-    gotX = (stk[PARSE_text_p].objType == PPLOBJ_NUM);
-    y = stk[PARSE_text_p + 1].real;
-    gotY = (stk[PARSE_text_p + 1].objType == PPLOBJ_NUM);
-    gap = stk[PARSE_text_gap].real;
-    gotGap = (stk[PARSE_text_gap].objType == PPLOBJ_NUM);
-    ang = stk[PARSE_text_rotation].real;
-    gotAng = (stk[PARSE_text_rotation].objType == PPLOBJ_NUM);
+    double x = stk[PARSE_text_p].real;
+    int gotX = (stk[PARSE_text_p].objType == PPLOBJ_NUM);
+    double y = stk[PARSE_text_p + 1].real;
+    int gotY = (stk[PARSE_text_p + 1].objType == PPLOBJ_NUM);
+    double gap = stk[PARSE_text_gap].real;
+    int gotGap = (stk[PARSE_text_gap].objType == PPLOBJ_NUM);
+    double ang = stk[PARSE_text_rotation].real;
+    int gotAng = (stk[PARSE_text_rotation].objType == PPLOBJ_NUM);
 
     // Read the string which we are to render
-    tempstr = (char *) stk[PARSE_text_string].auxil;
-    text = (char *) malloc(strlen(tempstr) + 1);
+    char *tempstr = (char *) stk[PARSE_text_string].auxil;
+    char *text = (char *) malloc(strlen(tempstr) + 1);
     // Failure to allocate memory is reported as an error
     if (text == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (L).");
@@ -1853,7 +1822,7 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Check for halign or valign modifiers
     tempstr = (char *) stk[PARSE_text_halign].auxil;
-    gotTempstr = (stk[PARSE_text_halign].objType == PPLOBJ_STR);
+    int gotTempstr = (stk[PARSE_text_halign].objType == PPLOBJ_STR);
     if (gotTempstr)
         ptr->settings.TextHAlign = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_HALIGN_INT, SW_HALIGN_STR);
     tempstr = (char *) stk[PARSE_text_valign].auxil;
@@ -1922,7 +1891,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
 static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNumber, canvas_plotdesc *out) {
     // Variables for expanding the wildcard
     char msg[PPL_MSG_LENGTH];
-    int i, C;
+    int i;
     char escaped[FNAME_LENGTH];
     wordexp_t wordExp;
     glob_t globData;
@@ -1931,7 +1900,7 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
     out->functions = NULL;
     out->vectors = NULL;
     if (wildcardMatchNumber < 0) wildcardMatchNumber = 0;
-    C = wildcardMatchNumber;
+    int C = wildcardMatchNumber;
     if ((strcmp(in, "") == 0) || (strcmp(in, "-") == 0) || (strcmp(in, "--") == 0)) // special filenames match once only
     {
         if (wildcardMatchNumber > 0) return 1;
@@ -2035,8 +2004,6 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             const int stkLevelOld = c->stackPtr;
             int pos = pos1;
             int Nexprs = 0, i;
-            pplExpr **exprList;
-            pplObj *first;
             while (stk[pos].objType == PPLOBJ_NUM) // count number of expressions
             {
                 pos = (int) round(stk[pos].real);
@@ -2050,7 +2017,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 new = NULL;
                 return 1;
             }
-            exprList = (pplExpr **) ppl_memAlloc(Nexprs * sizeof(pplExpr *));
+            pplExpr **exprList = (pplExpr **) ppl_memAlloc(Nexprs * sizeof(pplExpr *));
             // Failure to allocate memory is reported as an error
             if (exprList == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (S).");
@@ -2067,7 +2034,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
 
             // A single expression which evaluates to a string is a filename; expressions which evaluate to vectors
             // supply vectors of data; others are functions to sample
-            first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
+            pplObj *first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
             if ((!c->errStat.status) && (first->objType == PPLOBJ_STR) &&
                 (Nexprs == 1)) // If we have a single expression that evaluates to a string, it's a filename
             {
@@ -2077,11 +2044,10 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 if (status) return 1;
             } else if ((!c->errStat.status) && (first->objType == PPLOBJ_VEC)) {
                 const int stkLevelOld = c->stackPtr;
-                pplObj *vecs;
                 gsl_vector *v = ((pplVector *) first->auxil)->v;
                 const int l = v->size;
                 int j;
-                vecs = (pplObj *) ppl_memAlloc(Nexprs * sizeof(pplObj));
+                pplObj *vecs = (pplObj *) ppl_memAlloc(Nexprs * sizeof(pplObj));
                 // Failure to allocate memory is reported as an error
                 if (vecs == NULL) {
                     ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (T).");
@@ -2091,7 +2057,6 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 }
                 // Evaluate each expression, which must be a vector of the same length as the first
                 for (i = 0; i < Nexprs; i++) {
-                    int l2;
                     pplObj *obj = ppl_expEval(c, exprList[i], &j, 0, iterDepth);
                     // Report a failure to evaluate the expression
                     if (c->errStat.status) {
@@ -2119,7 +2084,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         new = NULL;
                         return 1;
                     }
-                    l2 = ((pplVector *) first->auxil)->v->size;
+                    int l2 = ((pplVector *) first->auxil)->v->size;
                     // All the vectors must have the same length
                     if (l != l2) {
                         ppl_snprintfTrunc(
@@ -2426,7 +2391,6 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         const int o = ptab[PARSE_INDEX_every_item];
         // Read each item of the every modifier
         while (stk[pos].objType == PPLOBJ_NUM) {
-            long x;
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
             // There may be no more than six items
@@ -2435,7 +2399,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                             "More than six numbers supplied to the every modifier -- trailing entries ignored.");
                 break;
             }
-            x = (long) round(stk[pos + o].real);
+            long x = (long) round(stk[pos + o].real);
             if (x > new->EveryList[Nevery]) new->EveryList[Nevery] = x;
             new->EverySet = ++Nevery;
         }
@@ -2455,7 +2419,6 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     // If reading data from pipe, read and store it now
     if ((new->filename != NULL) && ((strcmp(new->filename, "-") == 0) || (strcmp(new->filename, "--") == 0))) {
         int status = 0, errCount = DATAFILE_NERRS, nObjs = 0;
-        pplExpr **UsingList;
         int NUsing = new->NUsing;
         unsigned char autoUsingList = 0;
         const int linespoints = new->ww.USElinespoints
@@ -2466,7 +2429,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         char *errbuff = (char *) malloc(LSTR_LENGTH);
 
         // Check that the number of using items suits the plot style
-        UsingList = (pplExpr **) malloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
+        pplExpr **UsingList = (pplExpr **) malloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
         // Failure to allocate memory is reported as an error
         if ((errbuff == NULL) || (UsingList == NULL)) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (X).");
@@ -2539,7 +2502,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
     pplObj *stk = in->stk;
     parserLine *spool = NULL, **dataSpool = &spool;
     canvas_item *ptr;
-    int id, status;
+    int id;
 
     // Add this piechart to the linked list which decribes the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_PIE, &ptr, &id, 0)) { return 1; }
@@ -2564,7 +2527,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
     }
 
     // Fetch options in common with the plot command
-    status = ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_piechart_, 0, 0, iterDepth, dataSpool, 1);
+    int status = ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_piechart_, 0, 0, iterDepth, dataSpool, 1);
     // Give up if the data description could not be read
     if (status) {
         canvas_delete(c, id);

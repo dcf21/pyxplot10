@@ -135,11 +135,10 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         goto am_numeric;
     } else if ((t1 == PPLOBJ_STR) && (t2 == PPLOBJ_STR)) // adding strings: concatenate
     {
-        char *tmp;
         const int l1 = strlen((char *) a->auxil);
         const int l2 = strlen((char *) b->auxil);
         int l = l1 + l2 + 1;
-        tmp = (char *) malloc(l);
+        char *tmp = (char *) malloc(l);
         // Failure to allocate memory is reported as an error
         if (tmp == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
@@ -178,17 +177,15 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         addSubArrays(context, a, b, o, 0, status, errType, errText);
     } else if ((t1 == PPLOBJ_LIST) && (t2 == PPLOBJ_LIST)) // adding lists
     {
-        listIterator *li;
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
-        list *l;
         // Adding lists concatenates them into a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
-        l = (list *) o->auxil;
-        li = ppl_listIterateInit((list *) a->auxil);
+        list *l = (list *) o->auxil;
+        listIterator *li = ppl_listIterateInit((list *) a->auxil);
         // Copy the items of the first list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
@@ -203,18 +200,16 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if ((t1 == PPLOBJ_LIST) && (t2 == PPLOBJ_VEC)) // adding vector to list
     {
         int i;
-        listIterator *li;
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
         gsl_vector *bv = ((pplVector *) (b->auxil))->v;
-        list *l;
         // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
-        l = (list *) o->auxil;
-        li = ppl_listIterateInit((list *) a->auxil);
+        list *l = (list *) o->auxil;
+        listIterator *li = ppl_listIterateInit((list *) a->auxil);
         // Copy the items of the list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
@@ -230,17 +225,15 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if ((t1 == PPLOBJ_VEC) && (t2 == PPLOBJ_LIST)) // adding list to vector
     {
         int i;
-        listIterator *li;
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
         gsl_vector *av = ((pplVector *) (a->auxil))->v;
-        list *l;
         // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
-        l = (list *) o->auxil;
+        list *l = (list *) o->auxil;
         pplObjNum(&buff, 1, 0, 0);
         ppl_unitsDimCpy(&buff, a);
         // Copy the elements of the vector, as numbers with its units
@@ -248,7 +241,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             buff.real = gsl_vector_get(av, i);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
         }
-        li = ppl_listIterateInit((list *) b->auxil);
+        listIterator *li = ppl_listIterateInit((list *) b->auxil);
         // Append the items of the list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
@@ -257,18 +250,16 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if (((t1 == PPLOBJ_DICT) && (t2 == PPLOBJ_DICT)) || // adding dictionaries
                ((t1 == PPLOBJ_MOD) && (t2 == PPLOBJ_MOD))) // adding modules
     {
-        dictIterator *di;
         pplObj *item, buff;
         buff.refCount = 1; // Each copy appended to the list holds one reference
-        dict *d;
         char *key;
         // Adding dictionaries or modules merges them; items of the second override those of the first
         if (((t1 == PPLOBJ_DICT) ? pplObjDict(o, 0, 1, NULL) : pplObjModule(o, 0, 1, 0)) == NULL) {
             ppl_funcError(status, errType, errText, ERR_MEMORY, "Out of memory.");
             return;
         }
-        d = (dict *) o->auxil;
-        di = ppl_dictIterateInit((dict *) a->auxil);
+        dict *d = (dict *) o->auxil;
+        dictIterator *di = ppl_dictIterateInit((dict *) a->auxil);
         // Copy the items of the first dictionary
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);

@@ -47,15 +47,14 @@
 void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
     // The colors found so far, as 24-bit numbers; one more than a palette can hold
     char msg[PPL_MSG_LENGTH];
-    unsigned long size, i;
-    int ncols, j, colour;
+    unsigned long i;
+    int j, colour;
     int palette[257];
-    unsigned char *p;
 
     // Count the distinct colors, stopping once there are too many for a palette
-    size = (long) image->height * (long) image->width;
-    ncols = 0;
-    p = image->data;
+    unsigned long size = (long) image->height * (long) image->width;
+    int ncols = 0;
+    unsigned char *p = image->data;
 
     // Count the number of colours in the image
     for (i = 0; i < size; i++) {
@@ -136,16 +135,14 @@ void ppl_bmp_colour_count(pplerr_context *ec, bitmap_data *image) {
 void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
     char msg[PPL_MSG_LENGTH];
     int i;
-    unsigned long size;
-    unsigned char ncols;
 
     // Only 8-bit paletted images are checked
     if (image->type != BMP_COLOUR_PALETTE) return;
     if (image->depth != 8) return;
 
     // Find highest used palette entry
-    ncols = 0;
-    size = image->data_len;
+    unsigned char ncols = 0;
+    unsigned long size = image->data_len;
     for (i = 0; i < size; i++) ncols = (ncols > image->data[i] ? ncols : image->data[i]);
 
     // Shorten the palette, if its last entries are unused
@@ -170,20 +167,18 @@ void ppl_bmp_palette_check(pplerr_context *ec, bitmap_data *image) {
 void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
     // Variables describing the greyscale image
     char msg[PPL_MSG_LENGTH];
-    int i, grey, depth = 8, magic, test;
-    unsigned int ncols;
-    unsigned long size;
+    int i, depth = 8, magic, test;
 
     // Only 8-bit paletted images are checked
     if (image->type != BMP_COLOUR_PALETTE) return;
     if (image->depth != 8) return;
 
     // The number of palette entries and pixels
-    ncols = image->pal_len;
-    size = image->data_len;
+    unsigned int ncols = image->pal_len;
+    unsigned long size = image->data_len;
 
     // See if palette is greyscale. If not, we cannot reduce it to greyscale.
-    grey = 1;
+    int grey = 1;
     for (i = 0; i < image->pal_len; i++)
         if ((image->palette[3 * i] != image->palette[3 * i + 1]) ||
             (image->palette[3 * i] != image->palette[3 * i + 2])) {
@@ -277,7 +272,7 @@ void ppl_bmp_grey_check(pplerr_context *ec, bitmap_data *image) {
 
 void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
     // Variables for packing the pixels
-    int ncols, i, j, height, width;
+    int i, j;
     unsigned char *p, *p2, ctmp;
 
     // Only 8-bit paletted images with no more than 16 colors can be packed
@@ -286,9 +281,9 @@ void ppl_bmp_compact(pplerr_context *ec, bitmap_data *image) {
     if (image->pal_len > 16) return;
 
     // The number of colors determines the number of bits per pixel
-    ncols = image->pal_len;
-    height = image->height;
-    width = image->width;
+    int ncols = image->pal_len;
+    int height = image->height;
+    int width = image->width;
 
     // Pack two-color images with 1 bit per pixel, 2-color to 4-color ones with 2 bits, and up to 16 colors with 4 bits;
     // each row starts on a new byte
