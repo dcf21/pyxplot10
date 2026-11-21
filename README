@@ -56,8 +56,8 @@ Pyxplot website: <http://www.pyxplot.org.uk/>.
 2. SYSTEM REQUIREMENTS
 
 Pyxplot works on most UNIX-like operating systems. We have tested it under
-Linux, Solaris and MacOS X, and believe that it should work on other similar
-POSIX systems. We regret that it is not available for Microsoft Windows, and
+Linux and MacOS, and believe that it should work on other similar POSIX
+systems. We regret that it is not available for Microsoft Windows, and
 have no plans for porting it at this time.
 
 It requires that the following software packages (not included) be installed:

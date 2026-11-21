@@ -75,13 +75,13 @@ Full documentation can be found in:
   \-m, \-\-monochrome: Turn off coloured highlighting.
 .SH AUTHORS
 {authors}.
-.SH BUGS AND USER FORUMS
-To report bugs in Pyxplot, or to meet other Pyxplot users in our forums, please
-visit us on sourceforge: <http://sourceforge.net/projects/pyxplot/>.
+.SH BUGS
+To report bugs in Pyxplot, please visit our issue tracker on GitHub:
+<https://github.com/dcf21/pyxplot10/issues>.
 .SH CREDITS
 Matthew Smith, Michael Rutter, Zoltan Voros and John Walker have all
 contributed code to Pyxplot.  We welcome bug reports, which can be submitted to
-our project page on Sourceforge, and thank the many testers who have already
+our project page on GitHub, and thank the many testers who have already
 made significant contributions to the project by helping us to track down bugs.
 .SH "SEE ALSO"
 .BR pyxplot_watch (1), gnuplot (1)
