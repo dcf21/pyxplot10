@@ -19,7 +19,7 @@
 
 // ----------------------------------------------------------------------------
 
-// List-based string processing functions
+// Splits strings into lists of words. It is used by the help command to split help topics into words.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +42,7 @@ list *ppl_strSplit(char *in) {
     out = ppl_listInit(0);
     pos = 0;
     text_buffer = (char *) malloc(strlen(in) + 1);
+    // Find each word in turn
     while (in[pos] != '\0') {
         // Scan along to find the next word
         while (((unsigned char) in[pos] <= ' ') && (in[pos] > '\0')) pos++;
@@ -51,6 +52,7 @@ list *ppl_strSplit(char *in) {
         while (((unsigned char) in[pos] > ' ') && (in[pos] > '\0')) pos++;
         end = pos;
 
+        // Copy each non-empty word into the list
         if (end > start) {
             word = ppl_strSlice(in, text_buffer, start, end);
             ppl_listAppendCpy(out, word, strlen(word) + 1);

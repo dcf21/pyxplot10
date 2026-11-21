@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the commands which define functions, such as f(x)=x**2. A function may be defined differently over
+// different ranges of its arguments, e.g. f(x)[0:1]=x; each definition is a pplFunc in a linked list, and a new
+// definition trims or removes any older definitions whose ranges it overlaps. A definition with no expression, f(x)=,
+// undefines the function.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,6 +62,7 @@
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOutput *in, const int interactive) {
+    // The parser's output stack holds the function's name, argument names, ranges and definition
     pplObj *stk = in->stk;
     pplFunc *f = NULL;
     int i, j, nArgs = 0, pos, posR, argListLen = 0;
@@ -65,6 +71,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
 
     // Count number of arguments
     pos = PARSE_func_set_0argument_list;
+    // Walk the linked list of argument names on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         char *name;
         pos = (int) round(stk[pos].real);
@@ -72,6 +79,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
         nArgs++;
         argListLen += strlen(name) + 1;
     }
+    // Refuse to define functions with too many arguments
     if (nArgs > FUNC_MAXARGS) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Too many arguments to function; the maximum allowed number is %d.", FUNC_MAXARGS);
@@ -84,6 +92,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
 
     // Allocate function descriptor
     f = (pplFunc *) malloc(sizeof(pplFunc));
+    // Failure to allocate memory is reported as an error
     if (f == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
@@ -120,12 +129,14 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     posR = PARSE_func_set_0range_list;
     i = 0;
     j = 0;
+    // For each argument, store its name, and the range over which this definition applies, if any
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         char *name;
         pos = (int) round(stk[pos].real);
         name = (char *) stk[pos + PARSE_func_set_argument_name_0argument_list].auxil;
         strcpy(f->argList + i, name);
         i += strlen(name) + 1;
+        // This argument has a range specified
         if ((stk[posR].objType == PPLOBJ_NUM) && (stk[posR].real > 0)) {
             pplObj *min, *max;
             posR = (int) round(stk[posR].real);
@@ -137,6 +148,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                 pplObjZom(f->min + j, 0);
                 f->minActive[j] = 0;
             } else {
+                // Ranges may not have complex limits
                 if (min->flagComplex) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -153,6 +165,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                 pplObjZom(f->max + j, 0);
                 f->maxActive[j] = 0;
             } else {
+                // Ranges may not have complex limits
                 if (max->flagComplex) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -160,6 +173,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
                     ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[posR + PARSE_func_set_max_0range_list], "");
                     goto fail;
                 }
+                // The two limits must have the same dimensions
                 if (f->minActive[j] && !ppl_unitsDimEqual(min, max)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -189,6 +203,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &tmpObj,
                              PARSE_func_set_function_names, PARSE_func_set_function_name_function_names);
     if ((c->errStat.status) || (tmpObj == NULL)) goto fail;
+    // A global declaration at the top level cannot be redefined
     if (tmpObj->objType == PPLOBJ_GLOB) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Variable declared global in global namespace.");
@@ -218,6 +233,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     {
         pplFunc **fIterPtr = (pplFunc **) &tmpObj->auxil;
         pplFunc *fIter = *fIterPtr;
+        // Loop over all the existing definitions of the function, comparing their ranges with the new one
         for (; fIter != NULL;) {
             int k, Nsupersede = 0, Noverlap = 0, Nmiss = 0, lastOverlapType = 0, lastOverlapK = 0;
             for (k = 0; k < nArgs;
@@ -309,6 +325,7 @@ void ppl_directive_funcset(ppl_context *c, const parserLine *pl, const parserOut
     tmpObj->auxil = (void *) f;
     return;
 
+// Replace whatever variable or function had this name with the new definition, keeping the object's reference count
 supersede:
     {
         const int rc = tmpObj->refCount;
@@ -321,28 +338,36 @@ supersede:
     }
     return;
 
+// On error, free the partially built function descriptor
 fail:
+    // Free each part of the descriptor which was allocated
     if (f != NULL) {
+        // The argument names
         if (f->argList != NULL) {
             free(f->argList);
             f->argList = NULL;
         }
+        // The lower limits of the ranges
         if (f->min != NULL) {
             free(f->min);
             f->min = NULL;
         }
+        // The upper limits of the ranges
         if (f->max != NULL) {
             free(f->max);
             f->max = NULL;
         }
+        // The flags saying which arguments have lower limits
         if (f->minActive != NULL) {
             free(f->minActive);
             f->minActive = NULL;
         }
+        // The flags saying which arguments have upper limits
         if (f->maxActive != NULL) {
             free(f->maxActive);
             f->maxActive = NULL;
         }
+        // The compiled expression
         if (f->functionPtr != NULL) {
             pplExpr_free((pplExpr *) f->functionPtr);
             f->functionPtr = NULL;

@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The engine for two-dimensional interpolation of scattered data, used by the interpolate command and by plot styles
+// such as colormap and contours, which need data on a regular grid. It evaluates nearest-neighbour, inverse-square or
+// Modified Linear (cubic B-spline kernel) interpolation, with distances measured in units of the span of the data in
+// each direction.
+
 #define _INTERPOLATION2D_C 1
 
 #include <stdlib.h>
@@ -57,9 +62,11 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
     const double *inY = in + InSize;
     const double *inZ = in + ColNum * InSize;
 
+    // Scale the x and y distances by the span of the data in each direction, stored after the data by ppl_interp2d_grid
     const double Xscl = in[NCols * (InSize + 1)] - in[NCols * InSize];
     const double Yscl = in[NCols * (InSize + 1) + 1] - in[NCols * InSize + 1];
 
+    // Evaluate the interpolation using the selected method
     switch (sg->Sample2DMethod) {
         case SW_SAMPLEMETHOD_NEAREST: {
             double DistBest = 0;
@@ -67,6 +74,7 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
             *output = 0.0;
             for (i = 0; i < InSize; i++) {
                 const double dist = hypot((inX[i] - x) / Xscl, (inY[i] - y) / Yscl);
+                // Keep the value of the nearest point so far
                 if (first || (dist < DistBest)) {
                     DistBest = dist;
                     *output = inZ[i];
@@ -81,6 +89,7 @@ void ppl_interp2d_eval(const ppl_context *c, double *output, const pplset_graph 
             for (i = 0; i < InSize; i++) {
                 const double dist = gsl_pow_2((inX[i] - x) / Xscl) + gsl_pow_2((inY[i] - y) / Yscl);
                 double weight;
+                // If we are on top of a data point, return its value exactly, avoiding an infinite weight
                 if (dist < 1e-200) {
                     *output = inZ[i];
                     WeightSum = 1.0;
@@ -149,10 +158,12 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
         return;
     }
 
+    // Create a data table to hold imax x jmax grid points, with the same number of columns as the input
     k = in->Ncolumns_real;
     *output = ppldata_NewDataTable(k, 0, ppl_memAlloc_GetMemContext(), imax * jmax);
     if (*output == NULL) return; // Memory fail
 
+    // Mark every row of the output as unsplit and without text labels
     InSize = in->Nrows;
     (*output)->firstEntries = in->firstEntries;
     p2 = (*output)->current->blockPosition = (*output)->Nrows = imax * jmax;
@@ -163,7 +174,9 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     // Extract data into a temporary array
     tempContext = ppl_memAlloc_DescendIntoNewContext();
 
+    // Space for the data, plus a row of minima and a row of maxima for each column
     indata = (double *) malloc(k * (InSize + 2) * sizeof(double));
+    // Failure to allocate memory is reported as an error
     if (indata == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory whilst resampling data.");
         *output = NULL;
@@ -175,6 +188,7 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
 
     // Copy input data table into temporary array
     blk = in->first;
+    // Copy the data from each block of the table, transposing it into one array per column
     while (blk != NULL) {
         for (ct = 0; ct < k; ct++)
             for (j = 0; j < blk->blockPosition; j++) *(d[ct]++) = blk->data_real[ct + k * j];
@@ -184,10 +198,12 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     // Fill out minimum and maximum of data
     for (jms = 0; jms < k; jms++) {
         MinList[jms] = MaxList[jms] = 0.0;
+        // Find the range of values in this column
         for (ims = 0; ims < InSize; ims++) {
             if ((ims == 0) || (MinList[jms] > indata[jms * InSize + ims])) MinList[jms] = indata[jms * InSize + ims];
             if ((ims == 0) || (MaxList[jms] < indata[jms * InSize + ims])) MaxList[jms] = indata[jms * InSize + ims];
         }
+        // If all values are equal, widen the range slightly so it does not have zero span
         if (MaxList[jms] <= MinList[jms]) {
             const double t = MinList[jms];
             MinList[jms] = t * 0.999;
@@ -199,12 +215,14 @@ void ppl_interp2d_grid(ppl_context *c, dataTable **output, const pplset_graph *s
     for (j = 0, p = 0; j < jmax; j++) {
         const double y = SampleToEdge ? pplaxis_InvGetPosition((((double) j) / (jmax - 1)), axis_y)
                                       : pplaxis_InvGetPosition((((double) j + 0.5) / (jmax)), axis_y);
+        // Each grid point is placed at the edge or centre of a cell spanning the axes
         for (i = 0; i < imax; i++) {
             const double x = SampleToEdge ? pplaxis_InvGetPosition((((double) i) / (imax - 1)), axis_x)
                                           : pplaxis_InvGetPosition((((double) i + 0.5) / (imax)), axis_x);
             (*output)->current->data_real[p++] = x;
             (*output)->current->data_real[p++] = y;
 
+            // Interpolate each of the columns after x and y at this grid point
             for (ct = 2; ct < k; ct++)
                 ppl_interp2d_eval(c, &(*output)->current->data_real[p++], sg, indata, InSize, ct, k, x, y);
         }

@@ -19,7 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
-// This file contain an algorithm for the automatic placement of ticks along axes.
+// One of the algorithms for placing ticks automatically along an axis, chosen by eps_plot_ticking.c. Method 2, which
+// was Pyxplot 0.7's algorithm, generates candidate tick schemes at round multiples of powers of ten (or, on logarithmic
+// axes, at mantissas such as 1, 2 and 5 times powers of the base), and picks the one which places the most ticks
+// without exceeding the number which fit on the axis. Minor ticks must coincide with every major tick. If it fails,
+// ticks are simply spaced evenly along the axis.
 
 // METHOD 2: Pyxplot 0.7 automatic ticking.
 
@@ -69,6 +73,7 @@ static void TickScheme2_sprintf(char *out, const int OutLen, const double UnitMu
                                 const double TL_len) {
     int i = 0, j = 0, k = 0;
     out[j++] = '(';
+    // Write each tick, separated by commas, stopping if the buffer is full
     for (i = 0; ((i < TL_len) && (j < OutLen - 8)); i++) {
         if (k != 0) out[j++] = ',';
         snprintf(out + j, OutLen - j - 8, "%g", TL[i] / UnitMultiplier);
@@ -89,16 +94,21 @@ static void TickScheme2_sprintf(char *out, const int OutLen, const double UnitMu
 //! \param [in] LogBase - The base of the logarithmic axis
 
 static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, const int LogBase) {
+    // Make schemes which divide each power of the base into 1, 2, 3, ... parts, until rounding makes two mantissas
+    // equal
     unsigned char stopping;
     int i, divisor;
 
+    // Try each number of divisions
     for (stopping = 0, divisor = 1; (!stopping); divisor++) {
         if (*NTickSchemes > TICKS_MAXIMUM) return;
+        // Compute each mantissa, rounded to an integer
         for (i = 0; i < divisor; i++) {
             TickSchemes[*NTickSchemes].mantissa[i] = floor(pow(LogBase, ((double) i) / divisor) + 0.5);
             if ((i > 0) && (TickSchemes[*NTickSchemes].mantissa[i - 1] == TickSchemes[*NTickSchemes].mantissa[i]))
                 stopping = 1;
         }
+        // Accept the scheme if all its mantissas differ
         if (!stopping) {
             TickSchemes[*NTickSchemes].Nmantissas = divisor;
             TickSchemes[*NTickSchemes].ticksep = 1.0;
@@ -106,6 +116,7 @@ static void GenerateLogTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, c
             (*NTickSchemes)++;
         }
     }
+    // Add a scheme with ticks at every integer multiple of each power of the base
     if (*NTickSchemes < TICKS_MAXIMUM) {
         for (i = 1; ((i < LogBase) && (i < TICKS_MAXIMUM)); i++) TickSchemes[*NTickSchemes].mantissa[i] = i;
         TickSchemes[*NTickSchemes].Nmantissas = i;
@@ -132,9 +143,12 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, cons
     *NTickSchemes = 0;
     while (pow(10.0, LevelDescend - 1) < (10.0 * TICKS_MAXIMUM)) {
         const double OoMscan = OoM / pow(10.0, LevelDescend);
+        // On logarithmic axes, at the scale of one power of the base, use the special schemes; otherwise use steps
+        // which are factors of a power of ten
         if (IsLog && (OoMscan > 0.09) && (OoMscan < 0.11)) {
             GenerateLogTickSchemes(TickSchemes, NTickSchemes, LogBase);
         } else {
+            // Make a scheme for each factor
             for (i = NFactors - 1; i >= 0; i--) {
                 double t;
                 TickSchemes[*NTickSchemes].mantissa[0] = 1;
@@ -160,12 +174,14 @@ static void GenerateTickSchemes(TickScheme *TickSchemes, int *NTickSchemes, cons
 static void factorise(const int in, int *out, const int MaxFactors, const int FactorMax, int *NFactors) {
     int i, j = 0, k, N = sqrt(in);
     for (i = 2; i <= N; i++)
+        // Record each factor, and its cofactor, filling the list from both ends
         if (in % i == 0) {
             out[j] = i;
             out[MaxFactors - 1 - j] = in / i;
             j++;
             if (j >= MaxFactors / 2) break;
         }
+    // Merge the cofactors into the list, skipping duplicates, then drop factors whose cofactors exceed the limit
     for (i = MaxFactors - j; i <= MaxFactors - 1; i++) {
         out[j] = out[i];
         if (out[j] != out[j - 1]) j++;
@@ -199,6 +215,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     int NTickSchemes;
     TickScheme *TickSchemes = NULL;
 
+    // Log which algorithm is in use
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto2()");
 
     // Make temporary rough workspace
@@ -215,6 +232,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     // Work out order of magnitude of axis range
     axis_min = axis->MinFinal * UnitMultiplier;
     axis_max = axis->MaxFinal * UnitMultiplier;
+    // Make sure the range is the right way around, and not of zero width
     if (axis_min > axis_max) {
         double temp;
         temp = axis_min;
@@ -224,6 +242,8 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
         goto FAIL;
     }
     if (IsLog && (axis_max < 3 * axis_min)) IsLog = 0;
+    // Find the order of magnitude of the axis's range, and round its ends outwards to it, working with logarithms on
+    // logarithmic axes
     if (!IsLog) {
         OoM = pow(10.0, ceil(log10(axis_max - axis_min)));
         outer_min = floor(axis_min / OoM) * OoM;
@@ -241,6 +261,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
         axis->TickListPositions = (double *) ppl_memAlloc_incontext((TICKS_MAXIMUM + 1) * sizeof(double), OutContext);
         axis->TickListStrings = (char **) ppl_memAlloc_incontext((TICKS_MAXIMUM + 1) * sizeof(char *), OutContext);
     }
+    // Allocate the lists of minor ticks
     if (AutoTicks[0]) {
         axis->MTickListPositions = (double *) ppl_memAlloc_incontext((TICKS_MAXIMUM + 1) * sizeof(double), OutContext);
         axis->MTickListStrings = (char **) ppl_memAlloc_incontext((TICKS_MAXIMUM + 1) * sizeof(char *), OutContext);
@@ -261,7 +282,9 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
 
     // Deal with MAJOR ticks. Then MINOR ticks.
     for (major = 1; major >= 0; major--)
+        // Place the major ticks, then the minor ticks
         if (AutoTicks[major]) {
+            // Fill the list of major ticks, or minor ticks
             if (major) {
                 TLP = axis->TickListPositions;
                 TLS = axis->TickListStrings;
@@ -283,8 +306,10 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
             for (i = 0; i < NTickSchemes; i++) {
                 const double ts_min = outer_min + TickSchemes[i].offset;
                 TL_trial_len = 0;
+                // Generate the ticks of this scheme which lie within the axis's range
                 for (j = 0; j < ((outer_max - outer_min) / TickSchemes[i].ticksep + 1.5); j++) {
                     if (TL_trial_len >= TICKS_MAXIMUM) break;
+                    // Each mantissa within each step
                     for (k = 0; k < TickSchemes[i].Nmantissas; k++) {
                         double x;
                         if (TL_trial_len >= TICKS_MAXIMUM) break;
@@ -300,7 +325,10 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
 
                 // If minor ticks, make sure that this tick scheme overlays major ticks
                 OverlayMatch = 1;
+                // Minor tick schemes must have ticks at every major tick, which are then removed from the list of minor
+                // ticks
                 if (!major) {
+                    // Log the scheme in debugging mode
                     if (DEBUG) {
                         int tmp;
                         ppl_snprintfTrunc(msg, sizeof(msg), "Trying minor tick scheme: ");
@@ -308,8 +336,10 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                         TickScheme2_sprintf(msg + tmp, sizeof(msg) - tmp, UnitMultiplier, TL_trial, TL_trial_len);
                         ppl_log(&x->c->errcontext, msg);
                     }
+                    // Check each major tick
                     for (j = 0; axis->TickListStrings[j] != NULL; j++) {
                         OverlayMatch = 0;
+                        // Find a minor tick at the same position, and remove it
                         for (k = 0; k < TL_trial_len; k++) {
                             const double pos = eps_plot_axis_GetPosition(TL_trial[k] / UnitMultiplier, axis, 0, 0);
                             if (fabs(pos - axis->TickListPositions[j]) > 1e-4) continue;
@@ -320,6 +350,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                         }
                         if (!OverlayMatch) break;
                     }
+                    // Log the failure in debugging mode
                     if (DEBUG && !OverlayMatch) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "FAIL: Did not overlay major tick at %g (axis pos %.3f)",
                                           eps_plot_axis_InvGetPosition(axis->TickListPositions[j], axis),
@@ -332,7 +363,9 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
 
                 // See whether this tick scheme is better than previous
                 if ((IsLog) && (TickSchemes[i].Nmantissas >= LogBase - 1) && (!major)) {
+                    // Too many ticks; since schemes are tried from coarsest to finest, stop looking
                     if (TL_trial_len > 3 * number_ticks) {
+                        // Log the rejection in debugging mode
                         if (DEBUG) {
                             ppl_snprintfTrunc(
                                     msg, sizeof(msg),
@@ -347,6 +380,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                     TL_best_len = TL_trial_len;
                     for (j = 0; j < TL_trial_len; j++) TL_best[j] = TL_trial[j];
                 } else if ((IsLog) && (TickSchemes[i].Nmantissas > 1) && (TL_trial_len > number_ticks)) {
+                    // Log the rejection in debugging mode
                     if (DEBUG) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -356,6 +390,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                     }
                     continue;
                 } else if (TL_trial_len > number_ticks) break;
+                // Keep the scheme if it has more ticks than the best so far
                 else if (TL_trial_len > TL_best_len) {
                     for (j = 0; j < TL_trial_len; j++) TL_best[j] = TL_trial[j];
                     TL_best_len = TL_trial_len;
@@ -367,6 +402,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
                 const double xtmp = TL_best[i];
                 TLP[j] = eps_plot_axis_GetPosition(xtmp / UnitMultiplier, axis, 0, 0);
                 if (!gsl_finite(TLP[j])) continue;
+                // Label major ticks, either automatically or with the axis's format; minor ticks have no labels
                 if (major) {
                     if (axis->format == NULL) TickLabelAutoGen(x, &TLS[j], xtmp, LogBase, OutContext);
                     else
@@ -383,6 +419,7 @@ void eps_plot_ticking_auto2(EPSComm *x, pplset_axis *axis, const double UnitMult
     // Finished
     goto CLEANUP;
 
+// If the algorithm failed, space ticks evenly along the axis
 FAIL:
     if (DEBUG) ppl_log(&x->c->errcontext, "eps_plot_ticking_auto2() has failed");
 
@@ -391,14 +428,17 @@ FAIL:
     if (N < 3) N = 3;
     if (N > 100) N = 100;
 
+    // Allocate the lists of ticks
     axis->TickListPositions = (double *) ppl_memAlloc_incontext((N + 1) * sizeof(double), OutContext);
     axis->TickListStrings = (char **) ppl_memAlloc_incontext((N + 1) * sizeof(char *), OutContext);
+    // Failure to allocate memory is reported as an error
     if ((axis->TickListPositions == NULL) || (axis->TickListStrings == NULL)) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (s).");
         axis->TickListPositions = NULL;
         axis->TickListStrings = NULL;
         goto CLEANUP;
     }
+    // Place each tick, and label it
     for (i = 0; i < N; i++) {
         double X;
         X = ((double) i) / (N - 1);
@@ -407,6 +447,7 @@ FAIL:
         if (axis->format == NULL)
             TickLabelAutoGen(x, &axis->TickListStrings[i], X * UnitMultiplier, axis->tics.logBase, OutContext);
         else TickLabelFromFormat(x, &axis->TickListStrings[i], axis->format, X, &axis->DataUnit, axis->xyz, OutContext);
+        // Failure to allocate memory is reported as an error
         if (axis->TickListStrings[i] == NULL) {
             ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (t).");
             axis->TickListPositions = NULL;
@@ -416,6 +457,7 @@ FAIL:
     }
     axis->TickListStrings[i] = NULL; // null terminate list
 
+// Free the temporary workspace
 CLEANUP:
     // Delete temporary lists of ticks and tick schemes
     free(TL_best);

@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Reports errors, warnings, informational messages and debugging logs to the user, prefixing each with the file and
+// line of input being processed. Every part of Pyxplot reports problems through these functions, which also count the
+// errors so that Pyxplot can exit with a non-zero status. Messages are assembled in static buffers, under a lock, so
+// that threads evaluating functions in parallel can report safely.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +39,7 @@
 #include "coreUtils/errorReport.h"
 #include "settings/settingTypes.h"
 
+// The length of the static buffers in which messages are assembled, leaving room for a null terminator
 #define BLEN (LSTR_LENGTH - 1)
 
 static char temp_stringA[BLEN + 1], temp_stringB[BLEN + 1], temp_stringC[BLEN + 1], temp_stringD[BLEN + 1],
@@ -79,6 +85,7 @@ void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, cons
     static long sourceId = 0;
     context->error_input_sourceId = sourceId++;
     context->error_input_linenumber = linenumber;
+    // Record the filename, truncating it to fit the buffer
     if (filename != NULL) {
         strncpy(context->error_input_filename, filename, FNAME_LENGTH);
         context->error_input_filename[FNAME_LENGTH - 1] = '\0';
@@ -89,18 +96,23 @@ void ppl_error_setstreaminfo(pplerr_context *context, const int linenumber, cons
 //! errorUnlocked - The body of ppl_error(), which is called with the lock held that lets only one thread report at a time
 
 static void errorUnlocked(pplerr_context *context, const int ErrType, int HighlightPos1, int HighlightPos2, char *msg) {
+    // ApplyHighlighting is set if the terminal supports colour; reverse counts down the characters still to be shown in
+    // reverse video; i is the length of the message assembled so far
     unsigned char ApplyHighlighting, reverse = 0;
     int i = 0, j;
 
+    // Count the error, and decide whether to use colour
     if (msg == NULL) msg = "";
     context->errorCount++; // Any error makes Pyxplot exit with non-zero status
     ApplyHighlighting = ((context->session_default.color == SW_ONOFF_ON) && (isatty(STDERR_FILENO) == 1));
+    // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN] = '\0';
         msg = temp_stringA;
     }
 
+    // The message is assembled in temp_stringB, starting with an empty string
     temp_stringB[i] = temp_stringB[BLEN] = '\0';
 
     if (ErrType != ERR_PREFORMED) // Do not prepend anything to pre-formed errors
@@ -110,6 +122,7 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
             ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "%s:%d:", context->error_input_filename,
                               context->error_input_linenumber);
             i += strlen(temp_stringB + i);
+            // Stacked errors continue a message on the following lines, so are not followed by a space
             if ((ErrType != ERR_STACKED) && (i < BLEN - 2)) {
                 temp_stringB[i++] = ' ';
                 temp_stringB[i] = '\0';
@@ -162,9 +175,14 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
         i += strlen(temp_stringB + i);
     }
 
+    // Copy the message, highlighting the characters at HighlightPos1 and HighlightPos2. Each highlight covers three
+    // characters, e.g. the arrow /|\ which points to the position of a syntax error.
     for (j = 0; msg[j] != '\0'; j++) {
+        // Switch reverse video on at each highlighted position, and off three characters later
         if (ApplyHighlighting) {
+            // Start of the first highlight
             if (j == HighlightPos1 - 1) {
+                // Switch reverse video on, unless it is already on
                 if (reverse == 0) {
                     ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "\x1b[7m");
                     i += strlen(temp_stringB + i);
@@ -172,6 +190,7 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
                 reverse = 3;
                 HighlightPos1 = -1;
             } else if (j == HighlightPos2 - 1) {
+                // Start of the second highlight: switch reverse video on, unless it is already on
                 if (reverse == 0) {
                     ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "\x1b[7m");
                     i += strlen(temp_stringB + i);
@@ -184,7 +203,10 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
                 reverse = 0;
             } else if (reverse > 1) reverse--;
         }
+        // Append the character, if there is room
         if (i < BLEN) {
+            // A highlighted newline is shown as a space, before the newline itself is copied on the next pass (hence
+            // j--)
             if ((msg[j] == '\n') && (reverse > 0)) {
                 temp_stringB[i++] = ' ';
                 j--;
@@ -193,6 +215,7 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
                 temp_stringB[i++] = msg[j];
         }
     }
+    // Make sure that reverse video is switched off at the end of the message
     if (ApplyHighlighting && (reverse != 0)) {
         ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "\x1b[27m");
         i += strlen(temp_stringB + i);
@@ -200,6 +223,7 @@ static void errorUnlocked(pplerr_context *context, const int ErrType, int Highli
     }
     if (i < BLEN) temp_stringB[i] = '\0';
 
+    // Copy the message to the debugging log
     if (DEBUG) { ppl_log(context, temp_stringB); }
 
     // Print message in color or monochrome
@@ -241,6 +265,7 @@ void ppl_error(pplerr_context *context, const int ErrType, int HighlightPos1, in
 void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
     char introline[FNAME_LENGTH];
     if (msg == NULL) msg = "";
+    // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringE) {
         ppl_snprintfTrunc(temp_stringE, BLEN, "%s", msg);
         temp_stringE[BLEN - 1] = '\0';
@@ -257,15 +282,19 @@ void ppl_fatal(pplerr_context *context, char *file, int line, char *msg) {
 //! warningUnlocked - The body of ppl_warning(), which is called with the lock held that lets only one thread report at a time
 
 static void warningUnlocked(pplerr_context *context, const int ErrType, char *msg) {
+    // i is the length of the message assembled so far
     int i = 0;
 
+    // Treat a missing message as an empty one
     if (msg == NULL) msg = "";
+    // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN - 1] = '\0';
         msg = temp_stringA;
     }
 
+    // The message is assembled in temp_stringB, starting with an empty string
     temp_stringB[i] = temp_stringB[BLEN] = '\0';
 
     if (ErrType != ERR_PREFORMED) // Do not prepend anything to pre-formed errors
@@ -275,6 +304,7 @@ static void warningUnlocked(pplerr_context *context, const int ErrType, char *ms
             ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "%s:%d:", context->error_input_filename,
                               context->error_input_linenumber);
             i += strlen(temp_stringB + i);
+            // Stacked warnings continue a message on the following lines, so are not followed by a space
             if ((ErrType != ERR_STACKED) && (i < BLEN - 2)) {
                 temp_stringB[i++] = ' ';
                 temp_stringB[i] = '\0';
@@ -327,8 +357,10 @@ static void warningUnlocked(pplerr_context *context, const int ErrType, char *ms
         i += strlen(temp_stringB + i);
     }
 
+    // Append the message itself
     ppl_snprintfTrunc(temp_stringB + i, BLEN - i, "%s", msg);
 
+    // Copy the message to the debugging log
     if (DEBUG) { ppl_log(context, temp_stringB); }
 
     // Print message in color or monochrome
@@ -363,10 +395,12 @@ void ppl_warning(pplerr_context *context, const int ErrType, char *msg) {
 
 static void reportUnlocked(pplerr_context *context, char *msg) {
     if (msg == NULL) msg = "";
+    // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringA) {
         ppl_snprintfTrunc(temp_stringA, BLEN, "%s", msg);
         temp_stringA[BLEN - 1] = '\0';
     }
+    // Copy the message to the debugging log
     if (DEBUG) {
         ppl_snprintfTrunc(temp_stringC, BLEN, "%s%s", "Reporting:\n", temp_stringA);
         temp_stringC[BLEN] = '\0';
@@ -399,16 +433,20 @@ void ppl_report(pplerr_context *context, char *msg) {
 //! logUnlocked - The body of ppl_log(), which is called with the lock held that lets only one thread report at a time
 
 static void logUnlocked(pplerr_context *context, char *msg) {
+    // The log file, opened on the first call, and a latch which stops this function from calling itself
     static FILE *logfile = NULL;
     static int latch = 0;
     char linebuffer[LSTR_LENGTH];
 
     if (latch) return; // Do not allow recursive calls, which might be generated by the call to ppl_fatal below
     latch = 1;
+    // Open the log file on the first call, naming it after the process ID so that each of Pyxplot's processes has its
+    // own
     if (logfile == NULL) {
         char LogFName[128];
         snprintf(LogFName, 127, "pyxplot.%d.log", getpid());
         LogFName[127] = '\0';
+        // Failure to open the log file is fatal
         if ((logfile = fopen(LogFName, "w")) == NULL) {
             ppl_fatal(context, __FILE__, __LINE__, "Could not open log file to write.");
             exit(1);
@@ -416,7 +454,9 @@ static void logUnlocked(pplerr_context *context, char *msg) {
         setvbuf(logfile, NULL, _IOLBF, 0); // Set log file to be line-buffered, so that log file is always up-to-date
     }
 
+    // Treat a missing message as an empty one
     if (msg == NULL) msg = "";
+    // Copy the message into a static buffer, unless it is already there
     if (msg != temp_stringD) {
         ppl_snprintfTrunc(temp_stringD, BLEN, "%s", msg);
         temp_stringD[BLEN - 1] = '\0';

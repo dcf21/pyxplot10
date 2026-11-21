@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the set and unset commands, which change Pyxplot's settings, either the current settings or those of an
+// existing multiplot item. Each setting is handled by its own branch of a long if/else chain, keyed on the name of the
+// setting; unset restores a setting to its default value, which is either built in or read from a configuration file at
+// startup. Changing an axis between linear and logarithmic, or changing its units, discards any ticks set on it, since
+// these would no longer make sense.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -74,12 +80,15 @@
 
 static void tics_rm(pplset_tics *a) {
     a->tickMinSet = a->tickMaxSet = a->tickStepSet = 0;
+    // Free the tick positions
     if (a->tickList != NULL) {
         free(a->tickList);
         a->tickList = NULL;
     }
+    // Free the tick labels, which form a NULL-terminated list
     if (a->tickStrs != NULL) {
         int i;
+        // Free each label
         for (i = 0; a->tickStrs[i] != NULL; i++) {
             free(a->tickStrs[i]);
             a->tickStrs[i] = NULL;
@@ -101,14 +110,17 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
         for (l = 0; i->tickStrs[l] != NULL; l++);
         o->tickList = (double *) malloc((l + 1) * sizeof(double));
         o->tickStrs = (char **) malloc((l + 1) * sizeof(char *));
+        // If memory could not be allocated, leave the copy with no tick list
         if ((o->tickList == NULL) || (o->tickStrs == NULL)) {
             o->tickList = NULL;
             o->tickStrs = NULL;
             return;
         }
         memcpy(o->tickList, i->tickList, (l + 1) * sizeof(double));
+        // Copy each tick label
         for (j = 0; j < l; j++) {
             o->tickStrs[j] = (char *) malloc(strlen(i->tickStrs[j]) + 1);
+            // If memory could not be allocated, abandon the copy
             if (o->tickStrs[j] == NULL) {
                 o->tickList = NULL;
                 o->tickStrs = NULL;
@@ -133,6 +145,7 @@ static void tics_cp(pplset_tics *o, pplset_tics *i) {
 static void setAutoscaleAxis(ppl_context *c, pplset_axis *xa, pplset_axis *ya, pplset_axis *za, const int direction,
                              const int n, const int set, const int setAll) {
     pplset_axis *a, *ad;
+    // Point to the axis, and to its default settings
     if (direction == 1) {
         a = &ya[n];
         ad = &c->set->YAxesDefault[n];
@@ -143,6 +156,8 @@ static void setAutoscaleAxis(ppl_context *c, pplset_axis *xa, pplset_axis *ya, p
         a = &xa[n];
         ad = &c->set->XAxesDefault[n];
     }
+    // "set autoscale" enables the axis and makes its range automatic; unless it was named explicitly, only axes already
+    // enabled are affected. "unset autoscale" restores the default range
     if (set && ((!setAll) || (a->enabled))) {
         a->enabled = 1;
         a->MinSet = SW_BOOL_FALSE;
@@ -171,10 +186,12 @@ static int *getAxisLog(ppl_context *c, pplset_axis *axis, const int useDefaults,
     pplset_axis *ai = axis;
     int count = 0, *out = &ai->log;
     while ((ai->linked) && (count < 100)) { // Limit the length of chains of links, in case they are circular
+        // An axis linked to an axis of another multiplot item takes its own logscale setting
         if (ai->LinkedAxisCanvasID > 0) {
             out = &axis->log;
             *out = 0;
         }
+        // Follow the link to the axis it is linked to, among the current or the default axes
         if (!useDefaults) {
             if (ai->LinkedAxisToXYZ == 0) ai = xa + ai->LinkedAxisToNum;
             else if (ai->LinkedAxisToXYZ == 1) ai = ya + ai->LinkedAxisToNum;
@@ -185,6 +202,7 @@ static int *getAxisLog(ppl_context *c, pplset_axis *axis, const int useDefaults,
             else ai = c->set->ZAxesDefault + ai->LinkedAxisToNum;
         }
         count++;
+        // A link to a disabled axis is broken, so the axis takes its own logscale setting
         if (!ai->enabled) {
             out = &axis->log;
             *out = 0;
@@ -213,6 +231,7 @@ static void setNoTicks(pplset_tics *t) {
 
 static void unsetTicks(pplset_axis *a, pplset_axis *ad, const int minorOnly) {
     const int unitsMatch = ppl_unitsDimEqual(&a->unit, &ad->unit);
+    // Unless only the minor ticks are affected, reset the major ticks to their defaults
     if (!minorOnly) {
         tics_rm(&a->tics);
         if (unitsMatch) tics_cp(&a->tics, &ad->tics);
@@ -241,11 +260,13 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
     const int gotRange = ((ptab[PARSE_INDEX_start] > 0) && (command[ptab[PARSE_INDEX_start]].objType == PPLOBJ_NUM));
     const int gotList =
             ((ptab[PARSE_INDEX_got_list] > 0) && (command[ptab[PARSE_INDEX_got_list]].objType == PPLOBJ_STR));
+    // Set the direction of the ticks, if given
     if ((ptab[PARSE_INDEX_dir] > 0) && (command[ptab[PARSE_INDEX_dir]].objType == PPLOBJ_STR)) {
         t->tickDir = ppl_fetchSettingByName(&c->errcontext, (char *) command[ptab[PARSE_INDEX_dir]].auxil,
                                             SW_TICDIR_INT, SW_TICDIR_STR);
     }
     if (gotAuto || gotRange || gotList) tics_rm(t);
+    // Ticks at regular intervals: start, increment and end, any of which may be omitted
     if (gotRange) {
         int gotStart = ((ptab[PARSE_INDEX_start] > 0) && (command[ptab[PARSE_INDEX_start]].objType == PPLOBJ_NUM));
         int gotIncr =
@@ -257,6 +278,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         double start = objstart->real;
         double incr = objincr->real;
         double end = objend->real;
+        // If only one value is given, it is the increment, starting from zero
         if (!gotIncr) {
             objincr = objstart;
             incr = start;
@@ -264,6 +286,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             gotStart = 0;
         } /* if only one number given, it is increment */
 
+        // The start and increment must have the same units, except on logarithmic axes, where the increment is a factor
         if ((gotStart && gotIncr && !amLog) && (!ppl_unitsDimEqual(objstart, objincr))) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -272,6 +295,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
             return 1;
         }
+        // The start and end must have the same units
         if ((gotStart && gotEnd) && (!ppl_unitsDimEqual(objstart, objend))) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -280,6 +304,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
             return 1;
         }
+        // On logarithmic axes, the increment is a dimensionless factor
         if (amLog && (!objincr->dimensionless)) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -288,23 +313,28 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
             return 1;
         }
+        // The start must be finite
         if (gotStart && (!gsl_finite(start))) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Invalid starting value for axis ticks. Value supplied is not finite.");
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return 1;
         }
+        // The increment must be finite
         if (gotIncr && (!gsl_finite(incr))) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Invalid step size for axis ticks. Value supplied is not finite.");
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return 1;
         }
+        // The end must be finite
         if (gotEnd && (!gsl_finite(end))) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Invalid end value for axis ticks. Value supplied is not finite.");
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return 1;
         }
+        // Check that the tick positions have the same units as the axis
         if ((!amLog) || (gotStart)) {
             pplObj *o = amLog ? objstart : objincr;
+            // If the axis has a fixed range, the ticks must have the same units as it
             if ((unitSet) && (!ppl_unitsDimEqual(o, unit))) {
                 ppl_snprintfTrunc(
                         msg, sizeof(msg),
@@ -313,12 +343,14 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
                 ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
                 return 1;
             }
+            // If the units of the axis change, the other set of ticks (major or minor) no longer applies
             if (!ppl_unitsDimEqual(o, unit)) {
                 tics_rm(tOther);
                 (*unit) = *o;
             }
         }
 
+        // Store the tick positions
         if ((t->tickMinSet = gotStart)) t->tickMin = start;
         if ((t->tickStepSet = gotIncr)) t->tickStep = incr;
         if ((t->tickMaxSet = gotEnd)) t->tickMax = end;
@@ -329,6 +361,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         int i = 0;
         pplObj *first = NULL;
 
+        // Check every item in a list of tick positions, each optionally with a label
         while (command[pos].objType == PPLOBJ_NUM) {
             pplObj *ox, *ol;
             pos = (int) round(command[pos].real);
@@ -341,6 +374,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
                 ol = ox;
                 ox = tmp;
             }
+            // Tick positions must be numbers
             if (ox->objType != PPLOBJ_NUM) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Ticks can only be set at numeric values; supplied value is of type <%s>.",
@@ -348,26 +382,31 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
                 ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return 1;
             }
+            // Tick labels must be strings
             if ((ol->objType != PPLOBJ_ZOM) && (ol->objType != PPLOBJ_STR)) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Ticks labels must be strings; supplied value is of type <%s>.",
                                   pplObjTypeNames[ol->objType]);
                 ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return 1;
             }
+            // Tick positions must be finite
             if (!gsl_finite(ox->real)) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Ticks can only be set at finite numeric values; supplied value is not finite.");
                 ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return 1;
             }
+            // Tick positions must be real
             if (ox->flagComplex) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Ticks can only be set at real numeric values; supplied value is complex.");
                 ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return 1;
             }
+            // The first tick sets the units of the list; all others must match it
             if (i == 0) {
                 first = ox;
+                // If the axis has a fixed range, the ticks must have the same units as it
                 if ((unitSet) && (!ppl_unitsDimEqual(first, unit))) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -377,6 +416,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
                     ppl_error(&c->errcontext, ERR_UNIT, -1, -1, msg);
                     return 1;
                 }
+                // If the units of the axis change, the other set of ticks (major or minor) no longer applies
                 if (!ppl_unitsDimEqual(first, unit)) {
                     tics_rm(tOther);
                     (*unit) = *first;
@@ -395,6 +435,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
         t->tickStrs = (char **) malloc((i + 1) * sizeof(char *));
         pos = ptab[PARSE_INDEX_0tick_list];
         i = 0;
+        // Store each tick position and its label
         while (command[pos].objType == PPLOBJ_NUM) {
             pplObj *ox, *ol;
             char *label;
@@ -402,6 +443,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             if (pos <= 0) break;
             ox = &command[pos + x];
             ol = &command[pos + lab];
+            // The parser may return the position and label in either order
             if (ox->objType == PPLOBJ_STR) {
                 pplObj *tmp = ol;
                 ol = ox;
@@ -410,6 +452,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
             t->tickList[i] = ox->real;
             label = (ol->objType == PPLOBJ_STR) ? ((char *) ol->auxil) : ("\xFF");
             t->tickStrs[i] = (char *) malloc(strlen(label) + 1);
+            // Failure to allocate memory is reported as an error
             if (t->tickStrs[i] == NULL) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Out of memory.");
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, msg);
@@ -430,6 +473,7 @@ static int setTicks(ppl_context *c, pplObj *command, const int *ptab, const char
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive) {
+    // Pointers to the settings to change, which belong to a multiplot item or to the current settings
     char msg[PPL_MSG_LENGTH];
     pplset_graph *sg;
     pplarrow_object **al;
@@ -440,6 +484,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     const int gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
     char *directive, *setoption;
 
+    // Change the current settings, or those of a multiplot item
     if (!gotEditNo) {
         sg = &c->set->graph_current;
         al = &c->set->pplarrow_list;
@@ -452,6 +497,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int editNo = (int) round(command[PARSE_arc_editno].real);
         canvas_item *ptr;
 
+        // The multiplot item number must be valid
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
@@ -459,24 +505,28 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
         ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
+        // Report a multiplot item which does not exist
         if (ptr == NULL) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
 
+        // Use the multiplot item's settings
         sg = &(ptr->settings);
         al = &(ptr->arrow_list);
         ll = &(ptr->label_list);
         xa = ptr->XAxes;
         ya = ptr->YAxes;
         za = ptr->ZAxes;
+        // Some multiplot items, such as text items, have no axes, arrows or labels
         if ((xa == NULL) || (ya == NULL) || (za == NULL)) {
             al = NULL;
             ll = NULL;
         } // Objects which do not store axes also do not store any text labels or arrows
     }
 
+    // The command (set or unset), and the setting to change; each setting is handled in turn below
     directive = (char *) command[PARSE_arc_directive].auxil;
     setoption = (char *) command[PARSE_arc_set_option].auxil;
     strcmp_set = (strcmp(directive, "set") == 0);
@@ -490,11 +540,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (al != NULL) pplarrow_unset(c, al, in, pl, PARSE_TABLE_unset_arrow_);
     } else if ((strcmp(setoption, "autoscale") == 0)) /* set autoscale | unset autoscale */
     {
+        // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             const unsigned char set = strcmp_set;
             int pos = PARSE_set_autoscale_0axes;
             const unsigned char SetAll = (command[pos].objType != PPLOBJ_NUM);
             if (!SetAll)
+                // Autoscale each axis named
                 while (command[pos].objType == PPLOBJ_NUM) {
                     int i, j;
                     pos = (int) round(command[pos].real);
@@ -503,6 +555,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     j = (int) round(command[pos + PARSE_set_autoscale_axis_0axes].exponent[0]);
                     setAutoscaleAxis(c, xa, ya, za, j, i, set, SetAll);
                 }
+            // With no axes named, autoscale all of them
             else {
                 int i, j;
                 for (j = 0; j < 2; j++)
@@ -513,12 +566,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         int pos = PARSE_unset_axis_axes;
         int i, anum;
+        // Set each axis named
         while (command[pos].objType == PPLOBJ_NUM) {
             pplset_axis *a, *ad;
             pos = (int) round(command[pos].real);
             if (pos <= 0) break;
             anum = (int) round(command[pos + PARSE_set_axis_axis_axes].real);
             i = (int) round(command[pos + PARSE_set_axis_axis_axes].exponent[0]);
+            // Point to the axis, and to its default settings
             if (i == 1) {
                 a = &ya[anum];
                 ad = &c->set->YAxesDefault[anum];
@@ -536,18 +591,21 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (command[PARSE_set_axis_notatzero].objType == PPLOBJ_STR) a->atzero = 0;
             if (command[PARSE_set_axis_linked].objType == PPLOBJ_STR) a->linked = 1;
             if (command[PARSE_set_axis_notlinked].objType == PPLOBJ_STR) a->linked = 0;
+            // Set the orientation of x axes
             if (command[PARSE_set_axis_xorient].objType == PPLOBJ_STR) {
                 if (i != 0)
                     ppl_warning(&c->errcontext, ERR_SYNTAX,
                                 "Can only specify the positions 'top' or 'bottom' for x axes.");
                 else a->topbottom = (strcmp((char *) command[PARSE_set_axis_xorient].auxil, "on") == 0);
             }
+            // Set the orientation of y axes
             if (command[PARSE_set_axis_yorient].objType == PPLOBJ_STR) {
                 if (i != 1)
                     ppl_warning(&c->errcontext, ERR_SYNTAX,
                                 "Can only specify the positions 'left' and 'right' for y axes.");
                 else a->topbottom = (strcmp((char *) command[PARSE_set_axis_yorient].auxil, "on") == 0);
             }
+            // Set the orientation of z axes
             if (command[PARSE_set_axis_zorient].objType == PPLOBJ_STR) {
                 if (i != 2)
                     ppl_warning(&c->errcontext, ERR_SYNTAX,
@@ -560,8 +618,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (command[PARSE_set_axis_axisdisp].objType == PPLOBJ_STR)
                 a->ArrowType = ppl_fetchSettingByName(&c->errcontext, (char *) command[PARSE_set_axis_axisdisp].auxil,
                                                       SW_AXISDISP_INT, SW_AXISDISP_STR);
+            // Link the axis to another axis, optionally of another multiplot item
             if (command[PARSE_set_axis_linkaxis].objType == PPLOBJ_NUM) {
                 const int j = (int) round(command[PARSE_set_axis_linkaxis].real);
+                // Free the old expression mapping between the linked axes
                 if (a->linkusing != NULL) {
                     pplExpr_free((pplExpr *) a->linkusing);
                     a->linkusing = ad->linkusing;
@@ -574,7 +634,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (command[PARSE_set_axis_linktoid].objType == PPLOBJ_NUM) {
                 a->LinkedAxisCanvasID = (int) round(command[PARSE_set_axis_linktoid].real);
             }
+            // Store the expression mapping between the linked axes
             if (command[PARSE_set_axis_usingexp].objType == PPLOBJ_EXP) {
+                // Free the old expression mapping between the linked axes
                 if (a->linkusing != NULL) {
                     pplExpr_free((pplExpr *) a->linkusing);
                     a->linkusing = NULL;
@@ -585,27 +647,33 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_unset && (strcmp(setoption, "axis") == 0)) /* unset axis */
     {
         int pos = PARSE_unset_axis_0axes;
+        // With no axes named, remove all axes and restore the defaults
         if (command[pos].objType != PPLOBJ_NUM) {
             int i;
+            // Restore the default x axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(xa[i]));
                 pplaxis_copy(c, &(xa[i]), &(c->set->XAxesDefault[i]));
             }
+            // Restore the default y axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(ya[i]));
                 pplaxis_copy(c, &(ya[i]), &(c->set->YAxesDefault[i]));
             }
+            // Restore the default z axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(za[i]));
                 pplaxis_copy(c, &(za[i]), &(c->set->ZAxesDefault[i]));
             }
         } else {
             int i, anum;
+            // Restore each axis named to its default
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
                 anum = (int) round(command[pos + PARSE_unset_axis_axis_axes].real);
                 i = (int) round(command[pos + PARSE_unset_axis_axis_axes].exponent[0]);
+                // Point to the axis
                 if (i == 1) {
                     pplaxis_destroy(c, &(ya[anum]));
                     pplaxis_copy(c, &(ya[anum]), &(c->set->YAxesDefault[anum]));
@@ -638,6 +706,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int gotbarsize = (command[PARSE_set_bar_bar_size].objType == PPLOBJ_NUM);
         const int gotlarge = (command[PARSE_set_bar_bar_size_large].objType == PPLOBJ_STR);
         const int gotsmall = (command[PARSE_set_bar_bar_size_small].objType == PPLOBJ_STR);
+        // The size of the bars must be finite
         if (gotbarsize && !gsl_finite(barsize)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set bar' command was not finite.");
@@ -652,10 +721,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->bar = c->set->graph_default.bar;
     } else if (strcmp_set && (strcmp(setoption, "binorigin") == 0)) /* set binorigin */
     {
+        // An automatic bin origin, or a value
         if (command[PARSE_set_binwidth_auto].objType == PPLOBJ_STR) {
             c->set->term_current.BinOriginAuto = 1;
         } else {
             const double tempdbl = command[PARSE_set_binorigin_bin_origin].real;
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set binorigin' command was not finite.");
@@ -670,15 +741,18 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         c->set->term_current.BinOriginAuto = c->set->term_default.BinOriginAuto;
     } else if (strcmp_set && (strcmp(setoption, "binwidth") == 0)) /* set binwidth */
     {
+        // An automatic bin width, or a value
         if (command[PARSE_set_binwidth_auto].objType == PPLOBJ_STR) {
             c->set->term_current.BinWidthAuto = 1;
         } else {
             const double tempdbl = command[PARSE_set_binwidth_bin_width].real;
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set binwidth' command was not finite.");
                 return;
             }
+            // The bin width must be positive
             if (tempdbl <= 0) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, "Width of histogram bins must be greater than zero.");
                 return;
@@ -692,10 +766,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         c->set->term_current.BinWidthAuto = c->set->term_default.BinWidthAuto;
     } else if (strcmp_set && (strcmp(setoption, "boxfrom") == 0)) /* set boxfrom */
     {
+        // An automatic box origin, or a value
         if (command[PARSE_set_boxfrom_auto].objType == PPLOBJ_STR) {
             sg->BoxFromAuto = 1;
         } else {
             const double tempdbl = command[PARSE_set_boxfrom_box_from].real;
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set boxfrom' command was not finite.");
@@ -710,10 +786,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->BoxFromAuto = c->set->graph_default.BoxFromAuto;
     } else if (strcmp_set && (strcmp(setoption, "boxwidth") == 0)) /* set boxwidth */
     {
+        // An automatic box width, or a value
         if (command[PARSE_set_boxwidth_auto].objType == PPLOBJ_STR) {
             sg->BoxWidthAuto = 1;
         } else {
             const double tempdbl = command[PARSE_set_boxwidth_box_width].real;
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set boxwidth' command was not finite.");
@@ -728,7 +806,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->BoxWidthAuto = c->set->graph_default.BoxWidthAuto;
     } else if (strcmp_set && (strcmp(setoption, "c1format") == 0)) /* set c1format */
     {
+        // Store the expression which formats the tick labels
         if (command[PARSE_set_c1format_format_string].objType == PPLOBJ_EXP) {
+            // Free the old format expression
             if (sg->c1format != NULL) {
                 pplExpr_free((pplExpr *) sg->c1format);
                 sg->c1format = NULL;
@@ -736,7 +816,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->c1format = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_c1format_format_string].auxil);
             sg->c1formatset = 1;
         }
+        // Return to automatically formatted tick labels
         if (command[PARSE_set_c1format_auto_format].objType == PPLOBJ_STR) {
+            // Free the old format expression
             if (sg->c1format != NULL) {
                 pplExpr_free((pplExpr *) sg->c1format);
                 sg->c1format = NULL;
@@ -744,14 +826,17 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->c1format = NULL;
             sg->c1formatset = 0;
         }
+        // Set the orientation of the tick labels
         if (command[PARSE_set_c1format_orient].objType == PPLOBJ_STR) {
             sg->c1TickLabelRotation =
                     ppl_fetchSettingByName(&c->errcontext, (char *) command[PARSE_set_c1format_orient].auxil,
                                            SW_TICLABDIR_INT, SW_TICLABDIR_STR);
             sg->c1TickLabelRotate = c->set->graph_default.c1TickLabelRotate;
         }
+        // Set the angle of rotated tick labels
         if (command[PARSE_set_c1format_rotation].objType == PPLOBJ_NUM) {
             const double r = command[PARSE_set_c1format_rotation].real;
+            // The angle must be finite
             if (!gsl_finite(r)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The rotation angle supplied to the 'set c1format' command was not finite.");
@@ -762,6 +847,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_unset && (strcmp(setoption, "c1format") == 0)) /* unset c1format */
     {
+        // Free the format expression
         if (sg->c1format != NULL) {
             pplExpr_free((pplExpr *) sg->c1format);
             sg->c1format = NULL;
@@ -772,12 +858,15 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->c1TickLabelRotation = c->set->graph_default.c1TickLabelRotation;
     } else if (strcmp_set && (strcmp(setoption, "c1label") == 0)) /* set c1label */
     {
+        // Set the text of the label
         if (command[PARSE_set_c1label_label_text].objType == PPLOBJ_STR) {
             snprintf(sg->c1label, FNAME_LENGTH, "%s", (char *) command[PARSE_set_c1label_label_text].auxil);
             sg->c1label[FNAME_LENGTH - 1] = '\0';
         }
+        // Set the angle of the label
         if (command[PARSE_set_c1label_rotation].objType == PPLOBJ_NUM) {
             const double r = command[PARSE_set_c1label_rotation].real;
+            // The angle must be finite
             if (!gsl_finite(r)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The rotation angle supplied to the 'set c1label' command was not finite.");
@@ -794,6 +883,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int m = (command[PARSE_set_c1tics_minor].objType == PPLOBJ_STR);
         const int *ptab = PARSE_TABLE_set_c1tics_;
         char *cmd = m ? "mc1tics" : "c1tics";
+        // Set the major ticks, or the minor ticks
         if (!m) {
             if (setTicks(c, command, ptab, cmd, &(sg->ticsC), &(sg->ticsCM), &(sg->unitC),
                          ((sg->Cminauto[0] != SW_BOOL_TRUE) || (sg->Cmaxauto[0] != SW_BOOL_TRUE)),
@@ -808,6 +898,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_unset && (strcmp(setoption, "c1tics") == 0)) /* unset c1tics */
     {
         const int m = (command[PARSE_unset_c1tics_minor].objType == PPLOBJ_STR);
+        // Unless only the minor ticks are affected, restore the major ticks to their defaults, if the units are
+        // compatible
         if (!m) {
             tics_rm(&sg->ticsC);
             if (ppl_unitsDimEqual(&sg->unitC, &c->set->graph_default.unitC))
@@ -824,12 +916,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             c->set->term_current.CalendarIn = c->set->term_current.CalendarOut =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_CALENDAR_INT, SW_CALENDAR_STR);
 
+        // The calendar used to read dates
         tempstr = (char *) command[PARSE_set_calendar_calendarin].auxil;
         got = (command[PARSE_set_calendar_calendarin].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.CalendarIn =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_CALENDAR_INT, SW_CALENDAR_STR);
 
+        // The calendar used to write dates
         tempstr = (char *) command[PARSE_set_calendar_calendarout].auxil;
         got = (command[PARSE_set_calendar_calendarout].objType == PPLOBJ_STR);
         if (got)
@@ -850,6 +944,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         char *tempstr = (char *) command[PARSE_set_colkey_pos].auxil;
         const int got = (command[PARSE_set_colkey_pos].objType == PPLOBJ_STR);
 
+        // Turn the color key on, in the position given, if any
         sg->ColKey = SW_ONOFF_ON;
         if (got) sg->ColKeyPos = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_COLKEYPOS_INT, SW_COLKEYPOS_STR);
     } else if (strcmp_unset && (strcmp(setoption, "colkey") == 0)) /* unset colkey */
@@ -858,21 +953,27 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->ColKeyPos = c->set->graph_default.ColKeyPos;
     } else if (strcmp_set && (strcmp(setoption, "colmap") == 0)) /* set colmap */
     {
+        // Store the expression which maps data values to colors
         if (command[PARSE_set_colmap_color].objType == PPLOBJ_EXP) {
+            // Free the old color mapping expression
             if (sg->ColMapExpr != NULL) {
                 pplExpr_free((pplExpr *) sg->ColMapExpr);
                 sg->ColMapExpr = NULL;
             }
             sg->ColMapExpr = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_colmap_color].auxil);
         }
+        // Store the expression which selects which points are shown
         if (command[PARSE_set_colmap_mask].objType == PPLOBJ_EXP) {
+            // Free the old mask expression
             if (sg->MaskExpr != NULL) {
                 pplExpr_free((pplExpr *) sg->MaskExpr);
                 sg->MaskExpr = NULL;
             }
             sg->MaskExpr = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_colmap_mask].auxil);
         }
+        // Remove the mask
         if (command[PARSE_set_colmap_nomask].objType == PPLOBJ_STR) {
+            // Free the old mask expression
             if (sg->MaskExpr != NULL) {
                 pplExpr_free((pplExpr *) sg->MaskExpr);
                 sg->MaskExpr = NULL;
@@ -881,11 +982,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
     } else if (strcmp_unset && (strcmp(setoption, "colmap") == 0)) /* unset colmap */
     {
+        // Free the color mapping expression
         if (sg->ColMapExpr != NULL) {
             pplExpr_free((pplExpr *) sg->ColMapExpr);
             sg->ColMapExpr = NULL;
         }
         sg->ColMapExpr = (void *) pplExpr_cpy((pplExpr *) c->set->graph_default.ColMapExpr);
+        // Free the mask expression
         if (sg->MaskExpr != NULL) {
             pplExpr_free((pplExpr *) sg->MaskExpr);
             sg->MaskExpr = NULL;
@@ -895,13 +998,16 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         if (command[PARSE_set_contours_label].objType == PPLOBJ_STR) sg->ContoursLabel = SW_ONOFF_ON;
         if (command[PARSE_set_contours_nolabel].objType == PPLOBJ_STR) sg->ContoursLabel = SW_ONOFF_OFF;
+        // Either a number of contours, or a list of contour levels
         if (command[PARSE_set_contours_contours].objType == PPLOBJ_NUM) {
             double n = command[PARSE_set_contours_contours].real;
+            // There must be at least two contours
             if (n < 2) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Contour plots must have at least two contours.");
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                 return;
             }
+            // There is a fixed limit on the number of contours
             if (n > MAX_CONTOURS) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Contour maps cannot be constucted with more than %d contours.",
                                   MAX_CONTOURS);
@@ -913,11 +1019,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         } else if (command[PARSE_set_contours_contour_list].objType == PPLOBJ_NUM) {
             int pos = PARSE_set_contours_contour_list, i = 0;
             pplObj *first = NULL;
+            // Check every contour level in the list
             while (command[pos].objType == PPLOBJ_NUM) {
                 pplObj *o;
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
                 o = &command[pos + PARSE_set_contours_contour_contour_list];
+                // Contour levels must be numbers
                 if (o->objType != PPLOBJ_NUM) {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Contours can only be set at numeric values; supplied value is of type <%s>.",
@@ -925,6 +1033,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                     return;
                 }
+                // Contour levels must be finite
                 if (!gsl_finite(o->real)) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -932,6 +1041,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                     return;
                 }
+                // Contour levels must be real
                 if (o->flagComplex) {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Contours can only be set at real numeric values; supplied value is complex.");
@@ -939,6 +1049,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     return;
                 }
                 if (i == 0) first = o;
+                // All the contour levels must have the same units
                 else if (!ppl_unitsDimEqual(first, o)) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -949,6 +1060,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
                 i++;
             }
+            // An empty list is an internal error
             if (first == NULL) {
                 ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, "Empty list of contours.");
                 return;
@@ -957,6 +1069,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->ContoursListLen = i;
             pos = PARSE_set_contours_contour_list;
             i = 0;
+            // Store each contour level
             while (command[pos].objType == PPLOBJ_NUM) {
                 pplObj *o;
                 pos = (int) round(command[pos].real);
@@ -987,33 +1100,40 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (command[PARSE_set_crange_norenormalise].objType == PPLOBJ_STR) sg->Crenorm[C] = SW_BOOL_FALSE;
         if ((!mina) && (min->objType != PPLOBJ_NUM) && (sg->Cminauto[C] == SW_BOOL_FALSE)) min = &sg->Cmin[C];
         if ((!maxa) && (max->objType != PPLOBJ_NUM) && (sg->Cmaxauto[C] == SW_BOOL_FALSE)) max = &sg->Cmax[C];
+        // The minimum must be finite
         if ((min->objType == PPLOBJ_NUM) && (!gsl_finite(min->real))) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The range supplied to the 'set crange' command had non-finite limits.");
             return;
         }
+        // The maximum must be finite
         if ((max->objType == PPLOBJ_NUM) && (!gsl_finite(max->real))) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The range supplied to the 'set crange' command had non-finite limits.");
             return;
         }
+        // The minimum and maximum must have the same units
         if ((min->objType == PPLOBJ_NUM) && (max->objType == PPLOBJ_NUM) && (!ppl_unitsDimEqual(min, max))) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "Attempt to set crange with dimensionally incompatible minimum and maximum.");
             return;
         }
+        // Store the minimum, or make it automatic
         if (min->objType == PPLOBJ_NUM) {
             sg->Cmin[C] = *min;
             sg->Cminauto[C] = SW_BOOL_FALSE;
         }
+        // Store the maximum, or make it automatic
         if (max->objType == PPLOBJ_NUM) {
             sg->Cmax[C] = *max;
             sg->Cmaxauto[C] = SW_BOOL_FALSE;
         }
         if (mina) sg->Cminauto[C] = SW_BOOL_TRUE;
         if (maxa) sg->Cmaxauto[C] = SW_BOOL_TRUE;
+        // The range of the first color axis sets the units of its ticks
         if (C == 0) {
             pplObj *newunit = (sg->Cminauto[0] != SW_BOOL_TRUE) ? &sg->Cmin[0] : &sg->Cmax[0];
+            // If the range is fixed and its units have changed, the ticks no longer apply
             if ((sg->Cminauto[0] != SW_BOOL_TRUE) || (sg->Cmaxauto[0] != SW_BOOL_TRUE)) {
                 if (!ppl_unitsDimEqual(&sg->unitC, newunit)) { sg->unitC = *newunit; }
                 tics_rm(&sg->ticsC);
@@ -1030,8 +1150,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->Cmaxauto[C] = c->set->graph_default.Cmaxauto[C];
         sg->Crenorm[C] = c->set->graph_default.Crenorm[C];
         sg->Creverse[C] = c->set->graph_default.Creverse[C];
+        // The range of the first color axis sets the units of its ticks
         if (C == 0) {
             pplObj *newunit = (sg->Cminauto[0] != SW_BOOL_TRUE) ? &sg->Cmin[0] : &sg->Cmax[0];
+            // If the range is fixed and its units have changed, the ticks no longer apply
             if ((sg->Cminauto[0] != SW_BOOL_TRUE) || (sg->Cmaxauto[0] != SW_BOOL_TRUE)) {
                 if (!ppl_unitsDimEqual(&sg->unitC, newunit)) { sg->unitC = *newunit; }
                 tics_rm(&sg->ticsC);
@@ -1050,6 +1172,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         char *tempstr2 = (char *) command[PARSE_set_filter_filter].auxil;
         char *tempstr3 = (char *) malloc(strlen(tempstr2) + 1);
         pplObj val;
+        // Failure to allocate memory is reported as an error
         if (tempstr3 == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return;
@@ -1062,6 +1185,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         char *tempstr = (char *) command[PARSE_set_filter_filename].auxil;
         pplObj *tempobj = (pplObj *) ppl_dictLookup(c->set->filters, tempstr);
+        // Warn about a filter which does not exist
         if (tempobj == NULL) {
             ppl_warning(&c->errcontext, ERR_GENERIC, "Attempt to unset a filter which did not exist.");
             return;
@@ -1071,11 +1195,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "fontsize") == 0)) /* set fontsize */
     {
         const double tempdbl = command[PARSE_set_fontsize_fontsize].real;
+        // The value must be finite
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set fontsize' command was not finite.");
             return;
         }
+        // The font size must be positive
         if (tempdbl <= 0.0) {
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Font sizes are not allowed to be less than or equal to zero.");
@@ -1089,7 +1215,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                (strcmp(setoption, "gridmincolor") == 0) ||
                (strcmp(setoption, "textcolor") == 0)) /* set axescolor | set gridmajcolor | set gridmincolor */
     {
+        // Unset restores the default color; set changes it
         if (strcmp_unset) {
+            // The color of the axes
             if (strcmp(setoption, "axescolor") == 0) {
                 sg->AxesColor = c->set->graph_default.AxesColor;
                 sg->AxesCol1234Space = c->set->graph_default.AxesCol1234Space;
@@ -1098,6 +1226,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 sg->AxesColor3 = c->set->graph_default.AxesColor3;
                 sg->AxesColor4 = c->set->graph_default.AxesColor4;
             }
+            // The color of major grid lines
             if (strcmp(setoption, "gridmajcolor") == 0) {
                 sg->GridMajColor = c->set->graph_default.GridMajColor;
                 sg->GridMajCol1234Space = c->set->graph_default.GridMajCol1234Space;
@@ -1106,6 +1235,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 sg->GridMajColor3 = c->set->graph_default.GridMajColor3;
                 sg->GridMajColor4 = c->set->graph_default.GridMajColor4;
             }
+            // The color of minor grid lines
             if (strcmp(setoption, "gridmincolor") == 0) {
                 sg->GridMinColor = c->set->graph_default.GridMinColor;
                 sg->GridMinCol1234Space = c->set->graph_default.GridMinCol1234Space;
@@ -1114,6 +1244,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 sg->GridMinColor3 = c->set->graph_default.GridMinColor3;
                 sg->GridMinColor4 = c->set->graph_default.GridMinColor4;
             }
+            // The color of text
             if (strcmp(setoption, "textcolor") == 0) {
                 sg->TextColor = c->set->graph_default.TextColor;
                 sg->TextCol1234Space = c->set->graph_default.TextCol1234Space;
@@ -1144,8 +1275,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "grid") == 0)) /* set grid */
     {
         int pos = PARSE_set_grid_0axes;
+        // With no axes named, draw the grid from the default axes
         if (command[pos].objType != PPLOBJ_NUM) {
             int i;
+            // If the grid was off, draw it from the default axes
             if (sg->grid != SW_ONOFF_ON) {
                 for (i = 0; i < MAX_AXES; i++) sg->GridAxisX[i] = c->set->graph_default.GridAxisX[i];
                 for (i = 0; i < MAX_AXES; i++) sg->GridAxisY[i] = c->set->graph_default.GridAxisY[i];
@@ -1154,17 +1287,20 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->grid = SW_ONOFF_ON;
         } else {
             int i, anum;
+            // If the grid was off, clear the list of axes it is drawn from
             if (sg->grid != SW_ONOFF_ON) {
                 for (i = 0; i < MAX_AXES; i++) sg->GridAxisX[i] = 0;
                 for (i = 0; i < MAX_AXES; i++) sg->GridAxisY[i] = 0;
                 for (i = 0; i < MAX_AXES; i++) sg->GridAxisZ[i] = 0;
             }
             sg->grid = SW_ONOFF_ON;
+            // Draw the grid from each axis named
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
                 anum = (int) round(command[pos + PARSE_set_grid_axis_0axes].real);
                 i = (int) round(command[pos + PARSE_set_grid_axis_0axes].exponent[0]);
+                // Mark the axis in the requested direction
                 if (i == 1) {
                     sg->GridAxisY[anum] = 1;
                 } else if (i == 2) {
@@ -1187,6 +1323,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (command[PARSE_set_key_offset].objType == PPLOBJ_NUM) // Horizontal offset
         {
             const double tempdbl = command[PARSE_set_key_offset].real;
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The horizontal offset supplied to the 'set key' command was not finite.");
@@ -1195,6 +1332,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         if (command[PARSE_set_key_offset + 1].objType == PPLOBJ_NUM) // Vertical offset
         {
             const double tempdbl = command[PARSE_set_key_offset + 1].real;
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The vertical offset supplied to the 'set key' command was not finite.");
@@ -1206,9 +1344,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->KeyPos = ppl_fetchSettingByName(&c->errcontext, (char *) command[PARSE_set_key_pos].auxil,
                                                 SW_KEYPOS_INT, SW_KEYPOS_STR);
         }
+        // Move the key horizontally, keeping its vertical position
         if (command[PARSE_set_key_xpos].objType == PPLOBJ_STR) {
             char *tempstr = command[PARSE_set_key_xpos].auxil;
+            // A horizontal position was given
             if (tempstr != NULL) {
+                // Move the key to the left, keeping its vertical position
                 if (strcmp(tempstr, "left") == 0) {
                     if ((sg->KeyPos == SW_KEYPOS_TR) || (sg->KeyPos == SW_KEYPOS_TM) || (sg->KeyPos == SW_KEYPOS_TL))
                         sg->KeyPos = SW_KEYPOS_TL;
@@ -1217,6 +1358,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         sg->KeyPos = SW_KEYPOS_BL;
                     else sg->KeyPos = SW_KEYPOS_ML;
                 }
+                // Move the key to the horizontal centre, keeping its vertical position
                 if (strcmp(tempstr, "xcenter") == 0) {
                     if ((sg->KeyPos == SW_KEYPOS_TR) || (sg->KeyPos == SW_KEYPOS_TM) || (sg->KeyPos == SW_KEYPOS_TL))
                         sg->KeyPos = SW_KEYPOS_TM;
@@ -1225,6 +1367,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         sg->KeyPos = SW_KEYPOS_BM;
                     else sg->KeyPos = SW_KEYPOS_MM;
                 }
+                // Move the key to the right, keeping its vertical position
                 if (strcmp(tempstr, "right") == 0) {
                     if ((sg->KeyPos == SW_KEYPOS_TR) || (sg->KeyPos == SW_KEYPOS_TM) || (sg->KeyPos == SW_KEYPOS_TL))
                         sg->KeyPos = SW_KEYPOS_TR;
@@ -1235,9 +1378,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 }
             }
         }
+        // Move the key vertically, keeping its horizontal position
         if (command[PARSE_set_key_ypos].objType == PPLOBJ_STR) {
             char *tempstr = command[PARSE_set_key_ypos].auxil;
+            // A vertical position was given
             if (tempstr != NULL) {
+                // Move the key to the top, keeping its horizontal position
                 if (strcmp(tempstr, "top") == 0) {
                     if ((sg->KeyPos == SW_KEYPOS_TL) || (sg->KeyPos == SW_KEYPOS_ML) || (sg->KeyPos == SW_KEYPOS_BL))
                         sg->KeyPos = SW_KEYPOS_TL;
@@ -1246,6 +1392,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         sg->KeyPos = SW_KEYPOS_TR;
                     else sg->KeyPos = SW_KEYPOS_TM;
                 }
+                // Move the key to the vertical centre, keeping its horizontal position
                 if (strcmp(tempstr, "ycenter") == 0) {
                     if ((sg->KeyPos == SW_KEYPOS_TL) || (sg->KeyPos == SW_KEYPOS_ML) || (sg->KeyPos == SW_KEYPOS_BL))
                         sg->KeyPos = SW_KEYPOS_ML;
@@ -1254,6 +1401,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         sg->KeyPos = SW_KEYPOS_MR;
                     else sg->KeyPos = SW_KEYPOS_MM;
                 }
+                // Move the key to the bottom, keeping its horizontal position
                 if (strcmp(tempstr, "bottom") == 0) {
                     if ((sg->KeyPos == SW_KEYPOS_TL) || (sg->KeyPos == SW_KEYPOS_ML) || (sg->KeyPos == SW_KEYPOS_BL))
                         sg->KeyPos = SW_KEYPOS_BL;
@@ -1272,13 +1420,16 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->KeyYOff = c->set->graph_default.KeyYOff;
     } else if (strcmp_set && (strcmp(setoption, "keycolumns") == 0)) /* set keycolumns */
     {
+        // A number of columns, or automatic
         if (command[PARSE_set_keycolumns_key_columns].objType == PPLOBJ_NUM) {
             double tempdbl = command[PARSE_set_keycolumns_key_columns].real;
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The value supplied to the 'set keycolumns' command was not finite.");
                 return;
             }
+            // The number of columns must be positive
             if (tempdbl <= 0.0) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "Number of key columns is not allowed to be less than or equal to zero.");
@@ -1300,11 +1451,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "linewidth") == 0)) /* set linewidth */
     {
         const double tempdbl = command[PARSE_set_linewidth_linewidth].real;
+        // The value must be finite
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set linewidth' command was not finite.");
             return;
         }
+        // The line width must be positive
         if (tempdbl <= 0.0) {
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Line widths are not allowed to be less than or equal to zero.");
@@ -1340,8 +1493,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                           : (ul ? PARSE_unset_logscale_vlog_0axes : PARSE_set_nologscale_vlog_0axes);
         const int setAll = (command[pos].objType != PPLOBJ_NUM);
 
+        // Read the base of the logarithms, if given
         if (sl && (command[PARSE_set_logscale_base].objType == PPLOBJ_NUM)) {
             b = (int) round(command[PARSE_set_logscale_base].real);
+            // The base must be between 2 and 1024
             if ((b < 2) || (b > 1024)) {
                 ppl_snprintfTrunc(
                         msg, sizeof(msg),
@@ -1352,16 +1507,20 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         }
 
+        // Change the axes named, or all axes
         if (!setAll) {
+            // Change each axis named
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
+                // A numbered axis, or one of the c, t, u and v axes
                 if (command[pos + ap].objType == PPLOBJ_NUM) {
                     int *alog, *adlog;
                     int i = (int) round(command[pos + ap].real);
                     const int j = (int) round(command[pos + ap].exponent[0]);
                     int newstate;
                     pplset_axis *a, *ad;
+                    // Point to the axis, and to its default settings
                     if (j == 1) {
                         a = &ya[i];
                         ad = &c->set->YAxesDefault[i];
@@ -1374,6 +1533,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     }
                     alog = getAxisLog(c, a, 0, xa, ya, za);
                     adlog = getAxisLog(c, ad, 1, xa, ya, za);
+                    // Setting an axis to be logarithmic enables it
                     if (sl) {
                         a->enabled = 1;
                         newstate = SW_BOOL_TRUE;
@@ -1384,6 +1544,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         newstate = *adlog;
                     }
 
+                    // If the axis changes between linear and logarithmic, its ticks no longer apply
                     if (*alog != newstate) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1392,8 +1553,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     a->tics.logBase = b;
                     a->ticsM.logBase = b;
                 } else {
+                    // The first color axis
                     if (command[pos + c1p].objType == PPLOBJ_STR) {
                         const int newstate = sl ? SW_BOOL_TRUE : (ul ? c->set->graph_default.Clog[0] : SW_BOOL_FALSE);
+                        // If the axis changes between linear and logarithmic, its ticks no longer apply
                         if (sg->Clog[0] != newstate) {
                             tics_rm(&sg->ticsC);
                             tics_rm(&sg->ticsCM);
@@ -1427,15 +1590,19 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             int i, *alog;
             pplset_axis *a;
             const int newstate = sl ? SW_BOOL_TRUE : SW_BOOL_FALSE;
+            // If the color axis changes between linear and logarithmic, its ticks no longer apply
             if (sg->Clog[0] != newstate) {
                 tics_rm(&sg->ticsC);
                 tics_rm(&sg->ticsCM);
             }
             sg->Clog[0] = sg->Clog[1] = sg->Clog[2] = sg->Clog[3] = sg->Tlog = sg->Ulog = sg->Vlog = newstate;
+            // Change all enabled x axes
             for (i = 0; i < MAX_AXES; i++) {
                 a = &xa[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     alog = getAxisLog(c, a, 0, xa, ya, za);
+                    // If the axis changes between linear and logarithmic, its ticks no longer apply
                     if (*alog != newstate) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1444,10 +1611,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     a->tics.logBase = a->ticsM.logBase = b;
                 }
             }
+            // Change all enabled y axes
             for (i = 0; i < MAX_AXES; i++) {
                 a = &ya[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     alog = getAxisLog(c, a, 0, xa, ya, za);
+                    // If the axis changes between linear and logarithmic, its ticks no longer apply
                     if (*alog != newstate) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1456,10 +1626,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     a->tics.logBase = a->ticsM.logBase = b;
                 }
             }
+            // Change all enabled z axes
             for (i = 0; i < MAX_AXES; i++) {
                 a = &za[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     alog = getAxisLog(c, a, 0, xa, ya, za);
+                    // If the axis changes between linear and logarithmic, its ticks no longer apply
                     if (*alog != newstate) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1472,6 +1645,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         {
             int i, *alog, *adlog;
             pplset_axis *a, *ad;
+            // If the color axis changes between linear and logarithmic, its ticks no longer apply
             if (sg->Clog[0] != c->set->graph_default.Clog[0]) {
                 tics_rm(&sg->ticsC);
                 tics_rm(&sg->ticsCM);
@@ -1483,12 +1657,15 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->Tlog = c->set->graph_default.Tlog;
             sg->Ulog = c->set->graph_default.Ulog;
             sg->Vlog = c->set->graph_default.Vlog;
+            // Restore the default for all enabled x axes
             for (i = 0; i < MAX_AXES; i++) {
                 a = &xa[i];
                 ad = &c->set->XAxesDefault[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     alog = getAxisLog(c, a, 0, xa, ya, za);
                     adlog = getAxisLog(c, ad, 1, xa, ya, za);
+                    // If the axis changes between linear and logarithmic, its ticks no longer apply
                     if (*alog != *adlog) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1497,12 +1674,15 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     a->tics.logBase = a->ticsM.logBase = b;
                 }
             }
+            // Restore the default for all enabled y axes
             for (i = 0; i < MAX_AXES; i++) {
                 a = &ya[i];
                 ad = &c->set->YAxesDefault[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     alog = getAxisLog(c, a, 0, xa, ya, za);
                     adlog = getAxisLog(c, ad, 1, xa, ya, za);
+                    // If the axis changes between linear and logarithmic, its ticks no longer apply
                     if (*alog != *adlog) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1511,12 +1691,15 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     a->tics.logBase = a->ticsM.logBase = b;
                 }
             }
+            // Restore the default for all enabled z axes
             for (i = 0; i < MAX_AXES; i++) {
                 a = &za[i];
                 ad = &c->set->ZAxesDefault[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     alog = getAxisLog(c, a, 0, xa, ya, za);
                     adlog = getAxisLog(c, ad, 1, xa, ya, za);
+                    // If the axis changes between linear and logarithmic, its ticks no longer apply
                     if (*alog != *adlog) {
                         tics_rm(&a->tics);
                         tics_rm(&a->ticsM);
@@ -1564,15 +1747,18 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "nogrid") == 0)) /* set nogrid */
     {
         int pos = PARSE_set_nogrid_0axes;
+        // With no axes named, turn the grid off
         if (command[pos].objType != PPLOBJ_NUM) {
             sg->grid = SW_ONOFF_OFF;
         } else {
             int i, anum;
+            // Stop drawing the grid from each axis named
             while (command[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
                 anum = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].real);
                 i = (int) round(command[pos + PARSE_set_nogrid_axis_0axes].exponent[0]);
+                // Unmark the axis in the requested direction
                 if (i == 1) {
                     sg->GridAxisY[anum] = 0;
                 } else if (i == 2) {
@@ -1595,10 +1781,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "notics") == 0)) /* set notics */
     {
         const int m = (command[PARSE_set_notics_minor].objType == PPLOBJ_STR);
+        // Remove the ticks from the axis named, or from all axes
         if (command[PARSE_set_notics_axis].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_set_notics_axis].real);
             const int j = (int) round(command[PARSE_set_notics_axis].exponent[0]);
+            // Axis settings cannot be changed for multiplot items which have no axes
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
+                // Point to the axis in the requested direction; unless only the minor ticks are affected, remove the
+                // major ticks too
                 if (j == 1) {
                     pplset_axis *a = &ya[i];
                     if (!m) { setNoTicks(&(a->tics)); }
@@ -1615,22 +1805,28 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         } else {
             int i;
+            // Remove the ticks from all enabled x axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     if (!m) { setNoTicks(&(a->tics)); }
                     setNoTicks(&(a->ticsM));
                 }
             }
+            // Remove the ticks from all enabled y axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     if (!m) { setNoTicks(&(a->tics)); }
                     setNoTicks(&(a->ticsM));
                 }
             }
+            // Remove the ticks from all enabled z axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     if (!m) { setNoTicks(&(a->tics)); }
                     setNoTicks(&(a->ticsM));
@@ -1644,8 +1840,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         int i = (int) round(command[PARSE_set_noxformat_axis].real);
         const int j = (int) round(command[PARSE_set_noxformat_axis].exponent[0]);
+        // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a, *ad;
+            // Point to the axis, and to its default settings
             if (j == 1) {
                 a = &ya[i];
                 ad = &c->set->YAxesDefault[i];
@@ -1657,7 +1855,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 ad = &c->set->XAxesDefault[i];
             }
 
+            // Return to automatically formatted tick labels, at the default angle
             a->enabled = 1;
+            // Free the old format expression
             if (a->format != NULL) {
                 pplExpr_free((pplExpr *) a->format);
                 a->format = NULL;
@@ -1669,12 +1869,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         int i = (int) round(command[PARSE_set_noxlabel_axis].real);
         const int j = (int) round(command[PARSE_set_noxlabel_axis].exponent[0]);
+        // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a;
             if (j == 1) a = &ya[i];
             else if (j == 2) a = &za[i];
             else a = &xa[i];
             a->enabled = 1;
+            // Free the old label
             if (a->label != NULL) {
                 free(a->label);
                 a->label = NULL;
@@ -1689,20 +1891,25 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             c->set->term_current.ComplexNumbers =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // How errors in numerical calculations are reported
         tempstr = (char *) command[PARSE_set_numerics_errortype].auxil;
         got = (command[PARSE_set_numerics_errortype].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.ExplicitErrors =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // The number of significant figures to display
         got = (command[PARSE_set_numerics_number_significant_figures].objType == PPLOBJ_NUM);
+        // Check the number is sensible
         if (got) {
             const int tempint = (int) round(command[PARSE_set_numerics_number_significant_figures].real);
+            // There must be at least one significant figure
             if (tempint < 1) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "Numbers cannot be displayed to fewer than one significant figure.");
                 return;
             }
+            // There may be no more than 30 significant figures
             if (tempint > 30) {
                 ppl_error(
                         &c->errcontext, ERR_GENERIC, -1, -1,
@@ -1712,6 +1919,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             c->set->term_current.SignificantFigures = tempint;
         }
 
+        // How numbers are displayed: natural, LaTeX or typeable
         tempstr = (char *) command[PARSE_set_numerics_display].auxil;
         got = (command[PARSE_set_numerics_display].objType == PPLOBJ_STR);
         if (got)
@@ -1755,13 +1963,16 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_snprintfTrunc(c->set->term_current.output, FNAME_LENGTH, "%s", c->set->term_default.output);
     } else if (strcmp_set && (strcmp(setoption, "palette") == 0)) /* set palette */
     {
+        // The palette is either a list of colors written in the command, or a list object
         if (command[PARSE_set_palette_palette].objType == PPLOBJ_NUM) {
             int pos = PARSE_set_palette_palette, count = 0;
+            // Store each color in the list
             while (command[pos].objType == PPLOBJ_NUM) {
                 unsigned char d1, d2;
                 pplObj *co;
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
+                // There is a fixed limit on the length of the palette
                 if (count >= PALETTE_LENGTH - 1) {
                     ppl_warning(
                             &c->errcontext, ERR_GENERIC,
@@ -1780,6 +1991,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             pplObj *lo = &command[PARSE_set_palette_list];
             list *l = (list *) lo->auxil;
             int ll, i;
+            // The expression must evaluate to a list
             if (lo->objType != PPLOBJ_LIST) {
                 ppl_snprintfTrunc(
                         msg, sizeof(msg),
@@ -1789,13 +2001,16 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 return;
             }
             ll = ppl_listLen(l);
+            // The list must not be empty
             if (ll < 1) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "The 'set palette' command was passed a palette of zero length.");
                 ppl_error(&c->errcontext, ERR_TYPE, -1, -1, msg);
                 return;
             }
+            // Every item in the list must be a color, or a number indexing the default colors
             for (i = 0; i < ll; i++) {
                 pplObj *o = ppl_listGetItem(l, i);
+                // Report an item which is not a color
                 if ((o->objType != PPLOBJ_NUM) && (o->objType != PPLOBJ_COL)) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1805,9 +2020,11 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     return;
                 }
             }
+            // Store each color in the list
             for (i = 0; i < ll; i++) {
                 unsigned char d1, d2;
                 pplObj *o = ppl_listGetItem(l, i);
+                // There is a fixed limit on the length of the palette
                 if (i >= PALETTE_LENGTH - 1) {
                     ppl_warning(
                             &c->errcontext, ERR_GENERIC,
@@ -1831,10 +2048,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         for (i = 0; i < PALETTE_LENGTH; i++) c->set->palette4_current[i] = c->set->palette4_default[i];
     } else if (strcmp_set && (strcmp(setoption, "papersize") == 0)) /* set papersize */
     {
+        // A named paper size, or a width and height
         if (command[PARSE_set_papersize_paper_name].objType == PPLOBJ_STR) {
             double d1, d2;
             char *paperName = (char *) command[PARSE_set_papersize_paper_name].auxil;
             ppl_PaperSizeByName(paperName, &d1, &d2);
+            // Look up the named paper size, whose dimensions are in millimetres, and store them in metres
             if (d1 > 0) {
                 c->set->term_current.PaperHeight.real = d1 / 1000;
                 c->set->term_current.PaperWidth.real = d2 / 1000;
@@ -1847,6 +2066,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         } else {
             double d1 = command[PARSE_set_papersize_size].real;
             double d2 = command[PARSE_set_papersize_size + 1].real;
+            // The width and height must be finite
             if ((!gsl_finite(d1)) || (!gsl_finite(d2))) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "The size coordinates supplied to the 'set papersize' command was not finite.");
@@ -1868,11 +2088,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "pointlinewidth") == 0)) /* set pointlinewidth */
     {
         const double tempdbl = command[PARSE_set_pointlinewidth_pointlinewidth].real;
+        // The value must be finite
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set pointlinewidth' command was not finite.");
             return;
         }
+        // The value must be positive
         if (tempdbl <= 0.0) {
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Line widths are not allowed to be less than or equal to zero.");
@@ -1885,11 +2107,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "pointsize") == 0)) /* set pointsize */
     {
         const double tempdbl = command[PARSE_set_pointsize_pointsize].real;
+        // The value must be finite
         if (!gsl_finite(tempdbl)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set pointsize' command was not finite.");
             return;
         }
+        // The value must be positive
         if (tempdbl <= 0.0) {
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                       "Point sizes are not allowed to be less than or equal to zero.");
@@ -1909,8 +2133,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_snprintfTrunc(c->set->term_current.LatexPreamble, FNAME_LENGTH, "%s", c->set->term_default.LatexPreamble);
     } else if (strcmp_set && (strcmp(setoption, "samples") == 0)) /* set samples */
     {
+        // The number of samples along functions
         if (command[PARSE_set_samples_samples].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_set_samples_samples].real);
+            // There must be at least two samples
             if (i < 2) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "Graphs cannot be constucted based on fewer than two samples.");
@@ -1918,8 +2144,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             sg->samples = i;
         }
+        // The number of samples in the x direction, for functions of two variables
         if (command[PARSE_set_samples_samplesX].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_set_samples_samplesX].real);
+            // There must be at least two samples
             if (i < 2) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "Graphs cannot be constucted based on fewer than two samples.");
@@ -1928,8 +2156,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->SamplesX = i;
             sg->SamplesXAuto = SW_BOOL_FALSE;
         }
+        // The number of samples in the y direction, for functions of two variables
         if (command[PARSE_set_samples_samplesY].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_set_samples_samplesY].real);
+            // There must be at least two samples
             if (i < 2) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "Graphs cannot be constucted based on fewer than two samples.");
@@ -1940,6 +2170,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
         if (command[PARSE_set_samples_samplesXauto].objType == PPLOBJ_STR) sg->SamplesXAuto = SW_BOOL_TRUE;
         if (command[PARSE_set_samples_samplesYauto].objType == PPLOBJ_STR) sg->SamplesYAuto = SW_BOOL_TRUE;
+        // The method used to interpolate two-dimensional data onto a grid
         if (command[PARSE_set_samples_method].objType == PPLOBJ_STR) {
             sg->Sample2DMethod =
                     ppl_fetchSettingByName(&c->errcontext, (char *) command[PARSE_set_samples_method].auxil,
@@ -1957,6 +2188,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         long li;
         double d = command[PARSE_set_seed_seed].real;
+        // The value must be finite
         if (!gsl_finite(d)) {
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                       "The value supplied to the 'set seed' command was not finite.");
@@ -1973,7 +2205,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         pplfunc_setRandomSeed(c->set->term_current.RandomSeed);
     } else if (strcmp_set && (strcmp(setoption, "size") == 0)) /* set size */
     {
+        // The width of the graph
         if (command[PARSE_set_size_width].objType == PPLOBJ_NUM) {
+            // The width must be finite
             if (!gsl_finite(command[PARSE_set_size_width].real)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The width supplied to the 'set size' command was not finite.");
@@ -1981,8 +2215,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             sg->width.real = command[PARSE_set_size_width].real;
         }
+        // The height of the graph, stored as a ratio to its width
         if (command[PARSE_set_size_height].objType == PPLOBJ_NUM) {
             const double r = command[PARSE_set_size_height].real / sg->width.real;
+            // The ratio must be finite, and neither tiny nor huge
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested y/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -1991,8 +2227,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->aspect = r;
             sg->AutoAspect = SW_ONOFF_OFF;
         }
+        // The depth of the graph, stored as a ratio to its width
         if (command[PARSE_set_size_depth].objType == PPLOBJ_NUM) {
             const double r = command[PARSE_set_size_depth].real / sg->width.real;
+            // The ratio must be finite, and neither tiny nor huge
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested z/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -2001,8 +2239,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->zaspect = r;
             sg->AutoZAspect = SW_ONOFF_OFF;
         }
+        // The aspect ratio of the graph
         if (command[PARSE_set_size_ratio].objType == PPLOBJ_NUM) {
             const double r = command[PARSE_set_size_ratio].real;
+            // The ratio must be finite, and neither tiny nor huge
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested y/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -2011,8 +2251,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->aspect = r;
             sg->AutoAspect = SW_ONOFF_OFF;
         }
+        // The aspect ratio of the depth of the graph
         if (command[PARSE_set_size_zratio].objType == PPLOBJ_NUM) {
             const double r = command[PARSE_set_size_zratio].real;
+            // The ratio must be finite, and neither tiny nor huge
             if ((!gsl_finite(r)) || (fabs(r) < 1e-6) || (fabs(r) > 1e4)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The requested z/x aspect ratios for graphs must be in the range 1e-6 to 10000.");
@@ -2021,16 +2263,19 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->zaspect = r;
             sg->AutoZAspect = SW_ONOFF_OFF;
         }
+        // Square graphs
         if (command[PARSE_set_size_square].objType == PPLOBJ_STR) {
             sg->aspect = 1;
             sg->AutoAspect = SW_ONOFF_OFF;
             sg->zaspect = 1;
             sg->AutoZAspect = SW_ONOFF_OFF;
         }
+        // The default aspect ratio
         if (command[PARSE_set_size_noratio].objType == PPLOBJ_STR) {
             sg->aspect = c->set->graph_default.aspect;
             sg->AutoAspect = 1;
         }
+        // The default depth ratio
         if (command[PARSE_set_size_nozratio].objType == PPLOBJ_STR) {
             sg->zaspect = c->set->graph_default.zaspect;
             sg->AutoZAspect = 1;
@@ -2057,6 +2302,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         double nd = command[PARSE_set_style_numbered_style_set_number].real;
         int n;
         withWords *outstyle, ww_tmp, ww_tmp2;
+        // Style numbers must be within range
         if ((nd < 0) || (nd >= MAX_PLOTSTYLES)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "plot style numbers must be in the range 0-%d", MAX_PLOTSTYLES - 1);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
@@ -2075,6 +2321,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int style_ids = strcmp_set ? PARSE_set_nostyle_0style_ids : PARSE_unset_style_0style_ids;
         const int id_style_ids = strcmp_set ? PARSE_set_nostyle_id_0style_ids : PARSE_unset_style_id_0style_ids;
 
+        // "unset style data" and "unset style function" restore the default styles for data and functions
         if (command[dataset_type].objType == PPLOBJ_STR) {
             char *type = (char *) command[dataset_type].auxil;
             withWords *instyle = (type[0] == 'd') ? &c->set->graph_default.dataStyle : &c->set->graph_default.funcStyle;
@@ -2083,6 +2330,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             ppl_withWordsCpy(c, outstyle, instyle);
         } else {
             int pos = style_ids;
+            // Restore each numbered style named to its default
             while (command[pos].objType == PPLOBJ_NUM) {
                 double nd;
                 int n;
@@ -2090,6 +2338,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 pos = (int) round(command[pos].real);
                 if (pos <= 0) break;
                 nd = command[pos + id_style_ids].real;
+                // Style numbers must be within range
                 if ((nd < 0) || (nd >= MAX_PLOTSTYLES)) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "plot style numbers must be in the range 0-%d",
                                       MAX_PLOTSTYLES - 1);
@@ -2112,20 +2361,25 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             c->set->term_current.TermType =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_TERMTYPE_INT, SW_TERMTYPE_STR);
 
+        // Whether bitmap output is antialiased
         tempstr = (char *) command[PARSE_set_terminal_antiali].auxil;
         got = (command[PARSE_set_terminal_antiali].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.TermAntiAlias =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // Color or monochrome output
         tempstr = (char *) command[PARSE_set_terminal_col].auxil;
         got = (command[PARSE_set_terminal_col].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.color = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // The resolution of bitmap output
         tempdbl = command[PARSE_set_terminal_dpi].real;
         got = (command[PARSE_set_terminal_dpi].objType == PPLOBJ_NUM);
+        // A resolution was given
         if (got) {
+            // The value must be finite
             if (!gsl_finite(tempdbl)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The DPI resolution supplied to the 'set terminal' command was not finite.");
@@ -2137,24 +2391,28 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         }
 
+        // Whether output is enlarged to fill the page
         tempstr = (char *) command[PARSE_set_terminal_enlarge].auxil;
         got = (command[PARSE_set_terminal_enlarge].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.TermEnlarge =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // Landscape or portrait output
         tempstr = (char *) command[PARSE_set_terminal_land].auxil;
         got = (command[PARSE_set_terminal_land].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.landscape =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // Whether bitmap output has a transparent background
         tempstr = (char *) command[PARSE_set_terminal_trans].auxil;
         got = (command[PARSE_set_terminal_trans].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.TermTransparent =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // Whether bitmap output has its colors inverted
         tempstr = (char *) command[PARSE_set_terminal_invert].auxil;
         got = (command[PARSE_set_terminal_invert].objType == PPLOBJ_STR);
         if (got)
@@ -2191,11 +2449,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int m = (command[PARSE_set_tics_minor].objType == PPLOBJ_STR);
         const int *ptab = PARSE_TABLE_set_tics_;
 
+        // Set the ticks of the axis named, or of all axes
         if (command[PARSE_unset_tics_axis].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_unset_tics_axis].real);
             int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
             char cmd[16];
             ppl_snprintfTrunc(cmd, sizeof(cmd), "%s%c%d", m ? "m" : "", 'x' + j, i);
+            // Axis settings cannot be changed for multiplot items which have no axes
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
                 int *alog;
                 pplset_axis *a;
@@ -2203,6 +2463,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 else if (j == 2) a = &za[i];
                 else a = &xa[i];
                 alog = getAxisLog(c, a, 0, xa, ya, za);
+                // Set the major ticks, or the minor ticks
                 if (!m) {
                     tics_rm(&a->tics);
                     if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
@@ -2218,11 +2479,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         } else {
             int i;
             char *cmd = m ? "mtics" : "tics";
+            // Set the ticks of all enabled x axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     int *alog;
                     alog = getAxisLog(c, a, 0, xa, ya, za);
+                    // Set the major ticks, or the minor ticks
                     if (!m) {
                         tics_rm(&a->tics);
                         if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
@@ -2238,11 +2502,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     }
                 }
             }
+            // Set the ticks of all enabled y axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     int *alog;
                     alog = getAxisLog(c, a, 0, xa, ya, za);
+                    // Set the major ticks, or the minor ticks
                     if (!m) {
                         tics_rm(&a->tics);
                         if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
@@ -2258,11 +2525,14 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     }
                 }
             }
+            // Set the ticks of all enabled z axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i];
+                // Only change axes which are enabled
                 if (a->enabled) {
                     int *alog;
                     alog = getAxisLog(c, a, 0, xa, ya, za);
+                    // Set the major ticks, or the minor ticks
                     if (!m) {
                         tics_rm(&a->tics);
                         if (setTicks(c, command, ptab, cmd, &(a->tics), &(a->ticsM), &(a->unit),
@@ -2283,10 +2553,13 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         const int m = (command[PARSE_unset_tics_minor].objType == PPLOBJ_STR);
 
+        // Restore the default ticks of the axis named, or of all axes
         if (command[PARSE_unset_tics_axis].objType == PPLOBJ_NUM) {
             int i = (int) round(command[PARSE_unset_tics_axis].real);
             const int j = (int) round(command[PARSE_unset_tics_axis].exponent[0]);
+            // Axis settings cannot be changed for multiplot items which have no axes
             if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
+                // Point to the axis in the requested direction, and to its default settings
                 if (j == 1) {
                     pplset_axis *a = &ya[i], *ad = &c->set->YAxesDefault[i];
                     unsetTicks(a, ad, m);
@@ -2300,14 +2573,17 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
         } else {
             int i;
+            // Restore the default ticks of all x axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &xa[i], *ad = &c->set->XAxesDefault[i];
                 if (a->enabled) { unsetTicks(a, ad, m); }
             }
+            // Restore the default ticks of all y axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &ya[i], *ad = &c->set->YAxesDefault[i];
                 if (a->enabled) { unsetTicks(a, ad, m); }
             }
+            // Restore the default ticks of all z axes
             for (i = 0; i < MAX_AXES; i++) {
                 pplset_axis *a = &za[i], *ad = &c->set->ZAxesDefault[i];
                 if (a->enabled) { unsetTicks(a, ad, m); }
@@ -2324,6 +2600,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                           c->set->term_default.timezone);
     } else if (strcmp_set && (strcmp(setoption, "title") == 0)) /* set title */
     {
+        // Set the title of the graph
         if (command[PARSE_set_title_title].objType == PPLOBJ_STR) {
             char *tempstr = (char *) command[PARSE_set_title_title].auxil;
             strncpy(sg->title, tempstr, FNAME_LENGTH - 1);
@@ -2341,21 +2618,25 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->TitleYOff = c->set->graph_default.TitleYOff;
     } else if (strcmp_set && (strcmp(setoption, "trange") == 0)) /* set trange */
     {
+        // Set the range of t, unless only "reverse" was given
         if (command[PARSE_set_trange_range].objType == PPLOBJ_STR) {
             pplObj *min = &command[PARSE_set_trange_min];
             pplObj *max = &command[PARSE_set_trange_max];
             if ((min->objType != PPLOBJ_NUM)) min = &sg->Tmin;
             if ((max->objType != PPLOBJ_NUM)) max = &sg->Tmax;
+            // The minimum must be finite
             if ((!gsl_finite(min->real))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The range supplied to the 'set trange' command had non-finite limits.");
                 return;
             }
+            // The maximum must be finite
             if ((!gsl_finite(max->real))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The range supplied to the 'set trange' command had non-finite limits.");
                 return;
             }
+            // The minimum and maximum must have the same units
             if ((!ppl_unitsDimEqual(min, max))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "Attempt to set trange with dimensionally incompatible minimum and maximum.");
@@ -2364,6 +2645,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->Tmin = *min;
             sg->Tmax = *max;
         }
+        // Reverse the range
         if (command[PARSE_set_trange_reverse].objType == PPLOBJ_STR) {
             pplObj tmp = sg->Tmin;
             sg->Tmin = sg->Tmax;
@@ -2380,35 +2662,41 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int got, got2, got3;
         char *tempstr, *tempstr2 = NULL, *tempstr3 = NULL;
 
+        // Whether units are written in full or abbreviated
         tempstr = (char *) command[PARSE_set_unit_abbrev].auxil;
         got = (command[PARSE_set_unit_abbrev].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.UnitDisplayAbbrev =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // Whether angles are shown in radians or degrees
         tempstr = (char *) command[PARSE_set_unit_angle].auxil;
         got = (command[PARSE_set_unit_angle].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.UnitAngleDimless =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // Whether SI prefixes are used
         tempstr = (char *) command[PARSE_set_unit_prefix].auxil;
         got = (command[PARSE_set_unit_prefix].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.UnitDisplayPrefix =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_ONOFF_INT, SW_ONOFF_STR);
 
+        // The unit scheme, e.g. SI or imperial
         tempstr = (char *) command[PARSE_set_unit_scheme].auxil;
         got = (command[PARSE_set_unit_scheme].objType == PPLOBJ_STR);
         if (got)
             c->set->term_current.UnitScheme =
                     ppl_fetchSettingByName(&c->errcontext, tempstr, SW_UNITSCH_INT, SW_UNITSCH_STR);
 
+        // Preferred units, to add or to remove
         got2 = (command[PARSE_set_unit_preferred_unit].objType == PPLOBJ_EXP);
         if (got2) tempstr2 = ((pplExpr *) command[PARSE_set_unit_preferred_unit].auxil)->ascii;
         got3 = (command[PARSE_set_unit_unpreferred_unit].objType == PPLOBJ_EXP);
         if (got3) tempstr3 = ((pplExpr *) command[PARSE_set_unit_unpreferred_unit].auxil)->ascii;
 
+        // Add or remove preferred units
         if (got2 || got3) {
             int i;
             char *buf = (char *) malloc(LSTR_LENGTH);
@@ -2416,8 +2704,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             if (buf == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             } else
+                // Parse the unit to add (i == 0), then the unit to remove (i == 1)
                 for (i = 0; i < 2; i++) {
                     int errpos = -1;
+                    // Parse the unit to add
                     if (i == 0) {
                         if (!got2) continue;
                         tempstr = tempstr2;
@@ -2426,6 +2716,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         tempstr = tempstr3;
                     }
                     ppl_newPreferredUnit(c, &pu, tempstr, 0, &errpos, buf);
+                    // Report a unit which could not be parsed
                     if (errpos >= 0) {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, buf);
                         free(pu);
@@ -2436,9 +2727,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     // Remove any preferred unit which is dimensionally equal to new preferred unit
                     {
                         int didWork = 1;
+                        // Remove any preferred unit which matches the one being added or removed, repeating until none
+                        // are left
                         while (didWork) {
                             listIterator *listiter = ppl_listIterateInit(c->unit_PreferredUnits);
                             didWork = 0;
+                            // Look through the list of preferred units
                             while (listiter != NULL) {
                                 PreferredUnit *pui = (PreferredUnit *) listiter->data;
                                 if (ppl_unitsDimEqual(&pui->value, &pu->value) &&
@@ -2464,6 +2758,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         // set unit of length meter
         {
             int pos = PARSE_set_unit_preferred_units;
+            // Set the unit used to display each quantity named, e.g. "set unit of length miles"
             while (command[pos].objType == PPLOBJ_NUM) {
                 int i = 0, j = 0, k = 0, l = 0, m = 0, multiplier;
                 int p = 0;
@@ -2473,6 +2768,8 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 if (pos <= 0) break;
                 quantity = (char *) command[pos + PARSE_set_unit_quantity_preferred_units].auxil;
                 unit = (char *) command[pos + PARSE_set_unit_unit_preferred_units].auxil;
+                // Search the unit database for a unit of the requested quantity with the requested name, with any SI
+                // prefix it may take
                 for (j = 0; j < c->unit_pos; j++) {
                     if (i > 1) i = 1;
                     if ((c->unit_database[j].quantity != NULL) &&
@@ -2481,6 +2778,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         c->unit_database[j].userSel = 0;
                     }
 
+                    // Skip units for other quantities
                     if (pp != 0) continue;
                     multiplier = 8;
                     if ((k = ppl_unitNameCmp(unit, c->unit_database[j].nameAp, 1)) != 0) p = 1;
@@ -2492,6 +2790,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     else if ((k = ppl_unitNameCmp(unit, c->unit_database[j].alt2, 0)) != 0) p = 1;
                     else if ((k = ppl_unitNameCmp(unit, c->unit_database[j].alt3, 0)) != 0) p = 1;
                     else if ((k = ppl_unitNameCmp(unit, c->unit_database[j].alt4, 0)) != 0) p = 1;
+                    // Try each SI prefix which the unit may take
                     else {
                         for (l = c->unit_database[j].minPrefix / 3 + 8; l <= c->unit_database[j].maxPrefix / 3 + 8;
                              l++) {
@@ -2499,7 +2798,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             for (k = 0; ((SIprefixes_full[l][k] != '\0') &&
                                          (toupper(SIprefixes_full[l][k]) == toupper(unit[k])));
                                  k++);
+                            // Compare the rest of the name with the unit's full name
                             if (SIprefixes_full[l][k] == '\0') {
+                                // A match
                                 if ((m = ppl_unitNameCmp(unit + k, c->unit_database[j].nameFp, 0)) != 0) {
                                     p = 1;
                                     k += m;
@@ -2534,7 +2835,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             }
                             for (k = 0; ((SIprefixes_abbrev[l][k] != '\0') && (SIprefixes_abbrev[l][k] == unit[k]));
                                  k++);
+                            // Compare the rest of the name with the unit's abbreviation
                             if (SIprefixes_abbrev[l][k] == '\0') {
+                                // A match
                                 if ((m = ppl_unitNameCmp(unit + k, c->unit_database[j].nameAp, 1)) != 0) {
                                     p = 1;
                                     k += m;
@@ -2550,7 +2853,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         }
                     }
                     if (p == 0) continue;
+                    // Report a unit which was not found, or is not a unit of the quantity named
                     if (i != 2) {
+                        // The unit exists, but measures some other quantity
                         if ((c->unit_database[j].quantity != NULL) && (c->unit_database[j].quantity[0] != '\0')) {
                             ppl_snprintfTrunc(msg, sizeof(msg), "'%s' is not a unit of '%s', but of '%s'.", unit,
                                               quantity, c->unit_database[j].quantity);
@@ -2564,10 +2869,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     c->unit_database[j].userSelPrefix = multiplier;
                     pp = 1;
                 }
+                // No units of this quantity exist
                 if (i == 0) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "No such quantity as a '%s'.", quantity);
                     ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
                 }
+                // No unit of this name exists
                 if (p == 0) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "No such unit as a '%s'.", unit);
                     ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
@@ -2606,21 +2913,25 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         c->set->term_current.UnitScheme = c->set->term_default.UnitScheme;
     } else if (strcmp_set && (strcmp(setoption, "urange") == 0)) /* set urange */
     {
+        // Set the range of u, unless only "reverse" was given
         if (command[PARSE_set_urange_range].objType == PPLOBJ_STR) {
             pplObj *min = &command[PARSE_set_urange_min];
             pplObj *max = &command[PARSE_set_urange_max];
             if ((min->objType != PPLOBJ_NUM)) min = &sg->Umin;
             if ((max->objType != PPLOBJ_NUM)) max = &sg->Umax;
+            // The minimum must be finite
             if ((!gsl_finite(min->real))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The range supplied to the 'set urange' command had non-finite limits.");
                 return;
             }
+            // The maximum must be finite
             if ((!gsl_finite(max->real))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The range supplied to the 'set urange' command had non-finite limits.");
                 return;
             }
+            // The minimum and maximum must have the same units
             if ((!ppl_unitsDimEqual(min, max))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "Attempt to set urange with dimensionally incompatible minimum and maximum.");
@@ -2629,6 +2940,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->Umin = *min;
             sg->Umax = *max;
         }
+        // Reverse the range
         if (command[PARSE_set_urange_reverse].objType == PPLOBJ_STR) {
             pplObj tmp = sg->Umin;
             sg->Umin = sg->Umax;
@@ -2642,21 +2954,25 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->Umax = c->set->graph_default.Umax;
     } else if (strcmp_set && (strcmp(setoption, "vrange") == 0)) /* set vrange */
     {
+        // Set the range of v, unless only "reverse" was given
         if (command[PARSE_set_vrange_range].objType == PPLOBJ_STR) {
             pplObj *min = &command[PARSE_set_vrange_min];
             pplObj *max = &command[PARSE_set_vrange_max];
             if ((min->objType != PPLOBJ_NUM)) min = &sg->Tmin;
             if ((max->objType != PPLOBJ_NUM)) max = &sg->Tmax;
+            // The minimum must be finite
             if ((!gsl_finite(min->real))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The range supplied to the 'set vrange' command had non-finite limits.");
                 return;
             }
+            // The maximum must be finite
             if ((!gsl_finite(max->real))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The range supplied to the 'set vrange' command had non-finite limits.");
                 return;
             }
+            // The minimum and maximum must have the same units
             if ((!ppl_unitsDimEqual(min, max))) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "Attempt to set vrange with dimensionally incompatible minimum and maximum.");
@@ -2665,6 +2981,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             sg->Vmin = *min;
             sg->Vmax = *max;
         }
+        // Reverse the range
         if (command[PARSE_set_vrange_reverse].objType == PPLOBJ_STR) {
             pplObj tmp = sg->Vmin;
             sg->Vmin = sg->Vmax;
@@ -2678,8 +2995,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->Vmax = c->set->graph_default.Vmax;
     } else if (strcmp_set && (strcmp(setoption, "view") == 0)) /* set view */
     {
+        // The angle of rotation in the xy plane
         if (command[PARSE_set_view_xy_angle].objType == PPLOBJ_NUM) {
             const double d = command[PARSE_set_view_xy_angle].real;
+            // The value must be finite
             if (!gsl_finite(d)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The viewing angles supplied to the 'set view' command were not finite.");
@@ -2687,8 +3006,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             sg->XYview.real = d;
         }
+        // The angle of rotation in the yz plane
         if (command[PARSE_set_view_yz_angle].objType == PPLOBJ_NUM) {
             const double d = command[PARSE_set_view_yz_angle].real;
+            // The value must be finite
             if (!gsl_finite(d)) {
                 ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                           "The viewing angles supplied to the 'set view' command were not finite.");
@@ -2706,7 +3027,9 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         sg->YZview.real = c->set->graph_default.YZview.real;
     } else if (strcmp_set && (strcmp(setoption, "width") == 0)) /* set width */
     {
+        // The width of the graph
         if (command[PARSE_set_width_width].objType == PPLOBJ_NUM) {
+            // The width must be finite
             if (!gsl_finite(command[PARSE_set_width_width].real)) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
                           "The width supplied to the 'set width' command was not finite.");
@@ -2720,6 +3043,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp_set && (strcmp(setoption, "viewer") == 0)) /* set viewer */
     {
         int changedViewer = 0;
+        // The default viewer, or a custom command
         if (command[PARSE_set_viewer_auto_viewer].objType == PPLOBJ_STR) {
             const int viewerOld = c->set->term_current.viewer;
             if (strcmp(GHOSTVIEW_COMMAND, "/bin/false") != 0) c->set->term_current.viewer = SW_VIEWER_GV;
@@ -2728,10 +3052,12 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             changedViewer = (viewerOld != c->set->term_current.viewer);
         } else {
             char *nv = (char *) command[PARSE_set_viewer_viewer].auxil;
+            // Switching to a custom viewer
             if (c->set->term_current.viewer != SW_VIEWER_CUSTOM) {
                 changedViewer = 1;
                 c->set->term_current.viewer = SW_VIEWER_CUSTOM;
             }
+            // Changing the custom viewer's command
             if (strcmp(c->set->term_current.ViewerCmd, nv) != 0) {
                 changedViewer = 1;
                 snprintf(c->set->term_current.ViewerCmd, FNAME_LENGTH, "%s", nv);
@@ -2750,6 +3076,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp(setoption, "xformat") == 0) /* set xformat | unset xformat */
     {
         int i, j;
+        // Read the axis number and direction
         if (strcmp_set) {
             i = (int) round(command[PARSE_set_xformat_axis].real);
             j = (int) round(command[PARSE_set_xformat_axis].exponent[0]);
@@ -2757,8 +3084,10 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             i = (int) round(command[PARSE_unset_xformat_axis].real);
             j = (int) round(command[PARSE_unset_xformat_axis].exponent[0]);
         }
+        // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a, *ad;
+            // Point to the axis, and to its default settings
             if (j == 1) {
                 a = &ya[i];
                 ad = &c->set->YAxesDefault[i];
@@ -2770,29 +3099,37 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 ad = &c->set->XAxesDefault[i];
             }
 
+            // Set the format, or restore the default
             if (strcmp_set) {
                 a->enabled = 1;
+                // Store the expression which formats the tick labels
                 if (command[PARSE_set_xformat_format_string].objType == PPLOBJ_EXP) {
+                    // Free the old format expression
                     if (a->format != NULL) {
                         pplExpr_free((pplExpr *) a->format);
                         a->format = NULL;
                     }
                     a->format = (void *) pplExpr_cpy((pplExpr *) command[PARSE_set_xformat_format_string].auxil);
                 }
+                // Return to automatically formatted tick labels
                 if (command[PARSE_set_xformat_auto_format].objType == PPLOBJ_STR) {
+                    // Free the old format expression
                     if (a->format != NULL) {
                         pplExpr_free((pplExpr *) a->format);
                         a->format = NULL;
                     }
                 }
+                // Set the orientation of the tick labels
                 if (command[PARSE_set_xformat_orient].objType == PPLOBJ_STR) {
                     a->TickLabelRotation =
                             ppl_fetchSettingByName(&c->errcontext, (char *) command[PARSE_set_xformat_orient].auxil,
                                                    SW_TICLABDIR_INT, SW_TICLABDIR_STR);
                     a->TickLabelRotate = ad->TickLabelRotate;
                 }
+                // Set the angle of rotated tick labels
                 if (command[PARSE_set_xformat_rotation].objType == PPLOBJ_NUM) {
                     const double r = command[PARSE_set_xformat_rotation].real;
+                    // The angle must be finite
                     if (!gsl_finite(r)) {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                                   "The rotation angle supplied to the 'set format' command was not finite.");
@@ -2802,6 +3139,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             r; // TickLabelRotation will already have been set by "rotate" keyword mapping to "orient"
                 }
             } else {
+                // Free the format expression
                 if (a->format != NULL) {
                     pplExpr_free((pplExpr *) a->format);
                     a->format = NULL;
@@ -2815,26 +3153,32 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         int i = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].real);
         const int j = (int) round(command[strcmp_set ? PARSE_set_xlabel_axis : PARSE_unset_xlabel_axis].exponent[0]);
+        // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a;
             if (j == 1) a = &ya[i];
             else if (j == 2) a = &za[i];
             else a = &xa[i];
 
+            // Set the label, or restore the default
             if (strcmp_set) {
                 a->enabled = 1;
+                // Set the text of the label
                 if (command[PARSE_set_xlabel_label_text].objType == PPLOBJ_STR) {
                     char *in = (char *) command[PARSE_set_xlabel_label_text].auxil;
                     char *l = (char *) malloc(strlen(in) + 1);
                     if (l != NULL) strcpy(l, in);
+                    // Free the old label
                     if (a->label != NULL) {
                         free(a->label);
                         a->label = NULL;
                     }
                     a->label = l;
                 }
+                // Set the angle of the label
                 if (command[PARSE_set_xlabel_rotation].objType == PPLOBJ_NUM) {
                     const double r = command[PARSE_set_xlabel_rotation].real;
+                    // The angle must be finite
                     if (!gsl_finite(r)) {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                                   "The rotation angle supplied to the set axis label command was not finite.");
@@ -2846,6 +3190,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 char *in = c->set->axis_default.label;
                 char *l = (in == NULL) ? NULL : (char *) malloc(strlen(in) + 1);
                 if (l != NULL) strcpy(l, in);
+                // Free the label
                 if (a->label != NULL) {
                     free(a->label);
                     a->label = NULL;
@@ -2857,6 +3202,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
     } else if (strcmp(setoption, "range") == 0) /* set xrange | unset xrange */
     {
         int i, j;
+        // Read the axis number and direction
         if (strcmp_set) {
             i = (int) round(command[PARSE_set_range_axis].real);
             j = (int) round(command[PARSE_set_range_axis].exponent[0]);
@@ -2864,9 +3210,11 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             i = (int) round(command[PARSE_unset_range_axis].real);
             j = (int) round(command[PARSE_unset_range_axis].exponent[0]);
         }
+        // Axis settings cannot be changed for multiplot items which have no axes
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplset_axis *a, *ad;
             pplObj *unitNew, unitOld;
+            // Point to the axis, and to its default settings
             if (j == 1) {
                 a = &ya[i];
                 ad = &c->set->YAxesDefault[i];
@@ -2879,6 +3227,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             unitOld = a->unit;
 
+            // Set the range, or restore the default
             if (strcmp_set) {
                 pplObj *min = &command[PARSE_set_range_min], d1, d2;
                 pplObj *max = &command[PARSE_set_range_max];
@@ -2886,45 +3235,54 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 const int maxa = (command[PARSE_set_range_maxauto].objType == PPLOBJ_STR);
                 if (command[PARSE_set_range_reverse].objType == PPLOBJ_STR) a->RangeReversed = 1;
                 if (command[PARSE_set_range_noreverse].objType == PPLOBJ_STR) a->RangeReversed = 0;
+                // If no minimum was given, keep the old one
                 if ((!mina) && (min->objType != PPLOBJ_NUM) && (a->MinSet == SW_BOOL_TRUE)) {
                     min = &d1;
                     d1 = a->unit;
                     d1.real = a->min;
                 }
+                // If no maximum was given, keep the old one
                 if ((!maxa) && (max->objType != PPLOBJ_NUM) && (a->MaxSet == SW_BOOL_TRUE)) {
                     max = &d2;
                     d2 = a->unit;
                     d2.real = a->max;
                 }
+                // The minimum must be finite
                 if ((min->objType == PPLOBJ_NUM) && (!gsl_finite(min->real))) {
                     ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                               "The range supplied to the 'set range' command had non-finite limits.");
                     return;
                 }
+                // The maximum must be finite
                 if ((max->objType == PPLOBJ_NUM) && (!gsl_finite(max->real))) {
                     ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                               "The range supplied to the 'set range' command had non-finite limits.");
                     return;
                 }
+                // The minimum and maximum must have the same units
                 if ((min->objType == PPLOBJ_NUM) && (max->objType == PPLOBJ_NUM) && (!ppl_unitsDimEqual(min, max))) {
                     ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1,
                               "Attempt to set range with dimensionally incompatible minimum and maximum.");
                     return;
                 }
+                // Store the minimum; it sets the units of the axis
                 if (min->objType == PPLOBJ_NUM) {
                     a->unit = *min;
                     a->min = min->real;
                     a->MinSet = SW_BOOL_TRUE;
                 }
+                // Store the maximum; it sets the units of the axis
                 if (max->objType == PPLOBJ_NUM) {
                     a->unit = *max;
                     a->max = max->real;
                     a->MaxSet = SW_BOOL_TRUE;
                 }
+                // An automatic minimum
                 if (mina) {
                     a->MinSet = SW_BOOL_FALSE;
                     a->min = ad->min;
                 }
+                // An automatic maximum
                 if (maxa) {
                     a->MaxSet = SW_BOOL_FALSE;
                     a->max = ad->max;
@@ -2941,6 +3299,7 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
             // Check whether ticks need removing, if units of axis have changed
             unitNew = &a->unit;
+            // If the units of the axis have changed, its ticks no longer apply
             if (!ppl_unitsDimEqual(unitNew, &unitOld)) {
                 tics_rm(&a->tics);
                 tics_rm(&a->ticsM);
@@ -2952,5 +3311,6 @@ void ppl_directive_set(ppl_context *c, parserLine *pl, parserOutput *in, const i
         ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, msg);
     }
 
+    // The setting has been changed
     return;
 }

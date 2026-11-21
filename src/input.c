@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Reads commands, from an interactive terminal (using GNU readline if available), from piped input, or from script
+// files, and passes them to the parser. Each line is first joined to any previous lines which ended with a backslash,
+// stripped of comments, and split into statements at semicolons, ignoring those inside quotes or brackets; each
+// statement is then compiled and, unless it opens a block such as a loop which is still being entered, executed.
+
 #define _INPUT_C 1
 
 #include <stdio.h>
@@ -82,45 +87,54 @@ void ppl_interactiveSigInt(const int signo) {
 //! \param [in] context - The Pyxplot context
 
 void ppl_interactiveSession(ppl_context *context) {
+    // Variables for reading lines
     int linenumber = 1;
     const int errorCountOld = context->errcontext.errorCount;
     void (*sigint_old)(int) = NULL;
     parserLine *pl = NULL;
     parserStatus *ps = NULL;
 
+    // Log progress in debugging mode
     if (DEBUG) ppl_log(&context->errcontext, "Starting an interactive session.");
 
+    // A parser state, which accumulates blocks of commands spread over several lines
     ppl_parserStatInit(&ps, &pl);
+    // Failure to allocate memory is reported as an error
     if ((ps == NULL) || (context->inputLineBuffer == NULL)) {
         ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
         return;
     }
 
+    // Greet users at a terminal
     if ((isatty(STDIN_FILENO) == 1) && (context->errcontext.session_default.splash == SW_ONOFF_ON))
         ppl_report(&context->errcontext, ppltxt_welcome);
 
+    // Read and execute lines until the session ends, or until a break, continue or return
     context->shellExiting = 0;
     sigint_old = signal(SIGINT, ppl_interactiveSigInt); // Set up SIGINT handler
     while ((!context->shellExiting) && (!context->shellBroken) && (!context->shellContinued) &&
            (!context->shellReturned)) {
         pplcsp_checkForGvOutput(context);
         cancellationFlag = 0;
+        // At a terminal, prompt for each line; otherwise read piped input
         if (isatty(STDIN_FILENO) == 1) {
             ppl_error_setstreaminfo(&context->errcontext, -1, "");
 #ifdef HAVE_READLINE
             {
                 int len;
                 char *line_ptr, prompt[32];
+                // After a line ending with a backslash, show a continuation prompt
                 if (context->inputLineAddBuffer != NULL) {
                     strcpy(prompt, ".......> ");
                 } else {
-                    // Continuation prompt: the first seven characters of the prompt, padded with dots
+                    // The usual prompt: the first seven characters of the parser's prompt, padded with dots
                     int k;
                     for (k = 0; (k < 7) && (ps->prompt[k] != '\0'); k++) prompt[k] = ps->prompt[k];
                     for (; k < 7; k++) prompt[k] = '.';
                     strcpy(prompt + 7, "> ");
                 }
 
+                // On SIGINT, readline is abandoned and a new prompt is shown
                 if (sigsetjmp(sigint_destination, 1) != 0) { printf("\n"); }
                 sigint_longjmp = 1;
                 line_ptr = readline(prompt);
@@ -129,11 +143,13 @@ void ppl_interactiveSession(ppl_context *context) {
                 add_history(line_ptr);
                 context->historyNLinesWritten++;
                 len = strlen(line_ptr) + 1;
+                // Shrink the buffer back to its usual size after a long line
                 if ((context->inputLineBufferLen > LSTR_LENGTH) && (len < LSTR_LENGTH)) {
                     free(context->inputLineBuffer);
                     context->inputLineBuffer = NULL;
                     ppl_inputInit(context);
                 }
+                // Grow the buffer to hold a long line
                 if (len > context->inputLineBufferLen) {
                     context->inputLineBuffer = (char *) realloc(context->inputLineBuffer, len);
                     context->inputLineBufferLen = len;
@@ -148,10 +164,11 @@ void ppl_interactiveSession(ppl_context *context) {
                 char prompt[32];
                 if (sigsetjmp(sigint_destination, 1) != 0) { printf("\n"); }
                 sigint_longjmp = 1;
+                // After a line ending with a backslash, show a continuation prompt
                 if (context->inputLineAddBuffer != NULL) {
                     strcpy(prompt, ".......> ");
                 } else {
-                    // Continuation prompt: the first seven characters of the prompt, padded with dots
+                    // The usual prompt: the first seven characters of the parser's prompt, padded with dots
                     int k;
                     for (k = 0; (k < 7) && (ps->prompt[k] != '\0'); k++) prompt[k] = ps->prompt[k];
                     for (; k < 7; k++) prompt[k] = '.';
@@ -179,6 +196,7 @@ void ppl_interactiveSession(ppl_context *context) {
         pplcsp_killAllHelpers(context);
     }
 
+    // Discard any unfinished continuation line
     if (context->inputLineAddBuffer != NULL) {
         free(context->inputLineAddBuffer);
         context->inputLineAddBuffer = NULL;
@@ -189,6 +207,7 @@ void ppl_interactiveSession(ppl_context *context) {
     // Errors made while typing commands at a terminal do not count towards Pyxplot's exit status; only errors in
     // script files and piped input do
     if (isatty(STDIN_FILENO) == 1) context->errcontext.errorCount = errorCountOld;
+    // Say goodbye to users at a terminal
     if (isatty(STDIN_FILENO) == 1) {
         if (context->errcontext.session_default.splash == SW_ONOFF_ON)
             ppl_report(&context->errcontext, "\nGoodbye. Have a nice day.");
@@ -204,6 +223,7 @@ void ppl_interactiveSession(ppl_context *context) {
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
+    // Variables for reading the script
     char msg[PPL_MSG_LENGTH];
     int linenumber = 1;
     int status;
@@ -215,10 +235,12 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     const int shellBreakableOld = context->shellBreakable;
     const int shellReturnableOld = context->shellReturnable;
 
+    // Save the caller's input buffers, which are restored afterwards, as scripts may be run from within other scripts
     char *oldInputLineBuffer = context->inputLineBuffer;
     const int oldInputLineBufferLen = context->inputLineBufferLen;
     char *oldInputLineAddBuffer = context->inputLineAddBuffer;
 
+    // Log progress in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Processing input from the script file '%s'.", input);
         ppl_log(&context->errcontext, msg);
@@ -226,6 +248,7 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     ppl_unixExpandUserHomeDir(&context->errcontext, input, context->errcontext.session_default.cwd, full_filename,
                               sizeof(full_filename));
     ppl_snprintfTrunc(filename_description, sizeof(filename_description), "file '%s'", input);
+    // Report a script which cannot be opened
     if ((infile = fopen(full_filename, "r")) == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not find command file '%s'. Skipping on to next command file.",
                           full_filename);
@@ -233,13 +256,16 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
         goto restore;
     }
 
+    // A new input buffer and parser state for the script
     ppl_inputInit(context);
     ppl_parserStatInit(&ps, &pl);
+    // Failure to allocate memory is reported as an error
     if ((ps == NULL) || (context->inputLineBuffer == NULL)) {
         ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
         goto restore;
     }
 
+    // Execute each line of the script until it ends, or until an error, a break, continue or return, or control-C
     context->shellExiting = 0;
     context->shellBreakable = 0;
     context->shellReturnable = 0;
@@ -247,11 +273,13 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
            (!context->shellReturned) && (!cancellationFlag)) {
         ppl_error_setstreaminfo(&context->errcontext, linenumber, filename_description);
         if ((feof(infile)) || (ferror(infile))) break;
+        // Shrink the buffer back to its usual size after a long line
         if (context->inputLineBufferLen > LSTR_LENGTH) {
             free(context->inputLineBuffer);
             context->inputLineBuffer = NULL;
             ppl_inputInit(context);
         }
+        // Failure to allocate memory is reported as an error
         if (context->inputLineBuffer == NULL) {
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             break;
@@ -265,6 +293,7 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
             cancellationFlag) // If an error occurs in a script, aborted processing it
         {
             if (!context->shellExiting) ppl_error(&context->errcontext, ERR_FILE, -1, -1, "Aborting.");
+            // Discard any unfinished continuation line
             if (context->inputLineAddBuffer != NULL) {
                 free(context->inputLineAddBuffer);
                 context->inputLineAddBuffer = NULL;
@@ -282,6 +311,7 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
             status = ppl_processLine(context, ps, "", 0, iterDepth);
             ppl_error_setstreaminfo(&context->errcontext, -1, "");
             if (status > 0) ppl_error(&context->errcontext, ERR_FILE, -1, -1, "Aborting.");
+            // Discard the continuation line
             if (context->inputLineAddBuffer != NULL) {
                 free(context->inputLineAddBuffer);
                 context->inputLineAddBuffer = NULL;
@@ -295,7 +325,9 @@ void ppl_processScript(ppl_context *context, char *input, const int iterDepth) {
     ppl_parserStatFree(&ps);
     pplcsp_checkForGvOutput(context);
 
+// Free the script's input buffer, and restore the caller's
 restore:
+    // Free the script's buffer
     if (context->inputLineBuffer != NULL) {
         free(context->inputLineBuffer);
         context->inputLineBuffer = NULL;
@@ -322,6 +354,7 @@ typedef struct lineScanState {
 static int lineScanStep(lineScanState *st, const char *line, const int i) {
     const char ch = line[i];
     const int escaped = (i > 0) && (line[i - 1] == '\\');
+    // Outside strings, track brackets and the opening of strings; inside, look for the closing quote
     if (st->quoteChar == '\0') {
         if (ch == '(') st->bracketLevel++;
         else if (ch == ')') st->bracketLevel--;
@@ -329,6 +362,7 @@ static int lineScanStep(lineScanState *st, const char *line, const int i) {
         else return 0;
         return 1;
     }
+    // The closing quote, unless it is escaped
     if ((ch == st->quoteChar) && !escaped) {
         st->quoteChar = '\0';
         return 1;
@@ -345,15 +379,19 @@ static int lineScanStep(lineScanState *st, const char *line, const int i) {
 //! \return Zero on success, or one if an error occurred
 
 int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int interactive, const int iterDepth) {
+    // Variables for splitting the line
     int i, status = 0;
     char *inputLineBuffer = NULL;
 
     // Find last character of presently entered line. If it's a \, buffer line and collect another
     for (i = 0; in[i] != '\0'; i++);
     for (; ((i > 0) && ((unsigned char) in[i] <= ' ')); i--);
+    // A line ending with a backslash is stored, to be joined to the next line
     if (in[i] == '\\') {
+        // Start a new stored line, or append to the existing one
         if (context->inputLineAddBuffer == NULL) {
             context->inputLineAddBuffer = (char *) malloc(i + 1);
+            // Failure to allocate memory is reported as an error
             if (context->inputLineAddBuffer == NULL) {
                 ppl_error(&context->errcontext, ERR_MEMORY, -1, -1,
                           "Out of memory whilst trying to combine input lines.");
@@ -364,6 +402,7 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
         } else {
             int j = strlen(context->inputLineAddBuffer);
             context->inputLineAddBuffer = (char *) realloc((void *) context->inputLineAddBuffer, j + i + 1);
+            // Failure to allocate memory is reported as an error
             if (context->inputLineAddBuffer == NULL) {
                 ppl_error(&context->errcontext, ERR_MEMORY, -1, -1,
                           "Out of memory whilst trying to combine input lines.");
@@ -379,6 +418,7 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
     if (context->inputLineAddBuffer != NULL) {
         int j = strlen(context->inputLineAddBuffer);
         context->inputLineAddBuffer = (char *) realloc((void *) context->inputLineAddBuffer, j + i + 2);
+        // Failure to allocate memory is reported as an error
         if (context->inputLineAddBuffer == NULL) {
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory whilst trying to combine input lines.");
             return 1;
@@ -394,6 +434,7 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
     // Cut comments off the ends of lines
     {
         lineScanState st = {'\0', 0};
+        // A # outside a string starts a comment
         for (i = 0; inputLineBuffer[i] != '\0'; i++) {
             if (lineScanStep(&st, inputLineBuffer, i)) continue;
             if ((st.quoteChar == '\0') && (inputLineBuffer[i] == '#')) break;
@@ -404,8 +445,10 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
     // Loop over semicolon-separated line segments
     {
         lineScanState st = {'\0', 0};
+        // Execute each statement up to a semicolon outside strings and brackets
         for (i = 0; inputLineBuffer[i] != '\0'; i++) {
             if (lineScanStep(&st, inputLineBuffer, i)) continue;
+            // A semicolon ends a statement
             if ((st.quoteChar == '\0') && (st.bracketLevel == 0) && (inputLineBuffer[i] == ';')) {
                 inputLineBuffer[i] = '\0';
                 status = ppl_ProcessStatement(context, ps, inputLineBuffer, interactive, iterDepth);
@@ -416,7 +459,9 @@ int ppl_processLine(ppl_context *context, parserStatus *ps, char *in, const int 
         }
     }
 
+    // Execute the last statement, and discard the joined line
     if (!status) status = ppl_ProcessStatement(context, ps, inputLineBuffer, interactive, iterDepth);
+    // Discard the joined line
     if (context->inputLineAddBuffer != NULL) {
         free(context->inputLineAddBuffer);
         context->inputLineAddBuffer = NULL;
@@ -438,12 +483,14 @@ int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, con
                          const int iterDepth) {
     int stat = 0;
 
+    // Clear any traceback from previous errors
     ppl_tbClear(context);
 
     // If line is blank, ignore it
     {
         int i = 0, j = 0;
         for (i = 0; line[i] != '\0'; i++)
+            // Look for any non-blank character
             if ((unsigned char) line[i] > ' ') {
                 j = 1;
                 break;
@@ -451,20 +498,25 @@ int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, con
         if (j == 0) return 0;
     }
 
+    // Compile the statement
     stat = ppl_parserCompile(context, ps, context->errcontext.error_input_linenumber,
                              context->errcontext.error_input_sourceId, context->errcontext.error_input_filename, line,
                              0, iterDepth);
 
+    // Execute it, unless it is part of a block which is not yet complete
     if ((!stat) && (!context->errStat.status) && (ps->blockDepth == 0)) {
         ppl_parserExecute(context, ps->pl[iterDepth], NULL, interactive, iterDepth);
     }
 
+    // Statements within blocks are freed once executed
     if ((iterDepth > 0) && (ps->blockDepth == 0)) {
         ppl_parserLineFree(ps->pl[iterDepth]);
         ps->pl[iterDepth] = NULL;
     }
 
+    // Report errors, and reset the parser state at the top level
     if (stat || context->errStat.status) {
+        // At the top level, show the traceback and reset the parser
         if (iterDepth == 0) {
             ppl_tbWrite(context);
             ppl_parserStatReInit(ps);
@@ -472,5 +524,6 @@ int ppl_ProcessStatement(ppl_context *context, parserStatus *ps, char *line, con
         return 1;
     }
 
+    // Success
     return 0;
 }

@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// The expression evaluator: a stack machine which executes the bytecode produced by expCompile.c. Each instruction
+// pushes values (numbers, strings, variables), applies operators to the values on top of the stack, looks up members
+// and methods, slices, calls functions, or jumps (for the short-circuit operators and, or and ?:). It also provides the
+// casts between types which operators need, and the string substitution operator %. Every expression in Pyxplot is
+// evaluated here.
+
 #define _EXPEVAL_C 1
 
 #include <stdlib.h>
@@ -64,10 +70,12 @@
 //! \return Zero on success, or ERR_TYPE if the object could not be converted
 
 int ppl_castToNumber(ppl_context *context, pplObj *x, char *errText, const size_t errLen) {
+    // Booleans become 0 or 1, and strings are parsed as numbers; other types cannot be cast
     const int t = x->objType;
     const int rc = x->refCount; // The reference count is kept, since the object stays where it is (e.g. on the stack)
     double d = 0;
     if (t == PPLOBJ_NUM) return 0;
+    // Cast according to the type of the object
     switch (t) {
         case PPLOBJ_BOOL:
             d = (x->real != 0);
@@ -79,6 +87,7 @@ int ppl_castToNumber(ppl_context *context, pplObj *x, char *errText, const size_
             if (len > 0) {
                 while ((str[len] > '\0') && ((unsigned char) str[len] <= ' ')) len++; // Allow trailing whitespace
             }
+            // The whole string must be a valid number
             if ((len < 0) || (str[len] != '\0')) {
                 ppl_snprintfTrunc(errText, errLen,
                                   "Attempt to implicitly cast string to number failed: string is not a valid number.");
@@ -124,12 +133,14 @@ int ppl_castToNum(ppl_context *context, pplObj *x, const pplExpr *expr, const in
 
 int ppl_castToInt(ppl_context *context, pplObj *x, const char *op, const pplExpr *expr, const int charpos) {
     if (ppl_castToNum(context, x, expr, charpos)) return 1;
+    // Integer operators need real, dimensionless numbers which fit in an int
     if (x->flagComplex) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "The %s operator can only act on real numbers.", op);
         ppl_tbAddExpr(context, expr, ERR_RANGE, charpos, "");
         return 1;
     }
+    // The number must be dimensionless
     if (!x->dimensionless) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "The %s operator is an integer operator which can only act on dimensionless numbers: "
@@ -138,6 +149,7 @@ int ppl_castToInt(ppl_context *context, pplObj *x, const char *op, const pplExpr
         ppl_tbAddExpr(context, expr, ERR_UNIT, charpos, "");
         return 1;
     }
+    // The number must fit in an int
     if ((x->real < INT_MIN) || (x->real > INT_MAX)) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "The %s operator can only act on integers in the range %d to %d.", op, INT_MIN, INT_MAX);
@@ -154,10 +166,12 @@ int ppl_castToInt(ppl_context *context, pplObj *x, const char *op, const pplExpr
 //! \param [in,out] x - The object to convert, which is overwritten with the boolean
 
 void ppl_castToBool(ppl_context *context, pplObj *x) {
+    // Numbers are true unless zero, strings unless empty, and so on
     const int t = x->objType;
     const int rc = x->refCount; // The reference count is kept, since the object stays on the stack
     int s;
     if (t == PPLOBJ_BOOL) return;
+    // Cast according to the type of the object
     switch (t) {
         case PPLOBJ_NUM:
             s = ((x->real != 0) || (x->imag != 0)) && gsl_finite(x->real) && gsl_finite(x->imag) &&
@@ -215,6 +229,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
     int inP2, requiredArgs, l, arg1i = 0, arg2i = 0;
     char *out = (char *) malloc(outlen);
 
+    // Failure to allocate memory is reported as an error
     if (out == NULL) {
         strcpy(context->errStat.errBuff, "Out of memory.");
         ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
@@ -226,6 +241,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
         // If output buffer is nearly full, malloc some more
         if (outP > outlen - 16384) {
             char *outnew = (char *) realloc((void *) out, outlen += 65536);
+            // Failure to allocate memory is reported as an error
             if (outnew == NULL) {
                 free(out);
                 out = NULL;
@@ -236,6 +252,8 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
             out = outnew;
         }
 
+        // Parse each %-token of the format string, as printf() does: flags, width, precision and conversion character.
+        // The width and precision may be *, which takes an extra integer argument.
         if (format[inP] != '%') {
             out[outP++] = format[inP];
             continue;
@@ -244,6 +262,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
         requiredArgs = 1; // Normal %f like tokens require 1 argument
         if ((format[inP2] == '+') || (format[inP2] == '-') || (format[inP2] == ' ') || (format[inP2] == '#'))
             inP2++; // optional flag can be <+- #>
+        // The width may be * or a number
         if (format[inP2] == '*') {
             inP2++;
             requiredArgs++;
@@ -252,6 +271,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
         if (format[inP2] == '.') // precision starts with a . and is followed by * or by digits
         {
             inP2++;
+            // The precision may be * or a number
             if (format[inP2] == '*') {
                 inP2++;
                 requiredArgs++;
@@ -261,13 +281,16 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
 
         // We do not allow user to specify optional length flag, which could potentially be <hlL>
 
+        // The conversion character must be one which printf() accepts; %% takes no argument
         for (l = 0; allowedFormats[l] != '\0'; l++)
             if (format[inP2] == allowedFormats[l]) break;
         if (allowedFormats[l] == '%') requiredArgs = 0;
+        // Text which is not a valid %-token is copied as it is
         if ((allowedFormats[l] == '\0') || ((allowedFormats[l] == '%') && (format[inP2 - 1] != '%'))) {
             out[outP++] = format[inP];
             continue;
         } // Have not got correct syntax for a format specifier
+        // There must be enough arguments left for the token
         if (requiredArgs > -argP) {
             free(out);
             out = NULL;
@@ -288,6 +311,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
                 arg1i = (int) ((obj + argP)->real);
                 argP++;
             }
+            // A second * argument, for the precision
             if (requiredArgs > 2) {
                 if (ppl_castToInt(context, obj + argP, "%", inExpr, charpos)) goto cast_fail;
                 arg2i = (int) ((obj + argP)->real);
@@ -298,6 +322,7 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
             if ((allowedFormats[l] == 'c') || (allowedFormats[l] == 's') || (allowedFormats[l] == 'S')) {
                 const int tmpbufflen = 65536;
                 char *tmpbuff = (char *) malloc(tmpbufflen);
+                // Failure to allocate memory is reported as an error
                 if (tmpbuff == NULL) {
                     free(out);
                     out = NULL;
@@ -350,7 +375,9 @@ static void expEval_stringSubs(ppl_context *context, const pplExpr *inExpr, cons
     context->stackPtr++; // Push the substituted string
     return;
 
+// An argument could not be cast to the type the token needs
 cast_fail:
+    // Free the output buffer
     if (out != NULL) {
         free(out);
         out = NULL;
@@ -374,6 +401,7 @@ cast_fail:
 static int assignToVariable(ppl_context *context, pplObj *o, pplObj *tmp, const int rhsType, const pplExpr *inExpr,
                             const int charpos) {
     tmp->refCount = 1;
+    // Assign either to a variable, or to an element of a vector or matrix (which self_dval points to)
     if (o->self_dval == NULL) {
         // Assign to a variable, preserving its memory-management flags
         const int om = o->self_lval->amMalloced;
@@ -391,6 +419,7 @@ static int assignToVariable(ppl_context *context, pplObj *o, pplObj *tmp, const 
             ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
             return 1;
         }
+        // Elements of vectors and matrices must all have the same units
         if (!ppl_unitsDimEqual(o, tmp)) {
             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                               "Cannot insert element with dimensions <%s> into vector with dimensions <%s>.",
@@ -424,6 +453,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
     int charpos = 0;
     const pplExprInstruction *const bytecode = inExpr->bytecode;
 
+    // Guard against runaway recursion, e.g. a function which calls itself
     if (iterDepth > MAX_RECURSION_DEPTH) {
         strcpy(context->errStat.errBuff, "Maximum recursion depth exceeded.");
         ppl_tbAddExpr(context, inExpr, ERR_OVERFLOW, charpos, "");
@@ -435,6 +465,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
     initialStackPtr = context->stackPtr;
     *lastOpAssign = 0;
 
+    // Execute instructions until a RETURN. j is the index of the current instruction; stk points to the slot above the
+    // top of the stack.
     while (1) {
         pplObj *stk;
         const pplExprInstruction *const instruction = &bytecode[j]; // The instruction to execute
@@ -442,6 +474,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         int next = j + 1; // The index of the next instruction to execute; changed by instructions which jump
         charpos = instruction->charpos; // Position of the token in the source text, for error reporting
 
+        // Stop if the user has pressed Ctrl-C
         if (cancellationFlag) {
             strcpy(context->errStat.errBuff, "Operation cancelled.");
             charpos = 0;
@@ -454,6 +487,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         else {
             ppl_stackMustHave(context, 4);
         } // not allowed to realloc stack; will change pointers in calling layers
+        // The stack is full, and cannot be grown here
         if (context->stackFull) {
             strcpy(context->errStat.errBuff, "Stack overflow.");
             charpos = 0;
@@ -462,6 +496,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         }
         stk = &context->stack[context->stackPtr];
 
+        // Execute the instruction
         switch (opcode) {
             case PPL_BC_RETURN:
                 break;
@@ -502,6 +537,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     got = 1;
                     break;
                 }
+                // The variable was not found in any namespace
                 if (!got) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "No such variable '%s'.", key);
@@ -516,12 +552,15 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 for (i = context->ns_ptr;; i = 1) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
+                    // Look up the variable in the local namespace, creating it if it does not exist, so that it can be
+                    // assigned to. A variable declared global sends us on to the global namespace (i = 1).
                     if ((obj == NULL) && (!context->namespaces[i]->immutable)) {
                         pplObjZom(stk, 1); // Create a temporary zombie for now
                         stk->refCount = 1;
                         ppl_dictAppendCpy(context->namespaces[i], key, stk, sizeof(pplObj));
                         stk->amMalloced = 0;
                         obj = (pplObj *) ppl_dictLookup(context->namespaces[i], key);
+                        // Failure to allocate memory is reported as an error
                         if (obj == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
@@ -529,13 +568,16 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             goto cleanup_on_error;
                         }
                     }
+                    // Variables in immutable namespaces cannot be assigned to
                     if ((obj == NULL) || ((context->namespaces[i]->immutable) && (obj->objType != PPLOBJ_GLOB))) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Cannot modify variable in immutable namespace.");
                         ppl_tbAddExpr(context, inExpr, ERR_NAMESPACE, charpos, "");
                         goto cleanup_on_error;
                     }
+                    // A global declaration: look in the global namespace instead
                     if (obj->objType == PPLOBJ_GLOB) {
+                        // A global declaration in the global namespace itself would loop forever
                         if (i < 2) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Variable declared global in global namespace.");
@@ -562,6 +604,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 // Make copy of object that will be self_this (in, which we therefore don't garbage below)
                 in_cpy = (pplObj *) malloc(sizeof(pplObj));
+                // Failure to allocate memory is reported as an error
                 if (in_cpy == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff), "Out of memory.");
                     ppl_tbAddExpr(context, inExpr, ERR_MEMORY, charpos, "");
@@ -575,6 +618,8 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     dict *d = (dict *) (iter->auxil);
                     pplObj *obj = (pplObj *) ppl_dictLookup(d, key);
                     imm = imm || iter->immutable || d->immutable;
+                    // Members not found in this object are looked for in its prototype. Members inherited from a
+                    // prototype are immutable, so that they are not changed through an instance.
                     if ((obj == NULL) || (obj->objType == PPLOBJ_ZOM) || (obj->objType == PPLOBJ_GLOB)) {
                         imm = 1;
                         continue;
@@ -589,6 +634,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 {
                     dict *d = pplObjMethods[in->objType];
                     pplObj *obj = (pplObj *) ppl_dictLookup(d, key);
+                    // Neither the object nor its type has a member with this name
                     if (obj == NULL) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "No such method '%s'.", key);
@@ -615,19 +661,23 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
+                // Only members of modules and class instances can be assigned to
                 if ((t == PPLOBJ_MOD) || (t == PPLOBJ_USER)) {
                     pplObj *obj = (pplObj *) ppl_dictLookup(d, key);
+                    // Members of immutable modules cannot be assigned to
                     if (d->immutable) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Cannot modify variable in immutable namespace.");
                         ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                         goto cleanup_on_error;
                     }
+                    // Create the member if it does not exist, so that it can be assigned to
                     if (obj == NULL) {
                         pplObjZom(stk, 0); // Create a temporary zombie for now
                         stk->refCount = 1;
                         ppl_dictAppendCpy(d, key, stk, sizeof(pplObj));
                         obj = (pplObj *) ppl_dictLookup(d, key);
+                        // Failure to allocate memory is reported as an error
                         if (obj == NULL) {
                             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                               "Out of memory.");
@@ -661,8 +711,10 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 if (range) {
                     Nrange = minset + maxset;
+                    // Read the limits of the range from the stack; each must be a real, dimensionless integer
                     for (i = 1; i <= Nrange; i++) {
                         int *out = ((i == 1) && maxset) ? &max : &min;
+                        // The limit must be a number
                         if ((stk - i)->objType != PPLOBJ_NUM) {
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -671,6 +723,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                             goto cleanup_on_error;
                         }
+                        // The limit must be dimensionless
                         if (!(stk - i)->dimensionless) {
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -679,6 +732,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             ppl_tbAddExpr(context, inExpr, ERR_NUMERICAL, charpos, "");
                             goto cleanup_on_error;
                         }
+                        // The limit must be real
                         if ((stk - i)->flagComplex) {
                             ppl_snprintfTrunc(
                                     context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -699,6 +753,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 }
                 if (!range) ppl_sliceItem(context, getPtr, &status, &errType, context->errStat.errBuff);
                 else ppl_sliceRange(context, minset, min, maxset, max, &status, &errType, context->errStat.errBuff);
+                // Report a failure to slice
                 if (status) {
                     ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                     goto cleanup_on_error;
@@ -715,6 +770,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
+                // The keys and values of the dictionary are on the stack, alternately
                 if (context->stackPtr < 2 * len) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Attempt to make dictionary with too few items on the stack.");
@@ -722,6 +778,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     goto cleanup_on_error;
                 }
                 for (k = 0; k < len; k++)
+                    // Every key must be a string
                     if ((stk - 2 * (len - k))->objType != PPLOBJ_STR) {
                         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                           "Dictionary keys must be strings; supplied key has type <%s>.",
@@ -729,6 +786,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                         goto cleanup_on_error;
                     }
+                // Copy each key and value into the new dictionary
                 for (k = 0; k < len; k++) {
                     pplObj v;
                     pplObjCpy(&v, stk - 2 * (len - k) + 1, 0, 1, 1);
@@ -753,12 +811,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
+                // The items of the list are on the stack
                 if (context->stackPtr < len) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Attempt to make list with too few items on the stack.");
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
+                // Copy each item into the new list
                 for (k = 0; k < len; k++) {
                     pplObj v;
                     pplObjCpy(&v, stk - len + k, 0, 1, 1);
@@ -783,6 +843,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 pplObjNum(stk, 0, 0, 0);
                 stk->refCount = 1;
+                // Apply the operator
                 switch (t) {
                     case PPL_OP_NEGATE: {
                         if (ppl_castToNum(context, stk - 1, inExpr, charpos)) goto cast_fail;
@@ -809,6 +870,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         if (ppl_castToNum(context, stk - 1, inExpr, charpos)) goto cast_fail;
                         if (ppl_castToNum(context, stk - 2, inExpr, charpos)) goto cast_fail;
                         ppl_uaPow(context, stk - 2, stk - 1, stk, &status, &errType, context->errStat.errBuff);
+                        // Report an arithmetic error
                         if (status) {
                             ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
@@ -823,6 +885,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     case PPL_OP_MULTIPLY: {
                         int status = 0, errType = -1;
                         ppl_opMul(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
+                        // Report an arithmetic error
                         if (status) {
                             ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
@@ -837,6 +900,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     case PPL_OP_DIVIDE: {
                         int status = 0, errType = -1;
                         ppl_opDiv(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
+                        // Report an arithmetic error
                         if (status) {
                             ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
@@ -853,6 +917,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                         if (ppl_castToNum(context, stk - 1, inExpr, charpos)) goto cast_fail;
                         if (ppl_castToNum(context, stk - 2, inExpr, charpos)) goto cast_fail;
                         ppl_uaMod(context, stk - 2, stk - 1, stk, &status, &errType, context->errStat.errBuff);
+                        // Report an arithmetic error
                         if (status) {
                             ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
@@ -867,6 +932,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     case PPL_OP_ADD: {
                         int status = 0, errType = -1;
                         ppl_opAdd(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
+                        // Report an arithmetic error
                         if (status) {
                             ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
@@ -881,6 +947,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     case PPL_OP_SUBTRACT: {
                         int status = 0, errType = -1;
                         ppl_opSub(context, stk - 2, stk - 1, stk, 1, &status, &errType, context->errStat.errBuff);
+                        // Report an arithmetic error
                         if (status) {
                             ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
@@ -942,6 +1009,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     case PPL_OP_NOT_EQUAL: {
                         int stat = 0, errType = -1,
                             cmp = pplObjCmp(context, stk - 2, stk - 1, &stat, &errType, context->errStat.errBuff, 0);
+                        // Report objects which cannot be compared
                         if (stat) {
                             ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                             goto cleanup_on_error;
@@ -982,12 +1050,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
+                // Only variables can be assigned to
                 if (o->self_lval == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Assignment operators can only be applied to variables.");
                     ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
+                // Immutable variables cannot be assigned to
                 if (o->immutable) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Cannot assign to an immutable object.");
@@ -995,12 +1065,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     goto cleanup_on_error;
                 }
 
+                // Plain assignment copies the value; the fused operators, such as +=, compute the new value first
                 if (t == PPL_ASSIGN) {
                     pplObjCpy(tmp, in, 0, 0, 1);
                     tmp->immutable = 0;
                     if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_ADD) {
                     ppl_opAdd(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
+                    // Report an arithmetic error
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
@@ -1008,6 +1080,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_SUBTRACT) {
                     ppl_opSub(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
+                    // Report an arithmetic error
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
@@ -1015,6 +1088,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_MULTIPLY) {
                     ppl_opMul(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
+                    // Report an arithmetic error
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
@@ -1022,12 +1096,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else if (t == PPL_ASSIGN_DIVIDE) {
                     ppl_opDiv(context, o, in, tmp, 0, &status, &errType, context->errStat.errBuff);
+                    // Report an arithmetic error
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
                     }
                     if (assignToVariable(context, o, tmp, t2, inExpr, charpos)) goto cleanup_on_error;
                 } else {
+                    // The remaining fused operators, e.g. %= and &=, only act on numbers
                     if (o->objType != PPLOBJ_NUM) {
                         ppl_snprintfTrunc(
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -1037,6 +1113,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     }
                     if (ppl_castToNum(context, in, inExpr, charpos)) goto cast_fail;
                     pplObjNum(tmp, 0, 0, 0);
+                    // Compute the new value
                     switch (t) {
                         case PPL_ASSIGN_MODULO:
                             ppl_uaMod(context, o, in, tmp, &status, &errType, context->errStat.errBuff);
@@ -1075,6 +1152,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                             ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                             goto cleanup_on_error;
                     }
+                    // Report an arithmetic error
                     if (status) {
                         ppl_tbAddExpr(context, inExpr, errType, charpos, "");
                         goto cleanup_on_error;
@@ -1094,24 +1172,28 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
+                // Only numeric, mutable variables can be incremented or decremented
                 if (o->self_lval == NULL) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The -- and ++ operators can only be applied to variables.");
                     ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
+                // The variable must be a number
                 if (o->objType != PPLOBJ_NUM) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "The -- and ++ operators can only be applied to numeric variables.");
                     ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
+                // The variable must not be immutable
                 if (o->immutable) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Cannot modify an immutable object.");
                     ppl_tbAddExpr(context, inExpr, ERR_TYPE, charpos, "");
                     goto cleanup_on_error;
                 }
+                // Change the variable, or the element of a vector or matrix, in place
                 switch (t) {
                     case PPL_OP_POST_DECREMENT:
                     case PPL_OP_PRE_DECREMENT:
@@ -1138,12 +1220,14 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             case PPL_BC_STRING_SUBST: {
                 const int Nsubs = instruction->operand.count;
                 int i;
+                // The format string is on the stack, followed by the values to substitute into it
                 if (context->stackPtr < Nsubs + 1) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Too few items on stack for string substitution operator.");
                     ppl_tbAddExpr(context, inExpr, ERR_INTERNAL, charpos, "");
                     goto cleanup_on_error;
                 }
+                // The format must be a string
                 if ((stk - Nsubs - 1)->objType != PPLOBJ_STR) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Attempt to apply string substitution operator to a non-string.");
@@ -1163,6 +1247,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
             }
             case PPL_BC_DOLLAR: {
                 int t;
+                // The column to fetch is on the top of the stack
                 if (context->stackPtr < 1) {
                     ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                       "Too few items on stack for dollar operator.");
@@ -1170,9 +1255,11 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     goto cleanup_on_error;
                 }
                 t = context->stack[context->stackPtr - 1].objType;
+                // A number is a column number; a string is a column heading
                 if (t == PPLOBJ_NUM) {
                     double num = context->stack[context->stackPtr - 1].real;
                     int n;
+                    // The column number must be in range
                     if ((num < -4) || (num > MAX_DATACOLS) || (!gsl_finite(num))) {
                         ppl_snprintfTrunc(
                                 context->errStat.errBuff, sizeof(context->errStat.errBuff),
@@ -1188,6 +1275,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                     char *name = (char *) context->stack[context->stackPtr - 1].auxil;
                     const int malloced = context->stack[context->stackPtr - 1].auxilMalloced;
                     ppl_dollarOp_fetchColByName(context, inExpr, charpos, name);
+                    // Free the copy of the column name
                     if (malloced) {
                         free(name);
                         name = NULL;
@@ -1207,6 +1295,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 ppl_castToBool(context, stk - 1);
                 branch = (stk - 1)->real == 0;
+                // Jump if the value is false
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
                     next = instruction->operand.target;
@@ -1221,6 +1310,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
                 *lastOpAssign = 0;
                 ppl_castToBool(context, stk - 1);
                 branch = (stk - 1)->real != 0;
+                // Jump if the value is true
                 if (branch) {
                     // Jump, either leaving the tested value on the stack as the result (&& and ||), or popping it (?:)
                     next = instruction->operand.target;
@@ -1250,6 +1340,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
         if (opcode == PPL_BC_RETURN) break;
         j = next;
     }
+    // The expression must have left its value on the stack
     if (context->stackPtr <= 0) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "Unexpected empty stack at end of evaluation.");
@@ -1262,6 +1353,7 @@ pplObj *ppl_expEval(ppl_context *context, pplExpr *inExpr, int *lastOpAssign, co
     }
     return &context->stack[context->stackPtr - 1];
 
+// On error, discard everything this evaluation has pushed, and return NULL
 cast_fail:
 cleanup_on_error:
     ppl_stackClean(context, initialStackPtr); // Discard everything which this evaluation pushed onto the stack

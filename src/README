@@ -1,0 +1,96 @@
+src
+===
+
+The source code of Pyxplot. The files in this directory hold the program's
+entry point and the machinery which ties its parts together: reading input,
+reading data files, the multiplot canvas, and LaTeX typesetting. Each
+subdirectory, described below, has its own README.
+
+canvasItems.c, canvasItems.h
+    The multiplot canvas: the commands which add items to it (plot, text,
+    arrow, image and so on) and manage it (list, delete, move, swap, clear).
+    Each item records everything needed to redraw it, and the canvas is redrawn
+    by epsMaker after each change.
+
+children.c, children.h
+    Pyxplot's child processes: the child support process, which owns the
+    temporary directory and keeps postscript viewers such as gv running, and
+    the short-lived helpers (latex, sed, input filters) connected by pipes.
+
+datafile.c, datafile.h
+    Reads data for plot, fit, tabulate and similar commands, from files, from
+    vectors or by sampling functions, applying modifiers such as using,
+    select, every and index.
+
+datafile_rasters.c, datafile_rasters.h
+    Chooses where to sample the step functions made by the histogram and fft
+    commands, so that they are sampled once per bin or grid point rather than
+    uniformly.
+
+input.c, input.h
+    Reads commands, interactively with readline or from scripts, joins
+    continued lines, and passes each line to the parser for execution.
+
+pyxplot.c, pyxplot.h
+    The entry point of Pyxplot: reads the command-line options, sets up the
+    session's context, child processes and settings, then runs each script
+    given, or an interactive session.
+
+readConf.c, readConf.h
+    Reads the configuration files ~/.pyxplotrc and ./.pyxplotrc, which may
+    change the default settings, colors, units and LaTeX preamble, and define
+    variables and functions at startup.
+
+texify.c, texify.h
+    Converts expressions and strings into LaTeX, for the texify() function and
+    for automatically generated text such as the titles of datasets.
+
+pplConstants.h
+    Constants used throughout Pyxplot, such as buffer sizes and limits on the
+    numbers of items of various kinds.
+
+help.xml
+    The text of Pyxplot's interactive help system, read by the help command.
+
+pyxplot.eps
+    Pyxplot's logo, as encapsulated postscript.
+
+commands/
+    The implementation of each of Pyxplot's commands, from set and show to fit,
+    histogram and fft.
+
+coreUtils/
+    General-purpose infrastructure: data structures, memory management, error
+    reporting and access to the operating system.
+
+defaultObjs/
+    The functions, constants, units and modules which are defined when Pyxplot
+    starts, and the methods of each type of object.
+
+epsMaker/
+    Turns the multiplot canvas into postscript, drawing graphs and other items
+    and typesetting their text with LaTeX, then converts it to other formats.
+
+expressions/
+    Compiles algebraic expressions into bytecode, and executes it.
+
+helpers/
+    Small stand-alone programs built and installed alongside Pyxplot.
+
+mathsTools/
+    Small mathematical helpers which the standard C maths library lacks.
+
+parser/
+    The command-line parser, which matches each line of input against the
+    grammar of Pyxplot's commands.
+
+settings/
+    The values changed by the set command, their defaults, and the tables of
+    keywords they can take.
+
+stringTools/
+    Low-level string handling, used by every other part of Pyxplot.
+
+userspace/
+    Pyxplot's data model: the pplObj structure which holds every value, its
+    types, physical units, dates, and the state of a session.

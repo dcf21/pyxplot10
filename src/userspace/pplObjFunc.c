@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Frees and copies the descriptors of Pyxplot's function objects. Functions may be built-in (system) functions,
+// algebraic functions defined by the user, subroutines, or functions produced by commands such as interpolate,
+// histogram and fft, each of which keeps its own data. A user-defined function may consist of a chain of definitions,
+// each valid over a different range of its arguments.
+
 #include "stdlib.h"
 #include "string.h"
 
@@ -39,6 +44,7 @@
 
 void pplObjFuncDestroyChain(pplFunc *f) {
     pplFunc *next;
+    // Free each definition in the chain
     while (f != NULL) {
         next = f->next;
         pplObjFuncDestroy(f);
@@ -51,13 +57,16 @@ void pplObjFuncDestroyChain(pplFunc *f) {
 //! \param [in] f - The function descriptor to free
 
 void pplObjFuncDestroy(pplFunc *f) {
+    // Built-in functions are never freed
     const int type = f->functionType;
     if ((type == PPL_FUNC_SYSTEM) || (type == PPL_FUNC_MAGIC)) return; // Never garbage collect system functions
 
+    // Free the data held by each type of function
     switch (type) {
         case PPL_FUNC_USERDEF: {
             pplExpr *e = (pplExpr *) f->functionPtr;
             f->functionPtr = NULL;
+            // A user-defined function holds the expression which defines it
             if (e != NULL) {
                 pplExpr_free(e);
                 e = NULL;
@@ -67,18 +76,23 @@ void pplObjFuncDestroy(pplFunc *f) {
         case PPL_FUNC_SPLINE: {
             splineDescriptor *d = (splineDescriptor *) f->functionPtr;
             f->functionPtr = NULL;
+            // An interpolated function holds the GSL spline and its accelerator, except stepwise interpolation, which
+            // holds a plain array of data points
             if (d != NULL) {
                 if (d->splineType[1] != 't') // Not stepwise interpolation
                 {
+                    // Free the GSL spline
                     if (d->splineObj != NULL) {
                         gsl_spline_free(d->splineObj);
                         d->splineObj = NULL;
                     }
+                    // Free the GSL lookup accelerator
                     if (d->accelerator != NULL) {
                         gsl_interp_accel_free(d->accelerator);
                         d->accelerator = NULL;
                     }
                 } else {
+                    // Free the table of data points used for stepwise interpolation
                     if (d->splineObj != NULL) {
                         free(d->splineObj);
                         d->splineObj = NULL;
@@ -93,7 +107,9 @@ void pplObjFuncDestroy(pplFunc *f) {
         case PPL_FUNC_BMPDATA: {
             splineDescriptor *d = (splineDescriptor *) f->functionPtr;
             f->functionPtr = NULL;
+            // Two-dimensional interpolations and bitmap images hold a plain array of data
             if (d != NULL) {
+                // Free the array
                 if (d->splineObj != NULL) {
                     free(d->splineObj);
                     d->splineObj = NULL;
@@ -106,11 +122,14 @@ void pplObjFuncDestroy(pplFunc *f) {
         case PPL_FUNC_HISTOGRAM: {
             histogramDescriptor *h = (histogramDescriptor *) f->functionPtr;
             f->functionPtr = NULL;
+            // A histogram holds the boundaries of its bins, and the value of each
             if (h != NULL) {
+                // Free the bin boundaries
                 if (h->bins != NULL) {
                     free(h->bins);
                     h->bins = NULL;
                 }
+                // Free the bin values
                 if (h->binvals != NULL) {
                     free(h->binvals);
                     h->binvals = NULL;
@@ -123,7 +142,9 @@ void pplObjFuncDestroy(pplFunc *f) {
         case PPL_FUNC_FFT: {
             FFTDescriptor *d = (FFTDescriptor *) f->functionPtr;
             f->functionPtr = NULL;
+            // A Fourier transform holds its grid of output values, allocated by FFTW
             if (d != NULL) {
+                // Free the grid
                 if (d->datagrid != NULL) {
                     fftw_free(d->datagrid);
                     d->datagrid = NULL;
@@ -141,22 +162,27 @@ void pplObjFuncDestroy(pplFunc *f) {
         }
     }
 
+    // Free the names of the arguments, and the range of argument values over which this definition applies
     if (f->argList != NULL) {
         free(f->argList);
         f->argList = NULL;
     }
+    // Lower limits of the ranges of the arguments
     if (f->min != NULL) {
         free(f->min);
         f->min = NULL;
     }
+    // Upper limits of the ranges of the arguments
     if (f->max != NULL) {
         free(f->max);
         f->max = NULL;
     }
+    // Flags saying which lower limits apply
     if (f->minActive != NULL) {
         free(f->minActive);
         f->minActive = NULL;
     }
+    // Flags saying which upper limits apply
     if (f->maxActive != NULL) {
         free(f->maxActive);
         f->maxActive = NULL;
@@ -171,15 +197,18 @@ void pplObjFuncDestroy(pplFunc *f) {
 //! \return The copy, or NULL if <f> is not a user-defined function, or if memory allocation failed
 
 pplFunc *pplObjFuncCpy(pplFunc *f) {
+    // Only user-defined functions can be copied
     pplFunc *o;
     int i, j;
     int Nargs;
     if (f->functionType != PPL_FUNC_USERDEF) return NULL;
 
+    // Find the length of the list of argument names, which are stored one after another, each null-terminated
     Nargs = f->maxArgs;
     for (j = 0, i = 0; i < Nargs; i++)
         while (f->argList[j++] != '\0');
 
+    // Copy the descriptor, the expression, the argument names and the ranges of the arguments
     if ((o = (pplFunc *) malloc(sizeof(pplFunc))) == NULL) return NULL;
     o->functionType = PPL_FUNC_USERDEF;
     o->minArgs = f->minArgs;

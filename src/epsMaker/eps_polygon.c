@@ -19,6 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws polygon canvas items, made with the polygon command, into the postscript buffer during the final rendering pass
+// of canvasDraw.c.
+
 #define _PPL_EPS_ARROW 1
 
 #include <stdlib.h>
@@ -40,6 +43,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_polygon_RenderEPS(EPSComm *x) {
+    // Variables for the shape and style of the polygon
     int i;
     unsigned char filled = 0, stroked = 0;
     withWords ww;
@@ -76,9 +80,11 @@ void eps_polygon_RenderEPS(EPSComm *x) {
     else lw_scale = x->current->settings.LineWidth;
     lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
+    // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
+    // Write the line width and type
     if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Stroke outline of polygon

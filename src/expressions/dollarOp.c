@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The $ operator, with which expressions in the "using" modifiers of commands such as plot and fit refer to columns of
+// data, e.g. "using 1:$2**2" or "using $time:2". While each row of a data file is being processed, datafile.c makes the
+// row available here; $N then evaluates to column N, $name to the column with that heading, and $0, $-1, $-2 and $-3 to
+// the data point, block, index and line numbers.
+
 #define _DOLLAROP_C 1
 
 #include <stdlib.h>
@@ -117,10 +122,12 @@ void ppl_dollarOp_deconfig(ppl_context *c) {
 //! block, -1 the block number, -2 the index number, and -3 the line number in the file.
 
 void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int inExprCharPos, int colNum) {
+    // The value is written into the top slot of the stack, which the caller has reserved
     pplObj *out = &c->stack[c->stackPtr - 1];
     pplObjNum(out, 0, 0, 0);
     out->refCount = 1;
 
+    // Columns which do not exist give NaN, with a warning stored for the caller to report
     if ((colNum < -3) || (colNum > c->dollarStat.Ncols)) {
         ppl_snprintfTrunc(c->dollarStat.warntxt, sizeof(c->dollarStat.warntxt),
                           "%s:%ld: In the expression <%s>, the requested %s number %d does not exist %son line %ld.",
@@ -134,11 +141,15 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
         return;
     }
 
+    // Special columns: $-3 is the line number in the file, $-2 the index, $-1 the block, and $0 the data point number.
+    // Otherwise use the value already parsed, if there is one.
     if (colNum == -3) out->real = c->dollarStat.file_linenumber;
     else if (colNum == -2) out->real = c->dollarStat.index_number;
     else if (colNum == -1) out->real = c->dollarStat.block_count;
     else if (c->dollarStat.columns_val != NULL) pplObjCpy(out, &c->dollarStat.columns_val[colNum], 0, 0, 1);
     else if (colNum == 0) out->real = c->dollarStat.linenumber_count;
+    // Otherwise parse the text of the column as a number, which must not be followed by anything except whitespace or a
+    // comma
     else {
         char *s = c->dollarStat.columns_str[colNum - 1];
         int j = -1;
@@ -153,6 +164,7 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
             str[j] = '\0';
             pplObjStr(out, 0, 1, str);
         } else {
+            // Apply the units of the column, if the file's header gave them
             if ((colNum > 0) && (colNum <= c->dollarStat.NcolUnits)) {
                 ppl_unitsDimCpy(out, &c->dollarStat.colUnits[colNum - 1]);
                 out->real = ppl_getFloat(s, &j) * c->dollarStat.colUnits[colNum - 1].real;
@@ -174,6 +186,7 @@ void ppl_dollarOp_fetchColByNum(ppl_context *c, const pplExpr *inExpr, const int
 void ppl_dollarOp_fetchColByName(ppl_context *c, pplExpr *inExpr, const int inExprCharPos, char *colName) {
     int i;
     for (i = 0; i < c->dollarStat.NcolHeads; i++)
+        // Found the column with this heading; fetch it by number
         if (strcmp(colName, c->dollarStat.colHeads[i]) == 0) {
             ppl_dollarOp_fetchColByNum(c, inExpr, inExprCharPos, i);
             return;

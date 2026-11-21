@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws box canvas items, made with the box command, into the postscript buffer during the final rendering pass of
+// canvasDraw.c. A box may be given by two corners, or by one corner with a width and height, and may be rotated, filled
+// and stroked.
+
 #define _PPL_EPS_BOX 1
 
 #include <stdlib.h>
@@ -36,6 +40,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_box_RenderEPS(EPSComm *x) {
+    // Variables for the shape and style of the box
     int lt;
     unsigned char filled = 0, stroked = 0;
     double lw, lw_scale, x1, x2, y1, y2, xo, yo, r;
@@ -64,6 +69,7 @@ void eps_box_RenderEPS(EPSComm *x) {
         xo = (x1 + x2) / 2.0;
         yo = (y1 + y2) / 2.0;
     } // Rotate about centre of box if specified as 'from .... to ....'
+    // A box given by a corner, width and height rotates about that corner
     else {
         xo = x1;
         yo = y1;
@@ -90,9 +96,11 @@ void eps_box_RenderEPS(EPSComm *x) {
     else lw_scale = x->current->settings.LineWidth;
     lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
+    // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
+    // Write the line width and type
     if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Stroke outline of box

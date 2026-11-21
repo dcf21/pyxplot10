@@ -19,6 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
+// The phy module, which holds physical constants (its variables are set up in defaultVars.c) and the functions Bv() and
+// Bvmax(), which evaluate the Planck black-body spectrum and the frequency of its peak.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -61,6 +64,7 @@ void pplfunc_planck_Bv(ppl_context *c, pplObj *in, const int nArgs, int *status,
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj kelvin;
 
+    // The arguments must be a frequency and a temperature, which is converted to kelvin
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a frequency", UNIT_TIME, -1)) return;
     if (ppl_funcCheckUnit(&call, &in[1], "second", "a temperature", UNIT_TEMPERATURE, 1)) return;
     pplObjNum(&kelvin, 0, 1, 0);
@@ -92,6 +96,7 @@ void pplfunc_planck_Bvmax(ppl_context *c, pplObj *in, const int nArgs, int *stat
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     pplObj kelvin;
 
+    // The argument must be a temperature, which is converted to kelvin
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a temperature", UNIT_TEMPERATURE, 1)) return;
     pplObjNum(&kelvin, 0, 1, 0);
     kelvin.exponent[UNIT_TEMPERATURE] = 1;

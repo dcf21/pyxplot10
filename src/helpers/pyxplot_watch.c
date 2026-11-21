@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The pyxplot_watch program, which is built and installed alongside Pyxplot. It watches a list of Pyxplot script files,
+// and runs Pyxplot on each of them whenever it changes, so that plots are regenerated as scripts are edited. It shares
+// Pyxplot's string, dictionary, memory and error-reporting code, but none of its interpreter.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +41,7 @@
 #include "settings/settingTypes.h"
 #include "userspace/context.h"
 
+// Required by the shared string-handling code, which checks it while reading files; pyxplot_watch never sets it
 int cancellationFlag = 0;
 
 //! RunPyxplotOnFile - Run Pyxplot on a script file which pyxplot_watch has found to have changed
@@ -48,24 +53,30 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
     char LineBuffer[LSTR_LENGTH];
     int interactive, status;
 
+    // Progress messages are only shown in an interactive terminal, unless the user asked for quiet output
     interactive = ((isatty(STDIN_FILENO) == 1) && (context->session_default.splash == SW_ONOFF_ON));
 
+    // Announce that the script is being run
     if (interactive) {
         ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "[%s] Running %s.",
                           ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
         ppl_report(context, LineBuffer);
     }
 
+    // Run Pyxplot on the script, passing on the user's choice of coloured output
     ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "%s -q %s %s", PPLBINARY,
                       (context->session_default.color == SW_ONOFF_ON) ? "-c" : "-m", fname);
     status = system(LineBuffer);
 
+    // In a non-interactive session, report scripts which failed; in an interactive session, Pyxplot's own error
+    // messages suffice
     if (status && !interactive) {
         ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "[%s] Encountered problem in script file %s.",
                           ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
         ppl_error(context, ERR_PREFORMED, -1, -1, LineBuffer);
     }
 
+    // Announce that the script has finished
     if (interactive) {
         ppl_snprintfTrunc(LineBuffer, sizeof(LineBuffer), "[%s] Finished %s.",
                           ppl_strStrip(ppl_friendlyTimestring(), msg), fname);
@@ -81,6 +92,7 @@ void RunPyxplotOnFile(pplerr_context *context, char *fname) {
 //! \return The exit status of the process
 
 int main(const int argc, char **argv) {
+    // Buffers for messages, the welcome text, the help text and the version string
     char msg[PPL_MSG_LENGTH];
     struct timespec waitperiod, waitedperiod; // A time.h timespec specifier; used for sleeping
     char init_string[LSTR_LENGTH], help_string[LSTR_LENGTH], version_string[FNAME_LENGTH],
@@ -89,11 +101,13 @@ int main(const int argc, char **argv) {
     glob_t GlobData;
     pplerr_context *context;
 
+    // A dictionary of the stat() information of each file, recording when each was last modified
     dict *StatInfodict;
     struct stat StatInfo, *StatInfoPtr;
 
     // Initialise sub-modules
     context = malloc(sizeof(pplerr_context));
+    // Set up the error-reporting context, with no input file being processed
     if (context == NULL) {
         printf("malloc fail.");
         return 1;
@@ -103,6 +117,7 @@ int main(const int argc, char **argv) {
     context->error_input_filename[0] = '\0';
     strcpy(context->error_source, "main     ");
 
+    // Start the memory management system, and create the dictionary of file modification times
     if (DEBUG) ppl_log(context, "Initialising Pyxplot Watch.");
     ppl_memAlloc_MemoryInit(context, &ppl_error, &ppl_log);
     StatInfodict = ppl_dictInit(1);
@@ -117,6 +132,7 @@ int main(const int argc, char **argv) {
     // Make help and version strings
     ppl_snprintfTrunc(version_string, sizeof(version_string), "\nPyxplot Watch %s\n", VERSION);
 
+    // The text shown by the --help switch
     ppl_snprintfTrunc(help_string, sizeof(help_string), "%s\
 %s\n\
 \n\
@@ -136,6 +152,7 @@ For the latest information on Pyxplot development, see the project website:\n\
 <http://www.pyxplot.org.uk>\n",
                       version_string, ppl_strUnderline(version_string, version_string_underline), DOCDIR, PATHLINK);
 
+    // The welcome text shown on startup
     ppl_snprintfTrunc(init_string, sizeof(init_string), "\n\
                         _       _      PYXPLOT WATCH\n\
  _ __  _   ___  ___ __ | | ___ | |_    Version %s\n\
@@ -150,8 +167,10 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 
     // Scan command-line options for any switches
     HaveFilenames = 0;
+    // Process each command-line argument in turn
     for (i = 1; i < argc; i++) {
         if (strlen(argv[i]) == 0) continue;
+        // Arguments which are not switches are the filenames to watch
         if (argv[i][0] != '-') {
             HaveFilenames = 1;
             continue;
@@ -214,10 +233,13 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
     // Scan command-line options and glob all filenames
     while (1) {
         DoneWork = 0;
+        // Expand each filename argument, which may contain wildcards
         for (i = 1; i < argc; i++) {
             if ((argv[i][0] == '\0') || (argv[i][0] == '-')) continue;
             if (glob(argv[i], 0, NULL, &GlobData) != 0) continue;
 
+            // Run Pyxplot on each matching file which is new, or has been modified since we last ran it, pausing
+            // briefly after each one
             for (j = 0; j < GlobData.gl_pathc; j++) {
                 if (stat(GlobData.gl_pathv[j], &StatInfo) != 0) continue; // Stat didn't work...
                 StatInfoPtr = (struct stat *) ppl_dictLookup(StatInfodict, GlobData.gl_pathv[j]);
@@ -231,8 +253,10 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
                 nanosleep(&waitperiod, &waitedperiod);
             }
 
+            // Free the list of filenames matching this argument
             globfree(&GlobData);
         }
+        // If no files needed running, wait a second before looking again
         if (!DoneWork) {
             waitperiod.tv_sec = 1;
             waitperiod.tv_nsec = 0;

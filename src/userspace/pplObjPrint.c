@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Renders Pyxplot objects as text, for the print command, for expressions typed at the prompt, for str(), and for "show
+// variables". Depending on the setting of "set numerics display", values are shown in natural form, in a typeable form
+// which Pyxplot can read back, or in LaTeX. Long containers are truncated to fit the output buffer.
+
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
@@ -58,11 +62,13 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
     const int NSigFigs = c->set->term_current.SignificantFigures;
     const int typeable = c->set->term_current.NumDisplay;
 
+    // A missing object
     if (o == NULL) {
         ppl_snprintfTrunc(out, outlen, "%s", "<null>");
         return;
     }
     t = o->objType;
+    // Render each type of object
     switch (t) {
         case PPLOBJ_NUM:
             ppl_snprintfTrunc(out, outlen, "%s",
@@ -77,6 +83,8 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             else ppl_snprintfTrunc(out, outlen, "%s", "true");
             break;
         case PPLOBJ_DATE:
+            // Dates within containers, or in typeable mode, are shown as a call to time.fromCalendar(); otherwise as a
+            // date string in the current timezone
             if (internal || (typeable == SW_DISPLAY_T)) {
                 int status = 0;
                 int year, month, day, hour, minute;
@@ -102,6 +110,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
         case PPLOBJ_COL: {
             int i = 0, n;
             const int ct = floor(o->exponent[0] + 0.01);
+            // Colors are shown as a call to the function for their color space, with the right number of components
             if (ct == SW_COLSPACE_CMYK) {
                 ppl_strAppendf(out, outlen, &i, "%s", "cmyk(");
                 n = 4;
@@ -117,12 +126,14 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 n = 0;
             }
             i += strlen(out + i);
+            // Show the components, separated by commas
             if (n >= 1) {
                 ppl_strAppendf(
                         out, outlen, &i, "%s",
                         ppl_numericDisplay(o->exponent[8], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
             }
+            // Second component
             if (n >= 2) {
                 ppl_strAppendChar(out, outlen, &i, ',');
                 ppl_strAppendf(
@@ -130,6 +141,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                         ppl_numericDisplay(o->exponent[9], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
             }
+            // Third component
             if (n >= 3) {
                 ppl_strAppendChar(out, outlen, &i, ',');
                 ppl_strAppendf(
@@ -137,6 +149,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                         ppl_numericDisplay(o->exponent[10], c->numdispBuff[0], NSigFigs, (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
             }
+            // Fourth component
             if (n >= 4) {
                 ppl_strAppendChar(out, outlen, &i, ',');
                 ppl_strAppendf(
@@ -154,11 +167,15 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             char *key;
             pplObj *item;
             if (!expand) ppl_strAppendf(out, outlen, &i, "%s", "{ ... }");
+            // Dictionaries nested more than eight deep are abbreviated, to avoid infinite recursion
             else {
                 ppl_strAppendChar(out, outlen, &i, '{');
+                // Show each item as key:value, skipping global declarations and zombies; items after a module start on
+                // a new line
                 while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
                     if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                         continue; // Hide globals and zombies
+                    // Separate items with commas
                     if (!first) {
                         ppl_strAppendChar(out, outlen, &i, ',');
                         if (prevMod) { ppl_strAppendChar(out, outlen, &i, '\n'); }
@@ -170,6 +187,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     i += strlen(out + i);
                     pplObjPrint(c, item, NULL, out + i, outlen - i, 1, modIterDepth + 1);
                     i += strlen(out + i);
+                    // Stop when the output buffer is nearly full
                     if (i > outlen - 400) {
                         ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                         i += strlen(out + i);
@@ -192,12 +210,16 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             ppl_strAppendf(out, outlen, &i, (t == PPLOBJ_MOD) ? "module {" : "module instance {");
             i += strlen(out + i);
             if (!expand) ppl_strAppendf(out, outlen, &i, "%s", " ... }");
+            // Modules are expanded only at the top level, with one member per line, indented by depth and aligned in
+            // columns
             else {
                 ppl_strAppendChar(out, outlen, &i, '\n');
+                // Show each member, skipping global declarations and zombies
                 while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
                     const int j = i;
                     if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
                         continue; // Hide globals and zombies
+                    // Indent the member by its depth
                     for (k = 0; k <= modIterDepth; k++) {
                         ppl_strAppendChar(out, outlen, &i, ' ');
                         ppl_strAppendChar(out, outlen, &i, ' ');
@@ -210,6 +232,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     pplObjPrint(c, item, key, out + i, outlen - i, 1, modIterDepth + 1);
                     i += strlen(out + i);
                     ppl_strAppendChar(out, outlen, &i, '\n');
+                    // Stop when the output buffer is nearly full
                     if (i > outlen - 400) {
                         ppl_strAppendf(out, outlen, &i, "%s", "  ...\n");
                         i += strlen(out + i);
@@ -217,6 +240,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     }
                 }
                 if (i < outlen) ppl_strAppendChar(out, outlen, &i, ' ');
+                // Indent the closing brace to match
                 for (k = 0; ((k < modIterDepth) && (i < outlen - 2)); k++) {
                     ppl_strAppendChar(out, outlen, &i, ' ');
                     ppl_strAppendChar(out, outlen, &i, ' ');
@@ -231,9 +255,12 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             listIterator *iter = ppl_listIterateInit((list *) o->auxil);
             pplObj *item;
             if (!expand) ppl_strAppendf(out, outlen, &i, "%s", "[ ... ]");
+            // Lists nested more than eight deep are abbreviated, to avoid infinite recursion
             else {
                 ppl_strAppendChar(out, outlen, &i, '[');
+                // Show each item; items after a module start on a new line
                 while ((item = (pplObj *) ppl_listIterate(&iter)) != NULL) {
+                    // Separate items with commas
                     if (!first) {
                         ppl_strAppendChar(out, outlen, &i, ',');
                         if (prevMod) { ppl_strAppendChar(out, outlen, &i, '\n'); }
@@ -241,6 +268,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     }
                     pplObjPrint(c, item, NULL, out + i, outlen - i, 1, modIterDepth + 1);
                     i += strlen(out + i);
+                    // Stop when the output buffer is nearly full
                     if (i > outlen - 400) {
                         ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                         i += strlen(out + i);
@@ -265,7 +293,10 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             gsl_vector *v = ((pplVector *) (o->auxil))->v;
             ppl_strAppendf(out, outlen, &i, "%s", "vector(");
             i += strlen(out + i);
+            // Show each element, scaled into the display units. A vector's units are found by printing the units of a
+            // value of 1 with the vector's dimensions.
             for (j = 0; j < v->size; j++) {
+                // Separate elements with commas
                 if (j > 0) {
                     ppl_strAppendChar(out, outlen, &i, ',');
                     ppl_strAppendChar(out, outlen, &i, ' ');
@@ -274,6 +305,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                                ppl_numericDisplay(gsl_vector_get(v, j) * real, c->numdispBuff[0], NSigFigs,
                                                   (typeable == SW_DISPLAY_L)));
                 i += strlen(out + i);
+                // Stop when the output buffer is nearly full
                 if (i > outlen - 400) {
                     ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                     i += strlen(out + i);
@@ -295,16 +327,22 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             unit = ppl_printUnit(c, o, &real, &imag, 1, 1, SW_DISPLAY_T);
             if (o->dimensionless) real = 1;
             gsl_matrix *m = ((pplMatrix *) (o->auxil))->m;
+            // In typeable form, a matrix is shown as a call to matrix() with a list of rows; otherwise it is laid out
+            // one row per line, with the units beside the middle row
             if (internal || (typeable == SW_DISPLAY_T)) {
                 ppl_strAppendf(out, outlen, &i, "%s", "matrix(");
                 i += strlen(out + i);
+                // Show each row
                 for (j = 0; j < m->size1; j++) {
+                    // Separate rows with commas
                     if (j > 0) {
                         ppl_strAppendChar(out, outlen, &i, ',');
                         ppl_strAppendChar(out, outlen, &i, ' ');
                     }
                     ppl_strAppendChar(out, outlen, &i, '[');
+                    // Show each element of the row
                     for (k = 0; k < m->size2; k++) {
+                        // Separate elements with commas
                         if (k > 0) {
                             ppl_strAppendChar(out, outlen, &i, ',');
                             ppl_strAppendChar(out, outlen, &i, ' ');
@@ -313,6 +351,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                                        ppl_numericDisplay(gsl_matrix_get(m, j, k) * real, c->numdispBuff[0], NSigFigs,
                                                           (typeable == SW_DISPLAY_L)));
                         i += strlen(out + i);
+                        // Stop when the output buffer is nearly full
                         if (i > outlen - 400) {
                             ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                             i += strlen(out + i);
@@ -321,6 +360,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     }
                     ppl_strAppendf(out, outlen, &i, "%s", "]");
                     i += strlen(out + i);
+                    // Stop when the output buffer is nearly full
                     if (i > outlen - 400) {
                         ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                         i += strlen(out + i);
@@ -332,10 +372,13 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                 if (!o->dimensionless) ppl_strAppendf(out, outlen, &i, "%s", unit);
             } else {
                 const int unitLine = m->size1 / 2;
+                // Lay out each row on a line of its own
                 for (j = 0; j < m->size1; j++) {
                     ppl_strAppendf(out, outlen, &i, "%s", "(");
                     i += strlen(out + i);
+                    // Show each element of the row
                     for (k = 0; k < m->size2; k++) {
+                        // Separate elements with commas
                         if (k > 0) {
                             ppl_strAppendChar(out, outlen, &i, ',');
                             ppl_strAppendChar(out, outlen, &i, ' ');
@@ -344,6 +387,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                                        ppl_numericDisplay(gsl_matrix_get(m, j, k) * real, c->numdispBuff[0], NSigFigs,
                                                           (typeable == SW_DISPLAY_L)));
                         i += strlen(out + i);
+                        // Stop when the output buffer is nearly full
                         if (i > outlen - 400) {
                             ppl_strAppendf(out, outlen, &i, "%s", ", ...");
                             i += strlen(out + i);
@@ -353,6 +397,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                     if ((j != unitLine) || (o->dimensionless)) ppl_strAppendf(out, outlen, &i, "%s", ")\n");
                     else ppl_strAppendf(out, outlen, &i, ") %s\n", unit);
                     i += strlen(out + i);
+                    // Stop when the output buffer is nearly full
                     if (i > outlen - 400) {
                         ppl_strAppendf(out, outlen, &i, "%s", "...\n");
                         i += strlen(out + i);
@@ -371,13 +416,17 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             const pplFunc *f = (pplFunc *) o->auxil;
             int first = 1, i = 0;
             const int indent = 16 * (modIterDepth > 0) + 2 * modIterDepth;
+            // A function may consist of a chain of definitions, each valid over a different range of its arguments;
+            // show each on its own line
             for (; f != NULL; f = f->next, first = 0) {
                 const int t = f->functionType;
+                // Start each definition after the first on a new line, indented to line up with the first
                 if (!first) {
                     int j;
                     ppl_strAppendChar(out, outlen, &i, '\n');
                     for (j = 0; j < indent; j++) ppl_strAppendChar(out, outlen, &i, ' ');
                 }
+                // Describe each type of function
                 switch (t) {
                     case PPL_FUNC_SYSTEM:
                     case PPL_FUNC_MAGIC:
@@ -390,19 +439,25 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                             if (f->minActive[k] || f->maxActive[k]) j = k;
                         ppl_strAppendf(out, outlen, &i, "%s(", fnname);
                         i += strlen(out + i);
+                        // The argument names are stored one after another, each null-terminated; list them separated by
+                        // commas
                         for (l = 0, m = 0; l < f->maxArgs; l++, m++) {
                             for (; f->argList[m] != '\0'; m++) ppl_strAppendChar(out, outlen, &i, f->argList[m]);
                             ppl_strAppendChar(out, outlen, &i, ',');
                         }
                         if (f->maxArgs > 0) i--; // Remove final comma from list of arguments
                         ppl_strAppendChar(out, outlen, &i, ')');
+                        // Show the range of values of each argument over which this definition applies, e.g.
+                        // f(x)[0:1]=...; j is the last argument which has a limit
                         for (k = 0; k <= j; k++) {
                             ppl_strAppendChar(out, outlen, &i, '[');
+                            // The lower limit, if there is one
                             if (f->minActive[k]) {
                                 ppl_strAppendf(out, outlen, &i, "%s", ppl_unitsNumericDisplay(c, f->min + k, 0, 0, 0));
                                 i += strlen(out + i);
                             }
                             ppl_strAppendChar(out, outlen, &i, ':');
+                            // The upper limit, if there is one
                             if (f->maxActive[k]) {
                                 ppl_strAppendf(out, outlen, &i, "%s", ppl_unitsNumericDisplay(c, f->max + k, 0, 0, 0));
                                 i += strlen(out + i);
@@ -440,6 +495,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
                         int l, m;
                         ppl_strAppendf(out, outlen, &i, "%s(", fnname);
                         i += strlen(out + i);
+                        // List the argument names, separated by commas
                         for (l = 0, m = 0; l < f->maxArgs; l++, m++) {
                             for (; f->argList[m] != '\0'; m++) ppl_strAppendChar(out, outlen, &i, f->argList[m]);
                             ppl_strAppendChar(out, outlen, &i, ',');
@@ -460,6 +516,7 @@ void pplObjPrint(ppl_context *c, pplObj *o, const char *oname, char *out, const 
             int i = 0;
             ppl_snprintfTrunc(out, outlen, "%s", "<data type");
             i += strlen(out + i);
+            // Name the type, e.g. <data type: string>
             if (((pplType *) (o->auxil))->id >= 0) {
                 ppl_strAppendf(out, outlen, &i, "%s", ": ");
                 i += strlen(out + i);

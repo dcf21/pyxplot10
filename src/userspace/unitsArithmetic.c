@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Arithmetic on quantities with physical units: raising to powers, multiplication, division, addition and subtraction,
+// keeping track of the units of the result, and checking that the units of the operands are compatible. Temperatures
+// need special care, since degrees Celsius and Fahrenheit have offsets from absolute zero. The expression evaluator
+// calls these functions for each arithmetic operator.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -128,6 +133,7 @@ unsigned char ppl_tempTypeMatch(const unsigned char a, const unsigned char b) {
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
+    // exponent is the power to which a is raised; DimLess is cleared if the result has any units
     int i;
     double exponent;
     gsl_complex ac, bc;
@@ -135,7 +141,10 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
     exponent = b->real; // We may overwrite this when we set o->real, so store a copy
 
+    // An exponent with units is an error, unless errors are switched off, in which case the result is NaN. The same
+    // pattern follows every check below.
     if (b->dimensionless == 0) {
+        // Errors switched off: return NaN
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_OFF) {
             pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);
             return;
@@ -151,10 +160,12 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
     if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) // Real pow()
     {
+        // Complex numbers give NaN when complex arithmetic is switched off
         if (a->flagComplex || b->flagComplex) {
             o->real = GSL_NAN;
         } else {
             o->real = pow(a->real, exponent);
+            // A result which overflows, or is complex, e.g. (-1)**0.5, is an error
             if ((!gsl_finite(o->real)) && (c->set->term_current.ExplicitErrors == SW_ONOFF_ON)) {
                 ppl_snprintfTrunc(
                         errText, PPL_MSG_LENGTH,
@@ -168,7 +179,9 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         o->flagComplex = 0;
     } else // Complex pow()
     {
+        // Quantities with units cannot be raised to complex powers, which would give complex dimensions
         if ((a->dimensionless == 0) && (b->flagComplex)) {
+            // Errors switched off: return NaN
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_OFF) {
                 pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);
                 return;
@@ -182,6 +195,7 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
                 return;
             }
         } else {
+            // Raise to a real power or a complex power
             if (!b->flagComplex) {
                 GSL_SET_COMPLEX(&ac, a->real, a->imag);
                 ac = gsl_complex_pow_real(ac, b->real);
@@ -194,7 +208,9 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             o->imag = GSL_IMAG(ac);
             o->flagComplex = fabs(o->imag) > (fabs(o->real) * 1e-15);
             if (!o->flagComplex) o->imag = 0.0; // Enforce that real numbers have positive zero imaginary components
+            // An overflow is an error
             if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
+                // Report it, or return NaN if errors are switched off
                 if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                     ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "Exponentiation operator produced an overflow error.");
                     *errType = ERR_OVERFLOW;
@@ -208,15 +224,19 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // A dimensionless number raised to a power is dimensionless
     if (a->dimensionless != 0) {
         if ((o != a) && (o != b)) ppl_unitsDimCpy(o, a);
         return;
     }
 
+    // Otherwise multiply the exponent of each base unit by the power, checking for absurdly large exponents
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
         o->exponent[i] = a->exponent[i] * exponent;
         if (ppl_dblEqual(o->exponent[i], 0) == 0) DimLess = 0;
+        // Exponents this large are an overflow
         if (fabs(o->exponent[i]) > 20000) {
+            // Errors switched off: return NaN
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_OFF) {
                 pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);
                 return;
@@ -243,10 +263,12 @@ void ppl_uaPow(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
+    // tmp is workspace for complex multiplication; DimLess is cleared if the result has any units
     int i;
     double tmp, areal, breal, aimag, bimag;
     unsigned char DimLess = 1;
 
+    // Copy the operands, since o may be the same object as a or b
     areal = a->real;
     aimag = a->imag;
     breal = b->real;
@@ -254,6 +276,8 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
     // Two inputs have conflicting temperature units. This is only allowed in the special case of oC/oF and friends, when temperature conversion happens.
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
+        // Multiplying a temperature by an inverse temperature on a different scale, e.g. oC/oF, converts between the
+        // scales by adding the difference between their offsets
         if (ppl_dblEqual(a->exponent[UNIT_TEMPERATURE], 1.0) && (ppl_dblEqual(b->exponent[UNIT_TEMPERATURE], -1.0))) {
             areal = areal + c->tempTypeOffset[a->tempType] -
                     c->tempTypeOffset[b->tempType]; // Remember, areal and breal have already had multipliers applied.
@@ -276,9 +300,11 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     // If we're in one of the cases handled above, don't worry as temperature exponent is about to end up as zero after, e.g. oC/oF
     o->tempType = (a->tempType > b->tempType) ? a->tempType : b->tempType;
 
+    // Multiply the values, as real or complex numbers
     if ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) ||
         ((!a->flagComplex) && (!b->flagComplex))) // Real multiplication
     {
+        // Complex numbers give NaN when complex arithmetic is switched off
         if (a->flagComplex || b->flagComplex) {
             o->real = GSL_NAN;
         } else {
@@ -288,6 +314,7 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         o->flagComplex = 0;
     } else // Complex multiplication
     {
+        // Complex multiplication: (a + ib)(c + id) = (ac - bd) + i(bc + ad)
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             o->real = GSL_NAN;
             o->imag = 0;
@@ -301,7 +328,9 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // An overflow is an error
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
+        // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "Multiplication produced an overflow error.");
             *errType = ERR_OVERFLOW;
@@ -313,15 +342,19 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // The product of dimensionless numbers is dimensionless
     if ((a->dimensionless != 0) && (b->dimensionless != 0)) {
         if ((o != a) && (o != b)) ppl_unitsDimCpy(o, a);
         return;
     }
 
+    // Otherwise add the exponents of each base unit, checking for absurdly large exponents
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
         o->exponent[i] = a->exponent[i] + b->exponent[i];
         if (ppl_dblEqual(o->exponent[i], 0) == 0) DimLess = 0;
+        // Exponents this large are an overflow
         if (fabs(o->exponent[i]) > 20000) {
+            // Errors switched off: return NaN
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_OFF) {
                 pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);
                 return;
@@ -348,10 +381,12 @@ void ppl_uaMul(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
+    // mag and tmp are workspace for complex division; DimLess is cleared if the result has any units
     int i;
     double mag, tmp, areal, breal, aimag, bimag;
     unsigned char DimLess = 1;
 
+    // Copy the operands, since o may be the same object as a or b
     areal = a->real;
     aimag = a->imag;
     breal = b->real;
@@ -359,6 +394,8 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 
     // Two inputs have conflicting temperature units. This is only allowed in the special case of oC/oF and friends, when temperature conversion happens.
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
+        // Dividing temperatures on different scales, e.g. oC/oF, converts between the scales by adding the difference
+        // between their offsets
         if (ppl_dblEqual(a->exponent[UNIT_TEMPERATURE], 1.0) && (ppl_dblEqual(b->exponent[UNIT_TEMPERATURE], 1.0))) {
             areal = areal + c->tempTypeOffset[a->tempType] -
                     c->tempTypeOffset[b->tempType]; // Remember, areal and breal have already had multipliers applied.
@@ -381,14 +418,17 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
     // If we're in one of the cases handled above, don't worry as temperature exponent is about to end up as zero after, e.g. oC/oF
     o->tempType = (a->tempType > b->tempType) ? a->tempType : b->tempType;
 
+    // Divide the values, as real or complex numbers
     if ((c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) ||
         ((!a->flagComplex) && (!b->flagComplex))) // Real division
     {
+        // Complex numbers give NaN when complex arithmetic is switched off; division by zero is an error
         if (a->flagComplex || b->flagComplex) {
             o->real = GSL_NAN;
             o->imag = 0;
             o->flagComplex = 0;
         } else if (fabs(breal) < 1e-200) {
+            // Errors switched off: return NaN
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_OFF) {
                 o->real = GSL_NAN;
                 o->imag = 0;
@@ -400,6 +440,7 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
                 return;
             }
         } else {
+            // Real division
             if (a->flagComplex || b->flagComplex) {
                 o->real = GSL_NAN;
             } else {
@@ -410,11 +451,14 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     } else // Complex division
     {
+        // Complex division: multiply by the complex conjugate of the divisor, and divide by the square of its
+        // magnitude, mag
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             o->real = GSL_NAN;
             o->imag = 0;
             o->flagComplex = 0;
         } else if ((mag = pow(breal, 2) + pow(bimag, 2)) < 1e-200) {
+            // Division by zero: return NaN, or report an error
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_OFF) {
                 o->real = GSL_NAN;
                 o->imag = 0;
@@ -434,7 +478,9 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // An overflow is an error
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
+        // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "Division produced an overflow error.");
             *errType = ERR_OVERFLOW;
@@ -446,15 +492,19 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // The quotient of dimensionless numbers is dimensionless
     if ((a->dimensionless != 0) && (b->dimensionless != 0)) {
         if ((o != a) && (o != b)) ppl_unitsDimCpy(o, a);
         return;
     }
 
+    // Otherwise subtract the exponents of each base unit, checking for absurdly large exponents
     for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
         o->exponent[i] = a->exponent[i] - b->exponent[i];
         if (ppl_dblEqual(o->exponent[i], 0) == 0) DimLess = 0;
+        // Exponents this large are an overflow
         if (fabs(o->exponent[i]) > 20000) {
+            // Errors switched off: return NaN
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_OFF) {
                 pplObjNum(o, o->amMalloced, GSL_NAN, 0.0);
                 return;
@@ -481,14 +531,19 @@ void ppl_uaDiv(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
+    // Add the real parts; the result takes the units of the left operand
     o->real = a->real + b->real;
+    // Unless the result overwrites an operand, give it the left operand's units
     if ((o != a) && (o != b)) {
         ppl_unitsDimCpy(o, a);
         o->imag = 0.0;
         o->flagComplex = 0;
     }
+    // Quantities can only be added if they have the same units
     if ((a->dimensionless == 0) || (b->dimensionless == 0)) {
+        // The units differ: describe them in the error message
         if (ppl_unitsDimEqual(a, b) == 0) {
+            // Describe whichever operands have units
             if (a->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -510,6 +565,7 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             return;
         }
     }
+    // Temperatures on different scales, e.g. oC and oF, cannot be added directly
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
         *errType = ERR_UNIT;
         *status = 1;
@@ -518,7 +574,9 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
                 "Attempt to add quantities with different temperature units: left operand has units of <%s>, while right operand has units of <%s>. These must be explicitly cast onto the same temperature scale before addition is allowed. Type 'help units temperatures' for more details.",
                 ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
     }
+    // Add the imaginary parts, if either operand is complex
     if (a->flagComplex || b->flagComplex) {
+        // Complex numbers give NaN when complex arithmetic is switched off
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             o->real = GSL_NAN;
             o->imag = 0;
@@ -530,7 +588,9 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         if (!o->flagComplex) o->imag = 0.0; // Enforce that real numbers have positive zero imaginary components
     }
 
+    // An overflow is an error
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
+        // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Addition produced an overflow error.");
             *errType = ERR_OVERFLOW;
@@ -542,6 +602,7 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // Done
     return;
 }
 
@@ -555,14 +616,19 @@ void ppl_uaAdd(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
+    // Subtract the real parts; the result takes the units of the left operand
     o->real = a->real - b->real;
+    // Unless the result overwrites an operand, give it the left operand's units
     if ((o != a) && (o != b)) {
         ppl_unitsDimCpy(o, a);
         o->imag = 0.0;
         o->flagComplex = 0;
     }
+    // Quantities can only be subtracted if they have the same units
     if ((a->dimensionless == 0) || (b->dimensionless == 0)) {
+        // The units differ: describe them in the error message
         if (ppl_unitsDimEqual(a, b) == 0) {
+            // Describe whichever operands have units
             if (a->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -584,6 +650,7 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             return;
         }
     }
+    // Temperatures on different scales, e.g. oC and oF, cannot be subtracted directly
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
         *errType = ERR_UNIT;
         *status = 1;
@@ -592,7 +659,9 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
                 "Attempt to subtract quantities with different temperature units: left operand has units of <%s>, while right operand has units of <%s>. These must be explicitly cast onto the same temperature scale before subtraction is allowed. Type 'help units temperatures' for more details.",
                 ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
     }
+    // Subtract the imaginary parts, if either operand is complex
     if (a->flagComplex || b->flagComplex) {
+        // Complex numbers give NaN when complex arithmetic is switched off
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             o->real = GSL_NAN;
             o->imag = 0;
@@ -604,7 +673,9 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         if (!o->flagComplex) o->imag = 0.0; // Enforce that real numbers have positive zero imaginary components
     }
 
+    // An overflow is an error
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
+        // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Subtraction produced an overflow error.");
             *errType = ERR_OVERFLOW;
@@ -616,6 +687,7 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // Done
     return;
 }
 
@@ -630,14 +702,20 @@ void ppl_uaSub(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int *status, int *errType, char *errText) {
+    // Floored modulo, so that the result has the sign of b, e.g. -1 % 3 = 2; the result takes the units of the left
+    // operand
     o->real = a->real - floor(a->real / b->real) * b->real;
+    // Unless the result overwrites an operand, give it the left operand's units
     if ((o != a) && (o != b)) {
         ppl_unitsDimCpy(o, a);
         o->imag = 0.0;
         o->flagComplex = 0;
     }
+    // Both operands must have the same units
     if ((a->dimensionless == 0) || (b->dimensionless == 0)) {
+        // The units differ: describe them in the error message
         if (ppl_unitsDimEqual(a, b) == 0) {
+            // Describe whichever operands have units
             if (a->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -659,6 +737,7 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
             return;
         }
     }
+    // Temperatures on different scales, e.g. oC and oF, are not compatible
     if (!ppl_tempTypeMatch(a->tempType, b->tempType)) {
         *errType = ERR_UNIT;
         *status = 1;
@@ -667,7 +746,9 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
                 "Attempt to apply mod operator to quantities with different temperature units: left operand has units of <%s>, while right operand has units of <%s>. These must be explicitly cast onto the same temperature scale before the use of the mod operator is allowed. Type 'help units temperatures' for more details.",
                 ppl_printUnit(c, a, NULL, NULL, 0, 1, 0), ppl_printUnit(c, b, NULL, NULL, 1, 1, 0));
     }
+    // The modulo of complex numbers is not defined
     if (a->flagComplex || b->flagComplex) {
+        // Complex numbers give NaN when complex arithmetic is switched off
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             o->real = GSL_NAN;
             o->imag = 0;
@@ -681,7 +762,9 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         return;
     }
 
+    // An overflow, including taking a number modulo zero, is an error
     if ((!gsl_finite(o->real)) || (!gsl_finite(o->imag))) {
+        // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Modulo operator produced an overflow error.");
             *errType = ERR_OVERFLOW;
@@ -693,5 +776,6 @@ void ppl_uaMod(ppl_context *c, const pplObj *a, const pplObj *b, pplObj *o, int 
         }
     }
 
+    // Done
     return;
 }

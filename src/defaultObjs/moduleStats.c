@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The stats module of statistical distributions: the probability density functions and cumulative distribution
+// functions of the binomial, chi-squared, Gaussian, lognormal, Poisson and Student's t distributions, and the inverses of
+// the cumulative distribution functions of the continuous ones, mostly evaluated with GSL.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>

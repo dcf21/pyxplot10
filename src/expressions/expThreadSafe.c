@@ -90,6 +90,7 @@ static int isLocal(const threadSafeCheck *t, const char *name) {
 //! \return True if the function is safe to call
 
 static int funcThreadSafe(threadSafeCheck *t, const pplFunc *f) {
+    // Whether each kind of function can be called from several threads at once
     switch (f->functionType) {
         case PPL_FUNC_SYSTEM:
         case PPL_FUNC_MAGIC:
@@ -113,6 +114,7 @@ static int funcThreadSafe(threadSafeCheck *t, const pplFunc *f) {
                 if (g->functionPtr == NULL) continue;
                 // The function's arguments are bound in the worker's own namespace while it runs
                 for (j = k = 0; (j < g->minArgs) && (g->argList != NULL); j++) {
+                    // A function with too many arguments to track is treated as unsafe
                     if (t->nLocals >= MAX_LOCALS) {
                         safe = 0;
                         break;
@@ -141,7 +143,10 @@ static int funcThreadSafe(threadSafeCheck *t, const pplFunc *f) {
 //! \return True if the object is safe to share
 
 static int objThreadSafe(threadSafeCheck *t, const pplObj *o, const int depth) {
+    // Objects nested too deeply to check are treated as unsafe. Containers are safe if everything they contain is.
     if (depth > MAX_CHECK_DEPTH) return 0;
+    // Functions are checked as functions; lists, dictionaries and modules are checked item by item; other objects are
+    // always safe
     switch (o->objType) {
         case PPLOBJ_FUNC:
             return funcThreadSafe(t, (const pplFunc *) o->auxil);
@@ -178,10 +183,13 @@ static int exprThreadSafe(threadSafeCheck *t, const pplExpr *e) {
     const pplObj *module = NULL; // The module produced by the previous instruction, if it looked one up
     int i;
     if (e == NULL) return 0;
+    // Check each instruction of the expression's bytecode, looking for anything unsafe: variables which are assigned
+    // to, or which hold unsafe functions, and calls to unsafe methods
     for (i = 0; i < e->bcLen; i++) {
         const pplExprInstruction *in = &e->bytecode[i];
         const pplObj *previousModule = module;
         module = NULL;
+        // Instructions which look up or assign variables, or call methods, need checking; all others are safe
         switch (in->opcode) {
             case PPL_BC_LOOKUP: {
                 char *name = e->strings + in->operand.string;
@@ -201,6 +209,7 @@ static int exprThreadSafe(threadSafeCheck *t, const pplExpr *e) {
                 member = (const pplObj *) ppl_dictLookup((dict *) previousModule->auxil,
                                                          e->strings + in->operand.string);
                 if (member == NULL) break; // An error, which is reported in the usual way
+                // Remember a module, so that the next instruction, which looks up one of its members, can be checked
                 if (member->objType == PPLOBJ_MOD) {
                     module = member;
                     break;
@@ -265,12 +274,14 @@ int ppl_expThreadSafe(ppl_context *c, const pplExpr *e, const char *const *local
 //! \return The worker context, or NULL if memory ran out. Free with ppl_contextWorkerFree().
 
 ppl_context *ppl_contextWorkerNew(ppl_context *parent) {
+    // Create the worker's context
     ppl_context *w = (ppl_context *) malloc(sizeof(ppl_context));
     if (w == NULL) return NULL;
 
     // Share the parent's settings, unit database and namespaces
     memcpy(w, parent, sizeof(ppl_context));
 
+    // The worker has no cloned functions yet
     w->workerClones = NULL;
     w->workerNClones = 0;
 
@@ -299,6 +310,7 @@ ppl_context *ppl_contextWorkerNew(ppl_context *parent) {
     w->ns_branch = parent->ns_ptr;
     w->namespaces[w->ns_ptr] = ppl_dictInit(1);
 
+    // Failure to allocate memory: free what has been allocated, and return NULL
     if ((w->stack == NULL) || (w->namespaces[w->ns_ptr] == NULL)) {
         if (w->namespaces[w->ns_ptr] != NULL) ppl_garbageNamespace(w->namespaces[w->ns_ptr]);
         free(w->stack);
@@ -321,6 +333,7 @@ static pplFunc *cloneFunc(ppl_context *w, const pplFunc *f) {
     pplFunc *clone = (pplFunc *) malloc(sizeof(pplFunc));
     void **clones = (void **) realloc(w->workerClones, (w->workerNClones + 1) * sizeof(void *));
     if (clones != NULL) w->workerClones = clones;
+    // Failure to allocate memory returns NULL
     if ((clone == NULL) || (clones == NULL)) {
         free(clone);
         return NULL;
@@ -344,6 +357,7 @@ static int privatiseFuncBody(ppl_context *w, threadSafeCheck *t, const pplFunc *
     if (f->functionType != PPL_FUNC_USERDEF) return 0;
     if (t->depth >= MAX_CHECK_DEPTH) return 1;
     t->depth++;
+    // Privatise the variables used by each definition in the function's chain
     for (g = f; (g != NULL) && (!status); g = g->next) {
         const int nLocalsOld = t->nLocals;
         int j, k;
@@ -368,8 +382,10 @@ static int privatiseFuncBody(ppl_context *w, threadSafeCheck *t, const pplFunc *
 //! \return Zero on success, or nonzero if memory ran out
 
 static int privatiseExpr(ppl_context *w, threadSafeCheck *t, const pplExpr *e) {
+    // own is the worker's own namespace, into which private copies of variables are placed
     dict *own = w->namespaces[w->ns_ptr];
     int i;
+    // Find each variable which the expression looks up, and copy it into the worker's own namespace
     for (i = 0; i < e->bcLen; i++) {
         const pplExprInstruction *in = &e->bytecode[i];
         char *name;
@@ -380,7 +396,10 @@ static int privatiseExpr(ppl_context *w, threadSafeCheck *t, const pplExpr *e) {
         ppl_contextVarLookup(t->c, name, &obj, 0); // Look the variable up in the parent context
         if ((obj == NULL) || (obj->objType == PPLOBJ_MOD)) continue;
 
+        // Functions are cloned, so that the worker can bind their arguments without disturbing other threads; other
+        // variables are copied
         v.refCount = 1;
+        // Clone a function; copy any other object
         if (obj->objType == PPLOBJ_FUNC) {
             const pplFunc *f = (const pplFunc *) obj->auxil;
             pplFunc *clone = cloneFunc(w, f);
@@ -455,6 +474,7 @@ int ppl_contextWorkerPrivatiseFunc(ppl_context *w, ppl_context *parent, const pp
     t.depth = 0;
     out->refCount = 1;
     clone = cloneFunc(w, (const pplFunc *) fn->auxil);
+    // Failure to allocate memory leaves the output as a zombie
     if (clone == NULL) {
         pplObjZom(out, 0);
         return 1;
@@ -478,6 +498,7 @@ void ppl_contextWorkerFree(ppl_context *w) {
     // The private copies of function descriptors are freed directly. They share their contents (e.g. the bytecode
     // of user-defined functions) with the originals, so must not be passed to the garbage collector.
     di = ppl_dictIterateInit(w->namespaces[w->ns_ptr]);
+    // Detach the cloned functions from the worker's namespace before freeing it, since the clones are freed separately
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         if (item->objType != PPLOBJ_FUNC) continue;
         for (i = 0; i < w->workerNClones; i++)

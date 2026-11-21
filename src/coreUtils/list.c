@@ -19,7 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for manupulating linked lists
+// Pyxplot's doubly-linked list type. Lists hold user-level list objects, and are used internally wherever a sequence of
+// items of unknown length is needed, e.g. the items on the multiplot canvas or the words of a command. Items may be
+// allocated with malloc() or in a temporary memory context from memAlloc.c.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -58,6 +60,7 @@ int ppl_listFree(list *in) {
     listItem *ptr, *ptrnext;
     if ((in == NULL) || (!in->useMalloc)) return 0;
     ptr = in->first;
+    // Free each item in turn, with its data
     while (ptr != NULL) {
         ptrnext = ptr->next;
         free(ptr->data);
@@ -102,6 +105,7 @@ list *ppl_listCpy(list *in, const int useMalloc, const int itemSize) {
     out = ppl_listInit(useMalloc);
     if (out == NULL) return NULL;
     i = in->first;
+    // Append a copy of each item's data to the new list
     while (i != NULL) {
         ppl_listAppendCpy(out, i->data, itemSize);
         i = i->next;
@@ -143,7 +147,9 @@ int ppl_listAppendCpy(list *in, const void *item, const int size) {
     ptrnew->prev = in->last;
     ptrnew->next = NULL;
     ptrnew->data = listAlloc(in, size);
+    // Allocating space for the data failed: free the new item and give up
     if (ptrnew->data == NULL) {
+        // Memory from a memory context cannot be freed individually
         if (in->useMalloc) {
             free(ptrnew);
             ptrnew = NULL;
@@ -173,7 +179,9 @@ int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
     ptrnew = (listItem *) listAlloc(in, sizeof(listItem));
     if (ptrnew == NULL) return 1;
     ptrnew->data = listAlloc(in, size);
+    // Allocating space for the data failed: free the new item and give up
     if (ptrnew->data == NULL) {
+        // Memory from a memory context cannot be freed individually
         if (in->useMalloc) {
             free(ptrnew);
             ptrnew = NULL;
@@ -182,6 +190,7 @@ int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
     }
     memcpy(ptrnew->data, item, size);
     ptr = &in->first;
+    // Find the link which points to the Nth item (or the end of the list), and splice the new item in there
     for (i = 0; ((i < N) && (*ptr != NULL)); i++, ptr = &(*ptr)->next);
     ptrnew->prev = (*ptr == NULL) ? in->last : (*ptr)->prev;
     ptrnew->next = *ptr;
@@ -196,6 +205,8 @@ int ppl_listInsertCpy(list *in, const int N, const void *item, const int size) {
 //! \param [in] ptr - The list item to remove
 
 static void ppl_listRemoveEngine(list *in, listItem *ptr) {
+    // Rather than unlinking <ptr> itself, a neighbouring item's data is moved into <ptr> and the neighbour is unlinked.
+    // This keeps <ptr> valid, but means that any iterator which points to the neighbour must not be used afterwards.
     listItem *ptrnext;
     if (ptr->next != NULL) // We are not the last item in the list
     {
@@ -204,6 +215,7 @@ static void ppl_listRemoveEngine(list *in, listItem *ptr) {
         ptr->next = ptrnext->next;
         if (in->last == ptrnext) in->last = ptr;
         else ptr->next->prev = ptr;
+        // Free the unlinked neighbour, unless it is in a memory context which will be freed as a whole
         if (in->useMalloc) {
             free(ptrnext);
             ptrnext = NULL;
@@ -215,6 +227,7 @@ static void ppl_listRemoveEngine(list *in, listItem *ptr) {
         ptr->prev = ptrnext->prev;
         if (in->first == ptrnext) in->first = ptr;
         else ptrnext->prev->next = ptr;
+        // Free the unlinked neighbour, unless it is in a memory context which will be freed as a whole
         if (in->useMalloc) {
             free(ptrnext);
             ptrnext = NULL;
@@ -223,6 +236,7 @@ static void ppl_listRemoveEngine(list *in, listItem *ptr) {
     {
         in->first = NULL;
         in->last = NULL;
+        // Free the item, unless it is in a memory context which will be freed as a whole
         if (in->useMalloc) {
             free(ptr);
             ptr = NULL;
@@ -241,7 +255,9 @@ int ppl_listRemove(list *in, const void *item) {
     listItem *ptr;
     if (in == NULL) return 1;
     ptr = in->first;
+    // Search for an item with this data pointer
     while (ptr != NULL) {
+        // Found it: remove it
         if (ptr->data == item) {
             ppl_listRemoveEngine(in, ptr);
             return 0;
@@ -271,6 +287,7 @@ void *ppl_listGetItem(const list *in, const int N) {
     int i;
     if (in == NULL) return NULL;
     ptr = in->first;
+    // Walk along the list to the Nth item
     for (i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
     if (ptr == NULL) return NULL;
     return ptr->data;
@@ -284,6 +301,7 @@ void *ppl_listPop(list *in) {
     void *out;
     if (in->last == NULL) return NULL;
     out = in->last->data;
+    // Unlink the last item; the item itself is not freed
     if (in->first == in->last) {
         in->first = in->last = NULL;
     } else {
@@ -305,8 +323,10 @@ void *ppl_listPopItem(list *in, const int N) {
     int i;
     if (in == NULL) return NULL;
     ptr = in->first;
+    // Walk along the list to the Nth item
     for (i = 0; ((i < N) && (ptr != NULL)); i++, ptr = ptr->next);
     if (ptr == NULL) return NULL;
+    // Take the item's data, and remove the item from the list
     else {
         out = ptr->data;
         ppl_listRemoveEngine(in, ptr);

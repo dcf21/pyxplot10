@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws the grid lines of a graph, from the major and minor ticks of each axis on which "set grid" has turned them on.
+// Called by eps_plot.c while rendering a graph; in three-dimensional plots, grid lines are drawn on the back faces of
+// the cube.
+
 #define _PPL_EPS_PLOT_GRIDLINES 1
 
 #include <stdlib.h>
@@ -46,6 +50,7 @@
 static void setGridColor(EPSComm *x, withWords *ww, const int major) {
     const pplset_graph *s = &x->current->settings;
     ppl_withWordsZero(x->c, ww);
+    // The color is either a named color, or given by its components
     if ((major ? s->GridMajColor : s->GridMinColor) > 0) {
         ww->color = major ? s->GridMajColor : s->GridMinColor;
         ww->USEcolor = 1;
@@ -100,6 +105,7 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
     {
         if ((j == 2) && (!x->current->ThreeDim)) continue;
 
+        // Point to the axes of this direction, and the span of the graph along it
         if (j == 2) {
             axes = x->current->ZAxes;
             GridLines = x->current->settings.GridAxisZ;
@@ -117,32 +123,39 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
         }
 
         for (i = 0; i < MAX_AXES; i++) // Loop over all axes in a particular direction
+            // Only draw grid lines from axes which are drawn, and on which grid lines are turned on
             if ((axes[i].FinalActive) && (!axes[i].invisible) && (GridLines[i])) {
                 for (k = 0; k < 2; k++) // Minor ticks. Then major ticks
                 {
                     double *TLP;
                     char **TLS;
+                    // The major or minor ticks, and the style of their grid lines
                     if (k != 0) {
                         TLP = axes[i].TickListPositions;
                         TLS = axes[i].TickListStrings;
                         setGridColor(x, &ww, 1);
                     } // Major ticks
+                    // Minor ticks
                     else {
                         TLP = axes[i].MTickListPositions;
                         TLS = axes[i].MTickListStrings;
                         setGridColor(x, &ww, 0);
                     } // Minor ticks
+                    // Draw a grid line at each tick
                     if (TLP != NULL) {
                         for (l = 0; TLS[l] != NULL; l++) // Loop over all ticks along this axis
                         {
                             // Three-dimensional axes
                             if (x->current->ThreeDim) {
+                                // Draw a line across each of the two back faces of the cube which contain this
+                                // direction
                                 for (m = 0; m < 2; m++) {
                                     double ap[3];
                                     int n, o;
                                     ap[j] = TLP[l];
                                     n = (j != 0) ? 0 : 1;
                                     o = (j != 2) ? 2 : 1;
+                                    // Swap the roles of the other two directions for the second face
                                     if (m) {
                                         const int t = n;
                                         n = o;
@@ -169,6 +182,7 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
                             // 2D flat axes
                             else {
                                 double lrpos = left + (right - left) * TLP[l]; // left--right position of tick
+                                // Horizontal lines for y ticks; vertical lines for x ticks
                                 if (j == 1) {
                                     fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n",
                                             origin_x, lrpos, origin_x + width, lrpos);
@@ -191,5 +205,6 @@ void eps_plot_gridlines(EPSComm *x, double origin_x, double origin_y, double wid
             }
     }
 
+    // Done
     return;
 }

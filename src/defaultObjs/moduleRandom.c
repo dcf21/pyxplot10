@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The random module, which draws random numbers from various distributions using GSL's random number generator. The
+// generator is created on first use with a seed of zero, so that results are repeatable; "set seed" reseeds it. These
+// functions are marked as unsafe for parallel evaluation, since they share the generator.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -72,6 +76,7 @@ void pplfunc_setRandomSeed(const long i) {
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_frandom(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // Create the random number generator on first use
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
@@ -92,6 +97,7 @@ void pplfunc_frandom(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "binomial(p,n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Create the random number generator on first use
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
@@ -114,6 +120,7 @@ void pplfunc_frandombin(ppl_context *c, pplObj *in, const int nArgs, int *status
 void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "chisq(nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Create the random number generator on first use
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
@@ -135,6 +142,7 @@ void pplfunc_frandomcs(ppl_context *c, pplObj *in, const int nArgs, int *status,
 void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "gaussian(sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Create the random number generator on first use
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
@@ -156,6 +164,7 @@ void pplfunc_frandomg(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "lognormal(zeta,sigma)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Create the random number generator on first use
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
@@ -181,6 +190,7 @@ void pplfunc_frandomln(ppl_context *c, pplObj *in, const int nArgs, int *status,
 void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "poisson(n)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Create the random number generator on first use
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);
@@ -202,6 +212,7 @@ void pplfunc_frandomp(ppl_context *c, pplObj *in, const int nArgs, int *status, 
 void pplfunc_frandomt(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "tdist(nu)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Create the random number generator on first use
     if (rndgen == NULL) {
         rndgen = gsl_rng_alloc(gsl_rng_default);
         gsl_rng_set(rndgen, 0);

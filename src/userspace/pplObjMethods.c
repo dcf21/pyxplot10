@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The methods of Pyxplot's built-in types, e.g. "abc".len(), [1,2].append(3) and date.toYear(), and the methods common
+// to all objects, such as str() and type(). Each method is a system function stored in the dictionary of methods of its
+// type, which pplObjMethodsInit() populates when Pyxplot starts; the expression evaluator calls them with the object in
+// in[-1].self_this. This file also contains the methods of vectors and matrices, which do linear algebra with GSL.
+
 #define _PPLOBJMETHODS_C 1
 
 #include <stdlib.h>
@@ -65,6 +70,7 @@
 #include "userspace/unitsArithmetic.h"
 #include "userspace/unitsDisp.h"
 
+// The dictionary of methods of each type, indexed by PPLOBJ_* code
 dict **pplObjMethods;
 
 
@@ -99,6 +105,8 @@ static void pplmethod_class(ppl_context *c, pplObj *in, const int nArgs, int *st
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the object whose members are listed; keys records the names already listed, since members of an instance
+    // hide those of its class
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_data()"};
     int count = 0;
     char *keys[4096], *key, *tmp;
@@ -109,6 +117,7 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
     pplObj *item;
     list *l;
     dictIterator *di;
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -117,11 +126,15 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
     }
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
+    // List the members of the object, then of its class, and so on up the chain of prototypes, skipping functions
+    // (which are methods) and any name already listed
     for (; (t == PPLOBJ_MOD) || (t == PPLOBJ_USER); iter = iter->objPrototype, t = iter->objType) {
         di = ppl_dictIterateInit((dict *) iter->auxil);
+        // Consider each member of this object in the chain
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             int i, new = 1;
             for (i = 0; i < count; i++)
+                // Skip names already listed
                 if (strcmp(key, keys[i]) == 0) {
                     new = 0;
                     break;
@@ -136,9 +149,11 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
         }
     }
     di = ppl_dictIterateInit(pplObjMethods[st->objType]);
+    // The built-in methods of the object's type are not data, but must still hide nothing: record their names
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         int i, new = 1;
         for (i = 0; i < count; i++)
+            // Skip names already listed
             if (strcmp(key, keys[i]) == 0) {
                 new = 0;
                 break;
@@ -165,6 +180,8 @@ static void pplmethod_data(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the object whose members are listed; keys records the names already listed, since members of an instance
+    // hide those of its class
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_contents()"};
     int count = 0;
     char *keys[4096], *key, *tmp;
@@ -175,6 +192,7 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObj *item;
     list *l;
     dictIterator *di;
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -183,11 +201,15 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
     }
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
+    // List the members of the object, then of its class, and so on up the chain of prototypes, skipping any name
+    // already listed
     for (; (t == PPLOBJ_MOD) || (t == PPLOBJ_USER); iter = iter->objPrototype, t = iter->objType) {
         di = ppl_dictIterateInit((dict *) iter->auxil);
+        // Consider each member of this object in the chain
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             int i, new = 1;
             for (i = 0; i < count; i++)
+                // Skip names already listed
                 if (strcmp(key, keys[i]) == 0) {
                     new = 0;
                     break;
@@ -201,9 +223,11 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
         }
     }
     di = ppl_dictIterateInit(pplObjMethods[st->objType]);
+    // Then list the built-in methods of the object's type
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         int i, new = 1;
         for (i = 0; i < count; i++)
+            // Skip names already listed
             if (strcmp(key, keys[i]) == 0) {
                 new = 0;
                 break;
@@ -228,6 +252,8 @@ static void pplmethod_contents(ppl_context *c, pplObj *in, const int nArgs, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the object whose methods are listed; keys records the names already listed, since members of an instance
+    // hide those of its class
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_methods()"};
     int count = 0;
     char *keys[4096], *key, *tmp;
@@ -238,6 +264,7 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
     pplObj *item;
     list *l;
     dictIterator *di;
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -246,11 +273,15 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
     }
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
+    // List the functions among the members of the object, then of its class, and so on up the chain of prototypes,
+    // skipping any name already listed
     for (; (t == PPLOBJ_MOD) || (t == PPLOBJ_USER); iter = iter->objPrototype, t = iter->objType) {
         di = ppl_dictIterateInit((dict *) iter->auxil);
+        // Consider each member of this object in the chain
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             int i, new = 1;
             for (i = 0; i < count; i++)
+                // Skip names already listed
                 if (strcmp(key, keys[i]) == 0) {
                     new = 0;
                     break;
@@ -265,9 +296,11 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
         }
     }
     di = ppl_dictIterateInit(pplObjMethods[st->objType]);
+    // Then list the built-in methods of the object's type
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         int i, new = 1;
         for (i = 0; i < count; i++)
+            // Skip names already listed
             if (strcmp(key, keys[i]) == 0) {
                 new = 0;
                 break;
@@ -295,6 +328,7 @@ static void pplmethod_methods(ppl_context *c, pplObj *in, const int nArgs, int *
 static void pplmethod_str(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *t = in[-1].self_this;
     char *tmp = (char *) malloc(LSTR_LENGTH);
+    // Failure to allocate memory is reported as an error
     if (tmp == NULL) {
         *status = 1;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
@@ -339,6 +373,7 @@ static void pplmethod_strUpper(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
     if ((tmp = ppl_funcStrdup(&call, work)) == NULL) return;
+    // Convert each byte to upper case; only ASCII letters are affected
     while (tmp[i] != '\0') {
         tmp[i] = toupper(tmp[i]);
         i++;
@@ -362,6 +397,7 @@ static void pplmethod_strLower(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObj *t = in[-1].self_this;
     char *tmp, *work = (char *) t->auxil;
     if ((tmp = ppl_funcStrdup(&call, work)) == NULL) return;
+    // Convert each byte to lower case; only ASCII letters are affected
     while (tmp[i] != '\0') {
         tmp[i] = tolower(tmp[i]);
         i++;
@@ -381,10 +417,12 @@ static void pplmethod_strLower(ppl_context *c, pplObj *in, const int nArgs, int 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // t is the string on which the method was called
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil;
     int i, j;
     list *lst;
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -393,7 +431,10 @@ static void pplmethod_strSplit(ppl_context *c, pplObj *in, const int nArgs, int 
     }
     lst = (list *) OUTPUT.auxil;
     for (i = 0, j = 0;; i++)
+        // At each whitespace character, or the end of the string, add the word which has just ended to the list, if it
+        // is not empty
         if (((unsigned char) instr[i] <= ' ') && (instr[i] >= '\0')) {
+            // Copy the word between j and i into a new string, and add it to the list
             if (j < i) {
                 pplObj v;
                 char *s = (char *) malloc(i - j + 1);
@@ -427,6 +468,7 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
     int i, j;
     list *lst;
     for (i = 0; i < nArgs; i++)
+        // Every separator must be a string
         if (in[i].objType != PPLOBJ_STR) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -436,6 +478,7 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
                     pplObjTypeNames[in[i].objType]);
             return;
         }
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -443,11 +486,15 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
     lst = (list *) OUTPUT.auxil;
+    // Scan the string; j marks the start of the current piece. At each position, check whether any of the separators
+    // starts there.
     for (i = 0, j = 0;; i++) {
         int breaking = (instr[i] == '\0');
         int k, l = 0;
+        // Test each separator against the string at position i
         for (k = 0; ((k < nArgs) && (!breaking)); k++) {
             char *cmp = (char *) in[k].auxil;
+            // Compare the separator with the string, character by character
             for (l = 0; cmp[l] != '\0'; l++) {
                 if (instr[i + l] == '\0') break;
                 if (instr[i + l] != cmp[l]) break;
@@ -455,6 +502,7 @@ static void pplmethod_strSplitOn(ppl_context *c, pplObj *in, const int nArgs, in
             if (cmp[l] == '\0') breaking = 1;
             else l = 0;
         }
+        // Add the piece which has just ended to the list, and skip over the separator
         if (breaking) {
             pplObj v;
             char *s = (char *) malloc(i - j + 1);
@@ -558,9 +606,11 @@ static void pplmethod_strisalpha(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
     int p = 0, out = 1;
+    // Every character must be a letter
     while (s[p] != '\0') {
         // Decode each UTF-8 character in turn, so that letters such as é are recognised
         const long cp = ppl_utf8NextChar(s, &p);
+        // Any other character means the answer is false
         if (!ppl_utf8IsAlpha(cp)) {
             out = 0;
             break;
@@ -585,9 +635,11 @@ static void pplmethod_strisdigit(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
     int p = 0, out = 1;
+    // Every character must be a digit
     while (s[p] != '\0') {
         // Decode each UTF-8 character in turn, so that letters such as é are recognised
         const long cp = ppl_utf8NextChar(s, &p);
+        // Any other character means the answer is false
         if (!ppl_utf8IsDigit(cp)) {
             out = 0;
             break;
@@ -612,9 +664,11 @@ static void pplmethod_strisalnum(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj *t = in[-1].self_this;
     char *s = (char *) t->auxil;
     int p = 0, out = 1;
+    // Every character must be a letter or a digit
     while (s[p] != '\0') {
         // Decode each UTF-8 character in turn, so that letters such as é are recognised
         const long cp = ppl_utf8NextChar(s, &p);
+        // Any other character means the answer is false
         if (!(ppl_utf8IsAlpha(cp) || ppl_utf8IsDigit(cp))) {
             out = 0;
             break;
@@ -634,21 +688,25 @@ static void pplmethod_strisalnum(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // t is the string on which the method was called
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *astr;
     int alen;
+    // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method requires a single string argument.");
         return;
     }
+    // The string must be a variable, so that it can be extended in place
     if ((t == NULL) || (t->self_lval == NULL)) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "The append() method can only be called on a string lvalue.");
         return;
     }
+    // Immutable strings cannot be changed
     if ((t->immutable) || (t->self_lval->immutable)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -658,10 +716,12 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
     t = t->self_lval;
     astr = (char *) in[0].auxil;
     alen = strlen(astr);
+    // Extend the string's buffer with realloc(), or copy both strings into a new buffer
     if (in[0].auxilMalloced) {
         const int ilen = t->auxilLen - 1;
         int newlen = t->auxilLen + alen;
         instr = (char *) realloc(t->auxil, newlen);
+        // Failure to allocate memory is reported as an error
         if (instr == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -674,6 +734,7 @@ static void pplmethod_strAppend(ppl_context *c, pplObj *in, const int nArgs, int
         const int ilen = strlen(instr);
         int newlen = ilen + alen + 1;
         char *ns = (char *) malloc(newlen);
+        // Failure to allocate memory is reported as an error
         if (ns == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -703,6 +764,7 @@ static void pplmethod_strBeginsWith(ppl_context *c, pplObj *in, const int nArgs,
                                     char *errText) {
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
+    // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -729,6 +791,7 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
     int il, cl;
+    // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -739,6 +802,7 @@ static void pplmethod_strEndsWith(ppl_context *c, pplObj *in, const int nArgs, i
     il = strlen(instr);
     cl = strlen(cmpstr);
     instr += il - cl;
+    // A string cannot end with a longer string
     if (il < cl) {
         pplObjBool(&OUTPUT, 0, 0);
     } else {
@@ -761,6 +825,7 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
     pplObj *t = in[-1].self_this;
     char *instr = (char *) t->auxil, *cmpstr;
     int il, cl, pmax, p;
+    // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -772,6 +837,7 @@ static void pplmethod_strFind(ppl_context *c, pplObj *in, const int nArgs, int *
     cl = strlen(cmpstr);
     pmax = il - cl;
     for (p = 0; p <= pmax; p++)
+        // Return the position of the first match
         if (strncmp(instr + p, cmpstr, cl) == 0) {
             pplObjNum(&OUTPUT, 0, ppl_utf8CharIndex(instr, p), 0); // Position in characters, not bytes
             return;
@@ -797,12 +863,14 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     int il, cl, pmax, p;
     pplObj v;
     list *l;
+    // The argument must be a single string
     if ((nArgs != 1) || (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "The findAll() method requires a single string argument.");
         return;
     }
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -816,6 +884,7 @@ static void pplmethod_strFindAll(ppl_context *c, pplObj *in, const int nArgs, in
     cl = strlen(cmpstr);
     pmax = il - cl;
     for (p = 0; p <= pmax; p++)
+        // Add the position of each match to the list
         if (strncmp(instr + p, cmpstr, cl) == 0) {
             pplObjNum(&v, 1, ppl_utf8CharIndex(instr, p), 0); // Position in characters, not bytes
             ppl_listAppendCpy(l, &v, sizeof(v));
@@ -851,6 +920,7 @@ static void pplmethod_strLen(ppl_context *c, pplObj *in, const int nArgs, int *s
 
 static int methodTimezoneOffset(pplFuncCall *f, const int nArgs, const pplObj *t, double *offset) {
     const pplObj *in = f->in;
+    // The optional timezone must be a string
     if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) {
         *f->status = 1;
         *f->errType = ERR_TYPE;
@@ -887,6 +957,7 @@ static void pplmethod_dateToDayOfMonth(ppl_context *c, pplObj *in, const int nAr
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
+    // Report a date which cannot be expressed in the current calendar
     if (*status) {
         *errType = ERR_RANGE;
         return;
@@ -966,6 +1037,7 @@ static void pplmethod_dateToHour(ppl_context *c, pplObj *in, const int nArgs, in
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
+    // Report a date which cannot be expressed in the current calendar
     if (*status) {
         *errType = ERR_RANGE;
         return;
@@ -1009,6 +1081,7 @@ static void pplmethod_dateToMinute(ppl_context *c, pplObj *in, const int nArgs, 
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
+    // Report a date which cannot be expressed in the current calendar
     if (*status) {
         *errType = ERR_RANGE;
         return;
@@ -1053,6 +1126,7 @@ static void pplmethod_dateToMonthName(ppl_context *c, pplObj *in, const int nArg
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
+    // Report a date which cannot be expressed in the current calendar
     if (*status) {
         *errType = ERR_RANGE;
         return;
@@ -1082,6 +1156,7 @@ static void pplmethod_dateToMonthNum(ppl_context *c, pplObj *in, const int nArgs
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
+    // Report a date which cannot be expressed in the current calendar
     if (*status) {
         *errType = ERR_RANGE;
         return;
@@ -1110,6 +1185,7 @@ static void pplmethod_dateToSecond(ppl_context *c, pplObj *in, const int nArgs, 
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
+    // Report a date which cannot be expressed in the current calendar
     if (*status) {
         *errType = ERR_RANGE;
         return;
@@ -1129,10 +1205,12 @@ static void pplmethod_dateToSecond(ppl_context *c, pplObj *in, const int nArgs, 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // t is the date on which the method was called
     char *FunctionDescription = "str(<s>,<timezone>)";
     pplObj *t = in[-1].self_this;
     char *format = NULL, *out = NULL, timezone[FNAME_LENGTH];
     double offset;
+    // The optional format must be a string
     if ((nArgs > 0) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1141,6 +1219,7 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
                           FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
+    // The optional timezone must be a string
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1150,6 +1229,7 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     out = (char *) malloc(8192);
+    // Failure to allocate memory is reported as an error
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1164,6 +1244,7 @@ static void pplmethod_dateToStr(ppl_context *c, pplObj *in, const int nArgs, int
     ppl_calendarTimezoneOffset(c, t->real, timezone, &offset);
     ppl_dateString(c, out, 8192, t->real + offset, format, timezone, status, errText);
     ppl_calendarTimezoneUnset(c);
+    // Report a date which cannot be expressed in the current calendar, or a bad format string
     if (*status) {
         *errType = ERR_NUMERICAL;
         return;
@@ -1208,6 +1289,7 @@ static void pplmethod_dateToYear(ppl_context *c, pplObj *in, const int nArgs, in
     double offset;
     if (methodTimezoneOffset(&call, nArgs, t, &offset)) return;
     ppl_fromUnixTime(c, t->real + offset, &year, &month, &day, &hour, &minute, &second, status, errText);
+    // Report a date which cannot be expressed in the current calendar
     if (*status) {
         *errType = ERR_RANGE;
         return;
@@ -1233,6 +1315,8 @@ static void pplmethod_colCompRGB(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj *a = in[-1].self_this;
     double r, g, b;
     gsl_vector *v;
+    // A color's color space is stored in exponent[0], and its components in exponent[8] to exponent[11]; convert them
+    // to RGB
     if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
         r = a->exponent[8];
         g = a->exponent[9];
@@ -1265,6 +1349,7 @@ static void pplmethod_colCompCMYK(ppl_context *dummy, pplObj *in, const int nArg
     gsl_vector *v;
     if (round(a->exponent[0]) == SW_COLSPACE_RGB)
         pplcol_RGBtoCMYK(a->exponent[8], a->exponent[9], a->exponent[10], &c, &m, &y, &k);
+    // Convert the components to CMYK, if they are not already
     else if (round(a->exponent[0]) == SW_COLSPACE_CMYK) {
         c = a->exponent[8];
         m = a->exponent[9];
@@ -1299,6 +1384,7 @@ static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, in
         pplcol_RGBtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], &h, &s, &b);
     else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
         pplcol_CMYKtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &h, &s, &b);
+    // Convert the components to HSB, if they are not already
     else {
         h = a->exponent[8];
         s = a->exponent[9];
@@ -1324,6 +1410,7 @@ static void pplmethod_colCompHSB(ppl_context *c, pplObj *in, const int nArgs, in
 static void pplmethod_colToRGB(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplObj *a = in[-1].self_this;
     double r, g, b;
+    // Convert the components to RGB, if they are not already
     if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
         r = a->exponent[8];
         g = a->exponent[9];
@@ -1350,6 +1437,7 @@ static void pplmethod_colToCMYK(ppl_context *dummy, pplObj *in, const int nArgs,
     double c, m, y, k;
     if (round(a->exponent[0]) == SW_COLSPACE_RGB)
         pplcol_RGBtoCMYK(a->exponent[8], a->exponent[9], a->exponent[10], &c, &m, &y, &k);
+    // Convert the components to CMYK, if they are not already
     else if (round(a->exponent[0]) == SW_COLSPACE_CMYK) {
         c = a->exponent[8];
         m = a->exponent[9];
@@ -1376,6 +1464,7 @@ static void pplmethod_colToHSB(ppl_context *c, pplObj *in, const int nArgs, int 
         pplcol_RGBtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], &h, &s, &b);
     else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
         pplcol_CMYKtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &h, &s, &b);
+    // Convert the components to HSB, if they are not already
     else {
         h = a->exponent[8];
         s = a->exponent[9];
@@ -1402,7 +1491,9 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
     pplObj *st = in[-1].self_this;
     gsl_vector *v = ((pplVector *) st->auxil)->v;
     gsl_vector *vo;
+    // The new element must have the same units as the vector
     if (!ppl_unitsDimEqual(st, &in[0])) {
+        // Describe the conflicting units in the error message
         if (st->dimensionless) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -1423,6 +1514,7 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
         *status = 1;
         return;
     }
+    // Make a new vector, one element longer
     if (pplObjVector(&OUTPUT, 0, 1, v->size + 1) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1433,6 +1525,7 @@ static void pplmethod_vectorAppend(ppl_context *c, pplObj *in, const int nArgs, 
     for (i = 0; i < v->size; i++) gsl_vector_set(vo, i, gsl_vector_get(v, i));
     gsl_vector_set(vo, i, in[0].real);
     ppl_unitsDimCpy(&OUTPUT, st);
+    // If the vector is a variable, replace its value with the new vector, so that the method changes it in place
     if (st->self_lval != NULL) {
         pplObj *o = st->self_lval;
         const int om = o->amMalloced;
@@ -1464,8 +1557,11 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     gsl_vector *vo;
     int t = in[0].objType;
 
+    // The vector may be extended by another vector, which must have the same units, or by a list of numbers
     if (t == PPLOBJ_VEC) {
+        // The vector must have the same units as this one
         if (!ppl_unitsDimEqual(st, &in[0])) {
+            // Describe the conflicting units in the error message
             if (st->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -1499,6 +1595,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
         return;
     }
 
+    // Make a new vector, long enough for both
     if (pplObjVector(&OUTPUT, 0, 1, va->size + l) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1509,6 +1606,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
     for (i = 0; i < va->size; i++) gsl_vector_set(vo, i, gsl_vector_get(va, i));
     ppl_unitsDimCpy(&OUTPUT, st);
 
+    // Copy in the elements of the vector or list
     if (t == PPLOBJ_VEC) {
         int j;
         gsl_vector *vi = ((pplVector *) in[0].auxil)->v;
@@ -1517,7 +1615,9 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
         list *listin = (list *) in[0].auxil;
         listIterator *li = ppl_listIterateInit(listin);
         pplObj *item;
+        // Each item in the list must be a real number with the same units as the vector
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
+            // Report an item which is not a number
             if (item->objType != PPLOBJ_NUM) {
                 *status = 1;
                 *errType = ERR_TYPE;
@@ -1526,7 +1626,9 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
                                   pplObjTypeNames[item->objType]);
                 return;
             }
+            // Check the item's units
             if (!ppl_unitsDimEqual(st, item)) {
+                // Describe the conflicting units in the error message
                 if (st->dimensionless) {
                     ppl_snprintfTrunc(
                             errText, LSTR_LENGTH,
@@ -1547,6 +1649,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
                 *status = 1;
                 return;
             }
+            // Vectors cannot hold complex numbers
             if (item->flagComplex) {
                 *status = 1;
                 *errType = ERR_TYPE;
@@ -1557,6 +1660,7 @@ static void pplmethod_vectorExtend(ppl_context *c, pplObj *in, const int nArgs, 
             gsl_vector_set(vo, i++, item->real);
         }
     }
+    // If the vector is a variable, replace its value with the new vector, so that the method changes it in place
     if (st->self_lval != NULL) {
         pplObj *o = st->self_lval;
         const int om = o->amMalloced;
@@ -1593,7 +1697,9 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     pplFunc *fi;
     pplExpr dummy;
 
+    // Calling the function needs room on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1601,6 +1707,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
         return;
     }
 
+    // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1611,6 +1718,7 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1621,7 +1729,9 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
         return;
     }
 
+    // A buffer for the elements which pass the filter
     ovec = (double *) malloc(va->size * sizeof(double));
+    // Failure to allocate memory is reported as an error
     if (ovec == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1635,10 +1745,12 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
     dummy.srcFname = "<dummy>";
     dummy.ascii = "<filter(f) function>";
 
+    // v holds each element in turn, with the vector's units, to pass to the function
     pplObjNum(&v, 0, 0, 0);
     v.refCount = 1;
     ppl_unitsDimCpy(&v, st);
 
+    // Call the function on each element, and keep the element if the result is true
     for (i = 0; i < va->size; i++) {
         const int stkLevelOld = c->stackPtr;
 
@@ -1664,11 +1776,13 @@ static void pplmethod_vectorFilter(ppl_context *c, pplObj *in, const int nArgs, 
             return;
         }
 
+        // Keep the element if the function returned a true value
         ppl_castToBool(c, &c->stack[c->stackPtr - 1]);
         if (c->stack[c->stackPtr - 1].real) ovec[ovlen++] = v.real;
         ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
     }
 
+    // Make a vector of the elements which passed
     if (pplObjVector(&OUTPUT, 0, 1, ovlen) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1700,6 +1814,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     pplObj *st = in[-1].self_this;
     gsl_vector *v = ((pplVector *) st->auxil)->v;
     gsl_vector *vo;
+    // The position must be a real number, within or at the end of the vector
     if (in[0].objType != PPLOBJ_NUM) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1708,6 +1823,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
                           pplObjTypeNames[in[0].objType]);
         return;
     }
+    // The position must be real
     if (in[0].flagComplex) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1718,19 +1834,23 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     }
     if (in[0].real < 0) in[0].real += v->size + 1;
     p = (long) round(in[0].real);
+    // The position cannot be before the start of the vector
     if (p < 0) {
         *status = 1;
         *errType = ERR_RANGE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to insert a vector item before the beginning of a vector.");
         return;
     }
+    // The position cannot be beyond the end of the vector
     if (p > v->size) {
         *status = 1;
         *errType = ERR_RANGE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Vector index out of range.");
         return;
     }
+    // The new element must have the same units as the vector
     if (!ppl_unitsDimEqual(st, &in[1])) {
+        // Describe the conflicting units in the error message
         if (st->dimensionless) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -1751,6 +1871,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
         *status = 1;
         return;
     }
+    // Make a new vector, one element longer
     if (pplObjVector(&OUTPUT, 0, 1, v->size + 1) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1761,6 +1882,7 @@ static void pplmethod_vectorInsert(ppl_context *c, pplObj *in, const int nArgs, 
     gsl_vector_set(vo, p, in[1].real);
     for (i = 0; i < v->size; i++) gsl_vector_set(vo, i + (i >= p), gsl_vector_get(v, i));
     ppl_unitsDimCpy(&OUTPUT, st);
+    // If the vector is a variable, replace its value with the new vector, so that the method changes it in place
     if (st->self_lval != NULL) {
         pplObj *o = st->self_lval;
         const int om = o->amMalloced;
@@ -1806,6 +1928,7 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
     const int l = vec->size;
     pplObj v;
     list *lo;
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "Out of memory.");
         *status = 1;
@@ -1816,6 +1939,7 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
     v.refCount = 1;
     pplObjNum(&v, 1, 0, 0);
     ppl_unitsDimCpy(&v, st);
+    // Add each element to the list, as a number with the vector's units
     for (i = 0; i < l; i++) {
         v.real = gsl_vector_get(vec, i);
         ppl_listAppendCpy(lo, &v, sizeof(pplObj));
@@ -1834,6 +1958,7 @@ static void pplmethod_vectorList(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the vector on which the method was called
     char *FunctionDescription = "map(f)";
     pplObj *st = in[-1].self_this;
     gsl_vector *vec = ((pplVector *) st->auxil)->v;
@@ -1843,7 +1968,9 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     pplFunc *fi;
     pplExpr dummy;
 
+    // Calling the function needs room on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1851,6 +1978,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
 
+    // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1861,6 +1989,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -1870,6 +1999,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
                 FunctionDescription);
         return;
     }
+    // The output is a vector of the same length
     if (pplObjVector(&OUTPUT, 0, 1, vec->size) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -1884,10 +2014,12 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
     dummy.srcFname = "<dummy>";
     dummy.ascii = "<filter(f) function>";
 
+    // v holds each element in turn, with the vector's units, to pass to the function
     pplObjNum(&v, 0, 0, 0);
     v.refCount = 1;
     ppl_unitsDimCpy(&v, st);
 
+    // Call the function on each element
     for (i = 0; i < vec->size; i++) {
         const int stkLevelOld = c->stackPtr;
 
@@ -1911,6 +2043,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
             return;
         }
 
+        // The function must return a number
         if (c->stack[c->stackPtr - 1].objType != PPLOBJ_NUM) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -1921,7 +2054,9 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
             return;
         }
 
+        // Every result must have the same units as the first, which become the units of the output vector
         if (i == 0) memcpy(&val2, &c->stack[c->stackPtr - 1], sizeof(pplObj));
+        // Report a result with different units
         else if (!ppl_unitsDimEqual(&val2, &c->stack[c->stackPtr - 1])) {
             *status = 1;
             *errType = ERR_UNIT;
@@ -1933,6 +2068,7 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
             return;
         }
 
+        // Vectors cannot hold complex numbers
         if (c->stack[c->stackPtr - 1].flagComplex) {
             *status = 1;
             *errType = ERR_NUMERICAL;
@@ -1943,10 +2079,12 @@ static void pplmethod_vectorMap(ppl_context *c, pplObj *in, const int nArgs, int
             return;
         }
 
+        // Store the result, and discard it from the stack
         gsl_vector_set(ovec, i, c->stack[c->stackPtr - 1].real);
         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     }
 
+    // Done
     return;
 }
 
@@ -1992,7 +2130,9 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     pplObj val, val2;
     pplFunc *fi;
 
+    // Calling the function needs room on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2000,6 +2140,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
         return;
     }
 
+    // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2010,6 +2151,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2019,6 +2161,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
                 FunctionDescription);
         return;
     }
+    // Reducing needs at least two elements
     if (v->size < 2) {
         *status = 1;
         *errType = ERR_RANGE;
@@ -2041,6 +2184,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
     ppl_unitsDimCpy(&val, st);
     memcpy(&val2, &val, sizeof(pplObj));
 
+    // Combine the running value with each further element in turn: val = f(val, element)
     for (i = 1; i < v->size; i++) {
         // Push the function to call, followed by its arguments
         ppl_stackPushCopy(c, &in[0], 0);
@@ -2068,6 +2212,7 @@ static void pplmethod_vectorReduce(ppl_context *c, pplObj *in, const int nArgs, 
             return;
         }
 
+        // Keep the result as the running value, and discard it from the stack
         pplObjCpy(&val, &c->stack[c->stackPtr - 1], 0, 0, 1);
         val.refCount = 1;
         ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
@@ -2096,6 +2241,7 @@ static void pplmethod_vectorReverse(ppl_context *c, pplObj *in, const int nArgs,
     const long n = v->size;
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
     if (v->size < 2) return;
+    // Swap elements from the two ends, working inwards
     for (i = 0, j = n - 1; i < j; i++, j--) {
         const double tmp = gsl_vector_get(v, i);
         gsl_vector_set(v, i, gsl_vector_get(v, j));
@@ -2162,6 +2308,7 @@ static void pplmethod_listCount(ppl_context *c, pplObj *in, const int nArgs, int
     int count = 0;
     listIterator *li = ppl_listIterateInit(l);
     pplObj *item;
+    // Count the items equal to the argument
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
         pplObj *a = item;
         pplObj *b = &in[0];
@@ -2189,11 +2336,13 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
     list *l = (list *) st->auxil;
     int t = in[0].objType;
 
+    // Append the elements of a vector, as numbers with the vector's units, or the items of a list
     if (t == PPLOBJ_VEC) {
         int i;
         gsl_vector *vi = ((pplVector *) in[0].auxil)->v;
         pplObjNum(&v, 1, 0, 0);
         ppl_unitsDimCpy(&v, &in[0]);
+        // Append each element of the vector
         for (i = 0; i < vi->size; i++) {
             v.real = gsl_vector_get(vi, i);
             ppl_listAppendCpy(l, &v, sizeof(pplObj));
@@ -2202,6 +2351,7 @@ static void pplmethod_listExtend(ppl_context *c, pplObj *in, const int nArgs, in
         list *listin = (list *) in[0].auxil;
         listIterator *li = ppl_listIterateInit(listin);
         pplObj *item;
+        // Append a copy of each item of the list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             v.refCount = 1;
             pplObjCpy(&v, item, 0, 1, 1);
@@ -2242,7 +2392,9 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     listIterator *li = ppl_listIterateInit(l);
     pplExpr dummy;
 
+    // Calling the function needs room on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2250,6 +2402,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
 
+    // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2260,6 +2413,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2269,6 +2423,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
                 FunctionDescription);
         return;
     }
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -2283,6 +2438,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
     dummy.srcFname = "<dummy>";
     dummy.ascii = "<filter(f) function>";
 
+    // Call the function on each item, and keep the item if the result is true
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
         const int stkLevelOld = c->stackPtr;
 
@@ -2305,7 +2461,9 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
             return;
         }
 
+        // Keep the item if the function returned a true value
         ppl_castToBool(c, &c->stack[c->stackPtr - 1]);
+        // Add a copy of the item to the output list
         if (c->stack[c->stackPtr - 1].real) {
             pplObj v;
             pplObjCpy(&v, item, 0, 1, 1);
@@ -2315,6 +2473,7 @@ static void pplmethod_listFilter(ppl_context *c, pplObj *in, const int nArgs, in
         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     }
 
+    // Done
     return;
 }
 
@@ -2335,9 +2494,11 @@ static void pplmethod_listIndex(ppl_context *c, pplObj *in, const int nArgs, int
     int i = 0;
     listIterator *li = ppl_listIterateInit(l);
     pplObj *item;
+    // Find the first item equal to the argument, counting from zero
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
         pplObj *a = item;
         pplObj *b = &in[0];
+        // Return the position of the first match
         if (pplObjCmpQuiet(&a, &b) == 0) {
             OUTPUT.real = i;
             return;
@@ -2365,6 +2526,7 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj v;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
+    // The position must be a real number, within or at the end of the list
     if (in[0].objType != PPLOBJ_NUM) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2373,6 +2535,7 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
                           pplObjTypeNames[in[0].objType]);
         return;
     }
+    // The position must be real
     if (in[0].flagComplex) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2383,12 +2546,14 @@ static void pplmethod_listInsert(ppl_context *c, pplObj *in, const int nArgs, in
     }
     if (in[0].real < 0) in[0].real += l->length + 1;
     p = (long) round(in[0].real);
+    // The position cannot be before the start of the list
     if (p < 0) {
         *status = 1;
         *errType = ERR_RANGE;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to insert a list item before the beginning of a list.");
         return;
     }
+    // The position cannot be beyond the end of the list
     if (p > l->length) {
         *status = 1;
         *errType = ERR_RANGE;
@@ -2428,6 +2593,7 @@ static void pplmethod_listLen(ppl_context *c, pplObj *in, const int nArgs, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the list on which the method was called
     char *FunctionDescription = "map(f)";
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -2437,7 +2603,9 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     pplExpr dummy;
     listIterator *li = ppl_listIterateInit(l);
 
+    // Calling the function needs room on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2445,6 +2613,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
         return;
     }
 
+    // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2455,6 +2624,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2464,6 +2634,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
                 FunctionDescription);
         return;
     }
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -2478,6 +2649,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
     dummy.srcFname = "<dummy>";
     dummy.ascii = "<map(f) function>";
 
+    // Call the function on each item, and add the result to the output list
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
         const int stkLevelOld = c->stackPtr;
 
@@ -2509,6 +2681,7 @@ static void pplmethod_listMap(ppl_context *c, pplObj *in, const int nArgs, int *
         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
     }
 
+    // Done
     return;
 }
 
@@ -2568,13 +2741,17 @@ static void pplmethod_listMin(ppl_context *c, pplObj *in, const int nArgs, int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the list on which the method was called. With no argument, pop the last item; otherwise pop the item at the
+    // given position.
     pplObj *obj;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
+    // With no argument, pop the last item; otherwise pop the item at the given position
     if (nArgs == 0) {
         obj = ppl_listPop(l);
     } else {
         long p;
+        // The position must be a real number within the list
         if (in[0].objType != PPLOBJ_NUM) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -2584,6 +2761,7 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
                     pplObjTypeNames[in[0].objType]);
             return;
         }
+        // The position must be real
         if (in[0].flagComplex) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -2594,12 +2772,14 @@ static void pplmethod_listPop(ppl_context *c, pplObj *in, const int nArgs, int *
         }
         if (in[0].real < 0) in[0].real += l->length;
         p = (long) round(in[0].real);
+        // The position cannot be before the start of the list
         if (p < 0) {
             *status = 1;
             *errType = ERR_RANGE;
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Attempt to pop a list item before the beginning of a list.");
             return;
         }
+        // The position cannot be beyond the end of the list
         if (p >= l->length) {
             *status = 1;
             *errType = ERR_RANGE;
@@ -2635,7 +2815,9 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     pplFunc *fi;
     listIterator *li = ppl_listIterateInit(l);
 
+    // Calling the function needs room on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2643,6 +2825,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
 
+    // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2653,6 +2836,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2662,6 +2846,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
                 FunctionDescription);
         return;
     }
+    // Reducing needs at least two items
     if (l->length < 2) {
         *status = 1;
         *errType = ERR_RANGE;
@@ -2683,6 +2868,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
     pplObjCpy(&v, item, 0, 0, 1);
     v.refCount = 1;
 
+    // Combine the running value with each further item in turn: v = f(v, item)
     while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
         // Push the function to call, followed by its arguments
         ppl_stackPushCopy(c, &in[0], 0);
@@ -2709,6 +2895,7 @@ static void pplmethod_listReduce(ppl_context *c, pplObj *in, const int nArgs, in
             return;
         }
 
+        // Keep the result as the running value, and discard it from the stack
         pplObjCpy(&v, &c->stack[c->stackPtr - 1], 0, 0, 1);
         v.refCount = 1;
         ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
@@ -2739,6 +2926,7 @@ static void pplmethod_listReverse(ppl_context *c, pplObj *in, const int nArgs, i
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
     if (n < 2) return;
 
+    // Swap the data of items from the two ends of the list, working inwards
     for (i = 0; i < n / 2; i++) {
         void *tmp = l1->data;
         l1->data = l2->data;
@@ -2759,6 +2947,8 @@ static void pplmethod_listReverse(ppl_context *c, pplObj *in, const int nArgs, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the list on which the method was called; its items are sorted by copying pointers to them into an array,
+    // sorting the array, and copying the pointers back
     long i;
     pplObj *st = in[-1].self_this;
     list *l = (list *) st->auxil;
@@ -2768,6 +2958,7 @@ static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
     if (n < 2) return;
     items = (pplObj **) malloc(n * sizeof(pplObj *));
+    // Failure to allocate memory is reported as an error
     if (items == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -2775,6 +2966,7 @@ static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int 
         return;
     }
     i = 0;
+    // Copy the pointers to the items into the array
     while (li != NULL) {
         items[i++] = (pplObj *) li->data;
         ppl_listIterate(&li);
@@ -2782,6 +2974,7 @@ static void pplmethod_listSort(ppl_context *c, pplObj *in, const int nArgs, int 
     qsort(items, n, sizeof(pplObj *), pplObjCmpQuiet);
     li = ppl_listIterateInit(l);
     i = 0;
+    // Copy the sorted pointers back into the list
     while (li != NULL) {
         li->data = (void *) items[i++];
         ppl_listIterate(&li);
@@ -2802,6 +2995,8 @@ static int pplmethod_listSortOnCustom_errFlag = 0;
 //! \return The value returned by the user-supplied comparison function: -1, 0 or 1
 
 static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
+    // qsort() cannot pass extra arguments to its comparison function, so the context and the user's function are passed
+    // in static variables
     ppl_context *c = pplmethod_listSortOnCustom_context;
     pplExpr dummy;
     int stkLevelOld;
@@ -2854,6 +3049,7 @@ static int pplmethod_listSortOnCustom_slave(const void *a, const void *b) {
     else out = 0;
     ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
 
+    // The result of the user's function: negative, zero or positive
     return out;
 }
 
@@ -2881,7 +3077,9 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     int fail;
     listIterator *li = ppl_listIterateInit(l);
 
+    // Calling the function needs room on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2889,6 +3087,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
         return;
     }
 
+    // The argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2899,6 +3098,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -2911,6 +3111,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
     if (n < 2) return;
     items = (pplObj **) malloc(n * sizeof(pplObj *));
+    // Failure to allocate memory is reported as an error
     if (items == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -2918,6 +3119,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
         return;
     }
     i = 0;
+    // Copy the pointers to the items into the array
     while (li != NULL) {
         items[i++] = (pplObj *) li->data;
         ppl_listIterate(&li);
@@ -2930,6 +3132,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     pplmethod_listSortOnCustom_fn = NULL;
     pplmethod_listSortOnCustom_errFlag = 0;
     pplmethod_listSortOnCustom_context = NULL;
+    // The user's comparison function failed
     if (fail) {
         *status = 1;
         *errType = ERR_GENERIC;
@@ -2938,6 +3141,7 @@ static void pplmethod_listSortOnCustom(ppl_context *c, pplObj *in, const int nAr
     }
     li = ppl_listIterateInit(l);
     i = 0;
+    // Copy the sorted pointers back into the list
     while (li != NULL) {
         li->data = (void *) items[i++];
         ppl_listIterate(&li);
@@ -2967,10 +3171,12 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     int eNum = (int) floor(in[0].real);
     listIterator *li = ppl_listIterateInit(l);
     i = 0;
+    // Every item of the list must itself be a list
     while (li != NULL) {
         pplObj *o = (pplObj *) li->data;
         ppl_listIterate(&li);
         i++;
+        // Report an item which is not a list
         if (o->objType != PPLOBJ_LIST) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -2983,10 +3189,12 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     }
     li = ppl_listIterateInit(l);
     i = 0;
+    // Every sublist must have the element to sort on; negative indices count from the end
     while (li != NULL) {
         list *o = (list *) ((pplObj *) li->data)->auxil;
         ppl_listIterate(&li);
         i++;
+        // Report a sublist which is too short
         if ((eNum >= o->length) || (eNum < -o->length)) {
             *status = 1;
             *errType = ERR_RANGE;
@@ -3000,6 +3208,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     pplObjCpy(&OUTPUT, st, 0, 0, 1);
     if (n < 2) return;
     items = (pplObj **) malloc(n * 2 * sizeof(pplObj *));
+    // Failure to allocate memory is reported as an error
     if (items == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3008,6 +3217,8 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     }
     li = ppl_listIterateInit(l);
     i = 0;
+    // Fill the array with pairs of pointers: the element to sort on, followed by the sublist. qsort() then sorts the
+    // pairs on their first members.
     while (li != NULL) {
         pplObj *o = (pplObj *) li->data;
         list *l = (list *) o->auxil;
@@ -3018,6 +3229,7 @@ static void pplmethod_listSortOnElement(ppl_context *c, pplObj *in, const int nA
     qsort(items, n, 2 * sizeof(pplObj *), pplObjCmpQuiet);
     li = ppl_listIterateInit(l);
     i = 0;
+    // Copy the second member of each sorted pair, the sublist, back into the list
     while (li != NULL) {
         i++;
         li->data = (void *) items[i++];
@@ -3046,12 +3258,14 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
     listIterator *li = ppl_listIterateInit(listin);
     const long len = listin->length;
     gsl_vector *v;
+    // A vector cannot be empty
     if (len == 0) {
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Cannot create a vector of length zero.");
         *status = 1;
         return;
     }
+    // Make a vector of the same length as the list
     if (pplObjVector(&OUTPUT, 0, 1, len) == NULL) {
         *status = 1;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
@@ -3059,8 +3273,10 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
     v = ((pplVector *) OUTPUT.auxil)->v;
+    // The first item must be a real number; its units become the units of the vector
     if (len > 0) {
         pplObj *item = (pplObj *) ppl_listIterate(&li);
+        // Report an item which is not a number
         if (item->objType != PPLOBJ_NUM) {
             *status = 1;
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
@@ -3069,6 +3285,7 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
             *errType = ERR_TYPE;
             return;
         }
+        // Vectors cannot hold complex numbers
         if (item->flagComplex) {
             *status = 1;
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
@@ -3079,8 +3296,10 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
         ppl_unitsDimCpy(&OUTPUT, item);
         gsl_vector_set(v, i, item->real);
     }
+    // Every further item must be a real number with the same units as the first
     for (i = 1; i < len; i++) {
         pplObj *item = (pplObj *) ppl_listIterate(&li);
+        // Report an item which is not a number
         if (item->objType != PPLOBJ_NUM) {
             *status = 1;
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
@@ -3089,6 +3308,7 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
             *errType = ERR_TYPE;
             return;
         }
+        // Vectors cannot hold complex numbers
         if (item->flagComplex) {
             *status = 1;
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
@@ -3096,7 +3316,9 @@ static void pplmethod_listVector(ppl_context *c, pplObj *in, const int nArgs, in
             *errType = ERR_TYPE;
             return;
         }
+        // Check the item's units
         if (!ppl_unitsDimEqual(item, &OUTPUT)) {
+            // Describe the conflicting units in the error message
             if (OUTPUT.dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -3143,6 +3365,7 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj *st = in[-1].self_this;
     dict *di = (dict *) st->auxil;
     char *instr;
+    // The key must be a string
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -3151,6 +3374,7 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
                           pplObjTypeNames[in[0].objType]);
         return;
     }
+    // Immutable dictionaries, and immutable items, cannot be deleted from
     if (in[-1].self_this->immutable) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -3160,6 +3384,7 @@ static void pplmethod_dictDelete(ppl_context *c, pplObj *in, const int nArgs, in
     instr = (char *) in[0].auxil;
     item = ppl_dictLookup(di, instr);
     if (item == NULL) return;
+    // The item itself may be immutable
     if (item->immutable) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -3189,6 +3414,7 @@ static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj *st = in[-1].self_this;
     dict *di = (dict *) st->auxil;
     char *instr;
+    // The key must be a string
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -3214,11 +3440,13 @@ static void pplmethod_dictHasKey(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // di iterates over the dictionary on which the method was called
     pplFuncCall call = {c, in, status, errType, errText, "pplmethod_dictItems()"};
     char *key, *tmp;
     pplObj v, va, vb, *item;
     list *l, *l2;
     dictIterator *di = ppl_dictIterateInit((dict *) in[-1].self_this->auxil);
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3226,11 +3454,13 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     l = (list *) OUTPUT.auxil;
+    // Add a two-item list [key, value] for each item in the dictionary
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         v.refCount = 1;
         va.refCount = 1;
         vb.refCount = 1;
         if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
+        // The key
         if (pplObjStr(&va, 1, 1, tmp) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -3238,6 +3468,7 @@ static void pplmethod_dictItems(ppl_context *c, pplObj *in, const int nArgs, int
             return;
         }
         pplObjCpy(&vb, item, 0, 1, 1);
+        // The list holding the key and value
         if (pplObjList(&v, 1, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -3267,6 +3498,7 @@ static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int 
     pplObj v, *item;
     list *l;
     dictIterator *di = ppl_dictIterateInit((dict *) in[-1].self_this->auxil);
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3275,6 +3507,7 @@ static void pplmethod_dictKeys(ppl_context *c, pplObj *in, const int nArgs, int 
     }
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
+    // Add each key to the list
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         pplObjStr(&v, 1, 1, tmp);
@@ -3314,6 +3547,7 @@ static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, in
     pplObj v, *item;
     list *l;
     dictIterator *di = ppl_dictIterateInit((dict *) in[-1].self_this->auxil);
+    // The output is a new list
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3322,6 +3556,7 @@ static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, in
     }
     v.refCount = 1;
     l = (list *) OUTPUT.auxil;
+    // Add a copy of each value to the list
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         if ((tmp = ppl_funcStrdup(&call, key)) == NULL) return;
         pplObjCpy(&v, item, 0, 1, 1);
@@ -3342,6 +3577,8 @@ static void pplmethod_dictValues(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the matrix on which the method was called. The determinant is found from its LU decomposition, as the
+    // product of the diagonal elements of U, with the sign of the permutation.
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     double d = 0;
@@ -3349,12 +3586,14 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
     int s;
     gsl_matrix *tmp = NULL;
     gsl_permutation *p = NULL;
+    // Only square matrices have determinants
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The determinant is only defined for square matrices.");
         return;
     }
+    // Work on a copy, since the decomposition overwrites the matrix
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3362,12 +3601,14 @@ static void pplmethod_matrixDet(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     gsl_matrix_memcpy(tmp, m);
+    // The permutation of the rows made by the decomposition
     if ((p = gsl_permutation_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
+    // Decompose the matrix
     if (gsl_linalg_LU_decomp(tmp, p, &s) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
@@ -3399,12 +3640,14 @@ static void pplmethod_matrixDiagonal(ppl_context *c, pplObj *in, const int nArgs
                                      char *errText) {
     int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
+    // Only square matrices can be diagonal
     if (m->size1 != m->size2) {
         pplObjBool(&OUTPUT, 0, 0);
         return;
     }
     for (i = 0; i < m->size1; i++)
         for (j = 0; j < m->size2; j++)
+            // Every off-diagonal element must be zero
             if ((i != j) && (gsl_matrix_get(m, i, j) != 0)) {
                 pplObjBool(&OUTPUT, 0, 0);
                 return;
@@ -3432,6 +3675,7 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
     gsl_vector *vo;
     const int n = m->size1;
     gsl_eigen_symm_workspace *w;
+    // Eigenvalues are only computed for square, symmetric matrices, whose eigenvalues are real
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
@@ -3440,6 +3684,7 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
     }
     for (i = 0; i < m->size1; i++)
         for (j = 0; j < i; j++)
+            // The matrix must be symmetric
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 *status = 1;
                 *errType = ERR_NUMERICAL;
@@ -3448,12 +3693,14 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
                         "Eigenvalues can only be computed for symmetric matrices; supplied matrix is not symmetric.");
                 return;
             }
+    // GSL's workspace for the calculation
     if ((w = gsl_eigen_symm_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
+    // Work on a copy, since the calculation overwrites the matrix
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3461,6 +3708,7 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
         return;
     }
     gsl_matrix_memcpy(tmp, m);
+    // The output is a vector of the eigenvalues
     if (pplObjVector(&OUTPUT, 0, 1, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3468,6 +3716,7 @@ static void pplmethod_matrixEigenvalues(ppl_context *c, pplObj *in, const int nA
         return;
     }
     vo = ((pplVector *) OUTPUT.auxil)->v;
+    // Compute the eigenvalues
     if (gsl_eigen_symm(tmp, vo, w) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
@@ -3506,6 +3755,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     const int n = m->size1;
     gsl_eigen_symmv_workspace *w;
     v.refCount = 1;
+    // Eigenvectors are only computed for square, symmetric matrices, whose eigenvalues are real
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
@@ -3514,6 +3764,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     }
     for (i = 0; i < m->size1; i++)
         for (j = 0; j < i; j++)
+            // The matrix must be symmetric
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 *status = 1;
                 *errType = ERR_NUMERICAL;
@@ -3522,24 +3773,28 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
                         "Eigenvectors can only be computed for symmetric matrices; supplied matrix is not symmetric.");
                 return;
             }
+    // GSL's workspace for the calculation
     if ((w = gsl_eigen_symmv_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
+    // A copy of the matrix, since the calculation overwrites it
     if ((tmp1 = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
+    // A matrix whose columns will be the eigenvectors
     if ((tmp2 = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
+    // A vector of the eigenvalues
     if ((vtmp = gsl_vector_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3547,6 +3802,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
         return;
     }
     gsl_matrix_memcpy(tmp1, m);
+    // Compute the eigenvalues and eigenvectors
     if (gsl_eigen_symmv(tmp1, vtmp, tmp2, w) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
@@ -3558,6 +3814,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
     gsl_eigen_symmv_free(w);
     w = NULL;
     gsl_eigen_symmv_sort(vtmp, tmp2, GSL_EIGEN_SORT_VAL_ASC); // In the same order as eigenvalues() lists eigenvalues
+    // The output is a list of vectors
     if (pplObjList(&OUTPUT, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3565,7 +3822,9 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
         return;
     }
     lo = (list *) OUTPUT.auxil;
+    // Each eigenvector is a column of tmp2
     for (i = 0; i < n; i++) {
+        // Make a vector for the eigenvector
         if (pplObjVector(&v, 1, 1, n) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -3591,6 +3850,7 @@ static void pplmethod_matrixEigenvectors(ppl_context *c, pplObj *in, const int n
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // st is the matrix on which the method was called. The inverse is found from its LU decomposition.
     pplObj *st = in[-1].self_this;
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
     const int n = m->size1;
@@ -3598,12 +3858,14 @@ static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int
     gsl_matrix *tmp = NULL;
     gsl_matrix *mo = NULL;
     gsl_permutation *p = NULL;
+    // Only square matrices have inverses
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The inverse is only defined for square matrices.");
         return;
     }
+    // Work on a copy, since the decomposition overwrites the matrix
     if ((tmp = gsl_matrix_alloc(n, n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3611,18 +3873,21 @@ static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     gsl_matrix_memcpy(tmp, m);
+    // The permutation of the rows made by the decomposition
     if ((p = gsl_permutation_alloc(n)) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
+    // Decompose the matrix
     if (gsl_linalg_LU_decomp(tmp, p, &s) != 0) {
         *status = 1;
         *errType = ERR_NUMERICAL;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "LU decomposition failed whilst computing matrix determinant.");
         return;
     }
+    // The output is a new matrix
     if (pplObjMatrix(&OUTPUT, 0, 1, n, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3630,6 +3895,7 @@ static void pplmethod_matrixInv(ppl_context *c, pplObj *in, const int nArgs, int
         return;
     }
     mo = ((pplMatrix *) OUTPUT.auxil)->m;
+    // Compute the inverse
     if (gsl_linalg_LU_invert(tmp, p, mo)) {
         *status = 1;
         *errType = ERR_NUMERICAL;
@@ -3657,6 +3923,7 @@ static void pplmethod_matrixSize(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
     gsl_vector *vo;
+    // The output is a vector of the numbers of rows and columns
     if (pplObjVector(&OUTPUT, 0, 1, 2) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3683,12 +3950,14 @@ static void pplmethod_matrixSymmetric(ppl_context *c, pplObj *in, const int nArg
                                       char *errText) {
     int i, j;
     gsl_matrix *m = ((pplMatrix *) in[-1].self_this->auxil)->m;
+    // Only square matrices can be symmetric
     if (m->size1 != m->size2) {
         pplObjBool(&OUTPUT, 0, 0);
         return;
     }
     for (i = 0; i < m->size1; i++)
         for (j = 0; j < i; j++)
+            // Every element must equal its reflection in the diagonal
             if (gsl_matrix_get(m, i, j) != gsl_matrix_get(m, j, i)) {
                 pplObjBool(&OUTPUT, 0, 0);
                 return;
@@ -3712,12 +3981,14 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
     gsl_matrix *m = ((pplMatrix *) st->auxil)->m;
     int n = m->size1, i, j;
     gsl_matrix *vo = NULL;
+    // Only square matrices can be transposed by this method
     if (m->size1 != m->size2) {
         *status = 1;
         *errType = ERR_NUMERICAL;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", "The transpose is only defined for square matrices.");
         return;
     }
+    // The output is a new matrix
     if (pplObjMatrix(&OUTPUT, 0, 1, n, n) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3744,7 +4015,9 @@ static void pplmethod_matrixTrans(ppl_context *c, pplObj *in, const int nArgs, i
 
 static void pplmethod_fileClose(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
+    // Close the file, unless it is stdin (pipe == 2), which may not be closed
     if (f->open) {
+        // stdin may not be closed
         if (f->pipe == 2) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -3788,6 +4061,7 @@ static void pplmethod_fileDump(ppl_context *c, pplObj *in, const int nArgs, int 
 
 static void pplmethod_fileEof(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
+    // A closed file returns null
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
@@ -3808,10 +4082,12 @@ static void pplmethod_fileEof(ppl_context *c, pplObj *in, const int nArgs, int *
 
 static void pplmethod_fileFlush(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
+    // A closed file returns null
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
     }
+    // Report failure to flush the file
     if (fflush(f->file) < 0) {
         *status = 1;
         *errType = ERR_FILE;
@@ -3835,10 +4111,12 @@ static void pplmethod_fileGetpos(ppl_context *c, pplObj *in, const int nArgs, in
                                  char *errText) {
     long int fp;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
+    // A closed file returns null
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
     }
+    // Report failure to read the position
     if ((fp = ftell(f->file)) < 0) {
         *status = 1;
         *errType = ERR_FILE;
@@ -3877,19 +4155,25 @@ static void pplmethod_fileIsOpen(ppl_context *c, pplObj *in, const int nArgs, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_fileRead(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // The file is read in chunks of 8192 bytes into a buffer which grows as needed; pos is the number of bytes read so
+    // far
     char *out = NULL, *new;
     int chunk = 8192;
     long pos = 0;
     long size = chunk;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
+    // A closed file returns null
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
     }
     new = (char *) malloc(chunk + 4);
+    // Read chunks until the end of the file
     while (!feof(f->file)) {
         int n;
+        // Failure to allocate memory: free the buffer, and report an error
         if (new == NULL) {
+            // Free the buffer
             if (out != NULL) {
                 free(out);
                 out = NULL;
@@ -3928,27 +4212,33 @@ static void pplmethod_fileReadline(ppl_context *c, pplObj *in, const int nArgs, 
     long pos = 0;
     long size = chunk;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
+    // A closed file returns null
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
     }
     out = (char *) malloc(chunk);
+    // Failure to allocate memory is reported as an error
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "Out of memory.");
         return;
     }
+    // Read one byte at a time until the end of the line or the file
     while (!feof(f->file)) {
         int n;
         n = fread(out + pos, 1, 1, f->file);
         if ((n == 0) || (out[pos] == '\n')) break;
         pos++;
+        // Grow the buffer when it is nearly full
         if (pos > size - 4) {
             char *new;
             size += chunk;
             new = (char *) realloc(out, size);
+            // Failure to allocate memory: free the buffer, and report an error
             if (new == NULL) {
+                // Free the buffer
                 if (out != NULL) {
                     free(out);
                     out = NULL;
@@ -3983,10 +4273,12 @@ static void pplmethod_fileReadlines(ppl_context *c, pplObj *in, const int nArgs,
     pplFile *f = (pplFile *) st->auxil;
     list *l;
     v.refCount = 1;
+    // A closed file returns null
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
     }
+    // The output is a list of lines
     if (pplObjList(&v, 0, 1, NULL) == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -3994,9 +4286,11 @@ static void pplmethod_fileReadlines(ppl_context *c, pplObj *in, const int nArgs,
         return;
     }
     l = (list *) v.auxil;
+    // Read each line in turn with the readline() method, and add it to the list
     while (!feof(f->file)) {
         in[-1].self_this = st;
         pplmethod_fileReadline(c, in, 0, status, errType, errText);
+        // On error, discard the list of lines
         if (*status) {
             ppl_garbageObject(&v);
             return;
@@ -4026,11 +4320,13 @@ static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, in
     long int fp = (long int) in[0].real;
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a number of bytes", UNIT_BIT, 1)) return;
+    // A closed file returns null. A position with units of bits is converted to bytes.
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
     }
     if (!in[0].dimensionless) fp /= 8;
+    // Move to the new position
     if (fseek(f->file, fp, SEEK_SET) != 0) {
         *status = 1;
         *errType = ERR_FILE;
@@ -4038,6 +4334,7 @@ static void pplmethod_fileSetpos(ppl_context *c, pplObj *in, const int nArgs, in
         return;
     }
 
+    // Return the new position, in bytes
     if ((fp = ftell(f->file)) < 0) {
         *status = 1;
         *errType = ERR_FILE;
@@ -4062,6 +4359,7 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
     pplFile *f = (pplFile *) in[-1].self_this->auxil;
     char *s = (char *) in[0].auxil;
     long int l, o;
+    // The argument must be a string
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -4070,12 +4368,14 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
                           pplObjTypeNames[in[0].objType]);
         return;
     }
+    // A closed file returns null
     if (!f->open) {
         pplObjNull(&OUTPUT, 0);
         return;
     }
     l = strlen(s);
     o = fwrite(s, 1, l, f->file);
+    // Report failure to write the whole string
     if (o != l) {
         *status = 1;
         *errType = ERR_FILE;
@@ -4097,6 +4397,7 @@ static void pplmethod_fileWrite(ppl_context *c, pplObj *in, const int nArgs, int
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // The argument must be a string, which becomes the error message
     if ((nArgs != 1) && (in[0].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -4119,10 +4420,12 @@ static void pplmethod_excRaise(ppl_context *c, pplObj *in, const int nArgs, int 
 //! \param [in] c - The Pyxplot context
 
 void pplObjMethodsInit(ppl_context *c) {
+    // Create a dictionary of methods for each type
     int i;
     const int n = PPLOBJ_USER + 1;
     pplObjMethods = (dict **) malloc(n * sizeof(dict *));
     if (pplObjMethods == NULL) ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Out of memory.");
+    // Every type has the universal methods, such as class(), str() and type()
     for (i = 0; i < n; i++) {
         dict *d = pplObjMethods[i] = ppl_dictInit(1);
         if (d == NULL) ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Out of memory.");
@@ -4343,6 +4646,7 @@ void pplObjMethodsInit(ppl_context *c) {
         else if (i == 1) pplobj = PPLOBJ_MOD;
         else pplobj = PPLOBJ_USER;
 
+        // Dictionaries, modules and class instances share the methods of dictionaries
         ppl_addSystemMethod(pplObjMethods[pplobj], "delete", 1, 1, 0, 0, 0, 0, (void *) pplmethod_dictDelete,
                             "delete(x)", "\\mathrm{delete}@<@1@>",
                             "delete(x) deletes the key x from the dictionary, if it exists");
@@ -4418,5 +4722,6 @@ void pplObjMethodsInit(ppl_context *c) {
     ppl_addSystemMethod(pplObjMethods[PPLOBJ_EXC], "raise", 1, 1, 0, 0, 0, 0, (void *) pplmethod_excRaise, "raise(s)",
                         "\\mathrm{raise}@<@0@>", "raise(s) raises an exception with error string s");
 
+    // All the methods have been registered
     return;
 }

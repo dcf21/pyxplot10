@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements Pyxplot's simpler commands: assert, cd, exec, global, history, load, local, print and save, the error
+// messages for unrecognised set and unset options, and variable assignment, including the =~ operator, which applies a
+// sed regular expression to a string variable by piping it through a child sed process.
+
 #define _CORE_C 1
 
 #include <stdio.h>
@@ -90,19 +94,23 @@ static void versionError(ppl_context *c, const parserLine *pl, const parserOutpu
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutput *in) {
+    // Read the parameters of the command
     pplObj *stk = in->stk;
     int lt;
     char *txt, *version;
     pplObj *val;
 
+    // The optional message, version requirement and expression
     txt = (stk[PARSE_assert_message].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_message].auxil : NULL;
     version = (stk[PARSE_assert_version].objType == PPLOBJ_STR) ? (char *) stk[PARSE_assert_version].auxil : NULL;
     val = &stk[PARSE_assert_expr];
     lt = (stk[PARSE_assert_lt].objType == PPLOBJ_STR);
 
+    // If an expression was given, it must be true
     if (val->objType != PPLOBJ_ZOM) {
         ppl_castToBool(c, val);
         if (txt == NULL) txt = "Assertion was not true.";
+        // Report a false assertion
         if (val->real < 0.5) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "%s", txt);
             ppl_tbAddLine(c, pl, ERR_ASSERT, in->stkCharPos[PARSE_assert_expr], "");
@@ -110,6 +118,8 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         }
     }
 
+    // If a version requirement was given, compare it with this version of Pyxplot, one component at a time; sgn
+    // reverses the comparisons for a requirement that the version be older
     if (version != NULL) {
         int i = 0, j = 0, sgn, pass = 0;
         char txtauto[64];
@@ -119,10 +129,12 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         sgn = (!lt) ? 1 : -1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '\0') return;
+        // Read the major version number required
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
             j = 10 * j + (version[i] - '0');
             if (j > 1e6) j = 1e6;
         }
+        // Fail if the major version does not meet the requirement
         if ((sgn * VERSION_MAJ < sgn * j) && (!pass)) {
             versionError(c, pl, in, ERR_ASSERT, txt);
             return;
@@ -130,6 +142,7 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         if (sgn * VERSION_MAJ > sgn * j) pass = 1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '.') i++;
+        // Anything other than a dot after the number is malformed
         else if (version[i] != '\0') {
             {
                 versionError(c, pl, in, ERR_SYNTAX, "Malformed version string.");
@@ -137,15 +150,18 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
             }
         }
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
+        // A strict "older than" requirement fails if the major versions are equal and no minor version was given
         if ((version[i] == '\0') && (sgn == -1) && (!pass)) {
             versionError(c, pl, in, ERR_ASSERT, txt);
             return;
         }
         if (version[i] == '\0') return;
+        // Read the minor version number required
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
             j = 10 * j + (version[i] - '0');
             if (j > 1e6) j = 1e6;
         }
+        // Fail if the minor version does not meet the requirement
         if ((sgn * VERSION_MIN < sgn * j) && (!pass)) {
             versionError(c, pl, in, ERR_ASSERT, txt);
             return;
@@ -153,6 +169,7 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
         if (sgn * VERSION_MIN > sgn * j) pass = 1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
         if (version[i] == '.') i++;
+        // Anything other than a dot after the number is malformed
         else if (version[i] != '\0') {
             {
                 versionError(c, pl, in, ERR_SYNTAX, "Malformed version string.");
@@ -160,33 +177,39 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
             }
         }
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
+        // A strict "older than" requirement fails if the versions are equal so far and no revision was given
         if ((version[i] == '\0') && (sgn == -1) && (!pass)) {
             versionError(c, pl, in, ERR_ASSERT, txt);
             return;
         }
         if (version[i] == '\0') return;
+        // Read the revision number required
         for (j = 0; ((version[i] >= '0') && (version[i] <= '9')); i++) {
             j = 10 * j + (version[i] - '0');
             if (j > 1e6) j = 1e6;
         }
+        // Fail if the revision does not meet the requirement
         if ((sgn * VERSION_REV < sgn * j) && (!pass)) {
             versionError(c, pl, in, ERR_ASSERT, txt);
             return;
         }
         if (sgn * VERSION_REV > sgn * j) pass = 1;
         while ((version[i] > '\0') && ((unsigned char) version[i] <= ' ')) i++;
+        // Nothing may follow the revision number
         if (version[i] != '\0') {
             {
                 versionError(c, pl, in, ERR_SYNTAX, "Malformed version string.");
                 return;
             }
         }
+        // A strict "older than" requirement fails if the versions are equal
         if ((version[i] == '\0') && (sgn == -1) && (!pass)) {
             versionError(c, pl, in, ERR_ASSERT, txt);
             return;
         }
     }
 
+    // The assertion passed
     return;
 }
 
@@ -196,11 +219,13 @@ void ppl_directive_assert(ppl_context *c, const parserLine *pl, const parserOutp
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *in) {
+    // The path is a list of directory names, which are entered in turn
     pplObj *stk = in->stk;
     int pos = PARSE_cd_path;
     wordexp_t wordExp;
     glob_t globData;
 
+    // Walk the linked list of directory names on the parser stack
     while (stk[pos].objType == PPLOBJ_NUM) {
         char *raw, dirName[FNAME_LENGTH];
         pos = (int) round(stk[pos].real);
@@ -208,6 +233,7 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
         raw = (char *) stk[pos + PARSE_cd_directory_path].auxil;
         {
             int j, k;
+            // Escape spaces in the name before passing it to wordexp
             for (j = k = 0; ((raw[j] != '\0') && (k < FNAME_LENGTH - 1));) {
                 if (raw[j] == ' ') dirName[k++] = '\\';
                 dirName[k++] = raw[j++];
@@ -215,11 +241,13 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
             dirName[k++] = '\0';
         }
 
+        // Expand ~ and environment variables in the name
         if ((wordexp(dirName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not enter directory '%s'.", dirName);
             ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path], "");
             return;
         }
+        // Expand wildcards in the name
         if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not enter directory '%s'.", dirName);
             ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path], "");
@@ -227,6 +255,7 @@ void ppl_directive_cd(ppl_context *c, const parserLine *pl, const parserOutput *
             return;
         }
         wordfree(&wordExp);
+        // Enter the directory
         if (chdir(globData.gl_pathv[0]) < 0) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not change into directory '%s'.", globData.gl_pathv[0]);
             ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[pos + PARSE_cd_directory_path], "");
@@ -255,18 +284,23 @@ void ppl_directive_exec(ppl_context *c, const parserLine *pl, const parserOutput
     parserLine *pl2 = NULL;
     parserStatus *ps2 = NULL;
 
+    // A new parser state, so that the command can contain blocks of its own
     ppl_parserStatInit(&ps2, &pl2);
+    // Failure to allocate memory is reported as an error
     if ((ps2 == NULL) || (c->inputLineBuffer == NULL)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
         return;
     }
     ppl_error_setstreaminfo(&c->errcontext, -1, "executed statement");
 
+    // Execute the string as if it had been typed
     ppl_processLine(c, ps2, cmd, interactive, iterDepth + 1);
+    // Add this command to the traceback of any error
     if (c->errStat.status) {
         strcpy(c->errStat.errBuff, "");
         ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_GENERIC, 0, pl->linetxt, "executed statement");
     }
+    // Warn about a string which ends with a line continuation character
     if (c->inputLineAddBuffer != NULL) {
         ppl_warning(&c->errcontext, ERR_SYNTAX,
                     "Line continuation character (\\) at the end of executed string, with no line following it.");
@@ -290,6 +324,7 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
     pplObj *stk = in->stk;
     int pos;
 
+    // Global variables can only be declared inside a subroutine or module
     if (c->ns_ptr < 2) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Cannot declare global variables when not in a subroutine or module namespace.");
@@ -297,27 +332,33 @@ void ppl_directive_global(ppl_context *c, const parserLine *pl, const parserOutp
         return;
     }
 
+    // Declare each variable named as global
     pos = PARSE_global_var_names;
+    // Walk the linked list of variable names on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         int om, rc;
         char *varname;
         pplObj *obj;
 
+        // Look up the variable in the local namespace
         pos = (int) round(stk[pos].real);
         varname = (char *) stk[pos + PARSE_global_var_name_var_names].auxil;
         obj = (pplObj *) ppl_dictLookup(c->namespaces[c->ns_ptr], varname);
+        // If it does not exist locally, create it
         if ((obj == NULL) && (!c->namespaces[c->ns_ptr]->immutable)) {
             pplObj out;
             pplObjZom(&out, 1);
             out.refCount = 1; // Create a temporary zombie for now
             ppl_dictAppendCpy(c->namespaces[c->ns_ptr], varname, (void *) &out, sizeof(pplObj));
             obj = (pplObj *) ppl_dictLookup(c->namespaces[c->ns_ptr], varname);
+            // Failure to allocate memory is reported as an error
             if (obj == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                 ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
                 return;
             }
         }
+        // The local namespace may not be immutable
         if ((obj == NULL) || (c->namespaces[c->ns_ptr]->immutable)) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Cannot modify variable in immutable namespace.");
@@ -348,14 +389,17 @@ void ppl_directive_history(ppl_context *c, const parserLine *pl, const parserOut
     int start = 0, endpos, k;
     HIST_ENTRY **history_data;
 
+    // Fetch readline's history
     endpos = where_history();
     history_data = history_list();
 
+    // Show only the requested number of lines, if specified
     if (stk[PARSE_history_number_lines].objType == PPLOBJ_NUM) {
         start = endpos - (int) round(stk[PARSE_history_number_lines].real);
         if (start < 0) start = 0;
     }
 
+    // Print each line of history
     for (k = start; k < endpos; k++) ppl_report(&c->errcontext, history_data[k]->line);
     return;
 #else
@@ -386,6 +430,7 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
     glob_t globData;
     {
         int j, k;
+        // Escape spaces in the filename before passing it to wordexp
         for (j = k = 0; ((raw[j] != '\0') && (k < FNAME_LENGTH - 1));) {
             if (raw[j] == ' ') fn[k++] = '\\';
             fn[k++] = raw[j++];
@@ -394,13 +439,17 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
     }
 
 
+    // Expand ~ and environment variables in the filename
     if ((wordexp(fn, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not access file '%s'.", fn);
         ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[PARSE_load_filename], "");
         return;
     }
+    // Run every script matching each word of the expanded filename, stopping if the user presses control-C
     for (j = 0; (j < wordExp.we_wordc) && (!cancellationFlag); j++) {
+        // Expand wildcards; report an error if nothing matches and only one name was given
         if ((glob(wordExp.we_wordv[j], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
+            // Report an error
             if (wordExp.we_wordc == 1) {
                 snprintf(c->errStat.errBuff, LSTR_LENGTH, "Could not access file '%s'.", fn);
                 ppl_tbAddLine(c, pl, ERR_FILE, in->stkCharPos[PARSE_load_filename], "");
@@ -410,8 +459,10 @@ void ppl_directive_load(ppl_context *c, const parserLine *pl, const parserOutput
                 continue;
             }
         }
+        // Run each matching script
         for (i = 0; (i < globData.gl_pathc) && (!cancellationFlag); i++) {
             ppl_processScript(c, globData.gl_pathv[i], iterDepth + 1);
+            // Add this command to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAdd(c, pl->srcLineN, pl->srcId, pl->srcFname, 0, ERR_GENERIC, 0, pl->linetxt, "executed script");
@@ -437,6 +488,7 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
     pplObj *stk = in->stk;
     int pos;
 
+    // Local variables can only be declared inside a subroutine or module
     if (c->ns_ptr < 2) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Cannot declare global variables when not in a subroutine or module namespace.");
@@ -444,16 +496,20 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
         return;
     }
 
+    // Make each variable named local again
     pos = PARSE_local_var_names;
+    // Walk the linked list of variable names on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         char *varname;
         pplObj *obj;
 
+        // Look up the variable
         pos = (int) round(stk[pos].real);
         varname = (char *) stk[pos + PARSE_local_var_name_var_names].auxil;
 
         // Look up requested variable
         ppl_contextVarLookup(c, varname, &obj, 1);
+        // The variable must previously have been declared global
         if ((obj == NULL) || (obj->objType != PPLOBJ_GLOB)) {
             ppl_snprintfTrunc(
                     c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -463,6 +519,7 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
             return;
         }
 
+        // Replace the global marker with an undefined local variable
         pplObjZom(obj, obj->amMalloced);
     }
     return;
@@ -474,6 +531,7 @@ void ppl_directive_local(ppl_context *c, const parserLine *pl, const parserOutpu
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutput *in) {
+    // The values are printed one after another into a single buffer
     char msg[LSTR_LENGTH];
     pplObj *stk = in->stk;
     int pos = PARSE_print_0print_list;
@@ -481,6 +539,7 @@ void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutpu
     int gotItems = 0;
     msg[i] = '\0';
 
+    // Walk the linked list of the expressions on the parser stack, printing each value
     while (stk[pos].objType == PPLOBJ_NUM) {
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
@@ -518,6 +577,7 @@ void ppl_directive_print(ppl_context *c, const parserLine *pl, const parserOutpu
 //! \param [in] in - The parser output for the command, containing the values of its parameters
 
 void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput *in) {
+    // Variables for writing the history to a file
     char msg[PPL_MSG_LENGTH];
 #ifdef HAVE_READLINE
     pplObj *stk = in->stk;
@@ -528,11 +588,13 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
     FILE *outfile = NULL;
     HIST_ENTRY **history_data;
 
+    // Open the output file, backing up any file it replaces
     if (stk[pos].objType == PPLOBJ_STR) {
         outfname = (char *) stk[pos].auxil;
         ppl_createBackupIfRequired(c, outfname);
         outfile = fopen(outfname, "w");
     }
+    // Report a failure to open the file
     if (outfile == NULL) {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "The save command could not open output file '%s' for writing.",
                  outfname);
@@ -543,13 +605,16 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
             ppl_strStrip(ppl_friendlyTimestring(), msg));
     fprintf(outfile, "# User: %s\n\n", ppl_unixGetIRLName(&c->errcontext));
 
+    // Fetch readline's history
     endpos = history_length;
     history_data = history_list();
 
+    // Save only the lines typed since the last save
     x = endpos - c->historyNLinesWritten;
     if (x < history_base) x = history_base;
     start = (int) x;
 
+    // Write each line, except the last, which is this save command
     for (k = start; k < endpos - 1; k++) { fprintf(outfile, "%s\n", (history_data[k]->line)); }
     fclose(outfile);
     return;
@@ -572,7 +637,9 @@ void ppl_directive_save(ppl_context *c, const parserLine *pl, const parserOutput
 void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplObj *o = &in->stk[PARSE_set_error_set_option];
     char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
+    // Report the unrecognised option; in interactive sessions, list the options which are available
     if (tempstr != NULL) {
+        // In scripts, report an error
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unrecognised set option '%s'.", tempstr);
             ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
@@ -581,6 +648,7 @@ void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *
             ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
         }
     } else {
+        // In scripts, report an error
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "set command detected with no set option following it.");
             ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
@@ -602,7 +670,9 @@ void ppl_directive_seterror(ppl_context *c, const parserLine *pl, parserOutput *
 void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
     pplObj *o = &in->stk[PARSE_set_error_set_option];
     char *tempstr = (o->objType == PPLOBJ_STR) ? (char *) in->stk[PARSE_set_error_set_option].auxil : NULL;
+    // Report the unrecognised option; in interactive sessions, list the options which are available
     if (tempstr != NULL) {
+        // In scripts, report an error
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unrecognised set option '%s'.", tempstr);
             ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
@@ -611,6 +681,7 @@ void ppl_directive_unseterror(ppl_context *c, const parserLine *pl, parserOutput
             ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_set_error_set_option], "");
         }
     } else {
+        // In scripts, report an error
         if (!interactive) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "unset command detected with no set option following it.");
             ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
@@ -637,9 +708,11 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
     pplObj *rgx = &stk[PARSE_var_set_regex];
     pplObj *obj = NULL;
 
+    // Look up the variable to set
     ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &obj,
                              PARSE_var_set_varnames, PARSE_var_set_varname_varnames);
     if ((c->errStat.status) || (obj == NULL)) return;
+    // A global declaration at the top level cannot be overwritten
     if (obj->objType == PPLOBJ_GLOB) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Variable declared global in global namespace.");
@@ -677,6 +750,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         // Append 's' to the beginning of the regular expression
         rel = (strlen(in) + 8) * 8;
         re = (char *) malloc(rel);
+        // Failure to allocate memory is reported as an error
         if (re == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return;
@@ -695,13 +769,16 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
 
         // Wait for sed process's stdout to become readable. Get bored if this takes more than a second.
         trialNumber = 1;
+        // Retry the wait up to three times if it is interrupted by a signal
         while (1) {
             struct timespec waitperiod; // A time.h timespec specifier for a wait of zero seconds
             waitperiod.tv_sec = 1;
             waitperiod.tv_nsec = 0;
             FD_ZERO(&readable);
             FD_SET(fstdout, &readable);
+            // Wait for output, or a timeout
             if (pselect(fstdout + 1, &readable, NULL, NULL, &waitperiod, NULL) == -1) {
+                // Retry if interrupted by a signal
                 if ((errno == EINTR) && (trialNumber < 3)) {
                     trialNumber++;
                     continue;
@@ -715,6 +792,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
             }
             break;
         }
+        // Give up if sed did not respond
         if (!FD_ISSET(fstdout, &readable)) {
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "Got bored waiting for sed to return data.");
             sigprocmask(SIG_UNBLOCK, &sigs, NULL);
@@ -726,10 +804,13 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         // Read data back from sed process, until it closes the pipe. The output may be longer than the regular
         // expression buffer, and may arrive in several pieces, so grow the buffer as needed.
         i = 0;
+        // Read all of sed's output, growing the buffer as needed
         while (1) {
             ssize_t n;
+            // Double the size of the buffer when it is full
             if (i >= rel - 1) {
                 char *grown = (char *) realloc(re, rel * 2);
+                // Failure to allocate memory is reported as an error
                 if (grown == NULL) {
                     ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
                     close(fstdout);
@@ -743,6 +824,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
             }
             n = read(fstdout, re + i, rel - 1 - i);
             if ((n < 0) && (errno == EINTR)) continue;
+            // Report a failure to read from the pipe
             if (n < 0) {
                 ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "Could not read from pipe to sed.");
                 close(fstdout);
@@ -760,6 +842,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
 
         // Copy string into string variable
         outstr = (char *) malloc(i + 1);
+        // Failure to allocate memory is reported as an error
         if (outstr == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             free(re);
@@ -769,6 +852,7 @@ void ppl_directive_varset(ppl_context *c, const parserLine *pl, const parserOutp
         strcpy(outstr, re);
         free(re);
         re = NULL;
+        // Replace the variable's old string with the output from sed
         if (obj->auxilMalloced) {
             free(obj->auxil);
             obj->auxil = NULL;

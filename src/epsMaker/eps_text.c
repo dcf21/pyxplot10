@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws text canvas items, made with the text command, into the postscript buffer. All text in Pyxplot is typeset by
+// LaTeX: eps_text_YieldUpText() adds the item's text to the list sent to LaTeX in the text-collecting pass of
+// canvasDraw.c, and eps_text_RenderEPS() places the typeset result in the final rendering pass.
+
 #define _PPL_EPS_TEXT 1
 
 #include <stdlib.h>
@@ -41,10 +45,13 @@
 void eps_text_YieldUpText(EPSComm *x) {
     CanvasTextItem *i;
 
+    // Record where this item's text starts in the list of text items
     x->current->FirstTextID = x->NTextItems;
     if (x->current->text[0] == '\0') return;
 
+    // Add the text to the list of text to typeset
     i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+    // Failure to allocate memory is reported as an error
     if (i == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
         *(x->status) = 1;
@@ -61,13 +68,16 @@ void eps_text_YieldUpText(EPSComm *x) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_text_RenderEPS(EPSComm *x) {
+    // Variables for the style and position of the text
     withWords def, merged;
     double xgap, ygap, xgap2, ygap2;
     int pageno;
 
+    // This item's text is on the page of the typeset text which was recorded in eps_text_YieldUpText()
     pageno = x->LaTeXpageno = x->current->FirstTextID;
     x->LaTeXpageno++;
 
+    // Empty text items draw nothing
     if (x->current->text[0] == '\0') return;
 
     // Write header at top of postscript
@@ -90,9 +100,11 @@ void eps_text_RenderEPS(EPSComm *x) {
     xgap = -(x->current->settings.TextHAlign - SW_HALIGN_CENT) * x->current->xpos2;
     ygap = (x->current->settings.TextVAlign - SW_VALIGN_CENT) * x->current->xpos2;
 
+    // Rotate the gap with the text
     xgap2 = xgap * cos(x->current->rotation) - ygap * sin(x->current->rotation);
     ygap2 = xgap * sin(x->current->rotation) + ygap * cos(x->current->rotation);
 
+    // Draw the typeset text
     canvas_EPSRenderTextItem(x, NULL, pageno, x->current->xpos + xgap2, x->current->ypos + ygap2,
                              x->current->settings.TextHAlign, x->current->settings.TextVAlign, x->CurrentColor,
                              x->current->settings.FontSize, x->current->rotation, NULL, NULL);

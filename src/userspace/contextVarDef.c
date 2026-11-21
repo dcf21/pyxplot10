@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Looks up variables in Pyxplot's namespaces. Namespace 0 holds the built-in functions and constants, namespace 1 the
+// user's global variables, and higher namespaces the local variables of subroutines being executed. It also resolves
+// dotted names such as a.b.c, used by commands which set variables, and provides a safe way to overwrite a variable.
+
 #define _CONTEXT_C 1
 
 #include <stdlib.h>
@@ -66,6 +70,8 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
     int first = 1;
     int pos = base;
 
+    // The parser stores the parts of a dotted name as a list on its output stack, in which each item holds the position
+    // of the next. Walk along the list, descending into a dictionary, module or class instance at each step.
     while (stk[pos].objType == PPLOBJ_NUM) {
         int last;
         char *name;
@@ -73,8 +79,10 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
         if (pos <= 0) break;
         last = (stk[pos].objType != PPLOBJ_NUM);
         name = (char *) stk[pos + offset].auxil;
+        // The first part of a name with several parts must be an existing variable which has members
         if (first && !last) {
             ppl_contextVarLookup(c, name, out, 0);
+            // The variable does not exist
             if (*out == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable, '%s'.", name);
                 ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, stkPos[pos + offset], linetxt, "");
@@ -91,6 +99,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
             pplObj tmp;
             ppl_contextGetVarPointer(c, name, out, &tmp);
             ppl_contextRestoreVarPointer(c, name, &tmp);
+            // A variable declared global within a subroutine refers to namespace 1
             if ((*out)->objType == PPLOBJ_GLOB) {
                 const int ns_ptr = c->ns_ptr;
                 c->ns_ptr = 1;
@@ -100,6 +109,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
             }
         } else if (!last) {
             dict *d = (dict *) (*out)->auxil;
+            // Members of immutable objects, such as built-in modules, cannot be changed
             if (d->immutable) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
                                   last ? "modify the immutable variable" : "set variables in the immutable namespace",
@@ -122,6 +132,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
             }
         } else {
             dict *d = (dict *) (*out)->auxil;
+            // Members of immutable objects, such as built-in modules, cannot be changed
             if (d->immutable) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
                                   last ? "modify the immutable variable" : "set variables in the immutable namespace",
@@ -138,6 +149,7 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
                 *out = (pplObj *) ppl_dictLookup(d, name);
             }
         }
+        // Immutable variables cannot be changed
         if (((*out) != NULL) && ((*out)->immutable)) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Cannot %s '%s'.",
                               last ? "modify the immutable variable" : "set variables in the immutable namespace",
@@ -147,12 +159,14 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
         }
         first = 0;
     }
+    // The name could not be resolved
     if ((*out) == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such variable.");
         ppl_tbAdd(c, srcLineN, srcId, srcFname, 0, ERR_NAMESPACE, 0, linetxt, "");
         return;
     }
 
+    // The variable has been found
     return;
 }
 
@@ -166,6 +180,8 @@ void ppl_contextVarHierLookup(ppl_context *c, const int srcLineN, const int srcI
 
 void ppl_contextVarLookup(ppl_context *c, char *name, pplObj **output, const int returnGlobObjs) {
     int i;
+    // Search the current namespace, then the global namespace (1), and then the built-in namespace (0); the namespaces
+    // of any subroutines which called the current one are not searched
     for (i = c->ns_ptr; i >= 0; i = (i > 1) ? 1 : i - 1) {
         pplObj *obj = (pplObj *) ppl_dictLookup(c->namespaces[i], name);
         if (obj == NULL) continue;
@@ -211,6 +227,8 @@ void ppl_contextGetVarPointer(const ppl_context *c, char *name, pplObj **output,
 void ppl_contextRestoreVarPointer(const ppl_context *c, char *name, pplObj *temp) {
     dict *d = c->namespaces[c->ns_ptr];
     pplObj *obj = (pplObj *) ppl_dictLookup(d, name);
+    // Free the placeholder value, and move the new value into the variable, keeping the variable's own allocation flag
+    // and reference count
     if (obj != NULL) {
         const int om = obj->amMalloced;
         const int tm = temp->amMalloced;

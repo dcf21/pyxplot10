@@ -1,0 +1,64 @@
+commands
+========
+
+The implementations of Pyxplot's commands. The parser (src/parser) matches each
+command line against the command definitions, and parserExecute.c calls the
+ppl_directive_* function here which implements it. Plotting commands are in
+src/epsMaker and canvasItems.c.
+
+core.c, core.h
+    Simple commands: assert, cd, exec, global, history, load, local, print and
+    save, and variable assignment, including the =~ operator which applies a
+    sed regular expression to a string.
+
+eqnsolve.c, eqnsolve.h
+    The solve, minimise and maximise commands, which vary free variables with
+    GSL's simplex minimiser to solve equations or find extrema.
+
+fft.c, fft.h
+    The fft and ifft commands, which Fourier transform gridded data from a file
+    or a function with FFTW, and store the result as a new function.
+
+fit.c, fit.h
+    The fit command, which fits a function to data by maximum likelihood, and
+    estimates the uncertainties of the fitted parameters from the Hessian
+    matrix.
+
+flowctrl.c, flowctrl.h
+    Flow control: the do, for, foreach, foreach datum and while loops, if
+    statements, with blocks, subroutine definitions, and break, continue and
+    return.
+
+funcset.c, funcset.h
+    Function definitions such as f(x)=x**2, which may be restricted to ranges
+    of their arguments, so that a function can be defined piecewise.
+
+help.c, help.h
+    The help command, which finds the requested topic in the XML help document
+    and displays it through a pager.
+
+histogram.c, histogram.h
+    The histogram command, which bins data from a file and stores the result as
+    a new function.
+
+interpolate.c, interpolate.h
+    The interpolate command, which stores a new function interpolating between
+    data points from a file or the pixels of a bitmap image, in one or two
+    dimensions.
+
+interpolate_2d_engine.c, interpolate_2d_engine.h
+    Two-dimensional interpolation of scattered data onto a regular grid, used
+    by the interpolate command and by plot styles which need gridded data.
+
+set.c, set.h
+    The set and unset commands, which change Pyxplot's settings, or those of a
+    multiplot item.
+
+show.c, show.h
+    The show command, which lists the values of settings in the syntax of the
+    set commands which would set them, along with variables, functions and
+    units.
+
+tabulate.c, tabulate.h
+    The tabulate command, which writes data from files or functions to a text
+    file, in the same way that the plot command would plot it.

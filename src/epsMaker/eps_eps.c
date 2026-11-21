@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws eps canvas items, made with the eps command, which include an existing encapsulated postscript file in the
+// output. The file's bounding box is read from its %%BoundingBox comments, or computed by running it through
+// ghostscript's bbox device, and is used to scale and position the file; its contents are then copied into the
+// postscript buffer between BeginEPSF and EndEPSF, during the final rendering pass of canvasDraw.c.
+
 #define _PPL_EPS_EPS 1
 
 #include <stdlib.h>
@@ -42,6 +47,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_eps_RenderEPS(EPSComm *x) {
+    // Variables for the file and its placement
     char msg[PPL_MSG_LENGTH];
     FILE *inf;
     char filename[FNAME_LENGTH];
@@ -50,6 +56,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
     double xanchor = 0, yanchor = 0, xbotleft, ybotleft;
     unsigned char GotBBox;
 
+    // Label the item in the postscript, and expand the filename
     fprintf(x->epsbuffer, "%% Canvas item %d [eps image]\n", x->current->id);
 
     // Expand filename if it contains wildcards
@@ -59,17 +66,20 @@ void eps_eps_RenderEPS(EPSComm *x) {
         char fName[FNAME_LENGTH];
         {
             int j, k;
+            // Escape spaces in the filename before passing it to wordexp
             for (j = k = 0; ((x->current->text[j] != '\0') && (k < FNAME_LENGTH - 1));) {
                 if (x->current->text[j] == ' ') fName[k++] = '\\';
                 fName[k++] = x->current->text[j++];
             }
             fName[k++] = '\0';
         }
+        // Expand ~ and environment variables in the filename
         if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             return;
         }
+        // Expand wildcards in the filename
         if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -87,6 +97,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
     if (!x->current->calcbbox) // Read bounding box from headers of EPS file
     {
         inf = fopen(filename, "r");
+        // Report a failure to open the file
         if (inf == NULL) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not open EPS file '%s'.", filename);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -95,6 +106,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
         }
         eps_eps_ExtractBBox(x, inf, &bb_left, &bb_bottom, &bb_right, &bb_top, &GotBBox);
         fclose(inf);
+        // Warn that the bounding box will have to be computed
         if (!GotBBox) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -120,6 +132,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
         if (system(command))
             if (DEBUG) { ppl_log(&x->c->errcontext, "Ghostscript returned non-zero return value."); }
         inf = fopen(tmpdata, "r");
+        // Report a failure to open ghostscript's output
         if (inf == NULL) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not open temporary file '%s'.", tmpdata);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -128,6 +141,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
         }
         eps_eps_ExtractBBox(x, inf, &bb_left, &bb_bottom, &bb_right, &bb_top, &GotBBox);
         fclose(inf);
+        // Warn that the bounding box could not be found
         if (!GotBBox) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not calculate bounding box for EPS file '%s'.", filename);
             ppl_warning(&x->c->errcontext, ERR_GENERIC, msg);
@@ -183,6 +197,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
     // Copy contents of EPS into output postscript file
     fprintf(x->epsbuffer, "%% ---- Beginning of included EPS graphic ----\n%%%%BeginDocument: epsfile.eps\n");
     inf = fopen(filename, "r");
+    // Report a failure to open the file
     if (inf == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not open EPS file '%s'.", filename);
         ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -190,6 +205,7 @@ void eps_eps_RenderEPS(EPSComm *x) {
         return;
     }
     while (fgets(msg, FNAME_LENGTH, inf) != NULL)
+        // Report a failure to copy the file
         if (fputs(msg, x->epsbuffer) == EOF) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Error while reading EPS file '%s'.", filename);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -234,6 +250,7 @@ void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, dou
     int bbox_i = 0, hrbbox_i = 0, j, bbox_len, hrbbox_len, i;
     double blt, bbt, brt, btt; // Temporary bounding box values
 
+    // Search the file for the two comments, matching each one character by character as the file is read
     bbox_len = strlen(BBoxStr);
     hrbbox_len = strlen(HRBBoxStr);
 
@@ -241,17 +258,20 @@ void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, dou
 
     while ((j = fgetc(in)) != EOF) // Search input file for bounding box strings
     {
+        // Advance through the %%BoundingBox: string while the characters match
         if (BBoxStr[bbox_i] == j) {
             bbox_i++;
         } else {
             bbox_i = 0;
         }
+        // Advance through the %%HiResBoundingBox: string while the characters match
         if (HRBBoxStr[hrbbox_i] == j) {
             hrbbox_i++;
         } else {
             hrbbox_i = 0;
         }
 
+        // After %%BoundingBox:, read four numbers; keep searching, in case there is also a high-resolution bounding box
         if (bbox_i == bbox_len) {
             bbox_i = 0;
             if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%BoundingBox: . . . .
@@ -281,6 +301,7 @@ void eps_eps_ExtractBBox(const EPSComm *x, FILE *in, double *bl, double *bb, dou
             }
         }
 
+        // After %%HiResBoundingBox:, read four numbers, which take precedence
         if (hrbbox_i == hrbbox_len) {
             hrbbox_i = 0;
             if (fgets(msg, FNAME_LENGTH, in) != NULL) // Read %%HiResBoundingBox: . . . .

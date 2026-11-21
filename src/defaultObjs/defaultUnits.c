@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The database of physical units which Pyxplot knows, e.g. metres, inches, joules and parsecs, with their names,
+// abbreviations, LaTeX forms, dimensions, conversion factors, the SI prefixes they may take, and the unit schemes (SI,
+// CGS, imperial...) they belong to. It is built when Pyxplot starts, and used to parse units in expressions and to
+// choose units in which to display results.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,12 +50,15 @@
 //! \param [in|out] context - The Pyxplot context, in which the unit database is stored
 
 void ppl_makeDefaultUnits(ppl_context *context) {
+    // unit_pos is the number of units entered so far
     char msg[PPL_MSG_LENGTH];
     int i = 0, j = 0;
     int unit_pos = 0;
     unit *unit_database;
 
+    // Allocate the database
     context->unit_database = (unit *) malloc(UNITS_MAX * sizeof(unit));
+    // Failure to allocate memory is fatal
     if (context->unit_database == NULL) {
         ppl_fatal(&context->errcontext, __FILE__, __LINE__,
                   "Out of memory error whilst trying to malloc units database.");
@@ -58,19 +66,23 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     }
     unit_database = context->unit_database;
 
+    // The lists of units which the user prefers, set with "set unit preferred"
     context->unit_PreferredUnits = ppl_listInit(1);
+    // Failure to allocate memory is fatal
     if (context->unit_PreferredUnits == NULL) {
         ppl_fatal(&context->errcontext, __FILE__, __LINE__,
                   "Out of memory error whilst trying to malloc units database.");
         exit(1);
     }
     context->unit_PreferredUnits_default = ppl_listInit(1);
+    // Failure to allocate memory is fatal
     if (context->unit_PreferredUnits_default == NULL) {
         ppl_fatal(&context->errcontext, __FILE__, __LINE__,
                   "Out of memory error whilst trying to malloc units database.");
         exit(1);
     }
 
+    // The database starts empty, and user-defined base units are numbered from UNIT_FIRSTUSER
     context->unit_pos = 0;
     context->baseunit_pos = UNIT_FIRSTUSER;
 
@@ -2428,11 +2440,14 @@ void ppl_makeDefaultUnits(ppl_context *context) {
     unit_database[unit_pos].exponent[UNIT_CURRENT] = -2;
     unit_pos++;
 
+    // Record how many units were entered
     context->unit_pos = unit_pos;
+    // Log the number of units
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "%d system default units loaded.", unit_pos);
         ppl_log(&context->errcontext, msg);
     }
 
+    // The database is complete
     return;
 }

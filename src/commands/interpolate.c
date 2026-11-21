@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the interpolate command, which reads data from a file, or a bitmap image, and stores a new function which
+// interpolates between the data points. One-dimensional interpolation uses GSL's linear, polynomial, spline and Akima
+// methods, plus log-linear and stepwise methods of Pyxplot's own; two-dimensional interpolation of scattered data uses
+// interpolate_2d_engine.c, and bitmap interpolation returns the red, green or blue component of the pixel.
+// ppl_spline_evaluate() and ppl_interp2d_evaluate() are called by the expression evaluator when the functions are used.
+
 #define _FFT_C 1
 
 #include <stdlib.h>
@@ -105,9 +111,11 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         const int o2 = PARSE_interpolate2d_max_0range_list;
         for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = 0;
         for (i = 0; i < USING_ITEMS_MAX; i++) maxSet[i] = 0;
+        // Walk the linked list of ranges on the parser stack; at most two are allowed, for x and y
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There may be no more than two ranges
             if (nr >= 2) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; a maximum of two are allowed.");
@@ -122,6 +130,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             }
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
+                // The maximum must have the same type as the minimum
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -130,6 +139,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                     ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_interpolate2d_min_0range_list], "");
                     return;
                 }
+                // The maximum must have the same units as the minimum
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -209,6 +219,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     else if (mode == INTERP_BMPR) splineTypeName = "Bitmap (red component)";
     else if (mode == INTERP_BMPG) splineTypeName = "Bitmap (green component)";
     else if (mode == INTERP_BMPB) splineTypeName = "Bitmap (blue component)";
+    // Any other type of interpolation is an internal error
     else {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "interpolate command requested to perform unknown type of interpolation.");
@@ -231,7 +242,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
         // Check that the firstEntries above have the same units as any supplied ranges
         for (j = 0; j < NcolRequired; j++)
+            // Only columns with a range need checking
             if (minSet[j] || maxSet[j]) {
+                // The range must have the same units as the data
                 if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -248,6 +261,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             xdata = (double *) ppl_memAlloc_incontext(NcolRequired * (data->Nrows + 2) * sizeof(double),
                                                       contextLocalVec);
         else xdata = (double *) malloc(NcolRequired * (data->Nrows + 2) * sizeof(double));
+        // Failure to allocate memory is reported as an error
         if (xdata == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
             ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
@@ -261,11 +275,13 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         // Copy data table into an array of x values, and an array of y values
         blk = data->first;
         i = 0;
+        // Copy each block of the data table into the arrays of x, y and z values
         while (blk != NULL) {
             k = i;
             for (j = 0; j < blk->blockPosition; j++) xdata[i++] = blk->data_real[0 + NcolRequired * j];
             i = k;
             for (j = 0; j < blk->blockPosition; j++) ydata[i++] = blk->data_real[1 + NcolRequired * j];
+            // Two-dimensional interpolation also has z values
             if (NcolRequired > 2) {
                 i = k;
                 for (j = 0; j < blk->blockPosition; j++) zdata[i++] = blk->data_real[2 + NcolRequired * j];
@@ -279,6 +295,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                               "%s interpolation is only possible on data sets with at least %d member%s.",
                               splineTypeName, NxRequired, (NxRequired > 1) ? "s" : "");
             ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
+            // Free the arrays, if they were not allocated in the local memory context
             if (NcolRequired >= 3) {
                 free(xdata);
                 xdata = NULL;
@@ -289,12 +306,14 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         // Fill out minimum and maximum of data
         for (jms = 0; jms < NcolRequired; jms++) {
             MinList[jms] = MaxList[jms] = 0.0;
+            // Find the range of values in this column
             for (ims = 0; ims < i; ims++) {
                 if ((ims == 0) || (MinList[jms] > xdata[jms * data->Nrows + ims]))
                     MinList[jms] = xdata[jms * data->Nrows + ims];
                 if ((ims == 0) || (MaxList[jms] < xdata[jms * data->Nrows + ims]))
                     MaxList[jms] = xdata[jms * data->Nrows + ims];
             }
+            // If all values are equal, widen the range slightly so it does not have zero span
             if (MaxList[jms] <= MinList[jms]) {
                 const double t = MinList[jms];
                 MinList[jms] = t * 0.999;
@@ -302,6 +321,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             }
         }
 
+        // Remember the units of each column
         firstEntries[0] = data->firstEntries[0];
         firstEntries[1] = data->firstEntries[1];
         if (NcolRequired > 2) firstEntries[2] = data->firstEntries[2];
@@ -313,7 +333,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         int pos = PARSE_interpolate2d_expression_list;
         FILE *infile;
 
+        // Bitmap images may not have ranges
         for (i = 0; i < 2; i++)
+            // Report a range as an error
             if (minSet[i] || maxSet[i]) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Ranges cannot be applied when interpolating bitmap data.");
@@ -333,6 +355,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             int i;
             pplExpr *expr = (pplExpr *) stk[pos + PARSE_interpolate2d_expression_expression_list].auxil;
             pplObj *first = ppl_expEval(c, expr, &i, 0, iterDepth);
+            // The expression must evaluate to a string
             if ((c->errStat.status) || (first->objType != PPLOBJ_STR)) {
                 ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -351,17 +374,20 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             char escaped[FNAME_LENGTH];
             {
                 int j, k;
+                // Escape spaces in the filename before passing it to wordexp
                 for (j = k = 0; ((filenameOut[j] != '\0') && (k < FNAME_LENGTH - 1));) {
                     if (filenameOut[j] == ' ') escaped[k++] = '\\';
                     escaped[k++] = filenameOut[j++];
                 }
                 escaped[k++] = '\0';
             }
+            // Expand ~ and environment variables in the filename
             if ((wordexp(escaped, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open file '%s'.", escaped);
                 ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
                 return;
             }
+            // Expand wildcards in the filename
             if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open file '%s'.", escaped);
                 ppl_tbAddLine(c, pl, ERR_FILE, 0, "");
@@ -374,7 +400,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             globfree(&globData);
         }
 
+        // Open the bitmap image
         infile = fopen(filenameOut, "r");
+        // Report a failure to open the file
         if (infile == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Could not open input file '%s'",
                               filenameOut);
@@ -385,6 +413,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         for (i = 0; i < 3; i++) // Use magic to determine file type
         {
             j = fgetc(infile);
+            // Report a file which is too short
             if (j == EOF) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Could not read any image data from the input file '%s'", filenameOut);
@@ -394,6 +423,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             }
             buff[i] = (unsigned char) j;
         }
+        // Bitmap files start with the letters BM
         if ((buff[0] != 'B') && (buff[1] != 'M')) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "File '%s' does not appear to be a valid bitmap image.", filenameOut);
@@ -402,13 +432,16 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             return;
         }
 
+        // Read the image
         ppl_bmp_bmpread(&c->errcontext, infile, &bmpdata);
+        // Report a failure to read the image
         if (bmpdata.data == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Reading of bitmap image data failed");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "");
             return;
         }
 
+        // The pixel coordinates and values are dimensionless
         pplObjNum(&firstEntries[0], 0, 0, 0);
         firstEntries[0].refCount = 1;
         pplObjNum(&firstEntries[1], 0, 0, 0);
@@ -418,7 +451,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         sizeX = bmpdata.width;
         sizeY = bmpdata.height;
 
+        // Extract the requested color component of each pixel into an array of bytes
         bmpchars = (unsigned char *) malloc(sizeX * sizeY);
+        // Failure to allocate memory is reported as an error
         if (bmpchars == NULL) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Out of memory whilst reading data from input file.");
@@ -442,6 +477,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     if (NcolRequired == 2) {
         // Check that the firstEntries above have the same units as any supplied ranges
         if (minSet[0] || maxSet[0]) {
+            // The x range must have the same units as the data
             if (!ppl_unitsDimEqual(unit + 0, firstEntries + 0)) {
                 ppl_snprintfTrunc(
                         c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -452,7 +488,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                 return;
             }
         }
+        // Check that the y range has the same units as the data
         if (minSet[1] || maxSet[1]) {
+            // The y range must have the same units as the data
             if (!ppl_unitsDimEqual(unit + 1, firstEntries + 1)) {
                 ppl_snprintfTrunc(
                         c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -472,6 +510,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             long int *sortArray = (long int *) malloc(2 * i * sizeof(long int));
             long int *sortArrayI = sortArray + i;
             long int j;
+            // Failure to allocate memory is reported as an error
             if (sortArray == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
                 ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
@@ -479,10 +518,13 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             }
             for (j = 0; j < i; j++) sortArray[j] = j;
 
+            // Sort an array of indices by x value, and make the inverse mapping
             compareZeroPoint = xdata;
             qsort((void *) sortArray, i, sizeof(long int), interpolateSorter);
             for (j = 0; j < i; j++) sortArrayI[sortArray[j]] = j;
 
+            // Permute the x and y values into sorted order in place, keeping the index arrays up to date as values are
+            // swapped
             for (j = 0; j < i; j++) {
                 double tmp, tmp2;
                 long int tmp3;
@@ -509,6 +551,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             if ((minSet[1]) && (ydata[j] < min[1])) continue; // Ignore out-of-range datapoints
             if ((maxSet[1]) && (ydata[j] > max[1])) continue; // Ignore out-of-range datapoints
 
+            // Warn about repeated x values, which GSL cannot interpolate, and skip them
             if ((j > 0) && (xdata[j] == xdata[j - 1])) {
                 if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
                     v = firstEntries[0];
@@ -521,7 +564,9 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                 continue;
             }
 
+            // Log-linear interpolation works with the logarithms of x and y, which must be positive
             if (mode == INTERP_LOGLIN) {
+                // Warn about values which have no logarithm, and skip them
                 if ((xdata[j] <= 0.0) || (ydata[j] <= 0.0)) {
                     if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
                         v = firstEntries[0];
@@ -552,6 +597,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                     "%s interpolation is only possible on data sets with members at at least %d distinct values of x.",
                     splineTypeName, NxRequired);
             ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
+            // Free the arrays, if they were not allocated in the local memory context
             if (NcolRequired >= 3) {
                 free(xdata);
                 xdata = NULL;
@@ -564,12 +610,14 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             int status = 0;
             splineObj = gsl_spline_alloc(splineType, k);
             accel = gsl_interp_accel_alloc();
+            // Failure to create the GSL spline is reported as an error
             if (splineObj == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Failed to make interpolation object.");
                 ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
                 return;
             }
+            // Failure to create the GSL accelerator is reported as an error
             if (accel == NULL) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Failed to make GSL interpolation accelerator.");
@@ -577,6 +625,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
                 return;
             }
             status = gsl_spline_init(splineObj, xdata, ydata, k);
+            // Report a failure to fit the spline
             if (status) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Error whilst creating interpolation object: %s", gsl_strerror(status));
@@ -599,6 +648,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
     // Generate a function descriptor for this spline
     desc = (splineDescriptor *) malloc(sizeof(splineDescriptor));
+    // Failure to allocate memory is reported as an error
     if (desc == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Out of memory whilst adding interpolation object to function dictionary.");
@@ -614,6 +664,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
     desc->splineObj = splineObj;
     desc->accelerator = accel;
     desc->filename = (char *) malloc(strlen(filenameOut) + 1);
+    // Failure to allocate memory is reported as an error
     if (desc->filename == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Out of memory whilst adding interpolation object to function dictionary.");
@@ -625,6 +676,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
 
     // Make a new function descriptor
     funcPtr = (pplFunc *) malloc(sizeof(pplFunc));
+    // Failure to allocate memory is reported as an error
     if (funcPtr == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Out of memory whilst adding interpolation object to function dictionary.");
@@ -655,9 +707,11 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
         pplObj val;
         pplObj *obj = NULL;
 
+        // Look up the variable which is to hold the new function
         ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &obj,
                                  PARSE_interpolate2d_varnames, PARSE_interpolate2d_varname_varnames);
         if ((c->errStat.status) || (obj == NULL)) return;
+        // A global declaration at the top level cannot be overwritten
         if (obj->objType == PPLOBJ_GLOB) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Variable declared global in global namespace.");
@@ -665,6 +719,7 @@ void ppl_directive_interpolate(ppl_context *c, parserLine *pl, parserOutput *in,
             return;
         }
 
+        // Replace the variable's old value with the function, keeping its reference count and storage
         om = obj->amMalloced;
         rc = obj->refCount;
         obj->amMalloced = 0;
@@ -694,7 +749,9 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
                          char *errout) {
     double dblin, dblout;
 
+    // The argument must have the same units as the x data
     if (!ppl_unitsDimEqual(in, &desc->unitX)) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(
@@ -709,7 +766,9 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
         }
         return;
     }
+    // The argument must be real
     if (in->flagComplex) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(
@@ -735,6 +794,7 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     {
         long i, pos, ss, len = desc->sizeX, xystep = desc->sizeY, Nsteps = (long) ceil(log(desc->sizeX) / log(2));
         double *data = (double *) desc->splineObj;
+        // Binary search for the last data point at or below the argument
         for (pos = i = 0; i < Nsteps; i++) {
             ss = 1 << (Nsteps - 1 - i);
             if (pos + ss >= len) continue;
@@ -748,6 +808,7 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
 
     // Catch interpolation failure
     if (*status != 0) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(errout, LSTR_LENGTH, "Error whilst evaluating the %s(x) function: %s", FuncName,
@@ -764,7 +825,9 @@ void ppl_spline_evaluate(ppl_context *c, char *FuncName, splineDescriptor *desc,
     // If loglinear interpolation, unlog output value
     if (desc->logInterp) dblout = exp(dblout);
 
+    // The result must be finite
     if (!gsl_finite(dblout)) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(errout, LSTR_LENGTH,
@@ -802,7 +865,9 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
                            const pplObj *in2, const unsigned char bmp, pplObj *out, int *status, char *errout) {
     double dblin1, dblin2, dblout;
 
+    // The first argument must have the same units as the x data
     if (!ppl_unitsDimEqual(in1, &desc->unitX)) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(
@@ -817,7 +882,9 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
         }
         return;
     }
+    // The first argument must be real
     if (in1->flagComplex) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(
@@ -832,7 +899,9 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
         return;
     }
 
+    // The second argument must have the same units as the y data
     if (!ppl_unitsDimEqual(in2, &desc->unitY)) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(
@@ -847,7 +916,9 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
         }
         return;
     }
+    // The second argument must be real
     if (in2->flagComplex) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(
@@ -862,9 +933,11 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
         return;
     }
 
+    // Interpolate the scattered data, or look up the pixel of the bitmap, scaling its value to the range 0 to 1
     dblin1 = in1->real;
     dblin2 = in2->real;
 
+    // Scattered data, or a bitmap
     if (!bmp) {
         ppl_interp2d_eval(c, &dblout, &c->set->graph_current, (double *) desc->splineObj, desc->sizeX, 2, 3, dblin1,
                           dblin2);
@@ -875,7 +948,9 @@ void ppl_interp2d_evaluate(ppl_context *c, const char *FuncName, splineDescripto
         else dblout = ((double) (((unsigned char *) desc->splineObj)[x + y * desc->sizeX])) / 255.0;
     }
 
+    // The result must be finite
     if (!gsl_finite(dblout)) {
+        // Report an error, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             *status = 1;
             ppl_snprintfTrunc(errout, LSTR_LENGTH,

@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws image canvas items, made with the image command, which include a bitmap image in the output. The image is read
+// by one of the bmp_*read.c readers according to its type (BMP, GIF, JPEG or PNG), its palette is optimised by
+// bmp_optimise.c, any transparent color is set, and it is compressed with zlib (or left in its original DCT encoding
+// for JPEGs) and written as an ASCII85-encoded postscript image, during the final rendering pass of canvasDraw.c.
+
 #define _PPL_EPS_IMAGE 1
 
 #include <stdlib.h>
@@ -52,6 +57,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_image_RenderEPS(EPSComm *x) {
+    // Variables for the image and its placement
     char msg[PPL_MSG_LENGTH];
     bitmap_data data;
     FILE *infile;
@@ -63,11 +69,13 @@ void eps_image_RenderEPS(EPSComm *x) {
     uLongf zlen; // Length of buffer passed to zlib
     static unsigned char transparency_buff[3];
 
+    // Start with no image data
     data.data = data.palette = data.trans = NULL;
     data.type = 0;
     data.XDPI = data.YDPI = 180;
     data.TargetCompression = BMP_ENCODING_FLATE;
 
+    // Label the item in the postscript, and expand the filename
     fprintf(x->epsbuffer, "%% Canvas item %d [bitmap image]\n", x->current->id);
 
     // Expand filename if it contains wildcards
@@ -77,17 +85,20 @@ void eps_image_RenderEPS(EPSComm *x) {
         char fName[FNAME_LENGTH];
         {
             int j, k;
+            // Escape spaces in the filename before passing it to wordexp
             for (j = k = 0; ((x->current->text[j] != '\0') && (k < FNAME_LENGTH - 1));) {
                 if (x->current->text[j] == ' ') fName[k++] = '\\';
                 fName[k++] = x->current->text[j++];
             }
             fName[k++] = '\0';
         }
+        // Expand ~ and environment variables in the filename
         if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
             return;
         }
+        // Expand wildcards in the filename
         if ((glob(wordExp.we_wordv[0], 0, NULL, &globData) != 0) || (globData.gl_pathc <= 0)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", fName);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -102,6 +113,7 @@ void eps_image_RenderEPS(EPSComm *x) {
 
     // Open input data file
     infile = fopen(filename, "r");
+    // Report a failure to open the file
     if (infile == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not open input file '%s'", filename);
         ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -112,6 +124,7 @@ void eps_image_RenderEPS(EPSComm *x) {
     // Use magic to determine file type
     for (i = 0; i < 3; i++) {
         j = fgetc(infile);
+        // Report a file which is too short to identify
         if (j == EOF) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not read any image data from the input file '%s'", filename);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -125,6 +138,7 @@ void eps_image_RenderEPS(EPSComm *x) {
     else if ((buff[0] == 0xff) && (buff[1] == 0xd8) && (buff[2] == 0xff)) ImageType = SW_BITMAP_JPG;
     else if ((buff[0] == 'B') && (buff[1] == 'M')) ImageType = SW_BITMAP_BMP;
     else if ((buff[0] == 137) && (buff[1] == 'P') && (buff[2] == 'N')) ImageType = SW_BITMAP_PNG;
+    // Report a file of unrecognised type
     else {
         ppl_snprintfTrunc(
                 msg, sizeof(msg),
@@ -178,6 +192,8 @@ void eps_image_RenderEPS(EPSComm *x) {
     // If user has specified a transparent color, change transparency properties now
     if (x->current->CustomTransparency) {
         data.trans = NULL; // Turn off any transparency which may have been present in the original image
+        // In a paletted image, the transparent color is a palette entry; in an RGB image it is a color; in a greyscale
+        // image, it is a grey level
         if (data.colour == BMP_COLOUR_PALETTE) {
             for (i = 0; i < data.pal_len; i++)
                 if (((unsigned char) x->current->TransColR == data.palette[3 * i]) &&
@@ -198,6 +214,7 @@ void eps_image_RenderEPS(EPSComm *x) {
         {
             int magic;
 
+            // The step between grey levels at this depth
             if (data.depth == 1) {
                 magic = 255;
             } //   2-color greyscale
@@ -211,6 +228,7 @@ void eps_image_RenderEPS(EPSComm *x) {
                 magic = 1;
             } // 256-color greyscale
 
+            // Only a grey which is one of the image's levels can be transparent
             if ((x->current->TransColR % magic) == 0) {
                 data.trans = transparency_buff;
                 data.trans[0] = (unsigned char) (x->current->TransColR / magic);
@@ -231,6 +249,7 @@ void eps_image_RenderEPS(EPSComm *x) {
         case BMP_ENCODING_FLATE:
             zlen = data.data_len * 1.01 + 12; // Nasty guess at size of buffer needed.
             imagez = (unsigned char *) ppl_memAlloc(zlen);
+            // Failure to allocate memory is reported as an error
             if (imagez == NULL) {
                 ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
                 return;
@@ -238,7 +257,9 @@ void eps_image_RenderEPS(EPSComm *x) {
             if (DEBUG) { ppl_log(&x->c->errcontext, "Calling zlib to compress image data"); }
             j = compress2(imagez, &zlen, data.data, data.data_len, 9); // Call zlib to do deflation
 
+            // If zlib fails, write the image uncompressed
             if (j != 0) {
+                // Log the error in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "zlib returned error code %d\n", j);
                     ppl_log(&x->c->errcontext, msg);
@@ -246,13 +267,16 @@ void eps_image_RenderEPS(EPSComm *x) {
                 data.TargetCompression = BMP_ENCODING_NULL; // Give up trying to compress data
                 break;
             }
+            // Log the compression achieved in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "zlib has completed compression. Before flate: %ld bytes. After flate: %ld bytes",
                                   data.data_len, (long) zlen);
                 ppl_log(&x->c->errcontext, msg);
             }
+            // If compression made the image bigger, write it uncompressed
             if (zlen >= data.data_len) {
+                // Log this in debugging mode
                 if (DEBUG) {
                     ppl_log(&x->c->errcontext,
                             "Using original uncompressed data since zlib made it bigger than it was to start with");
@@ -316,6 +340,7 @@ void eps_image_RenderEPS(EPSComm *x) {
         fprintf(x->epsbuffer, "] setcolorspace\n\n");
     }
 
+    // Write the image dictionary; type 4 images have a mask color for transparency
     fprintf(x->epsbuffer, "<<\n /ImageType %d\n /Width %d\n /Height %d\n /ImageMatrix [%d 0 0 %d 0 %d]\n",
             ((!x->current->NoTransparency) && (data.trans != NULL)) ? 4 : 1, data.width, data.height, data.width,
             -data.height, data.height);

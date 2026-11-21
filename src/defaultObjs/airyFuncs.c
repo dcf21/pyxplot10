@@ -21,8 +21,10 @@
 
 // ----------------------------------------------------------------------------
 
-// This file contains an implementation of the Airy functions for general
-// complex inputs provided courtesy of Matthew Smith.
+// The Airy functions Ai and Bi and their derivatives for complex arguments, used by the airy_ai() family of functions
+// when their arguments are complex (GSL only handles real arguments). Small arguments use the Maclaurin series,
+// intermediate ones a Taylor series about the nearest point in a table of precomputed values, and large ones the
+// asymptotic expansions. The implementation was provided courtesy of Matthew Smith.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +50,8 @@ gsl_complex airy_series_y1(gsl_complex z) {
     z = gsl_complex_mul(c, z);
     c = GSL_COMPLEX_ONE;
     d = GSL_COMPLEX_ZERO;
+    // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
+    // factorial terms
     for (i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
@@ -67,6 +71,8 @@ gsl_complex airy_series_y1_diff(gsl_complex z) {
     z = gsl_complex_mul(c, z);
     c = gsl_complex_div_real(c, 2.0);
     d = GSL_COMPLEX_ZERO;
+    // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
+    // factorial terms
     for (i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
@@ -87,6 +93,8 @@ gsl_complex airy_series_y2(gsl_complex z) {
     z = gsl_complex_mul(z, z);
     z = gsl_complex_mul(c, z);
     d = GSL_COMPLEX_ZERO;
+    // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
+    // factorial terms
     for (i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
@@ -107,6 +115,8 @@ gsl_complex airy_series_y2_diff(gsl_complex z) {
     z = gsl_complex_mul(c, z);
     c = GSL_COMPLEX_ONE;
     d = GSL_COMPLEX_ZERO;
+    // Sum the series to the term in z^45, each term following from the previous one by a factor of z^3 and the next
+    // factorial terms
     for (i = 0; i <= 45; i += 3) {
         d = gsl_complex_add(d, c);
         c = gsl_complex_mul(c, z);
@@ -125,8 +135,12 @@ gsl_complex airy_series_y2_diff(gsl_complex z) {
 //! \param [out] z0 - The expansion point
 
 void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
+    // The table divides the complex plane into annuli by modulus, and each annulus into sectors by argument; z0 is the
+    // centre of the sector which contains the input
     int sector;
+    // Annuli with moduli above 6
     if (mod > 6.0) {
+        // The outermost annulus, divided into sectors of 10 degrees
         if (mod > 7.4) {
             sector = (int) floor(arg / 0.174532925199432957);
             if (sector == 18) sector = 17;
@@ -204,11 +218,13 @@ void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(-0.411631872053758450, 1.154133085728225467);
                     *b = gsl_complex_rect(3.438836982285023958, 1.020294784165429366);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(8.3, 0.0);
                 *a = gsl_complex_rect(1.97486174966769314e-8, 0.0);
                 *b = gsl_complex_rect(-5.74753973633800903e-8, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-8.1, 0.0);
                 *a = gsl_complex_rect(-0.142908147093581424, 0.0);
@@ -279,11 +295,13 @@ void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(-0.369525268938545475, -0.982363120132267512);
                     *b = gsl_complex_rect(-2.640584453161403622, 1.000850197648983227);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(6.9, 0.0);
                 *a = gsl_complex_rect(9.78611333926603763e-7, 0.0);
                 *b = gsl_complex_rect(-2.60492608708626216e-6, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-6.7, 0.0);
                 *a = gsl_complex_rect(-0.0783124718012559192, 0.0);
@@ -291,6 +309,7 @@ void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b
             }
         }
     } else {
+        // The annulus with moduli between 4.6 and 6, divided into sectors of 15 degrees
         if (mod > 4.6) {
             sector = (int) floor(arg / 0.261799387799149436);
             if (sector == 12) sector = 11;
@@ -344,11 +363,13 @@ void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(0.565834486636532210, 0.702465032137459288);
                     *b = gsl_complex_rect(1.693217682289265054, -1.266250187624501159);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(5.5, 0.0);
                 *a = gsl_complex_rect(0.0000336853119085998144, 0.0);
                 *b = gsl_complex_rect(-0.0000804633913055651434, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-5.3, 0.0);
                 *a = gsl_complex_rect(0.182567931068339499, 0.0);
@@ -395,17 +416,21 @@ void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(-0.399255021084886709, -0.620073474688977667);
                     *b = gsl_complex_rect(-1.356140170328659265, 0.747979061496786733);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(4.1, 0.0);
                 *a = gsl_complex_rect(0.000773629663781597187, 0.0);
                 *b = gsl_complex_rect(-0.00161061146122698678, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-3.9, 0.0);
                 *a = gsl_complex_rect(-0.147419905640744195, 0.0);
                 *b = gsl_complex_rect(-0.747558085535477472, 0.0);
             }
+            // Small inputs: use the Maclaurin series
             if (mod < 3.2) {
+                // The innermost annulus, near the positive real axis
                 if (arg < 0.349) {
                     *z0 = gsl_complex_rect(2.7, 0.0);
                     *a = gsl_complex_rect(0.0111985354510658809, 0.0);
@@ -435,8 +460,12 @@ void airy_lookup_ai(const double mod, double arg, gsl_complex *a, gsl_complex *b
 //! \param [out] z0 - The expansion point
 
 void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b, gsl_complex *z0) {
+    // The table divides the complex plane into annuli by modulus, and each annulus into sectors by argument; z0 is the
+    // centre of the sector which contains the input
     int sector;
+    // Annuli with moduli above 6
     if (mod > 6.0) {
+        // The outermost annulus, divided into sectors of 10 degrees
         if (mod > 7.4) {
             sector = (int) floor(arg / 0.174532925199432957);
             if (sector == 18) sector = 17;
@@ -514,11 +543,13 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(-1.197232705740973243, -0.398846715021573711);
                     *b = gsl_complex_rect(-1.063357695753367352, 3.318117262231328193);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(7.9, 0.0);
                 *a = gsl_complex_rect(907790.616061993809, 0.0);
                 *b = gsl_complex_rect(2.52192411395678168e6, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-8.1, 0.0);
                 *a = gsl_complex_rect(-0.302303309060702033, 0.0);
@@ -589,11 +620,13 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(1.035372887759647344, -0.347508845565481187);
                     *b = gsl_complex_rect(-1.048748656729446018, -2.499497840255305692);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(6.5, 0.0);
                 *a = gsl_complex_rect(22340.6077183969982, 0.0);
                 *b = gsl_complex_rect(56062.4958425228607, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-6.7, 0.0);
                 *a = gsl_complex_rect(0.341727738606750260, 0.0);
@@ -601,6 +634,7 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
             }
         }
     } else {
+        // The annulus with moduli between 4.6 and 6, divided into sectors of 15 degrees
         if (mod > 4.6) {
             sector = (int) floor(arg / 0.261799387799149436);
             if (sector == 12) sector = 11;
@@ -654,11 +688,13 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(-0.760409929247544386, 0.516811161929970686);
                     *b = gsl_complex_rect(1.367896840330848079, 1.549999754654686720);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(5.1, 0.0);
                 *a = gsl_complex_rect(819.209658679961277, 0.0);
                 *b = gsl_complex_rect(1807.33448135136778, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-5.3, 0.0);
                 *a = gsl_complex_rect(-0.323716076748792404, 0.0);
@@ -705,11 +741,13 @@ void airy_lookup_bi(const double mod, double arg, gsl_complex *a, gsl_complex *b
                     *a = gsl_complex_rect(0.707766208050378964, -0.340021058812675720);
                     *b = gsl_complex_rect(-0.845016967250801511, -1.168521092980009461);
             }
+            // Points close to the positive real axis use an expansion point on the axis
             if (arg < 0.04) {
                 *z0 = gsl_complex_rect(3.7, 0.0);
                 *a = gsl_complex_rect(47.5607474995894429, 0.0);
                 *b = gsl_complex_rect(87.8907272628334109, 0.0);
             }
+            // Points close to the negative real axis use an expansion point on the axis
             if (arg > 3.0543) {
                 *z0 = gsl_complex_rect(-3.9, 0.0);
                 *a = gsl_complex_rect(0.372890578319395619, 0.0);
@@ -1058,11 +1096,14 @@ void airy_series_taylor(gsl_complex *dp, gsl_complex *dq, gsl_complex zd, gsl_co
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
+    // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
+    // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int conjugate, i, max;
     double mod, arg;
     gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
+    // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
     if (mod < 3.2 && (mod < 2.0 || arg > 1.05 || arg < -1.05)) {
         d = gsl_complex_mul_real(airy_series_y1(in), 0.355028053887817239);
         d = gsl_complex_sub(d, gsl_complex_mul_real(airy_series_y2(in), 0.258819403792806798));
@@ -1070,6 +1111,8 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
         *out = d;
         return;
     } else if (mod < 8.8) {
+        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
+        // work in the upper half-plane
         if (arg < 0.0) {
             conjugate = 1;
             in = gsl_complex_conjugate(in);
@@ -1092,11 +1135,13 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             return;
         }
     } else {
+        // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
+        // Large inputs near the negative real axis, where the function oscillates
         if (arg < -2.094395102393195492 || arg > 2.094395102393195492) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
             max = 29;
@@ -1106,6 +1151,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             c = GSL_COMPLEX_ONE;
             dp = GSL_COMPLEX_ZERO;
             dq = GSL_COMPLEX_ZERO;
+            // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
             for (i = 0; i <= max; i += 2) {
                 dp = gsl_complex_add(dp, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) 48 * (i + 1)));
@@ -1115,6 +1161,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
                 c = gsl_complex_div(c, zah);
             }
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
+            // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
@@ -1133,6 +1180,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             if (mod > 16.0) max = 12;
             c = GSL_COMPLEX_ONE;
             d = GSL_COMPLEX_ZERO;
+            // Sum the terms of the asymptotic series
             for (i = 0; i <= max; i++) {
                 d = gsl_complex_add(d, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) -48 * (i + 1)));
@@ -1141,6 +1189,7 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, -0.25));
             d = gsl_complex_div_real(d, 3.544907701811032054);
             c = gsl_complex_div_real(zah, -1.5);
+            // The exponential factor would overflow
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
@@ -1161,11 +1210,14 @@ void airy_ai(gsl_complex in, gsl_complex *out, int *status, char *errText) {
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
+    // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
+    // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int conjugate, i, max;
     double mod, arg;
     gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
+    // Small inputs: use the Maclaurin series
     if (mod < 3.2) {
         d = gsl_complex_mul_real(airy_series_y1(in), 0.614926627446000735);
         d = gsl_complex_add(d, gsl_complex_mul_real(airy_series_y2(in), 0.448288357353826357));
@@ -1173,6 +1225,8 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
         *out = d;
         return;
     } else if (mod < 8.8) {
+        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
+        // work in the upper half-plane
         if (arg < 0.0) {
             conjugate = 1;
             in = gsl_complex_conjugate(in);
@@ -1195,11 +1249,13 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             return;
         }
     } else {
+        // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
+        // Large inputs near the negative real axis, where the function oscillates
         if (arg < -1.63 || arg > 1.63) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
             max = 29;
@@ -1209,6 +1265,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             c = GSL_COMPLEX_ONE;
             dp = GSL_COMPLEX_ZERO;
             dq = GSL_COMPLEX_ZERO;
+            // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
             for (i = 0; i <= max; i += 2) {
                 dp = gsl_complex_add(dp, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) 48 * (i + 1)));
@@ -1218,6 +1275,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
                 c = gsl_complex_div(c, zah);
             }
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
+            // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
@@ -1236,6 +1294,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             if (mod > 16.0) max = 12;
             c = GSL_COMPLEX_ONE;
             d = GSL_COMPLEX_ZERO;
+            // Sum the terms of the asymptotic series
             for (i = 0; i <= max; i++) {
                 d = gsl_complex_add(d, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i + 1) * (6 * i + 5)) / ((double) 48 * (i + 1)));
@@ -1244,6 +1303,7 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, -0.25));
             d = gsl_complex_div_real(d, 1.772453850905516027);
             c = gsl_complex_div_real(zah, 1.5);
+            // The exponential factor would overflow
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
@@ -1276,11 +1336,14 @@ void airy_bi(gsl_complex in, gsl_complex *out, int *status, char *errText) {
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) {
+    // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
+    // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int conjugate, i, max;
     double mod, arg;
     gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
+    // Small inputs, away from the positive real axis where the series converges slowly: use the Maclaurin series
     if (mod < 3.2 && (mod < 2.0 || arg > 1.05 || arg < -1.05)) {
         d = gsl_complex_mul_real(airy_series_y1_diff(in), 0.355028053887817239);
         d = gsl_complex_sub(d, gsl_complex_mul_real(airy_series_y2_diff(in), 0.258819403792806798));
@@ -1288,6 +1351,8 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
         *out = d;
         return;
     } else if (mod < 8.8) {
+        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
+        // work in the upper half-plane
         if (arg < 0.0) {
             conjugate = 1;
             in = gsl_complex_conjugate(in);
@@ -1310,11 +1375,13 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             return;
         }
     } else {
+        // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
+        // Large inputs near the negative real axis, where the function oscillates
         if (arg < -2.094395102393195492 || arg > 2.094395102393195492) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
             max = 29;
@@ -1324,6 +1391,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             c = GSL_COMPLEX_ONE;
             dp = GSL_COMPLEX_ZERO;
             dq = GSL_COMPLEX_ZERO;
+            // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
             for (i = 0; i <= max; i += 2) {
                 dp = gsl_complex_add(dp, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) 48 * (i + 1)));
@@ -1333,6 +1401,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
                 c = gsl_complex_div(c, zah);
             }
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
+            // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
@@ -1351,6 +1420,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             if (mod > 16.0) max = 12;
             c = GSL_COMPLEX_ONE;
             d = GSL_COMPLEX_ZERO;
+            // Sum the terms of the asymptotic series
             for (i = 0; i <= max; i++) {
                 d = gsl_complex_add(d, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) -48 * (i + 1)));
@@ -1359,6 +1429,7 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, 0.25));
             d = gsl_complex_div_real(d, -3.544907701811032054);
             c = gsl_complex_div_real(zah, -1.5);
+            // The exponential factor would overflow
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
@@ -1379,11 +1450,14 @@ void airy_ai_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) {
+    // mod and arg are the modulus and argument of the input. Small inputs use the Maclaurin series; intermediate ones a
+    // Taylor series about the nearest of a table of points; and large ones the asymptotic expansions.
     int conjugate, i, max;
     double mod, arg;
     gsl_complex a, b, c, d, dp, dq, zah, zd, z0;
     mod = gsl_complex_abs(in);
     arg = gsl_complex_arg(in);
+    // Small inputs: use the Maclaurin series
     if (mod < 3.2) {
         d = gsl_complex_mul_real(airy_series_y1_diff(in), 0.614926627446000735);
         d = gsl_complex_add(d, gsl_complex_mul_real(airy_series_y2_diff(in), 0.448288357353826357));
@@ -1391,6 +1465,8 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
         *out = d;
         return;
     } else if (mod < 8.8) {
+        // The function is real on the real axis, so its value below the axis is the conjugate of its value above it;
+        // work in the upper half-plane
         if (arg < 0.0) {
             conjugate = 1;
             in = gsl_complex_conjugate(in);
@@ -1413,11 +1489,13 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             return;
         }
     } else {
+        // Large inputs: the result would overflow
         if (log(mod) > 440.0) {
             *status = 2; // calculation will overflow
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
             return;
         }
+        // Large inputs near the negative real axis, where the function oscillates
         if (arg < -1.63 || arg > 1.63) {
             zah = gsl_complex_pow_real(gsl_complex_negative(in), 1.5);
             max = 29;
@@ -1427,6 +1505,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             c = GSL_COMPLEX_ONE;
             dp = GSL_COMPLEX_ZERO;
             dq = GSL_COMPLEX_ZERO;
+            // Sum the even and odd terms of the asymptotic series separately, to form its oscillating parts
             for (i = 0; i <= max; i += 2) {
                 dp = gsl_complex_add(dp, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) 48 * (i + 1)));
@@ -1436,6 +1515,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
                 c = gsl_complex_div(c, zah);
             }
             c = gsl_complex_add_real(gsl_complex_div_real(zah, 1.5), 0.785398163397448309);
+            // The trigonometric factors would overflow
             if (GSL_IMAG(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");
@@ -1454,6 +1534,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             if (mod > 16.0) max = 12;
             c = GSL_COMPLEX_ONE;
             d = GSL_COMPLEX_ZERO;
+            // Sum the terms of the asymptotic series
             for (i = 0; i <= max; i++) {
                 d = gsl_complex_add(d, c);
                 c = gsl_complex_mul_real(c, ((double) (6 * i - 1) * (6 * i + 7)) / ((double) 48 * (i + 1)));
@@ -1462,6 +1543,7 @@ void airy_bi_diff(gsl_complex in, gsl_complex *out, int *status, char *errText) 
             d = gsl_complex_mul(d, gsl_complex_pow_real(in, 0.25));
             d = gsl_complex_div_real(d, 1.772453850905516027);
             c = gsl_complex_div_real(zah, 1.5);
+            // The exponential factor would overflow
             if (GSL_REAL(c) > 650.0) {
                 *status = 2; // risk of overflow
                 ppl_snprintfTrunc(errText, LSTR_LENGTH, "Overflow error within Airy function");

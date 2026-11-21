@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Stores the arrows which users add to graphs with the "set arrow" command: adding, removing and resetting them,
+// comparing and copying lists of them, and describing them for the show and save commands. The arrows are drawn by
+// epsMaker/eps_plot_labelsarrows.c. Some of these helpers, which read coordinates and their coordinate systems, are
+// shared with labels.c.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -91,8 +96,10 @@ int pplarrow_getAxis(const parserOutput *in, const int *ptab, const int index) {
 int pplarrow_checkAxis(ppl_context *context, const parserOutput *in, const parserLine *pl, const int *ptab,
                        const int index) {
     const pplObj *o = &in->stk[ptab[index]];
+    // An axis number was given: check that it is in range
     if (o->objType == PPLOBJ_NUM) {
         const int i = (int) round(o->real);
+        // Report an axis number out of range
         if ((i < 0) || (i >= MAX_AXES)) {
             ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                               "Axis number %d is out of range; axis numbers must be in the range 0 - %d", i,
@@ -121,6 +128,8 @@ void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, cons
     if (o->objType != PPLOBJ_NUM) return;
     if (((system == SW_SYSTEM_GRAPH) || (system == SW_SYSTEM_PAGE)) && (!o->dimensionless))
         for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+            // Dimensional coordinates must have units of length: the exponent of every base unit must be zero, except
+            // length, which must be one
             if (o->exponent[i] != (i == UNIT_LENGTH)) {
                 ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                                   "Coordinates specified in the graph and page systems must have dimensions of "
@@ -128,6 +137,7 @@ void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, cons
                                   ppl_printUnit(context, o, NULL, NULL, 0, 1, 0));
                 ppl_tbAddLine(context, pl, ERR_UNIT, in->stkCharPos[ptab[index]], "");
             }
+    // Coordinates must be finite
     if (!gsl_finite(o->real)) {
         ppl_snprintfTrunc(context->errStat.errBuff, sizeof(context->errStat.errBuff),
                           "Coordinates specified are not finite.");
@@ -146,10 +156,12 @@ void pplarrow_checkDimensions(ppl_context *context, const parserOutput *in, cons
 void pplarrow_copyCoordinate(parserOutput *in, const int *ptab, const int index, const int system, pplObj *out) {
     pplObj tempobj;
     pplObj *o = &in->stk[ptab[index]];
+    // Coordinates which were not given are zero
     if (o->objType != PPLOBJ_NUM) {
         o = &tempobj;
         pplObjNum(&tempobj, 0, 0, 0);
     }
+    // Dimensionless coordinates in the graph and page systems are in centimetres; convert them to metres
     if (((system == SW_SYSTEM_GRAPH) || (system == SW_SYSTEM_PAGE)) && (o->dimensionless)) {
         o->dimensionless = 0;
         o->exponent[UNIT_LENGTH] = 1;
@@ -167,11 +179,13 @@ void pplarrow_copyCoordinate(parserOutput *in, const int *ptab, const int index,
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
 void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
+    // The coordinate system of each end of the arrow, and the record of the arrow
     int i;
     int system_x0, system_y0, system_z0, system_x1, system_y1, system_z1;
     char *tempstr;
     pplarrow_object *out;
 
+    // Read the coordinate system of each coordinate of the two ends of the arrow
     system_x0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x0_system);
     system_y0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y0_system);
     system_z0 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z0_system);
@@ -179,6 +193,7 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     system_y1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y1_system);
     system_z1 = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z1_system);
 
+    // Check the units of each coordinate
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x0, system_x0);
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_y0, system_y0);
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_z0, system_z0);
@@ -186,6 +201,7 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_y1, system_y1);
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_z1, system_z1);
 
+    // Check the axis number of each coordinate
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_x0_axis)) return;
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_y0_axis)) return;
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z0_axis)) return;
@@ -193,13 +209,16 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_y1_axis)) return;
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z1_axis)) return;
 
+    // Find the arrow with this ID in the list, which is sorted by ID, or the place where it belongs
     i = (int) round(in->stk[ptab[PARSE_INDEX_arrow_id]].real);
     while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
+    // Reuse an existing arrow with this ID, or insert a new one
     if ((*inlist != NULL) && ((*inlist)->id == i)) {
         out = *inlist;
         ppl_withWordsDestroy(context, &out->style);
     } else {
         out = (pplarrow_object *) malloc(sizeof(pplarrow_object));
+        // Failure to allocate memory is reported as an error
         if (out == NULL) {
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return;
@@ -218,6 +237,7 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     // Check what style keywords have been specified in the 'with' clause
     ppl_withWordsFromDict(context, in, pl, ptab, 0, &out->style);
 
+    // Store the coordinate system, axis number and value of each coordinate
     out->system_x0 = system_x0;
     out->system_y0 = system_y0;
     out->system_z0 = system_z0;
@@ -225,6 +245,7 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     out->system_y1 = system_y1;
     out->system_z1 = system_z1;
 
+    // Store the axis number of each coordinate
     out->axis_x0 = pplarrow_getAxis(in, ptab, PARSE_INDEX_x0_axis);
     out->axis_y0 = pplarrow_getAxis(in, ptab, PARSE_INDEX_y0_axis);
     out->axis_z0 = pplarrow_getAxis(in, ptab, PARSE_INDEX_z0_axis);
@@ -232,6 +253,7 @@ void pplarrow_add(ppl_context *context, pplarrow_object **inlist, parserOutput *
     out->axis_y1 = pplarrow_getAxis(in, ptab, PARSE_INDEX_y1_axis);
     out->axis_z1 = pplarrow_getAxis(in, ptab, PARSE_INDEX_z1_axis);
 
+    // Store the value of each coordinate
     pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_x0, system_x0, &out->x0);
     pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_y0, system_y0, &out->y0);
     pplarrow_copyCoordinate(in, ptab, PARSE_INDEX_z0, system_z0, &out->z0);
@@ -256,12 +278,16 @@ void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutpu
     int pos;
     pplarrow_object **first;
 
+    // pos is the position in the parser's output stack of the list of arrow IDs
     first = inlist;
     pos = ptab[PARSE_INDEX_0arrow_list];
 
+    // With no IDs, remove every arrow
     if ((in->stk[pos].objType != PPLOBJ_NUM) || (in->stk[pos].real <= 0))
         pplarrow_list_destroy(context, inlist); // set noarrow with no number specified means all arrows deleted
+    // Otherwise remove each listed arrow
     else {
+        // Each item in the parser's list holds the position of the next item, or zero at the end of the list
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             int i;
             pos = (int) round(in->stk[pos].real);
@@ -269,6 +295,7 @@ void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutpu
             i = (int) round(in->stk[pos + ptab[PARSE_INDEX_arrow_id]].real);
             inlist = first;
             while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
+            // Unlink and free the arrow, or warn that it does not exist
             if ((*inlist != NULL) && ((*inlist)->id == i)) {
                 pplarrow_object *obj = *inlist;
                 *inlist = (*inlist)->next;
@@ -293,6 +320,7 @@ void pplarrow_remove(ppl_context *context, pplarrow_object **inlist, parserOutpu
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
 void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
+    // pos is the position in the parser's output stack of the list of arrow IDs
     int pos;
     pplarrow_object **first;
 
@@ -300,6 +328,7 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
     first = inlist;
     pos = ptab[PARSE_INDEX_0arrow_list];
 
+    // With no IDs, replace all arrows with a copy of the default list
     if ((in->stk[pos].objType != PPLOBJ_NUM) || (in->stk[pos].real <= 0)) {
         pplarrow_list_destroy(context, inlist);
         pplarrow_list_copy(
@@ -307,6 +336,8 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
                 &context->set
                          ->pplarrow_list_default); // Check to see whether we are unsetting ALL arrows, and if so, use the copy command
     } else {
+        // Otherwise restore the default definition of each listed arrow. Each item in the parser's list holds the
+        // position of the next item, or zero at the end of the list.
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             int i;
             pplarrow_object *obj;
@@ -314,13 +345,16 @@ void pplarrow_unset(ppl_context *context, pplarrow_object **inlist, parserOutput
             if (pos <= 0) break;
             i = (int) round(in->stk[pos + ptab[PARSE_INDEX_arrow_id]].real);
 
+            // Look for the arrow in the list of defaults
             obj = context->set->pplarrow_list_default;
             while ((obj != NULL) && (obj->id < i)) obj = (obj->next);
+            // If it has a default definition, insert a copy of it into the list in the right place
             if ((obj != NULL) && (obj->id == i)) {
                 pplarrow_object *new;
                 inlist = first;
                 while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
                 new = (pplarrow_object *) malloc(sizeof(pplarrow_object));
+                // Failure to allocate memory is reported as an error
                 if (new == NULL) {
                     ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
                     return;
@@ -360,8 +394,10 @@ unsigned char pplarrow_compare(ppl_context *context, pplarrow_object *a, pplarro
 
 void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_object **in) {
     *out = NULL;
+    // Copy each arrow in turn, with its style, linking the copies together
     while (*in != NULL) {
         *out = (pplarrow_object *) malloc(sizeof(pplarrow_object));
+        // Failure to allocate memory is reported as an error
         if (*out == NULL) {
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
             return;
@@ -382,7 +418,9 @@ void pplarrow_list_copy(ppl_context *context, pplarrow_object **out, pplarrow_ob
 void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist) {
     pplarrow_object *obj, **first;
 
+    // Free each arrow in turn, with its style
     first = inlist;
+    // Unlink the first arrow, and free it
     while (*inlist != NULL) {
         obj = *inlist;
         *inlist = (*inlist)->next;
@@ -401,11 +439,13 @@ void pplarrow_list_destroy(ppl_context *context, pplarrow_object **inlist) {
 //! \param [in] outLen - The size of the buffer <out>
 
 void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, const size_t outLen) {
+    // Describe the start of the arrow: the coordinate system, axis number (if any) and value of each coordinate
     int i = 0;
     ppl_strAppendf(out, outLen, &i, "from %s",
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x0, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i = strlen(out);
+    // Coordinates given against a numbered axis include the axis number
     if (in->system_x0 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_x0);
         i += strlen(out + i);
@@ -416,6 +456,7 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y0, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Coordinates given against a numbered axis include the axis number
     if (in->system_y0 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_y0);
         i += strlen(out + i);
@@ -426,6 +467,7 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z0, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Coordinates given against a numbered axis include the axis number
     if (in->system_z0 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_z0);
         i += strlen(out + i);
@@ -436,6 +478,7 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x1, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Describe the end of the arrow in the same way. Coordinates given against a numbered axis include the axis number.
     if (in->system_x1 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_x1);
         i += strlen(out + i);
@@ -446,6 +489,7 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y1, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Coordinates given against a numbered axis include the axis number
     if (in->system_y1 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_y1);
         i += strlen(out + i);
@@ -456,6 +500,7 @@ void pplarrow_print(ppl_context *context, pplarrow_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z1, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Coordinates given against a numbered axis include the axis number. Then describe the arrow's head and style.
     if (in->system_z1 == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_z1);
         i += strlen(out + i);

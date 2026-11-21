@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the tabulate command, which evaluates functions or reads data files in the same way as the plot command,
+// and writes the resulting columns of numbers to a text file. Each column is written in its own units, which are listed
+// in a ColumnUnits header line, either in an automatically chosen format or in a format supplied by the user.
+
 #define _TABULATE_C 1
 
 #include <stdlib.h>
@@ -76,7 +80,9 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
 
     // Check that the firstEntries above have the same units as any supplied ranges
     for (j = 0; j < Ncolumns; j++)
+        // Only columns with a range need checking
         if (minSet[j] || maxSet[j]) {
+            // The range must have the same units as the data
             if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
                 ppl_snprintfTrunc(
                         msg, sizeof(msg),
@@ -90,7 +96,9 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
 
     // Output a column units line
     fprintf(output, "# ColumnUnits: ");
+    // For each column, write its units and find the factor which converts its values into them
     for (j = 0; j < Ncolumns; j++) {
+        // Dimensionless columns need no conversion
         if (data->firstEntries[j].dimensionless) {
             fprintf(output, "1 "); // This column contains dimensionless data
             multiplier[j] = 1.0;
@@ -110,17 +118,23 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
     // Iterate over columns of data in this data grid, working out which columns of data are all ints, and which are all %f-able data
     for (j = 0; j < Ncolumns; j++) { allInts[j] = allSmall[j] = 1; }
     blk = data->first;
+    // Loop over the blocks of the data table
     while (blk != NULL) {
+        // Loop over the rows in each block
         for (i = 0; i < blk->blockPosition; i++) {
             inRange = 1;
+            // Skip rows with any value outside its column's range
             for (k = 0; k < Ncolumns; k++) {
                 val = blk->data_real[k + Ncolumns * i];
+                // This value is outside the range
                 if ((minSet[k] && (val < min[k])) || (maxSet[k] && (val > max[k]))) {
                     inRange = 0;
                     break;
                 } // Check that value is within range
             }
             if (inRange)
+                // Note which columns contain values which are not all small integers, or not all of a size which can be
+                // written with %f
                 for (k = 0; k < Ncolumns; k++) {
                     val = blk->data_real[k + Ncolumns * i] * multiplier[k];
                     if (!gsl_finite(val)) allInts[k] = 0; // don't try to represent NANs as integers!
@@ -133,21 +147,27 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
         blk = blk->next;
     }
 
-    // Iterate over columns of data in this data grid, working out which columns of data are all ints, and which are all %f-able data
+    // Write out each row of data which falls within the ranges, in the best format for each column or the user's format
     blk = data->first;
     split = 0;
+    // Loop over the blocks of the data table
     while (blk != NULL) {
+        // Loop over the rows in each block; splits in the data are written as blank lines
         for (i = 0; i < blk->blockPosition; i++) {
             inRange = 1;
             if (blk->split[i]) split = 1;
+            // Skip rows with any value outside its column's range
             for (k = 0; k < Ncolumns; k++) {
                 val = blk->data_real[k + Ncolumns * i];
+                // This value is outside the range
                 if ((minSet[k] && (val < min[k])) || (maxSet[k] && (val > max[k]))) {
                     inRange = 0;
                     break;
                 } // Check that value is within range
             }
+            // Write this row
             if (inRange) {
+                // A blank line marks a break in the data
                 if (split) {
                     fprintf(output, "\n");
                     split = 0;
@@ -155,6 +175,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
                 if (format ==
                     NULL) // User has not supplied a format string, and so we just list the contents of each column in turn using best-fit format style
                 {
+                    // Write each column as an integer, a fixed-point number or in exponential notation
                     for (k = 0; k < Ncolumns; k++) {
                         val = blk->data_real[k + Ncolumns * i] * multiplier[k];
                         if (allInts[k]) fprintf(output, "%10d ", (int) val);
@@ -162,7 +183,9 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
                         else fprintf(output, "%17.8e ", val);
                     }
                 } else { // The user has supplied a format string, which we now substitute column values into
+                    // Step through the format string; if it runs out before all the columns are used, it is repeated
                     for (pos = l = 0;; pos++) {
+                        // At the end of the format string, start again if some columns remain
                         if (format[pos] == '\0') {
                             if ((l > 0) && (l < Ncolumns)) pos = 0;
                             else break;
@@ -170,8 +193,10 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
                         if (format[pos] != '%')
                             fprintf(output, "%c",
                                     format[pos]); // Just copy text of format string until we hit a % character
+                        // Parse a % format token, and write the next column using it
                         else {
                             k = pos + 1; // k looks ahead to see experimentally if syntax is right
+                            // %% writes a literal percent sign
                             if (format[k] == '%') {
                                 fprintf(output, "%%");
                                 pos++;
@@ -192,6 +217,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
                                         multiplier
                                                 [l]; // Set val to equal data from data table that we're about to print.
                             l++;
+                            // Temporarily terminate the string after the token, so it can be passed to fprintf
                             if (format[k] != '\0') {
                                 tmpchr = format[k + 1];
                                 format[k + 1] = '\0';
@@ -232,6 +258,7 @@ static int ppl_tab_dataGridDisplay(ppl_context *c, FILE *output, dataTable *data
         blk = blk->next;
     }
 
+    // Success
     return 0;
 }
 
@@ -265,9 +292,11 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
         const int o2 = PARSE_tabulate_max_0range_list;
         for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = 0;
         for (i = 0; i < USING_ITEMS_MAX; i++) maxSet[i] = 0;
+        // Walk the linked list of ranges on the parser stack; each may have a minimum and a maximum
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There may be no more ranges than columns
             if (nr >= USING_ITEMS_MAX) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
@@ -282,6 +311,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
             }
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
+                // The maximum must have the same type as the minimum
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -290,6 +320,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
                     ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_tabulate_min_0range_list], "");
                     return;
                 }
+                // The maximum must have the same units as the minimum
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -317,6 +348,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
         ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
         return;
     }
+    // A wildcard may not match more than one file
     if (wordExp.we_wordc > 1) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Filename '%s' is ambiguous.", filename);
         ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
@@ -330,6 +362,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
     // Open output file and write header at the top of it
     ppl_createBackupIfRequired(c, filename);
     output = fopen(filename, "w");
+    // Report a failure to open the file
     if (output == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "The tabulate command could not open output file '%s' for writing.",
                           filename);
@@ -343,6 +376,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
     // Loop over datasets being tabulated
     pos = PARSE_tabulate_0tabulate_list;
     j = 0; // Index blocks are numbered from zero, as they are by the index modifier when the data are read back
+    // Walk the linked list of the items to tabulate on the parser stack
     while (stk[pos].objType == PPLOBJ_NUM) {
         char *format, datafname[FNAME_LENGTH] = "";
         int w, errCount = 5;
@@ -356,6 +390,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
             format = (char *) stk[pos + PARSE_tabulate_format_0tabulate_list].auxil;
         else format = NULL;
 
+        // A filename may contain wildcards; tabulate each matching file in turn, until no more are found
         for (w = 0;; w++) {
             // Descend into new memory context
             const int contextLocal = ppl_memAlloc_DescendIntoNewContext();
@@ -371,7 +406,9 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
                 ppl_memAlloc_AscendOutOfContext(contextLocal);
                 break;
             } else {
+                // For data from a file, write the filename, starting a new index block for every file after the first
                 if (datafname[0] != '\0') {
+                    // Each further file gets an index block of its own
                     if (w > 0) {
                         j++;
                         fprintf(output, "\n\n\n# Index %ld\n", j);
@@ -387,6 +424,7 @@ void ppl_directive_tabulate(ppl_context *c, parserLine *pl, parserOutput *in, co
         j++;
     }
 
+    // Close the output file
     fclose(output);
     return;
 }

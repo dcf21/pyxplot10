@@ -19,6 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws circle and arc canvas items, made with the circle and arc commands, into the postscript buffer during the final
+// rendering pass of canvasDraw.c.
+
 #define _PPL_EPS_CIRCLE 1
 
 #include <stdlib.h>
@@ -36,6 +39,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_circ_RenderEPS(EPSComm *x) {
+    // Variables for the shape and style of the circle
     int lt;
     unsigned char filled = 0, stroked = 0;
     double lw, lw_scale, xpos, ypos, r, start = 0, end = 360, theta;
@@ -87,9 +91,11 @@ void eps_circ_RenderEPS(EPSComm *x) {
     else lw_scale = x->current->settings.LineWidth;
     lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
+    // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
+    // Write the line width and type
     if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Stroke outline of circle
@@ -104,6 +110,7 @@ void eps_circ_RenderEPS(EPSComm *x) {
 
     // Factor circle into EPS file's bounding box
     if (filled || stroked) {
+        // A full circle extends a radius in each direction; an arc's extent depends on the angles it spans
         if (!x->current->xfset) {
             eps_core_BoundingBox(x, xpos - r, ypos, lw);
             eps_core_BoundingBox(x, xpos + r, ypos, lw);

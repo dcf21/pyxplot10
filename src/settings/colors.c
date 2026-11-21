@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Converts the colors which users specify in commands, e.g. "with color red" or "with color 3", into the components
+// which Pyxplot draws with. A color may be a color object, a number referring to the current palette, or an expression
+// to be evaluated for each data point. This is used by every command which draws in color, e.g. plot, arrow and text.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -95,6 +99,7 @@ int ppl_colorFromDict(ppl_context *c, parserOutput *in, const parserLine *pl, co
 int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcolspace, pplExpr **EXPoutcol,
                      double *outcol1, double *outcol2, double *outcol3, double *outcol4, unsigned char *USEcol,
                      unsigned char *USEcol1234, char *errText) {
+    // The color may be specified in several ways, distinguished by the type of the object
     switch (col->objType) {
         case PPLOBJ_ZOM: // no color specified
             return 0;
@@ -102,6 +107,9 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
         {
             int j, k1, k2, palette_index1, palette_index2;
             double w1, w2;
+            // A number refers to a color in the palette, counting from 1 and wrapping around at the end of the palette.
+            // A fractional number mixes the two palette colors either side of it; e.g. 1.5 is halfway between colors 1
+            // and 2. j is the length of the palette.
             for (j = 1; j < PALETTE_LENGTH; j++)
                 if (c->set->palette_current[j] == -1) break;
             k1 = (int) floor(col->real);
@@ -121,6 +129,8 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
                 double r1, g1, b1, r2, g2, b2;
                 double i11, i12, i13, i14, i21, i22, i23, i24;
                 int s1, s2;
+                // Fetch the first of the two palette colors being mixed: named colors are stored as color numbers, and
+                // other colors as components in some color space
                 if (c->set->palette_current[palette_index1] > 0) {
                     s1 = SW_COLSPACE_CMYK;
                     i11 = *(double *) ppl_fetchSettingName(&c->errcontext, c->set->palette_current[palette_index1],
@@ -138,6 +148,7 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
                     i13 = c->set->palette3_current[palette_index1];
                     i14 = c->set->palette4_current[palette_index1];
                 }
+                // Fetch the second of the two palette colors being mixed, in the same way
                 if (c->set->palette_current[palette_index2] > 0) {
                     s2 = SW_COLSPACE_CMYK;
                     i21 = *(double *) ppl_fetchSettingName(&c->errcontext, c->set->palette_current[palette_index2],
@@ -155,12 +166,14 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
                     i23 = c->set->palette3_current[palette_index2];
                     i24 = c->set->palette4_current[palette_index2];
                 }
+                // Convert both colors to RGB, so that they can be mixed in proportion to the weights w1 and w2
                 if (s1 == SW_COLSPACE_RGB) {
                     r1 = i11;
                     g1 = i12;
                     b1 = i13;
                 } else if (s1 == SW_COLSPACE_CMYK) pplcol_CMYKtoRGB(i11, i12, i13, i14, &r1, &g1, &b1);
                 else pplcol_HSBtoRGB(i11, i12, i13, &r1, &g1, &b1);
+                // Convert the second color to RGB
                 if (s2 == SW_COLSPACE_RGB) {
                     r2 = i21;
                     g2 = i22;
@@ -190,6 +203,7 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
         }
         case PPLOBJ_EXP: // color expressed as an expression via %C
         {
+            // The caller must be able to accept an expression
             if (EXPoutcol == NULL) {
                 if (errText != NULL)
                     ppl_snprintfTrunc(
@@ -197,6 +211,8 @@ int ppl_colorFromObj(ppl_context *c, const pplObj *col, int *outcol, int *outcol
                             "Colour specified as expression via %%C token, but no pointer given for output of this expression.");
                 return 1;
             }
+            // Release any expression previously held, and keep a reference to the new one, which the caller will
+            // evaluate for each data point
             if (*EXPoutcol != NULL) {
                 pplExpr_free(*EXPoutcol);
                 *EXPoutcol = NULL;

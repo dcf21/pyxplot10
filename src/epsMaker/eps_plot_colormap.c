@@ -19,6 +19,13 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws the colormap plot style, and the color scales beside graphs which use it. Data on a regular grid are converted
+// into a bitmap image, each pixel colored by the expression set with "set colmap", which is evaluated with the
+// variables c1...c4 set to the values in the data's third and later columns, normalised to the range 0 to 1 unless "set
+// crange ... norenormalise" is used; "set colmap ... mask" can make pixels transparent. The image is compressed and
+// written into the postscript, on the back face of the cube in three-dimensional plots. A color scale, with its own
+// axis of ticks, shows the mapping from c1 to color.
+
 #define _PPL_EPS_PLOT_COLORMAP_C 1
 
 #include <stdlib.h>
@@ -83,6 +90,7 @@ static void clipComponents(double comp[4]) {
 //! \param [in] pd - The descriptor of the plot item
 
 void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph *sg, canvas_plotdesc *pd) {
+    // Variables for finding the range of c1, and the size of the color scale
     dataBlock *blk;
     const int XSize = pd->GridXSize;
     const int YSize = pd->GridYSize;
@@ -118,13 +126,16 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     // Find extremal values
     if (CMinAuto || CMaxAuto)
         for (j = 0; j < YSize; j++)
+            // Find the smallest and largest finite values of c1, which must be positive on logarithmic scales
             for (i = 0; i < XSize; i++) {
                 const double val = blk->data_real[2 + Ncol * (i + XSize * j)];
                 if (!gsl_finite(val)) continue;
+                // A new minimum
                 if ((CMinAuto) && ((!CMinSet) || (CMin > val)) && ((!CLog) || (val > 0.0))) {
                     CMin = val;
                     CMinSet = 1;
                 }
+                // A new maximum
                 if ((CMaxAuto) && ((!CMaxSet) || (CMax < val)) && ((!CLog) || (val > 0.0))) {
                     CMax = val;
                     CMaxSet = 1;
@@ -147,6 +158,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
     } else {
         xmin = xmax = origin_x;
         ymin = ymax = origin_y;
+        // Find the extent of the graph on the page, from the projections of the corners of the cube
         for (k = 0; k < 8; k++) {
             double x0, y0, z0;
             eps_plot_ThreeDimProject((k & 1), (k & 2) != 0, (k & 4) != 0, sg, origin_x, origin_y, width, height, zdepth,
@@ -158,6 +170,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
         }
     }
 
+    // The color scale runs along the side of the graph it is on, and its ticks are spaced as for an axis of that length
     horizontal = ((sg->ColKeyPos == SW_COLKEYPOS_T) || (sg->ColKeyPos == SW_COLKEYPOS_B));
     PhysicalLength = fabs(horizontal ? (xmax - xmin) : (ymax - ymin)) / M_TO_PS;
     PhysicalLengthMinor = PhysicalLength / 0.004;
@@ -217,6 +230,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
         pd->CRangeUnit = data->firstEntries[2];
     }
 
+    // Done
     return;
 }
 
@@ -224,6 +238,7 @@ void eps_plot_colormap_YieldText(EPSComm *x, const dataTable *data, pplset_graph
 //! \param [in,out] comp - The components of the colour, each in the range 0 to 1
 
 static void hsbToRgb(double comp[4]) {
+    // Convert hue, saturation and brightness to red, green and blue
     double h2, ch, xc, m;
     int h2i;
     clipComponents(comp);
@@ -231,6 +246,7 @@ static void hsbToRgb(double comp[4]) {
     h2i = (int) (h2 = comp[0] * 6); // Sextant of the colour wheel
     xc = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
     m = comp[2] - ch;
+    // Each sixth of the color wheel blends two primary colors
     switch (h2i) {
         case 0:
             comp[0] = ch;
@@ -300,6 +316,7 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
     if (sg->MaskExpr != NULL) {
         int lOP;
         const pplObj *v = ppl_expEval(x->c, (pplExpr *) sg->MaskExpr, &lOP, 1, x->iterDepth + 1); // Stack: push result
+        // Report a failure to evaluate the mask expression
         if (x->c->errStat.status) {
             ppl_snprintfTrunc(msg, msgLen, "Could not evaluate mask expression <%s>.",
                               ((pplExpr *) sg->MaskExpr)->ascii);
@@ -308,6 +325,7 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
             ppl_tbClear(x->c);
             return 1;
         }
+        // Masked pixels are transparent
         if (v->real == 0) {
             ppl_stackClean(x->c, stkLevelOld); // Stack: discard the result of the mask expression
             return 0;
@@ -322,6 +340,7 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
         int lOP, outcol;
         unsigned char d1, d2;
         const pplObj *v = ppl_expEval(x->c, (pplExpr *) sg->ColMapExpr, &lOP, 1, x->iterDepth + 1); // Stack: push
+        // Report a failure to evaluate the color expression
         if (x->c->errStat.status) {
             ppl_snprintfTrunc(msg, msgLen, "Could not evaluate color expression <%s>.",
                               ((pplExpr *) sg->ColMapExpr)->ascii);
@@ -331,10 +350,12 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
             return 1;
         }
         lOP = ppl_colorFromObj(x->c, v, &outcol, &colspace, NULL, comp, comp + 1, comp + 2, comp + 3, &d1, &d2, msg);
+        // Report an expression which does not return a color
         if (lOP) {
             ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
             return 1;
         }
+        // Named colors are converted to CMYK components
         if (outcol != 0) {
             colspace = SW_COLSPACE_CMYK;
             comp[0] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT,
@@ -346,6 +367,7 @@ static int colormapPixel(EPSComm *x, const pplset_graph *sg, const pplObj *C1Var
             comp[3] = *(double *) ppl_fetchSettingName(&x->c->errcontext, outcol, SW_COLOR_INT,
                                                        (void *) SW_COLOR_CMYK_K, sizeof(double));
         }
+        // Pixels with non-finite components are transparent
         if ((!gsl_finite(comp[0])) || (!gsl_finite(comp[1])) || (!gsl_finite(comp[2])) || (!gsl_finite(comp[3]))) {
             ppl_stackClean(x->c, stkLevelOld); // Stack: discard the result of the colour expression
             return 0;
@@ -402,6 +424,7 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
 
     zlen = img->data_len * 1.01 + 12; // Nasty guess at size of buffer needed
     imagez = (unsigned char *) ppl_memAlloc(zlen);
+    // Failure to allocate memory is reported as an error
     if (imagez == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (m).");
         img->TargetCompression = BMP_ENCODING_NULL;
@@ -410,7 +433,9 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
     if (DEBUG) { ppl_log(&x->c->errcontext, "Calling zlib to compress image data."); }
     status = compress2(imagez, &zlen, img->data, img->data_len, 9); // Call zlib to do deflation
 
+    // If zlib fails, write the image uncompressed
     if (status != 0) {
+        // Log the error in debugging mode
         if (DEBUG) {
             char msg[PPL_MSG_LENGTH];
             ppl_snprintfTrunc(msg, sizeof(msg), "zlib returned error code %d\n", status);
@@ -419,6 +444,7 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
         img->TargetCompression = BMP_ENCODING_NULL; // Give up trying to compress data
         return;
     }
+    // Log the compression achieved in debugging mode
     if (DEBUG) {
         char msg[PPL_MSG_LENGTH];
         ppl_snprintfTrunc(msg, sizeof(msg),
@@ -426,7 +452,9 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
                           img->data_len, (long) zlen);
         ppl_log(&x->c->errcontext, msg);
     }
+    // If compression made the image bigger, write it uncompressed
     if (zlen >= img->data_len) {
+        // Log this in debugging mode
         if (DEBUG) {
             ppl_log(&x->c->errcontext,
                     "Using original uncompressed data since zlib made it bigger than it was to start with.");
@@ -445,6 +473,7 @@ static void compressPostscriptImage(EPSComm *x, bitmap_data *img) {
 static void writePostscriptImage(EPSComm *x, const bitmap_data *img) {
     if (img->colour == BMP_COLOUR_RGB) fprintf(x->epsbuffer, "/DeviceRGB setcolorspace\n"); // RGB palette
     else if (img->colour == BMP_COLOUR_GREY) fprintf(x->epsbuffer, "/DeviceGray setcolorspace\n"); // Greyscale
+    // A paletted image's palette is written as part of the color space
     else if (img->colour == BMP_COLOUR_PALETTE) {
         // Indexed palette
         fprintf(x->epsbuffer, "[/Indexed /DeviceRGB %d <~\n", img->pal_len - 1);
@@ -452,6 +481,7 @@ static void writePostscriptImage(EPSComm *x, const bitmap_data *img) {
         fprintf(x->epsbuffer, "] setcolorspace\n\n");
     }
 
+    // Write the image dictionary; type 4 images have a mask color for transparency
     fprintf(x->epsbuffer, "<<\n /ImageType %d\n /Width %d\n /Height %d\n /ImageMatrix [%d 0 0 %d 0 %d]\n",
             (img->trans == NULL) ? 1 : 4, img->width, img->height, img->width, -img->height, img->height);
     // Image data is stored in currentfile, but need to apply filters to decode it
@@ -461,6 +491,7 @@ static void writePostscriptImage(EPSComm *x, const bitmap_data *img) {
             (img->colour == BMP_COLOUR_RGB) ? (img->depth / 3) : (img->depth),
             (img->type == BMP_COLOUR_PALETTE) ? ((1 << img->depth) - 1) : 1,
             (img->colour == BMP_COLOUR_RGB) ? " 0 1 0 1" : "");
+    // The transparent color
     if (img->trans != NULL) {
         fprintf(x->epsbuffer, " /MaskColor [");
         if (img->colour == BMP_COLOUR_RGB)
@@ -512,6 +543,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     if (eps_plot_WithWordsCheckUsingItemsDimLess(x->c, &pd->ww_final, data->firstEntries, Ncol_real, Ncol_obj,
                                                  &NcolsData))
         return 1;
+    // The size of the graph
     if (!ThreeDim) {
         scale_x = width;
         scale_y = height;
@@ -523,7 +555,9 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     }
     blk = data->first;
 
+    // A buffer for error messages
     errtext = ppl_memAlloc(LSTR_LENGTH);
+    // Failure to allocate memory is reported as an error
     if (errtext == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (k).");
         return 1;
@@ -537,6 +571,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         Ly = scale_y;
         ThetaX = M_PI / 2;
         ThetaY = 0.0;
+        // If the data are plotted against the y axis horizontally, swap the directions of the image
         if (xn != 0) {
             double t1 = Lx, t2 = ThetaX;
             Lx = Ly;
@@ -554,10 +589,12 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                                  &ytmp, &z1tmp);
         ap[2] = (z1tmp > z0tmp) ? 1.0 : 0.0; // Determine whether zap=0 or zap=1 represents back of cuboid
 
+        // The origin of the image is the corner of the back face where both axes are at their minimum
         ap[0] = ap[1] = 0.0;
         eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xo, &yo,
                                  &z0tmp);
 
+        // The direction and length of the image's horizontal edge
         ap[0] = 1.0;
         eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
                                  &ytmp, &z0tmp);
@@ -565,6 +602,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         ThetaX = atan2(xtmp - xo, ytmp - yo);
         if (!gsl_finite(ThetaX)) ThetaX = 0.0;
 
+        // The direction and length of the image's vertical edge
         ap[0] = 0.0;
         ap[1] = 1.0;
         eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
@@ -592,6 +630,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     img.data_len = 3 * XSize * YSize;
     img.TargetCompression = BMP_ENCODING_FLATE;
     img.data = (unsigned char *) ppl_memAlloc(3 * XSize * YSize);
+    // Failure to allocate memory is reported as an error
     if (img.data == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (l).");
         return 1;
@@ -601,6 +640,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     for (i = 0; i < 4; i++) {
         char v[3] = {'c', '1' + i, '\0'};
         ppl_contextGetVarPointer(x->c, v, CVar + i, CDummy + i);
+        // Without renormalisation, c1...c4 take the units of their columns; otherwise they are dimensionless
         if ((i < NcolsData - 2) && (sg->Crenorm[i] == SW_BOOL_FALSE)) {
             *CVar[i] = data->firstEntries[i + 2];
             CVar[i]->flagComplex = 0;
@@ -623,13 +663,16 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         // Find extremal values
         if (CMinAuto[c] || CMaxAuto[c])
             for (j = 0; j < YSize; j++)
+                // Find the smallest and largest finite values, which must be positive on logarithmic scales
                 for (i = 0; i < XSize; i++) {
                     const double val = blk->data_real[c + 2 + Ncol_real * (i + XSize * j)];
                     if (!gsl_finite(val)) continue;
+                    // A new minimum
                     if ((CMinAuto[c]) && ((!CMinSet[c]) || (CMin[c] > val)) && ((!CLog[c]) || (val > 0.0))) {
                         CMin[c] = val;
                         CMinSet[c] = 1;
                     }
+                    // A new maximum
                     if ((CMaxAuto[c]) && ((!CMaxSet[c]) || (CMax[c] < val)) && ((!CLog[c]) || (val > 0.0))) {
                         CMax[c] = val;
                         CMaxSet[c] = 1;
@@ -656,6 +699,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
         if ((!CMinSet[c]) || (!CMaxSet[c])) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No data supplied to determine range for variable c%d", c + 1);
             ppl_log(&x->c->errcontext, msg);
+            // Restore the variables c1...c4 before giving up
             for (i = 0; i < 4; i++) {
                 char v[3] = {'c', '1' + i, '\0'};
                 ppl_contextRestoreVarPointer(x->c, v, CDummy + i);
@@ -690,14 +734,18 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
 
     // Populate bitmap data array
     for (p = 0, j = YSize - 1; j >= 0; j--) // Postscript images are top-first. Data block is bottom-first.
+        // Color each pixel of each row, starting from the top row, as postscript images are stored from the top down
         for (i = 0; i < XSize; i++) {
             // Set values of c1...c4
             for (c = 0; c < 4; c++)
+                // Set c1...c4 to the values in this pixel, normalised unless renormalisation is off; unused variables
+                // keep their old values
                 if (c > cmax) /* No c<c> */ {
                     *CVar[c] = CDummy[c];
                 } else if (sg->Crenorm[c] == SW_BOOL_FALSE) {
                     CVar[c]->real = blk->data_real[c + 2 + Ncol_real * (i + XSize * j)];
                 } // No renormalisation
+                // A range of zero width maps every finite value to the middle of the scale
                 else if (CMax[c] == CMin[c]) /* Ooops */ {
                     CVar[c]->real = (gsl_finite(blk->data_real[c + 2 + Ncol_real * (i + XSize * j)])) ? 0.5 : (GSL_NAN);
                 } else if (!CLog[c]) /* Linear */ {
@@ -708,6 +756,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
                             log(blk->data_real[c + 2 + Ncol_real * (i + XSize * j)] / CMin[c]) / log(CMax[c] / CMin[c]);
                 }
 
+            // Color the pixel
             C1Var = CVar[0];
             if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) return 1;
             p += 3;
@@ -729,6 +778,7 @@ int eps_plot_colormap(EPSComm *x, dataTable *data, const unsigned char ThreeDim,
     fprintf(x->epsbuffer, "[ %.2f %.2f %.2f %.2f %.2f %.2f ] concat\n", Lx * sin(ThetaX), Lx * cos(ThetaX),
             Ly * sin(ThetaY), Ly * cos(ThetaY), xo, yo);
 
+    // Write the image, transformed onto its place on the page
     writePostscriptImage(x, &img);
     fprintf(x->epsbuffer, "grestore\n");
     return 0;
@@ -754,7 +804,9 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
     pplset_graph *sg = &x->current->settings;
     withWords ww;
 
+    // A buffer for error messages
     errtext = ppl_memAlloc(LSTR_LENGTH);
+    // Failure to allocate memory is reported as an error
     if (errtext == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (n).");
         return 1;
@@ -762,6 +814,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
 
     // Set color for painting axes
     ppl_withWordsZero(x->c, &ww);
+    // Draw color scales in the color set with "set axescolor"
     if (x->current->settings.AxesColor > 0) {
         ww.color = x->current->settings.AxesColor;
         ww.USEcolor = 1;
@@ -790,6 +843,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
     } else {
         xmin = xmax = origin_x;
         ymin = ymax = origin_y;
+        // Find the extent of the graph on the page, from the projections of the corners of the cube
         for (k = 0; k < 8; k++) {
             double x0, y0, z0;
             eps_plot_ThreeDimProject((k & 1), (k & 2) != 0, (k & 4) != 0, sg, origin_x, origin_y, width, height, zdepth,
@@ -807,6 +861,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
     while (pd != NULL) // loop over all datasets
     {
         dataTable *data = x->current->plotdata[k];
+        // Draw a color scale for each dataset which has one
         if (pd->CRangeDisplay) {
             double XSize = 1024, YSize = 1; // Dimensions of bitmap image
             unsigned char transparent[3] = {TRANS_R, TRANS_G, TRANS_B};
@@ -820,6 +875,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             bitmap_data img;
             pplObj *CVar = NULL, *C1Var, CDummy;
 
+            // The scale's inner edge runs along the side of the graph it is on, beyond the axes there
             if (sg->ColKeyPos == SW_COLKEYPOS_T) {
                 x1 = xmin;
                 x2 = xmax;
@@ -840,6 +896,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                 continue;
             }
 
+            // Its outer edge is a fixed width further out
             if (sg->ColKeyPos == SW_COLKEYPOS_T) {
                 x3 = x1;
                 x4 = x2;
@@ -860,6 +917,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                 continue;
             }
 
+            // The direction and length of the image's edges
             if (sg->ColKeyPos == SW_COLKEYPOS_T) {
                 Lx = xmax - xmin;
                 Ly = WIDTH;
@@ -896,6 +954,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             img.data_len = 3 * XSize * YSize;
             img.data = ppl_memAlloc(3 * XSize * YSize);
             img.TargetCompression = BMP_ENCODING_FLATE;
+            // Failure to allocate memory is reported as an error
             if (img.data == NULL) {
                 ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (o).");
                 goto POST_BITMAP;
@@ -908,6 +967,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
 
             // Get pointer to variable c1 in the user's variable space
             ppl_contextGetVarPointer(x->c, v, &CVar, &CDummy);
+            // Without renormalisation, c1 takes the units of the data; otherwise it is dimensionless
             if (sg->Crenorm[0] == SW_BOOL_FALSE) {
                 *CVar = data->firstEntries[2];
                 CVar->flagComplex = 0;
@@ -918,6 +978,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
 
             // Populate bitmap data array
             for (p = 0, j = YSize - 1; j >= 0; j--) // Postscript images are top-first. Data block is bottom-first.
+                // Color each pixel of the scale, with c1 running across its range
                 for (i = 0; i < XSize; i++) {
                     // Set value of c1
                     if (sg->Crenorm[0] == SW_BOOL_FALSE) {
@@ -925,6 +986,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
                         else CVar->real = CMin * pow(CMax / CMin, ((double) i) / (XSize - 1));
                     } else CVar->real = ((double) i) / (XSize - 1);
 
+                    // Color the pixel
                     C1Var = CVar;
                     if (colormapPixel(x, sg, C1Var, img.data + p, msg, sizeof(msg))) return 1;
                     p += 3;
@@ -941,6 +1003,7 @@ int eps_plot_colormap_DrawScales(EPSComm *x, const double origin_x, const double
             writePostscriptImage(x, &img);
             fprintf(x->epsbuffer, "grestore\n");
 
+        // Restore the variable c1, and draw the scale's axes and ends
         POST_BITMAP:
             // Restore variable c1 in the user's variable space
             if (CVar != NULL) {

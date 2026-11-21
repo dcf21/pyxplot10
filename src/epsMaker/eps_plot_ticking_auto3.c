@@ -19,7 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
-// This file contain an algorithm for the automatic placement of ticks along axes.
+// One of the algorithms for placing ticks automatically along an axis, chosen by eps_plot_ticking.c. Method 3 is used
+// for an axis linked to another axis of the same length: it copies that axis's ticks, so that the two match. If this is
+// not possible, it falls back to method 2 (eps_plot_ticking_auto2.c).
 
 // METHOD 3: This axis is linked to another axis of the same length. Use the
 // same ticking scheme.
@@ -47,8 +49,9 @@
 #include "epsMaker/eps_plot_ticking_auto2.h"
 #include "epsMaker/eps_plot_ticking_auto3.h"
 
-//! eps_plot_ticking_auto3 - Place ticks automatically on an axis whose ticks are copied from another axis linked
-//! through a "using" expression, labelling each tick with the value the linkage expression gives it
+//! eps_plot_ticking_auto3 - Place ticks automatically on an axis which is linked, without a "using" expression, to
+//! another axis of the same length, by copying that axis's ticks; tick labels are reformatted if the axis has its own
+//! format. Falls back to eps_plot_ticking_auto2() if this is not possible.
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 //! \param [in] axis - The axis
 //! \param [in] UnitMultiplier - The factor by which values on the axis are multiplied to express them in the units
@@ -60,26 +63,33 @@ void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMult
                             const pplset_axis *linkedto) {
     int i, Nticks_maj, Nticks_min, OutContext;
 
+    // Log which algorithm is in use, and note the memory context in which tick labels are to be allocated
     if (DEBUG) ppl_log(&x->c->errcontext, "Using eps_plot_ticking_auto3()");
     OutContext = ppl_memAlloc_GetMemContext();
 
+    // This method only applies to axes linked, without a using expression, to an axis of the same length which has
+    // ticks
     if (linkedto == NULL) goto FAIL;
     if (axis->linkusing != NULL) goto FAIL;
     if (linkedto->PhysicalLengthMinor != axis->PhysicalLengthMinor) goto FAIL;
     if ((linkedto->TickListStrings == NULL) || (linkedto->MTickListStrings == NULL)) goto FAIL;
 
+    // Count the major and minor ticks on the other axis
     for (Nticks_maj = 0; linkedto->TickListStrings[Nticks_maj] != NULL; Nticks_maj++);
     for (Nticks_min = 0; linkedto->MTickListStrings[Nticks_min] != NULL; Nticks_min++);
 
+    // Use the same tick positions
     axis->TickListPositions = linkedto->TickListPositions;
     axis->MTickListPositions = linkedto->MTickListPositions;
 
+    // Use the same tick labels, unless this axis has its own format
     if (axis->format == NULL) {
         axis->TickListStrings = linkedto->TickListStrings;
     } else {
         axis->TickListStrings = (char **) ppl_memAlloc((Nticks_maj + 1) * sizeof(char *));
         if (axis->TickListStrings == NULL) goto FAIL;
 
+        // Label each tick with this axis's format, using exactly zero for values which straddle zero
         for (i = 0; i < Nticks_maj; i++) {
             double xtmpA, xtmp, xtmpB;
             xtmpA = eps_plot_axis_InvGetPosition(axis->TickListPositions[i] - 1e8, axis) * UnitMultiplier;
@@ -94,6 +104,7 @@ void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMult
         axis->TickListStrings[i] = NULL;
     }
 
+    // Minor ticks have no labels
     axis->MTickListStrings = (char **) ppl_memAlloc((Nticks_min + 1) * sizeof(char *));
     if (axis->MTickListStrings == NULL) goto FAIL;
     for (i = 0; i < Nticks_min; i++) axis->MTickListStrings[i] = "";
@@ -102,10 +113,12 @@ void eps_plot_ticking_auto3(EPSComm *x, pplset_axis *axis, const double UnitMult
     // Finished
     goto CLEANUP;
 
+// If this method cannot be used, fall back to method 2
 FAIL:
     if (DEBUG) ppl_log(&x->c->errcontext, "eps_plot_ticking_auto3() has failed");
     eps_plot_ticking_auto2(x, axis, UnitMultiplier, AutoTicks, linkedto);
 
+// Done
 CLEANUP:
     return;
 }

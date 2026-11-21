@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The arithmetic operators (+, -, *, /, %, **) of the expression evaluator, for every combination of types they accept:
+// numbers with units, strings (concatenation), dates (adding time intervals), colors (mixing), vectors, matrices
+// (including matrix products), lists and dictionaries. Operations on plain numbers are passed to unitsArithmetic.c;
+// other types are cast to numbers where that makes sense, or reported as errors.
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -60,6 +65,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     const int t1 = a->objType;
     const int t2 = b->objType;
 
+    // Choose what addition means from the types of the two operands
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
     } else if ((t1 == PPLOBJ_STR) && (t2 == PPLOBJ_STR)) // adding strings: concatenate
@@ -69,6 +75,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         const int l2 = strlen((char *) b->auxil);
         int l = l1 + l2 + 1;
         tmp = (char *) malloc(l);
+        // Failure to allocate memory is reported as an error
         if (tmp == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -81,6 +88,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if ((t1 == PPLOBJ_COL) && (t2 == PPLOBJ_COL)) // adding colors
     {
         double r1, g1, b1, r2, g2, b2;
+        // Adding colors mixes them additively: convert both to RGB, and add their components
         if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
             r1 = a->exponent[8];
             g1 = a->exponent[9];
@@ -88,6 +96,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         } else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
             pplcol_CMYKtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &r1, &g1, &b1);
         else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r1, &g1, &b1);
+        // Convert the second color to RGB
         if (round(b->exponent[0]) == SW_COLSPACE_RGB) {
             r2 = b->exponent[8];
             g2 = b->exponent[9];
@@ -105,6 +114,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         int i;
         pplObj *num = (t1 == PPLOBJ_NUM) ? a : b;
         for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+            // The number added to a date must have units of time
             if (num->exponent[i] != (i == UNIT_TIME)) {
                 *status = 1;
                 *errType = ERR_UNIT;
@@ -121,7 +131,9 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
         gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
         gsl_vector *vo;
+        // Vectors can only be added if they have the same units
         if (!ppl_unitsDimEqual(a, b)) {
+            // Describe the conflicting units in the error message
             if (a->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -142,6 +154,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // ...and the same length
         if (v1->size != v2->size) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -151,6 +164,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // The output is a new vector
         if (pplObjVector(o, 0, 1, v1->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -165,6 +179,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         listIterator *li;
         pplObj *item, buff;
         list *l;
+        // Adding lists concatenates them into a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -173,11 +188,13 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         l = (list *) o->auxil;
         li = ppl_listIterateInit((list *) a->auxil);
+        // Copy the items of the first list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
         }
         li = ppl_listIterateInit((list *) b->auxil);
+        // Copy the items of the second list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
@@ -189,6 +206,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObj *item, buff;
         gsl_vector *bv = ((pplVector *) (b->auxil))->v;
         list *l;
+        // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -197,12 +215,14 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         l = (list *) o->auxil;
         li = ppl_listIterateInit((list *) a->auxil);
+        // Copy the items of the list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
         }
         pplObjNum(&buff, 1, 0, 0);
         ppl_unitsDimCpy(&buff, b);
+        // Append the elements of the vector, as numbers with its units
         for (i = 0; i < bv->size; i++) {
             buff.real = gsl_vector_get(bv, i);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
@@ -214,6 +234,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObj *item, buff;
         gsl_vector *av = ((pplVector *) (a->auxil))->v;
         list *l;
+        // The output is a new list
         if (pplObjList(o, 0, 1, NULL) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -223,11 +244,13 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         l = (list *) o->auxil;
         pplObjNum(&buff, 1, 0, 0);
         ppl_unitsDimCpy(&buff, a);
+        // Copy the elements of the vector, as numbers with its units
         for (i = 0; i < av->size; i++) {
             buff.real = gsl_vector_get(av, i);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
         }
         li = ppl_listIterateInit((list *) b->auxil);
+        // Append the items of the list
         while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
             ppl_listAppendCpy(l, (void *) &buff, sizeof(pplObj));
@@ -239,6 +262,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObj *item, buff;
         dict *d;
         char *key;
+        // Adding dictionaries or modules merges them; items of the second override those of the first
         if (((t1 == PPLOBJ_DICT) ? pplObjDict(o, 0, 1, NULL) : pplObjModule(o, 0, 1, 0)) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -247,11 +271,13 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
         d = (dict *) o->auxil;
         di = ppl_dictIterateInit((dict *) a->auxil);
+        // Copy the items of the first dictionary
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
             ppl_dictAppendCpy(d, key, (void *) &buff, sizeof(pplObj));
         }
         di = ppl_dictIterateInit((dict *) b->auxil);
+        // Copy the items of the second dictionary
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             pplObjCpy(&buff, item, 0, 1, 1);
             ppl_dictAppendCpy(d, key, (void *) &buff, sizeof(pplObj));
@@ -262,7 +288,9 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *m1 = ((pplMatrix *) (a->auxil))->m;
         gsl_matrix *m2 = ((pplMatrix *) (b->auxil))->m;
         gsl_matrix *mo;
+        // Matrices can only be added if they have the same units
         if (!ppl_unitsDimEqual(a, b)) {
+            // Describe the conflicting units in the error message
             if (a->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -283,6 +311,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // ...and the same size
         if ((m1->size1 != m2->size1) || (m1->size2 != m2->size2)) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -292,6 +321,7 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // The output is a new matrix
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -305,11 +335,13 @@ void ppl_opAdd(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         ppl_unitsDimCpy(o, a);
     } else // adding numbers
     {
+        // Any other types must be cast to numbers, e.g. booleans
         if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;
             goto cast_fail;
         }
+        // Cast the second operand
         if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -347,6 +379,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     const int t1 = a->objType;
     const int t2 = b->objType;
 
+    // Choose what subtraction means from the types of the two operands
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
     } else if ((t1 == PPLOBJ_DATE) && (t2 == PPLOBJ_DATE)) // subtracting dates: return time interval
@@ -358,6 +391,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     {
         int i;
         for (i = 0; i < UNITS_MAX_BASEUNITS; i++)
+            // The number subtracted from a date must have units of time
             if (b->exponent[i] != (i == UNIT_TIME)) {
                 *status = 1;
                 *errType = ERR_UNIT;
@@ -371,6 +405,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     } else if ((t1 == PPLOBJ_COL) && (t2 == PPLOBJ_COL)) // subtracting colors
     {
         double r1, g1, b1, r2, g2, b2;
+        // Subtracting colors: convert both to RGB, and subtract their components
         if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
             r1 = a->exponent[8];
             g1 = a->exponent[9];
@@ -378,6 +413,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         } else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
             pplcol_CMYKtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &r1, &g1, &b1);
         else pplcol_HSBtoRGB(a->exponent[8], a->exponent[9], a->exponent[10], &r1, &g1, &b1);
+        // Convert the second color to RGB
         if (round(b->exponent[0]) == SW_COLSPACE_RGB) {
             r2 = b->exponent[8];
             g2 = b->exponent[9];
@@ -395,7 +431,9 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *v1 = ((pplVector *) (a->auxil))->v;
         gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
         gsl_vector *vo;
+        // Vectors can only be subtracted if they have the same units
         if (ppl_unitsDimEqual(a, b) == 0) {
+            // Describe the conflicting units in the error message
             if (a->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -416,6 +454,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // ...and the same length
         if (v1->size != v2->size) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -425,6 +464,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // The output is a new vector
         if (pplObjVector(o, 0, 1, v1->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -440,7 +480,9 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *m1 = ((pplMatrix *) (a->auxil))->m;
         gsl_matrix *m2 = ((pplMatrix *) (b->auxil))->m;
         gsl_matrix *mo;
+        // Matrices can only be subtracted if they have the same units
         if (ppl_unitsDimEqual(a, b) == 0) {
+            // Describe the conflicting units in the error message
             if (a->dimensionless) {
                 ppl_snprintfTrunc(
                         errText, LSTR_LENGTH,
@@ -461,6 +503,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // ...and the same size
         if ((m1->size1 != m2->size1) || (m1->size2 != m2->size2)) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -470,6 +513,7 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // The output is a new matrix
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -483,11 +527,13 @@ void ppl_opSub(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         ppl_unitsDimCpy(o, a);
     } else // subtracting numbers
     {
+        // Any other types must be cast to numbers, e.g. booleans
         if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;
             goto cast_fail;
         }
+        // Cast the second operand
         if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -524,6 +570,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     const int t1 = a->objType;
     const int t2 = b->objType;
 
+    // Choose what multiplication means from the types of the two operands
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
     } else if (((t1 == PPLOBJ_COL) && (t2 == PPLOBJ_NUM)) ||
@@ -533,6 +580,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObj *c = (t1 == PPLOBJ_COL) ? a : b;
         pplObj *n = (t1 == PPLOBJ_COL) ? b : a;
         const double m = n->real;
+        // Colors can only be scaled by plain positive numbers
         if ((!n->dimensionless) || (n->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
                               "Can only multiply colors by dimensionless, real, positive numbers.");
@@ -540,6 +588,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // Convert the color to RGB, and scale its components
         if (round(c->exponent[0]) == SW_COLSPACE_RGB) {
             r1 = c->exponent[8];
             g1 = c->exponent[9];
@@ -557,6 +606,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_vector *v2 = ((pplVector *) (b->auxil))->v;
         int i;
         double acc = 0;
+        // The product of two vectors is their dot product, which needs vectors of the same length
         if (v1->size != v2->size) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -581,6 +631,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObj *vec = (t1 == PPLOBJ_VEC) ? a : b;
         gsl_vector *v = ((pplVector *) (vec->auxil))->v;
         gsl_vector *vo = NULL;
+        // Multiplying a vector by a number: the number must be real
         if (num->flagComplex) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
                               "Vectors can only contain real numbers, and cannot be multiplied by complex numbers.");
@@ -591,6 +642,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         vec->real = 1;
         vec->imag = 0;
         vec->flagComplex = 0;
+        // The output is a new vector, each element multiplied by the number
         if (pplObjVector(o, 0, 1, v->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -609,6 +661,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         pplObj *mat = (t1 == PPLOBJ_MAT) ? a : b;
         gsl_matrix *m = ((pplMatrix *) (mat->auxil))->m;
         gsl_matrix *mo = NULL;
+        // Multiplying a matrix by a number: the number must be real
         if (num->flagComplex) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
                               "Matrices can only contain real numbers, and cannot be multiplied by complex numbers.");
@@ -619,6 +672,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         mat->real = 1;
         mat->imag = 0;
         mat->flagComplex = 0;
+        // The output is a new matrix, each element multiplied by the number
         if (pplObjMatrix(o, 0, 1, m->size1, m->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -636,6 +690,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *m = ((pplMatrix *) (a->auxil))->m;
         gsl_vector *v = ((pplVector *) (b->auxil))->v;
         gsl_vector *vo = NULL;
+        // A matrix times a vector needs as many columns in the matrix as there are elements in the vector
         if (m->size2 != v->size) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -645,6 +700,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // The output is a vector with one element per row of the matrix
         if (pplObjVector(o, 0, 1, m->size1) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -656,6 +712,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         a->flagComplex = b->flagComplex = 0;
         ppl_uaMul(context, a, b, o, status, errType, errText);
         vo = ((pplVector *) (o->auxil))->v;
+        // Compute the product with BLAS
         if ((gslerr = gsl_blas_dgemv(CblasNoTrans, 1, m, v, 0, vo)) != 0) {
             *status = 1;
             *errType = ERR_NUMERICAL;
@@ -668,6 +725,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         gsl_matrix *m1 = ((pplMatrix *) (a->auxil))->m;
         gsl_matrix *m2 = ((pplMatrix *) (b->auxil))->m;
         gsl_matrix *mo = NULL;
+        // A matrix product needs as many columns in the left matrix as rows in the right
         if (m1->size2 != m2->size1) {
             ppl_snprintfTrunc(
                     errText, LSTR_LENGTH,
@@ -677,6 +735,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
             *status = 1;
             return;
         }
+        // The output is a new matrix
         if (pplObjMatrix(o, 0, 1, m1->size1, m2->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -688,6 +747,7 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         a->flagComplex = b->flagComplex = 0;
         ppl_uaMul(context, a, b, o, status, errType, errText);
         mo = ((pplMatrix *) (o->auxil))->m;
+        // Compute the product with BLAS
         if ((gslerr = gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1, m1, m2, 0, mo)) != 0) {
             *status = 1;
             *errType = ERR_NUMERICAL;
@@ -696,11 +756,13 @@ void ppl_opMul(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         }
     } else // multiplying numbers
     {
+        // Any other types must be cast to numbers, e.g. booleans
         if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;
             goto cast_fail;
         }
+        // Cast the second operand
         if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;
@@ -737,18 +799,21 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
     const int t1 = a->objType;
     const int t2 = b->objType;
 
+    // Choose what division means from the types of the two operands
     if ((t1 == PPLOBJ_NUM) && (t2 == PPLOBJ_NUM)) {
         goto am_numeric;
     } else if ((t1 == PPLOBJ_COL) && (t2 == PPLOBJ_NUM)) // dividing colors by numbers
     {
         double r1, g1, b1;
         const double m = b->real;
+        // Colors can only be divided by plain positive numbers
         if ((!b->dimensionless) || (b->flagComplex) || (!gsl_finite(m)) || (m < 0)) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "Can only divide colors by dimensionless, real, positive numbers.");
             *errType = ERR_RANGE;
             *status = 1;
             return;
         }
+        // Convert the color to RGB, and divide its components
         if (round(a->exponent[0]) == SW_COLSPACE_RGB) {
             r1 = a->exponent[8];
             g1 = a->exponent[9];
@@ -765,6 +830,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         int i;
         gsl_vector *v = ((pplVector *) (a->auxil))->v;
         gsl_vector *vo = NULL;
+        // Dividing a vector by a number: the number must be real
         if (b->flagComplex) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
                               "Vectors can only contain real numbers, and cannot be divided by complex numbers.");
@@ -775,6 +841,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         a->real = 1;
         a->imag = 0;
         a->flagComplex = 0;
+        // The output is a new vector, each element divided by the number
         if (pplObjVector(o, 0, 1, v->size) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -790,6 +857,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         int i, j;
         gsl_matrix *m = ((pplMatrix *) (a->auxil))->m;
         gsl_matrix *mo = NULL;
+        // Dividing a matrix by a number: the number must be real
         if (b->flagComplex) {
             ppl_snprintfTrunc(errText, LSTR_LENGTH,
                               "Matrices can only contain real numbers, and cannot be divided by complex numbers.");
@@ -800,6 +868,7 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         a->real = 1;
         a->imag = 0;
         a->flagComplex = 0;
+        // The output is a new matrix, each element divided by the number
         if (pplObjMatrix(o, 0, 1, m->size1, m->size2) == NULL) {
             *status = 1;
             *errType = ERR_MEMORY;
@@ -813,11 +882,13 @@ void ppl_opDiv(ppl_context *context, pplObj *a, pplObj *b, pplObj *o, const int 
         o->real = 0;
     } else // dividing numbers
     {
+        // Any other types must be cast to numbers, e.g. booleans
         if (ppl_castToNumber(context, a, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;
             goto cast_fail;
         }
+        // Cast the second operand
         if (ppl_castToNumber(context, b, errText, LSTR_LENGTH)) {
             *status = 1;
             *errType = ERR_TYPE;

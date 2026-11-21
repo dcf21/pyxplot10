@@ -19,6 +19,13 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws the contourmap plot style: lines of constant value through data on a regular grid, optionally labelled with
+// their values. Contours are traced cell by cell through the grid, first from the edges of the grid and then around
+// closed loops within it, using flags stored in each grid point to mark which cell edges have been crossed. Open
+// contours are closed around the corners of the grid so that their areas can be compared, and contours are drawn from
+// the largest area down. Labels are placed on the flattest segment of each contour, with the contour line clipped away
+// around them.
+
 #define _PPL_EPS_PLOT_CONTOURMAP_C 1
 
 #include <stdlib.h>
@@ -86,6 +93,7 @@ static int ContourCmp(const void *xv, const void *yv) {
     const ContourDesc *x = (const ContourDesc *) xv;
     const ContourDesc *y = (const ContourDesc *) yv;
 
+    // Sort into order of decreasing area
     if (x->area < y->area) return 1.0;
     else if (x->area > y->area) return -1.0;
     else return 0.0;
@@ -99,6 +107,7 @@ static int ContourCmp(const void *xv, const void *yv) {
 //! \param [in] pd - The descriptor of the plot item
 
 void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const pplset_graph *sg, canvas_plotdesc *pd) {
+    // Variables for finding the range of c1
     dataBlock *blk;
     const int XSize = (x->current->settings.SamplesXAuto == SW_BOOL_TRUE) ? x->current->settings.samples
                                                                           : x->current->settings.SamplesX;
@@ -126,13 +135,16 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     // Find extremal values
     if (CMinAuto || CMaxAuto)
         for (j = 0; j < YSize; j++)
+            // Find the smallest and largest finite values of c1, which must be positive on logarithmic scales
             for (i = 0; i < XSize; i++) {
                 const double val = blk->data_real[2 + Ncol * (i + XSize * j)];
                 if (!gsl_finite(val)) continue;
+                // A new minimum
                 if ((CMinAuto) && ((!CMinSet) || (CMin > val)) && ((!CLog) || (val > 0.0))) {
                     CMin = val;
                     CMinSet = 1;
                 }
+                // A new maximum
                 if ((CMaxAuto) && ((!CMaxSet) || (CMax < val)) && ((!CLog) || (val > 0.0))) {
                     CMax = val;
                     CMaxSet = 1;
@@ -148,6 +160,7 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
 
     // If there's no spread of data, make a spread up
     if ((fabs(CMax) <= fabs(CMin)) || (fabs(CMin - CMax) <= fabs(1e-14 * CMax))) {
+        // Widen the range by a small amount, or by a factor of ten on logarithmic scales
         if (!CLog) {
             const double step = ppl_max(1.0, 1e-3 * fabs(CMin));
             CMin -= step;
@@ -171,23 +184,28 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
     min_prelim = CMin * UnitMultiplier;
     max_prelim = CMax * UnitMultiplier;
 
+    // Work with logarithms on logarithmic scales
     if (CLog) {
         min_prelim = log10(min_prelim);
         max_prelim = log10(max_prelim);
     }
 
+    // Round each end of the range to a multiple of a power of ten, about a fifth of the range
     OoM = pow(10.0, floor(log10(fabs(max_prelim - min_prelim) / 5)));
     min_prelim = floor(min_prelim / OoM) * OoM;
     max_prelim = ceil(max_prelim / OoM) * OoM;
 
+    // Convert back from logarithms
     if (CLog) {
         min_prelim = pow(10.0, min_prelim);
         max_prelim = pow(10.0, max_prelim);
     }
 
+    // Convert back from the units in which the contours are labelled
     min_prelim /= UnitMultiplier;
     max_prelim /= UnitMultiplier;
 
+    // Use the rounded range, if it is sensible
     if (gsl_finite(min_prelim) && (CLog || (min_prelim > 1e-300))) CMin = min_prelim;
     if (gsl_finite(max_prelim) && (CLog || (min_prelim > 1e-300))) CMax = max_prelim;
 
@@ -198,6 +216,8 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
          k++) {
         pplObj v = pd->CRangeUnit;
 
+        // Contours are evenly spaced across the range, or at the values listed by the user; ends of the range set by
+        // the user have contours on them, while automatic ends do not
         if (sg->ContoursListLen < 0)
             v.real = CLog
                     ? (CMin *
@@ -244,10 +264,12 @@ void eps_plot_contourmap_YieldText(EPSComm *x, const dataTable *data, const ppls
 static int IsBetween(const double x, const double a, const double b, double *f) {
     *f = 0.5;
     if (a == b) { return x == a; }
+    // The value lies between a and b, in increasing order
     if ((a < b) && (x >= a) && (x <= b)) {
         *f = (x - a) / (b - a);
         return 1;
     }
+    // The value lies between a and b, in decreasing order
     if ((a > b) && (x <= a) && (x >= b)) {
         *f = (x - a) / (b - a);
         return 1;
@@ -283,6 +305,7 @@ static int GetStartPoint(const double c1, const dataTable *data, unsigned char *
     *xcell = x0;
     *ycell = y0;
 
+    // Look for a crossing on the top edge of the cell
     if (((EntryFace < 0) || (EntryFace == FACE_T)) && (x0 <= XSize - 2) && (x0 >= 0) && (y0 >= 0) &&
         (y0 <= YSize - 1) && (((blk->split[(x0) + (y0) *XSize] >> (0 + 2 * pass)) & 1) == 0) &&
         IsBetween(c1, blk->data_real[2 + Ncol * ((x0) + (y0) *XSize)],
@@ -294,6 +317,7 @@ static int GetStartPoint(const double c1, const dataTable *data, unsigned char *
         return 1;
     }
 
+    // Look for a crossing on the right edge of the cell
     if (((EntryFace < 0) || (EntryFace == FACE_R)) && (x0 <= XSize - 2) && (x0 >= -1) && (y0 >= 0) &&
         (y0 <= YSize - 2) && (((blk->split[(x0 + 1) + (y0) *XSize] >> (1 + 2 * pass)) & 1) == 0) &&
         IsBetween(c1, blk->data_real[2 + Ncol * ((x0 + 1) + (y0) *XSize)],
@@ -305,6 +329,7 @@ static int GetStartPoint(const double c1, const dataTable *data, unsigned char *
         return 1;
     }
 
+    // Look for a crossing on the bottom edge of the cell
     if (((EntryFace < 0) || (EntryFace == FACE_B)) && (x0 <= XSize - 2) && (x0 >= 0) && (y0 >= -1) &&
         (y0 <= YSize - 2) && (((blk->split[(x0) + (y0 + 1) * XSize] >> (0 + 2 * pass)) & 1) == 0) &&
         IsBetween(c1, blk->data_real[2 + Ncol * ((x0) + (y0 + 1) * XSize)],
@@ -316,6 +341,7 @@ static int GetStartPoint(const double c1, const dataTable *data, unsigned char *
         return 1;
     }
 
+    // Look for a crossing on the left edge of the cell
     if (((EntryFace < 0) || (EntryFace == FACE_L)) && (x0 <= XSize - 1) && (x0 >= 0) && (y0 >= 0) &&
         (y0 <= YSize - 2) && (((blk->split[(x0) + (y0) *XSize] >> (1 + 2 * pass)) & 1) == 0) &&
         IsBetween(c1, blk->data_real[2 + Ncol * ((x0) + (y0) *XSize)],
@@ -353,7 +379,9 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
     int j;
     double f;
 
+    // Look for an exit from the cell, first opposite the entry, then on any unused edge
     for (j = 0; j < 2; j++) {
+        // An exit through the top edge
         if (((j == 1) || (EntryFace == FACE_B)) && (x0 <= XSize - 2) && (x0 >= 0) && (y0 >= 0) && (y0 <= YSize - 1) &&
             (((blk->split[(x0) + (y0) *XSize] >> (0 + 2 * pass)) & 1) == 0) &&
             IsBetween(c1, blk->data_real[2 + Ncol * ((x0) + (y0) *XSize)],
@@ -367,6 +395,7 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
             return 1;
         }
 
+        // An exit through the right edge
         if (((j == 1) || (EntryFace == FACE_L)) && (x0 <= XSize - 2) && (x0 >= -1) && (y0 >= 0) && (y0 <= YSize - 2) &&
             (((blk->split[(x0 + 1) + (y0) *XSize] >> (1 + 2 * pass)) & 1) == 0) &&
             IsBetween(c1, blk->data_real[2 + Ncol * ((x0 + 1) + (y0) *XSize)],
@@ -380,6 +409,7 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
             return 1;
         }
 
+        // An exit through the bottom edge
         if (((j == 1) || (EntryFace == FACE_T)) && (x0 <= XSize - 2) && (x0 >= 0) && (y0 >= -1) && (y0 <= YSize - 2) &&
             (((blk->split[(x0) + (y0 + 1) * XSize] >> (0 + 2 * pass)) & 1) == 0) &&
             IsBetween(c1, blk->data_real[2 + Ncol * ((x0) + (y0 + 1) * XSize)],
@@ -393,6 +423,7 @@ static int GetNextPoint(const double c1, const dataTable *data, const int pass, 
             return 1;
         }
 
+        // An exit through the left edge
         if (((j == 1) || (EntryFace == FACE_R)) && (x0 <= XSize - 1) && (x0 >= 0) && (y0 >= 0) && (y0 <= YSize - 2) &&
             (((blk->split[(x0) + (y0) *XSize] >> (1 + 2 * pass)) & 1) == 0) &&
             IsBetween(c1, blk->data_real[2 + Ncol * ((x0) + (y0) *XSize)],
@@ -445,6 +476,7 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
          (GetNextPoint(v->real, data, 0, XSize, YSize, xcell, ycell, face, &face, &xcell, &ycell, &xpos, &ypos) != 0);
          i++) {
         double grad;
+        // Measure the gradient of each segment on the page, ignoring vertical ones
         if (xpos != xold) {
             double x0, y0, x1, y1;
             x0 = Lx * xold / (XSize - 1) * sin(ThetaX) + Ly * yold / (YSize - 1) * sin(ThetaY);
@@ -452,6 +484,7 @@ static void FollowContour(const EPSComm *x, dataTable *data, ContourDesc *cd, co
             x1 = Lx * xpos / (XSize - 1) * sin(ThetaX) + Ly * ypos / (YSize - 1) * sin(ThetaY);
             y1 = Lx * xpos / (XSize - 1) * cos(ThetaX) + Ly * ypos / (YSize - 1) * cos(ThetaY);
             grad = fabs((y1 - y0) / (x1 - x0));
+            // Remember the flattest segment, where the label will go
             if (grad < grad_flatest) {
                 grad_flatest = grad;
                 i_flatest = i;
@@ -566,8 +599,10 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
     }
     blk = data->first;
 
+    // A list of the contours traced, and a buffer for error messages
     clist = (ContourDesc *) ppl_memAlloc(MAX_CONTOUR_PATHS * sizeof(ContourDesc));
     errtext = ppl_memAlloc(LSTR_LENGTH);
+    // Failure to allocate memory is reported as an error
     if ((clist == NULL) || (errtext == NULL)) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (p).");
         return 1;
@@ -581,6 +616,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
         Ly = scale_y;
         ThetaX = M_PI / 2;
         ThetaY = 0.0;
+        // If the data are plotted against the y axis horizontally, swap the directions of the grid
         if (xn != 0) {
             double t1 = Lx, t2 = ThetaX;
             Lx = Ly;
@@ -598,10 +634,12 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
                                  &ytmp, &z1tmp);
         ap[2] = (z1tmp > z0tmp) ? 1.0 : 0.0; // Determine whether zap=0 or zap=1 represents back of cuboid
 
+        // The origin of the grid is the corner of the back face where both axes are at their minimum
         ap[0] = ap[1] = 0.0;
         eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xo, &yo,
                                  &z0tmp);
 
+        // The direction and length of the grid's horizontal edge
         ap[0] = 1.0;
         eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
                                  &ytmp, &z0tmp);
@@ -609,6 +647,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
         ThetaX = atan2(xtmp - xo, ytmp - yo);
         if (!gsl_finite(ThetaX)) ThetaX = 0.0;
 
+        // The direction and length of the grid's vertical edge
         ap[0] = 0.0;
         ap[1] = 1.0;
         eps_plot_ThreeDimProject(ap[xn], ap[yn], ap[zn], sg, origin_x, origin_y, scale_x, scale_y, scale_z, &xtmp,
@@ -654,6 +693,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
 
     // Get pointer to variable c1 in the user's variable space
     ppl_contextGetVarPointer(x->c, c1name, &CVar, &CDummy);
+    // Without renormalisation, c1 takes the units of the data; otherwise it is dimensionless
     if (!CRenorm) {
         *CVar = pd->CRangeUnit;
         CVar->flagComplex = 0;
@@ -667,6 +707,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
          k++) {
         pplObj v = pd->CRangeUnit;
 
+        // Contours are evenly spaced across the range, or at the values listed by the user
         if (sg->ContoursListLen < 0)
             v.real = CLog
                     ? (CMin *
@@ -696,6 +737,7 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
 
         // Scan edges of plot looking for contour start points
         for (i = 0; i < XSize - 1; i++) // Top face
+            // Trace each contour which starts on the edge of the grid, and then each closed contour within it
             if (GetStartPoint(v.real, data, &flags, XSize, YSize, i, 0, FACE_T, &face, &xcell, &ycell, &xpos, &ypos)) {
                 clist[cpos].i = k;
                 clist[cpos].vreal = CVar->real;
@@ -749,25 +791,30 @@ int eps_plot_contourmap(EPSComm *x, dataTable *data, const unsigned char ThreeDi
                 }
     } // Finish looping over contours we are to trace
 
+// Contours have been traced
 GOT_CONTOURS:
 
     // Add corners of plot to paths of non-closed contours
     for (cn = 0; cn < cpos; cn++)
+        // Close each open contour around the corners of the grid, according to which edges its ends lie on
         if (!clist[cn].closepath) {
             int faceA, faceB;
             const int n = clist[cn].Nvertices_min;
             if (clist[cn].posdata == NULL) continue;
 
+            // The edge on which the contour starts
             if (clist[cn].posdata[0] < 0.0001) faceA = FACE_L;
             else if (clist[cn].posdata[0] > (XSize - 0.0001)) faceA = FACE_R;
             else if (clist[cn].posdata[1] < 0.0001) faceA = FACE_T;
             else faceA = FACE_B;
 
+            // The edge on which the contour ends
             if (clist[cn].posdata[2 * (n - 1) + 0] < 0.0001) faceB = FACE_L;
             else if (clist[cn].posdata[2 * (n - 1) + 0] > (XSize - 0.0001)) faceB = FACE_R;
             else if (clist[cn].posdata[2 * (n - 1) + 1] < 0.0001) faceB = FACE_T;
             else faceB = FACE_B;
 
+            // Add the corner, or corners, between the two edges
             if (((faceA == FACE_L) && (faceB == FACE_T)) || ((faceA == FACE_T) && (faceB == FACE_L))) {
                 clist[cn].posdata[2 * n + 0] = 0;
                 clist[cn].posdata[2 * n + 1] = 0;
@@ -815,7 +862,9 @@ GOT_CONTOURS:
     for (cn = 0; cn < cpos; cn++) {
         int i;
         double area = 0.0;
+        // Find the area enclosed, using the shoelace formula
         if (clist[cn].posdata != NULL) {
+            // Sum over the edges of the polygon
             for (i = 0; i < clist[cn].Nvertices_max - 1; i++) {
                 area += clist[cn].posdata[2 * (i) + 0] * clist[cn].posdata[2 * (i + 1) + 1] -
                         clist[cn].posdata[2 * (i + 1) + 0] * clist[cn].posdata[2 * (i) + 1];
@@ -836,9 +885,11 @@ GOT_CONTOURS:
         if ((pass == 2) && (sg->ContoursLabel == SW_ONOFF_ON)) fprintf(x->epsbuffer, "gsave\n");
         if ((pass == 4) && (sg->ContoursLabel == SW_ONOFF_ON)) fprintf(x->epsbuffer, "grestore\n");
 
+        // Draw each contour, in each pass
         for (cn = 0; cn < cpos; cn++) {
             const int stkLevelOld = x->c->stackPtr;
 
+            // Skip empty contours
             if (clist[cn].Nvertices_max < 1) continue;
 
             // Set value of c1
@@ -878,11 +929,14 @@ GOT_CONTOURS:
                     double dbl;
                     int errpos = -1;
 
+                    // Stop at the end of the list of expressions
                     if (clip[i] > 1) break;
                     if (expr[i] == NULL) continue;
 
+                    // Evaluate the expression
                     outval = ppl_expEval(x->c, expr[i], &lOP, 1, x->iterDepth + 1);
 
+                    // Report an expression which could not be evaluated
                     if (errpos >= 0) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -891,6 +945,7 @@ GOT_CONTOURS:
                         ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
+                    // The result must be dimensionless
                     if (!outval->dimensionless) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -899,6 +954,7 @@ GOT_CONTOURS:
                         ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
+                    // The result must be real
                     if (outval->flagComplex) {
                         ppl_snprintfTrunc(msg, sizeof(msg),
                                           "The style expression <%s> yielded a result which was a complex number.",
@@ -906,6 +962,7 @@ GOT_CONTOURS:
                         ppl_error(&x->c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         continue;
                     }
+                    // The result must be finite
                     if (!gsl_finite(outval->real)) {
                         ppl_snprintfTrunc(msg, sizeof(msg),
                                           "The style expression <%s> yielded a result which was not a finite number.",
@@ -915,7 +972,9 @@ GOT_CONTOURS:
                     }
                     dbl = outval->real;
 
+                    // Store the result in the style
                     if (outD[i] != NULL) *outD[i] = dbl;
+                    // Integer style values are clipped to the range of an int
                     if (outI[i] != NULL) {
                         if (dbl < INT_MIN) dbl = INT_MIN + 1;
                         if (dbl > INT_MAX) dbl = INT_MAX - 1;
@@ -927,6 +986,7 @@ GOT_CONTOURS:
                 }
                 ppl_stackClean(x->c, stkLevelOld); // Discard anything left on the stack
 
+                // Colors given by their components
                 if ((col1 >= 0.0) && (col2 >= 0.0) && (col3 >= 0.0) &&
                     ((pd->ww_final.Col1234Space != SW_COLSPACE_CMYK) || (col4 >= 0.0))) {
                     pd->ww_final.color1 = col1;
@@ -947,6 +1007,7 @@ GOT_CONTOURS:
                     pd->ww_final.USEfillcolor1234 = 1;
                 }
 
+                // A color given as a number selects a color from the palette
                 if (gsl_finite(col)) {
                     int j, palette_index;
                     for (j = 1; j < PALETTE_LENGTH; j++)
@@ -963,6 +1024,7 @@ GOT_CONTOURS:
                     pd->ww_final.AUTOcolor = 0;
                     pd->ww_final.USEcolor = (pd->ww_final.color > 0);
                 }
+                // A fill color given as a number selects a color from the palette
                 if (gsl_finite(fc)) {
                     int j, palette_index;
                     for (j = 1; j < PALETTE_LENGTH; j++)
@@ -986,6 +1048,7 @@ GOT_CONTOURS:
                         if (x->c->set->palette_current[j] == -1) break; // j now contains length of palette
                     i = ((pd->ww_final.AUTOcolor + clist[cn].i) - 5) % j; // i is now the palette color number to use
                     while (i < 0) i += j;
+                    // A named color, or one given by its components
                     if (x->c->set->palette_current[i] > 0) {
                         pd->ww_final.color = x->c->set->palette_current[i];
                         pd->ww_final.USEcolor = 1;
@@ -1026,6 +1089,7 @@ GOT_CONTOURS:
             else if (pass == 2) {
                 const long n = clist[cn].Nvertices_max;
                 if (n < 1) continue;
+                // Clip away the area around the contour's label, so that the contour is not drawn through it
                 if (sg->ContoursLabel == SW_ONOFF_ON) {
                     int page = x->current->DatasetTextID[pdn] + clist[cn].i;
                     const long i = clist[cn].segment_flatest;
@@ -1038,6 +1102,7 @@ GOT_CONTOURS:
                     postscriptPage *dviPage;
                     const contourProjection proj = {xo, yo, Lx, Ly, ThetaX, ThetaY, XSize, YSize};
 
+                    // Find where the label goes on the page, and how big it is
                     contourToPostscript(&proj, xlab0, ylab0, &xlab, &ylab);
                     if (x->dvi == NULL) { continue; }
                     dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, page + 1);
@@ -1053,6 +1118,7 @@ GOT_CONTOURS:
                     hlab = (fabs(bb_top - bb_bottom) + 2) * x->current->settings.FontSize;
                     wlab = (fabs(ab_right - ab_left) + 2) * x->current->settings.FontSize;
 
+                    // Set a clipping path which excludes the label's box, using the even-odd rule
                     fprintf(x->epsbuffer,
                             "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath %.2f %.2f %.2f 0 360 arc closepath eoclip\n",
                             xlab - wlab / 2, ylab - hlab / 2, xlab + wlab / 2, ylab - hlab / 2, xlab + wlab / 2,
@@ -1064,6 +1130,7 @@ GOT_CONTOURS:
             else if (pass == 3) {
                 eps_core_SetColor(x, &pd->ww_final, 1);
                 eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.linewidth, pd->ww_final.linetype, 0);
+                // Draw the contour, unless it is invisible
                 if (eps_core_isVisible(x)) {
                     double xps, yps;
                     long c = 0;
@@ -1074,6 +1141,7 @@ GOT_CONTOURS:
                     ypos = clist[cn].posdata[c++];
                     contourToPostscript(&proj, xpos, ypos, &xps, &yps);
                     fprintf(x->epsbuffer, "newpath %.2f %.2f moveto\n", xps, yps);
+                    // Draw a line to each vertex
                     while (c < 2 * clist[cn].Nvertices_min) {
                         xpos = clist[cn].posdata[c++];
                         ypos = clist[cn].posdata[c++];
@@ -1090,8 +1158,10 @@ GOT_CONTOURS:
                 const long n = clist[cn].Nvertices_max;
                 withWords ww;
 
+                // Skip empty contours
                 if (n < 1) continue;
                 ppl_withWordsZero(x->c, &ww);
+                // Write labels in the color set with "set textcolor"
                 if (x->current->settings.TextColor > 0) {
                     ww.color = x->current->settings.TextColor;
                     ww.USEcolor = 1;
@@ -1105,6 +1175,7 @@ GOT_CONTOURS:
                 }
                 eps_core_SetColor(x, &ww, 1);
 
+                // Write the label at the middle of the flattest segment, unless it is invisible
                 if (eps_core_isVisible(x)) {
                     const double xlab =
                             (clist[cn].posdata[2 * ((i) % n) + 0] + clist[cn].posdata[2 * ((i + 1) % n) + 0]) / 2;
@@ -1126,5 +1197,6 @@ GOT_CONTOURS:
     // Reset value of variable c1
     if (CVar != NULL) ppl_contextRestoreVarPointer(x->c, c1name, &CDummy);
 
+    // Done
     return 0;
 }

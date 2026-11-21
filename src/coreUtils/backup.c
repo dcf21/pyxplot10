@@ -19,7 +19,8 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for making backup copies of files before they are overwritten
+// Makes backup copies of files before Pyxplot overwrites them, when the user has turned on "set backup". It is called
+// whenever Pyxplot writes output files, e.g. graphs and tables.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -44,8 +45,10 @@ void ppl_createBackupIfRequired(const ppl_context *c, const char *filename) {
     if (c->set->term_current.backup == SW_ONOFF_OFF) return; // Backup is switched off
     if (access(filename, F_OK) != 0) return; // File we're about to write to does not already exist
 
+    // Try the names <filename~0>, <filename~1>, etc., until we find one which is not in use
     ppl_snprintfTrunc(newname, sizeof(newname), "%s", filename);
     i = strlen(filename);
+    // Try each backup number in turn
     for (j = 0; j < 65536; j++) {
         sprintf(newname + i, "~%d", j);
         if (access(newname, F_OK) != 0) break; // We've found a backup file which does not already exist

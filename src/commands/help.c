@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the help command. The help pages are held in the XML document help.xml, in which each element is a topic
+// and nested elements are subtopics. The words of the user's request are matched against the element names, allowing
+// abbreviations, and the matching page is word-wrapped and shown through the user's pager.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +57,7 @@
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *node, const int interactive) {
+    // The page is built up in textBuffer, using the "\\" line-break markers understood by ppl_strWordWrap
     xmlNode *cur_node;
     char textBuffer[LSTR_LENGTH];
     char textBuffer2[LSTR_LENGTH];
@@ -62,13 +67,17 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
     int i, j, Ncolumns, Nchildren, strlen_version, strlen_date;
     FILE *pagerHandle;
 
+    // Start with a title line, then copy the text of the page
     ppl_snprintfTrunc(textBuffer, sizeof(textBuffer), "\\\\**** Help Topic: %s****\\\\", PageName);
     i = strlen(textBuffer);
     for (cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
+        // Copy each text node, substituting the version number and date for $VERSION and $DATE
         if (cur_node->type == XML_TEXT_NODE) {
             strlen_version = strlen("$VERSION");
             strlen_date = strlen("$DATE");
+            // Copy the text character by character
             for (j = 0; cur_node->content[j] != '\0';) {
+                // Substitute the placeholders where they appear
                 if (strncmp((char *) cur_node->content + j, "$VERSION", strlen_version) == 0) {
                     j += strlen_version;
                     strcpy(textBuffer + i, VERSION);
@@ -83,11 +92,14 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
             }
         } // NB, textBuffer is not null terminated at this point, but we're about to add stuff to it...
 
+    // End the page text with a blank line
     sprintf(textBuffer + i, "\\\\\\\\\\\\");
     // Insert information about children
     Nchildren = 0;
     for (cur_node = node->children; cur_node; cur_node = cur_node->next) // Loop over children
+        // Each child element is a subtopic; list their names, separated by commas
         if (cur_node->type == XML_ELEMENT_NODE) {
+            // Introduce the list before the first subtopic
             if (Nchildren == 0) {
                 sprintf(textBuffer + i, "This help page has the following subtopics:\\\\\\\\");
                 i += strlen(textBuffer + i);
@@ -99,6 +111,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
             i += strlen(textBuffer + i);
             Nchildren++;
         }
+    // End the list of subtopics, or say there are none
     if (Nchildren == 0) {
         sprintf(textBuffer + i, "This help page has no subtopics.\\\\\\\\");
         i += strlen(textBuffer + i);
@@ -122,9 +135,11 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
 
     // Word wrap the text we have, and send it to a pager
     ppl_strWordWrap(textBuffer, textBuffer2, Ncolumns);
+    // Display the page
     if (interactive == 0) {
         ppl_report(c, textBuffer2); // In non-interactive sessions, we just send text to stdout
     } else {
+        // Pipe the page into the pager
         if ((pagerHandle = popen(pagerName, "w")) == NULL) {
             ppl_error(c, ERR_INTERNAL, -1, -1, "Cannot open pipe to pager application.");
         } else {
@@ -142,6 +157,7 @@ static void help_PagerDisplay(pplerr_context *c, char *PageName, const xmlNode *
 
 static void help_TopicPrint(char *out, char **words, const int Nwords) {
     int i, j;
+    // Join the words with spaces
     for (i = 0, j = 0; i <= Nwords; i++) {
         strcpy(out + j, words[i]);
         j += strlen(out + j);
@@ -167,12 +183,15 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
     int abbreviation, i;
     list *prevMatchPosition;
 
+    // There is a fixed limit on the number of matches which can be recorded
     if ((*Nmatches) == MAX_HELP_HITS) {
         ppl_error(c, ERR_INTERNAL, -1, -1, "Cannot parse ppl_help.xml. Need to increase MAX_HELP_HITS.");
         return;
     }
     help_TopicPrint(helpTexts[*Nmatches], helpPosition, ppl_listLen(topicWords));
+    // Unless we already know the request is ambiguous, decide whether this match or the previous one is better
     if (*ambiguous == 0) {
+        // The first match is the best so far
         if (*matchNode == NULL) {
             *matchTextPos = 0;
             *matchNode = node; // This is the first match we've found
@@ -181,18 +200,22 @@ static void help_MatchFound(pplerr_context *c, xmlNode *node, xmlNode **matchNod
 
             abbreviation = 1; // If previous match is an autocomplete shortening of current match, let it stand
             for (i = 0; i <= ppl_listLen(topicWords); i++)
+                // Stop if any word of the previous match is not an abbreviation of this one
                 if (ppl_strAutocomplete((char *) ppl_listGetItem(prevMatchPosition, i), helpPosition[i], 1) == -1) {
                     abbreviation = 0;
                     break;
                 }
+            // Otherwise, check whether this match is an abbreviation of the previous one
             if (abbreviation != 1) {
                 abbreviation =
                         1; // If current match is an autocomplete shortening of previous match, the current match wins
                 for (i = 0; i <= ppl_listLen(topicWords); i++)
+                    // Stop if any word of this match is not an abbreviation of the previous one
                     if (ppl_strAutocomplete(helpPosition[i], (char *) ppl_listGetItem(prevMatchPosition, i), 1) == -1) {
                         abbreviation = 0;
                         break;
                     }
+                // This match wins if it is an abbreviation of the previous one; otherwise neither wins
                 if (abbreviation == 1) {
                     *matchTextPos = *Nmatches;
                     *matchNode = node;
@@ -223,7 +246,9 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
     xmlNode *cur_node = NULL;
     int match, i;
 
+    // Do not search deeper than the number of words in the request
     if (depth > ppl_listLen(topicWords)) return;
+    // There is a fixed limit on the depth of the help document
     if (depth == MAX_HELP_DEPTH) {
         ppl_error(c, ERR_INTERNAL, -1, -1, "Cannot parse ppl_help.xml. Need to increase MAX_HELP_DEPTH.");
         return;
@@ -232,9 +257,12 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
     for (cur_node = node; cur_node; cur_node = cur_node->next) // Loop over siblings
     {
         match = 1;
+        // Record this element's name, and check whether each word of the request so far abbreviates the element names
+        // on its path
         if (cur_node->type == XML_ELEMENT_NODE) {
             sprintf(helpPosition[depth], "%s", cur_node->name); // Converted signedness of chars
             for (i = 1; i <= depth; i++)
+                // This element does not match the request
                 if (ppl_strAutocomplete((char *) ppl_listGetItem(topicWords, i - 1), helpPosition[i], 1) == -1) {
                     match = 0;
                     break;
@@ -257,6 +285,7 @@ void help_explore(pplerr_context *c, xmlNode *node, xmlNode **matchNode, list *t
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, const int interactive) {
+    // The variables used to search the help document
     char msg[PPL_MSG_LENGTH];
     pplerr_context *e = &c->errcontext;
     list *topicWords = NULL; // A list of the help topic words supplied by the user
@@ -273,14 +302,17 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
     int Nmatches = 0; // Counts the number of pages the user's request matches
     int i;
 
+    // Split the user's request into words
     topicString = (char *) in->stk[PARSE_help_topic].auxil;
     topicWords = ppl_strSplit(topicString);
 
     ppl_snprintfTrunc(filename, sizeof(filename), "%s%s%s", SRCDIR, PATHLINK, "help.xml"); // Find help.xml
     LIBXML_TEST_VERSION
 
+    // Load the help document
     doc = xmlReadFile(filename, NULL, 0);
 
+    // Report an error if the help document cannot be read
     if (doc == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Help command cannot find help data in expected location of '%s'.",
                           filename);
@@ -288,6 +320,7 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
         return;
     }
 
+    // Allocate buffers for the path of the current position in the document, and for the names of the topics found
     for (i = 0; i < MAX_HELP_DEPTH; i++) helpPosition[i] = NULL;
     for (i = 0; i < MAX_HELP_HITS; i++) helpTexts[i] = NULL;
     for (i = 0; i < MAX_HELP_DEPTH; i++)
@@ -295,10 +328,12 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
     for (i = 0; i < MAX_HELP_HITS; i++)
         if ((helpTexts[i] = (char *) malloc(SSTR_LENGTH * sizeof(char))) == NULL) goto cleanup;
 
+    // Search the document for topics matching the request
     root_element = xmlDocGetRootElement(doc);
     help_explore(e, root_element, &matchNode, topicWords, &matchTextPos, &Nmatches, &ambiguous, helpPosition, helpTexts,
                  0);
 
+    // Show the page which matched, or report that the request was ambiguous or matched nothing
     if (ambiguous == 1) {
         ppl_report(e, "Ambiguous help request. The following help topics were matched:");
         for (i = 0; i < Nmatches; i++) ppl_report(e, helpTexts[i]);
@@ -309,11 +344,14 @@ void ppl_directive_help(ppl_context *c, const parserLine *pl, parserOutput *in, 
         help_PagerDisplay(e, helpTexts[matchTextPos], matchNode, interactive);
     }
 
+// Free the buffers and the document
 cleanup:
+    // Free the path buffers
     for (i = 0; i < MAX_HELP_DEPTH; i++) {
         free(helpPosition[i]);
         helpPosition[i] = NULL;
     }
+    // Free the names of the topics found
     for (i = 0; i < MAX_HELP_HITS; i++) {
         free(helpTexts[i]);
         helpTexts[i] = NULL;

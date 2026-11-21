@@ -19,6 +19,13 @@
 
 // ----------------------------------------------------------------------------
 
+// Manages Pyxplot's child processes. At startup, the main process forks the Child Support Process (CSP), which creates
+// Pyxplot's temporary directory and launches postscript viewers on request, keeping them open as the X11 terminals
+// require (including after Pyxplot exits, for X11_persist), and removes the directory when everything has finished; the
+// two processes talk through a pair of pipes. The main process also launches short-lived helpers itself (sed, latex,
+// input filters and kpsewhich), connected to it by pipes, and relays error messages which the CSP and helpers send
+// back.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -71,6 +78,7 @@ static int PyxplotRunning = 1; // Flag which we drop in the CSP when the main pr
 //! \param [in] context - The Pyxplot context
 
 void pplcsp_init(ppl_context *context) {
+    // Variables for creating the CSP
     int pid, fail, i;
     struct stat statinfo;
 
@@ -80,6 +88,7 @@ void pplcsp_init(ppl_context *context) {
     HelperPIDs = (int *) malloc(PTABLE_LISTLEN * sizeof(int));
     static_context = context;
 
+    // Failure to allocate memory is fatal
     if ((GhostViews == NULL) || (GhostView_Persists == NULL) || (HelperPIDs == NULL))
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Out of memory.");
     for (i = 0; i < PTABLE_LISTLEN; i++) GhostViews[i] = 0;
@@ -93,8 +102,10 @@ void pplcsp_init(ppl_context *context) {
     if (pipe(PipeCSP2MAIN) < 0) ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not create a pipe.");
     if (pipe(PipeMAIN2CSP) < 0) ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not create a pipe.");
 
+    // Fork the CSP
     if ((pid = fork()) < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not fork a child process for the CSP.");
+    // The main process sets its SIGCHLD handler and returns; the rest of this function runs in the CSP
     else if (pid != 0) {
         close(PipeMAIN2CSP[0]); // Parent process; close CSP's ends of pipes
         //close(PipeCSP2MAIN[1]); // Leave this pipe open so that sed can return error messages down it
@@ -122,6 +133,7 @@ void pplcsp_init(ppl_context *context) {
         (access(context->errcontext.session_default.tempdir, F_OK) != 0)) {
         fail = 1;
     } // If temporary directory does not exist, fail.
+    // The directory must be a directory owned by this user
     else {
         if (stat(context->errcontext.session_default.tempdir, &statinfo) < 0)
             fail = 1; // Otherwise stat it and make sure it's a directory we own
@@ -162,12 +174,16 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
     int pos, TrialNumber;
     char linebuffer[SSTR_LENGTH];
 
+    // Check whether the pipe from the CSP is readable, retrying up to three times if interrupted by a signal
     TrialNumber = 1;
+    // Retry if interrupted by a signal
     while (1) {
         waitperiod.tv_sec = waitperiod.tv_nsec = 0;
         FD_ZERO(&readable);
         FD_SET(PipeCSP2MAIN[0], &readable);
+        // Report a failure of pselect
         if (pselect(PipeCSP2MAIN[0] + 1, &readable, NULL, NULL, &waitperiod, NULL) == -1) {
+            // Retry if interrupted by a signal
             if ((errno == EINTR) && (TrialNumber < 3)) {
                 TrialNumber++;
                 continue;
@@ -179,8 +195,10 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
     }
     if (!FD_ISSET(PipeCSP2MAIN[0], &readable)) return; // select tells us that pipe from CSP is not readable
 
+    // Read what is waiting, and report it line by line
     pos = strlen(PipeOutputBuffer);
     if (read(PipeCSP2MAIN[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5) > 0)
+        // Report each complete line, ignoring messages about viewers being killed
         while (PipeOutputBuffer[0] != '\0') {
             ppl_strRemoveCompleteLine(PipeOutputBuffer, linebuffer);
             if (linebuffer[0] == '\0') continue;
@@ -188,6 +206,7 @@ void pplcsp_checkForGvOutput(ppl_context *context) {
             if (strncmp(linebuffer, SED_COMMAND, strlen(SED_COMMAND)) == 0)
                 ppl_error(&context->errcontext, ERR_GENERIC, -1, -1,
                           "A problem was encounter with the supplied regular expression.");
+            // Warnings, such as X toolkit font warnings from ghostview, are reported as warnings
             else if (strncmp(linebuffer, "Warning:", 8) == 0) {
                 // Messages such as X toolkit font warnings from ghostview are not errors: they should neither be
                 // labelled as errors, nor make Pyxplot exit with a non-zero status. ppl_warning() adds its own prefix.
@@ -217,8 +236,10 @@ void pplcsp_sendCommand(ppl_context *context, const char *cmd) {
 //! \param [in] context - The Pyxplot context
 
 void pplcsp_main(ppl_context *context) {
+    // Keep running while Pyxplot is running, or while any persistent viewers remain open
     int gotPersists = 1;
 
+    // Every 100ms, check for commands from the main process
     while (gotPersists) {
         struct timespec waitperiod, waitedperiod;
         waitperiod.tv_sec = 0;
@@ -234,9 +255,11 @@ void pplcsp_main(ppl_context *context) {
         }
         gotPersists = 0;
         if (PyxplotRunning) gotPersists = 1;
+        // After Pyxplot has quit, wait for persistent viewers to close
         else {
             int i;
             for (i = 0; i < PTABLE_LISTLEN; i++)
+                // A persistent viewer is still open
                 if (GhostView_Persists[i] != 0) {
                     gotPersists = 1;
                     break;
@@ -250,14 +273,18 @@ void pplcsp_main(ppl_context *context) {
 //! \param [in] signo - The signal number
 
 void pplcsp_checkForChildExits(const int signo) {
+    // Variables for reaping viewers
     int i;
     char errtext[FNAME_LENGTH];
     ppl_context *context = static_context;
 
+    // Note which viewers have exited
     for (i = 0; i < PTABLE_LISTLEN; i++) {
         const int gv_pid = GhostViews[i];
         if (gv_pid == 0) continue;
+        // This viewer has exited
         if (waitpid(gv_pid, NULL, WNOHANG) != 0) {
+            // Log the exit in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(errtext, sizeof(errtext), "A ghostview process with pid %d has terminated.", gv_pid);
                 ppl_log(&context->errcontext, errtext);
@@ -267,10 +294,13 @@ void pplcsp_checkForChildExits(const int signo) {
         }
     }
 
+    // Note which persistent viewers have exited
     for (i = 0; i < PTABLE_LISTLEN; i++) {
         const int gv_pid = GhostView_Persists[i];
         if (gv_pid == 0) continue;
+        // This viewer has exited
         if (waitpid(gv_pid, NULL, WNOHANG) != 0) {
+            // Log the exit in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(errtext, sizeof(errtext),
                                   "A persistent ghostview process with pid %d has terminated.", gv_pid);
@@ -292,12 +322,16 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
     int pos, TrialNumber;
     char linebuffer[SSTR_LENGTH];
 
+    // Check whether the pipe from the main process is readable, retrying up to three times if interrupted by a signal
     TrialNumber = 1;
+    // Retry if interrupted by a signal
     while (1) {
         waitperiod.tv_sec = waitperiod.tv_nsec = 0;
         FD_ZERO(&readable);
         FD_SET(PipeMAIN2CSP[0], &readable);
+        // Report a failure of pselect
         if (pselect(PipeMAIN2CSP[0] + 1, &readable, NULL, NULL, &waitperiod, NULL) == -1) {
+            // Retry if interrupted by a signal
             if ((errno == EINTR) && (TrialNumber < 3)) {
                 TrialNumber++;
                 continue;
@@ -309,8 +343,10 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
     }
     if (!FD_ISSET(PipeMAIN2CSP[0], &readable)) return; // select tells us that pipe from main process is not readable
 
+    // Read what is waiting, and process it command by command
     pos = strlen(PipeOutputBuffer);
     if (read(PipeMAIN2CSP[0], PipeOutputBuffer + pos, LSTR_LENGTH - pos - 5) > 0)
+        // Process each complete line
         while (1) {
             ppl_strRemoveCompleteLine(PipeOutputBuffer, linebuffer);
             if (linebuffer[0] == '\0') break;
@@ -325,9 +361,12 @@ void pplcsp_checkForNewCommands(ppl_context *context) {
 //! \param [in] in - The command. Its first character identifies the command, and the rest gives its arguments.
 
 void pplcsp_processCommand(ppl_context *context, char *in) {
+    // Commands are a single character: A to clear the display, B when Pyxplot quits, and 0, 1 or 2 followed by a viewer
+    // command line, for the X11_singlewindow, X11_multiwindow and X11_persist terminals
     char msg[PPL_MSG_LENGTH];
     char cmd[FNAME_LENGTH];
 
+    // Act on the command
     if (in[0] == '\0') return;
     else if (in[0] == 'A') // clear command executed
     {
@@ -344,14 +383,18 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
         int state = 0, i;
         char *filename = in + 1;
         for (i = 1; in[i] != '\0'; i++)
+            // A new word
             if ((((unsigned char) in[i] > ' ') || (in[i] < '\0')) || ((i > 1) && (in[i - 1] == '\\'))) {
+                // Remember where the word starts
                 if (!state) {
                     filename = in + i;
                     state = 1;
                 } // New word
             } else state = 0;
 
+        // If a single-window viewer is open, copy the new file over the one it is watching; otherwise open a new viewer
         if (GhostView_pid > 1) {
+            // Log progress in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Received gv_singlewindow request. Putting into existing window with pid %d.",
@@ -361,6 +404,7 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
             if (snprintf(cmd, FNAME_LENGTH, "cp -f %s %s", filename, context->pplcsp_ghostView_fname) >= FNAME_LENGTH) {
                 if (DEBUG) ppl_log(&context->errcontext, "Filename of postscript document is too long to copy.");
             } else if (system(cmd) != 0)
+                // Log the failure in debugging mode
                 if (DEBUG) {
                     ppl_log(&context->errcontext,
                             "Failed to copy postscript document into existing gv_singlewindow session.");
@@ -389,23 +433,28 @@ void pplcsp_processCommand(ppl_context *context, char *in) {
 //! \return The process ID of the viewer, or zero on failure
 
 int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
+    // Variables for launching the viewer
     char msg[PPL_MSG_LENGTH];
 #define MAX_CMDARGS 64
 
+    // The words of the command line
     int pid, i, state = 0, NArgs = 0;
     char *Args[MAX_CMDARGS], ViewerApp[FNAME_LENGTH];
     sigset_t sigs;
 
     // Split up command line into words
     for (i = 0; fname[i] != '\0'; i++) {
+        // Split the command line into words at whitespace which is not escaped
         if ((((unsigned char) fname[i] > ' ') || (fname[i] < '\0')) || ((i > 1) && (fname[i - 1] == '\\'))) {
             if (state) {
             } // In the middle of a word... keep going
+            // The start of a new word
             else {
                 Args[NArgs++] = fname + i;
                 state = 1;
             } // New word
         } else {
+            // The end of a word
             if (state) {
                 fname[i] = '\0';
                 state = 0;
@@ -413,6 +462,7 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
             else {} // Lots of whitespace
         }
 
+        // There is a fixed limit on the number of words
         if (NArgs == MAX_CMDARGS) {
             FILE *f = fdopen(PipeCSP2MAIN[1], "w");
             if (f == NULL) return 0;
@@ -423,19 +473,24 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
     }
     Args[NArgs] = NULL;
 
+    // The name of the viewer, for error messages
     snprintf(ViewerApp, FNAME_LENGTH, "%s", Args[0]);
     ViewerApp[FNAME_LENGTH - 1] = '\0';
 
+    // Block SIGCHLD while the viewer is launched, so that it is not reaped before it is recorded
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
     sigprocmask(SIG_BLOCK, &sigs, NULL);
 
+    // Fork the viewer
     if ((pid = fork()) < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not fork a child process for the CSP.");
+    // The CSP records the viewer's pid; the child runs the viewer
     else if (pid != 0) {
         // Parent process (i.e. the CSP)
         int i;
         for (i = 0; i < PTABLE_LISTLEN; i++)
+            // Record the viewer in the first free slot
             if (gv_list[i] == 0) {
                 gv_list[i] = pid;
                 break;
@@ -448,6 +503,7 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
         ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "GV%7d",
                           getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New postscript viewer process alive; going to view %s.", fname);
             ppl_log(&context->errcontext, msg);
@@ -480,6 +536,7 @@ int pplcsp_forkNewGv(ppl_context *context, char *fname, int *gv_list) {
 void pplcsp_killAllGvs(ppl_context *context) {
     int i;
     if (DEBUG) ppl_log(&context->errcontext, "Killing all ghostview processes.");
+    // Close each viewer
     for (i = 0; i < PTABLE_LISTLEN; i++) {
         const int gv_pid = GhostViews[i];
         if (gv_pid == 0) continue;
@@ -495,7 +552,9 @@ void pplcsp_killAllGvs(ppl_context *context) {
 
 void pplcsp_killLatestSinglewindow(ppl_context *context) {
     char msg[PPL_MSG_LENGTH];
+    // Close the viewer, if there is one
     if (GhostView_pid > 1) {
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Killing latest ghostview singlewindow process with pid %d.",
                               GhostView_pid);
@@ -503,6 +562,7 @@ void pplcsp_killLatestSinglewindow(ppl_context *context) {
         }
         kill(GhostView_pid, SIGTERM);
     } else {
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No ghostview singlewindow process to kill.");
             ppl_log(&context->errcontext, msg);
@@ -523,10 +583,13 @@ void pplcsp_checkForHelperExits(const int signo) {
     char errtext[256];
     ppl_context *context = static_context;
 
+    // Note which helpers have exited
     for (i = 0; i < PTABLE_LISTLEN; i++) {
         const int pid = HelperPIDs[i];
         if (pid == 0) continue;
+        // This helper has exited
         if (waitpid(pid, NULL, WNOHANG) != 0) {
+            // Log the exit in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(errtext, sizeof(errtext), "A helper process with pid %d has terminated.", pid);
                 ppl_log(&context->errcontext, errtext);
@@ -544,9 +607,11 @@ void pplcsp_killAllHelpers(const ppl_context *context) {
     int i;
     sigset_t sigs;
 
+    // Block SIGCHLD while helpers are killed
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
     sigprocmask(SIG_BLOCK, &sigs, NULL);
+    // Kill each helper
     for (i = 0; i < PTABLE_LISTLEN; i++) {
         const int pid = HelperPIDs[i];
         if (pid == 0) continue;
@@ -564,21 +629,28 @@ void pplcsp_killAllHelpers(const ppl_context *context) {
 //! \param [out] fstdout - Set to the file descriptor of a pipe from sed's standard output
 
 void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) {
+    // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];
     int i, pid;
     sigset_t sigs;
 
+    // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
+    // Create the pipes to the helper's standard input and output
     if ((pipe(fd0) < 0) || (pipe(fd1) < 0))
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not open required pipes.");
 
+    // Block SIGCHLD
     sigprocmask(SIG_BLOCK, &sigs, NULL);
 
+    // Fork the helper
     if ((pid = fork()) < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not fork a child process for sed process.");
+    // The main process keeps its ends of the pipes and records the helper's pid; the child redirects its input and
+    // output to the pipes and runs sed
     else if (pid != 0) {
         // Parent process
         close(fd0[0]);
@@ -586,6 +658,7 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
         close(fd1[1]);
         *fstdout = fd1[0];
         for (i = 0; i < PTABLE_LISTLEN; i++)
+            // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;
                 break;
@@ -602,6 +675,7 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
         ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "SED%6d",
                           getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New sed process alive; going to run command \"%s\".", cmd);
             ppl_log(&context->errcontext, msg);
@@ -642,21 +716,28 @@ void pplcsp_forkSed(ppl_context *context, char *cmd, int *fstdin, int *fstdout) 
 //! \param [out] fstdout - Set to the file descriptor of a pipe from LaTeX's standard output
 
 void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fstdin, int *fstdout) {
+    // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2], fd1[2];
     int i, pid;
     sigset_t sigs;
 
+    // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
+    // Create the pipes to the helper's standard input and output
     if ((pipe(fd0) < 0) || (pipe(fd1) < 0))
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not open required pipes.");
 
+    // Block SIGCHLD
     sigprocmask(SIG_BLOCK, &sigs, NULL);
 
+    // Fork the helper
     if ((pid = fork()) < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not fork a child process for latex process.");
+    // The main process keeps its ends of the pipes and records the helper's pid; the child redirects its input and
+    // output to the pipes and runs latex
     else if (pid != 0) {
         // Parent process
         close(fd0[0]);
@@ -665,6 +746,7 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
         *fstdout = fd1[0];
         *PidOut = pid;
         for (i = 0; i < PTABLE_LISTLEN; i++)
+            // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;
                 break;
@@ -681,6 +763,7 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
         ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "TEX%6d",
                           getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New latex process alive; going to latex file \"%s\".", filename);
             ppl_log(&context->errcontext, msg);
@@ -718,25 +801,33 @@ void pplcsp_forkLaTeX(ppl_context *context, char *filename, int *PidOut, int *fs
 //! \param [out] fstdout - Set to the file descriptor of a pipe from the filter's standard output
 
 void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
+    // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     int fd0[2];
     int i, pid;
     sigset_t sigs;
 
+    // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
+    // Create the pipe from the helper's standard output
     if (pipe(fd0) < 0) ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not open required pipes.");
 
+    // Block SIGCHLD
     sigprocmask(SIG_BLOCK, &sigs, NULL);
 
+    // Fork the helper
     if ((pid = fork()) < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not fork a child process for input filter process.");
+    // The main process keeps its ends of the pipes and records the helper's pid; the child redirects its input and
+    // output to the pipes and runs the input filter
     else if (pid != 0) {
         // Parent process
         close(fd0[1]);
         *fstdout = fd0[0];
         for (i = 0; i < PTABLE_LISTLEN; i++)
+            // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;
                 break;
@@ -752,6 +843,7 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
         ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "IF %6d",
                           getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New input filter process alive; going to run command \"%s\".", cmd[0]);
             ppl_log(&context->errcontext, msg);
@@ -786,26 +878,34 @@ void pplcsp_forkInputFilter(ppl_context *context, char **cmd, int *fstdout) {
 //! \param [out] fstdout - Set to the file descriptor of a pipe from kpsewhich's standard output
 
 void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout) {
+    // Variables for launching the helper
     char msg[PPL_MSG_LENGTH];
     char CmdLineOpt[128];
     int fd0[2];
     int i, pid;
     sigset_t sigs;
 
+    // SIGCHLD is blocked while the helper is launched, so that it is not reaped before it is recorded
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
+    // Create the pipe from the helper's standard output
     if (pipe(fd0) < 0) ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not open required pipes.");
 
+    // Block SIGCHLD
     sigprocmask(SIG_BLOCK, &sigs, NULL);
 
+    // Fork the helper
     if ((pid = fork()) < 0)
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not fork a child process for kpsewhich process.");
+    // The main process keeps its ends of the pipes and records the helper's pid; the child redirects its input and
+    // output to the pipes and runs kpsewhich
     else if (pid != 0) {
         // Parent process
         close(fd0[1]);
         *fstdout = fd0[0];
         for (i = 0; i < PTABLE_LISTLEN; i++)
+            // Record the helper in the first free slot
             if (HelperPIDs[i] == 0) {
                 HelperPIDs[i] = pid;
                 break;
@@ -821,6 +921,7 @@ void pplcsp_forkKpseWhich(ppl_context *context, const char *ftype, int *fstdout)
         ppl_snprintfTrunc(context->errcontext.error_source, sizeof(context->errcontext.error_source), "KPS%6d",
                           getpid());
         context->errcontext.session_default.color = SW_ONOFF_OFF;
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "New kpsewhich process alive; going to get paths for filetype \"%s\".",
                               ftype);

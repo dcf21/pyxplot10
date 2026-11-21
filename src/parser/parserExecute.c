@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Executes commands which parserCompile.c has compiled. Each compiled command is a list of atoms, which are literals or
+// expressions; executing it evaluates each atom, checks that it has the type which the command's grammar requires (e.g.
+// a length, an angle or a color), and places it on an output stack. The output stack is then passed to parserShell.c,
+// which runs the command.
+
 #define _PARSEREXECUTE_C 1
 
 #include <stdio.h>
@@ -59,12 +64,15 @@ void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
     char *t = msg;
     parserAtom *a = in->firstAtom;
 
+    // Describe the line as a whole
     ppl_snprintfTrunc(t, sizeof(msg), "Parser line -- stack length %d\nOriginal line was: %s", in->stackLen,
                       in->linetxt);
     ppl_report(&c->errcontext, msg);
     if (in->containsMacros) ppl_report(&c->errcontext, "Contains macros.");
 
+    // Describe where each atom will be placed on the output stack
     for (a = in->firstAtom; a != NULL; a = a->next) {
+        // A literal value, printed in full; or an expression, printed as typed
         if (a->literal != NULL) {
             int i = 0;
             ppl_strAppendf(t, sizeof(msg), &i, "Set %4d to literal of type %2d -- ", a->stackOutPos,
@@ -78,6 +86,7 @@ void ppl_parserLinePrint(ppl_context *c, parserLine *in) {
         ppl_report(&c->errcontext, msg);
     }
 
+    // End of the description
     ppl_report(&c->errcontext, "---------------");
     return;
 }
@@ -127,6 +136,8 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
     // If at bottom iteration depth, clean up stack now if there is any left-over junk
     if (iterDepth == 0) ppl_stackClean(c, 0);
 
+    // Execute each compiled line in turn, stopping on an error, or if a break, continue, return or exit statement needs
+    // to unwind the stack of loops and subroutines
     while ((in != NULL) && (!c->errStat.status) && (!c->shellExiting) && (!c->shellBroken) && (!c->shellContinued) &&
            (!c->shellReturned)) {
         parserAtom *item = in->firstAtom;
@@ -139,6 +150,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
             parserStatus *ps = NULL;
             parserLine *pl = NULL;
             ppl_parserStatInit(&ps, &pl);
+            // Failure to allocate memory is reported as an error
             if (ps == NULL) {
                 strcpy(eB, "Out of memory.");
                 ppl_tbAddLine(c, in, ERR_MEMORY, 0, NULL);
@@ -155,12 +167,14 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
 
         // Initialise output stack
         out = (parserOutput *) malloc(sizeof(parserOutput));
+        // Failure to allocate memory is reported as an error
         if (out == NULL) {
             strcpy(eB, "Out of memory.");
             ppl_tbAddLine(c, in, ERR_MEMORY, 0, NULL);
             return;
         }
         stk = (pplObj *) malloc(in->stackLen * sizeof(pplObj));
+        // Failure to allocate memory is reported as an error
         if (stk == NULL) {
             free(out);
             out = NULL;
@@ -168,11 +182,14 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
             ppl_tbAddLine(c, in, ERR_MEMORY, 0, NULL);
             return;
         }
+        // Every slot on the output stack starts as a zombie, meaning that nothing was matched there
         for (i = 0; i < in->stackLen; i++) {
             stk[i].refCount = 1;
             pplObjZom(&stk[i], 0);
         }
         stkCharPos = (int *) malloc(in->stackLen * sizeof(int));
+        // Failure to allocate memory is reported as an error. stkCharPos records where in the line each value came
+        // from, for error messages.
         if (stkCharPos == NULL) {
             free(out);
             out = NULL;
@@ -189,6 +206,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
 
         // Loop over atoms
         while (item != NULL) {
+            // Atoms are either literals, such as keywords matched in the command, or expressions to be evaluated now
             if (item->literal != NULL) {
                 // Atom is a literal: simply copy it
                 pplObjCpy(&stk[item->stackOutPos], item->literal, 0, 0, 1);
@@ -197,6 +215,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                 const int stkLevelOld = c->stackPtr;
                 int lastOpAssign = 0, passed = 0, j = 0, k = 0, p = 0;
                 pplObj *val = ppl_expEval(c, item->expr, &lastOpAssign, 1, iterDepth + 1);
+                // The expression could not be evaluated
                 if (c->errStat.status) {
                     if (item->options[1] ==
                         'E') // If expression has produced an error, and its second option is type E, store it for per-point evaluation
@@ -215,11 +234,17 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                 // Check type of pplObj produced by expression, and complain if the wrong type
                 strcpy(eB + k, "Expression evaluates to the wrong type: needed");
                 k += strlen(eB + k);
+                // Check the value against each of the types which the grammar allows for this item, building up the
+                // error message as we go, until one is accepted. The type letters are those of the %X codes in
+                // buildScripts/parser_data.dat.
                 for (j = 0; ((j < PARSER_TYPE_OPTIONS) && (item->options[j] != '\0') && (!passed)); j++) {
+                    // Separate the alternatives in the error message
                     if (j != 0) {
                         strcpy(eB + k, ", or");
                         k += strlen(eB + k);
                     }
+                    // Test whether the value is of this type, converting it into the form in which the command expects
+                    // it
                     switch (item->options[j]) {
                         case 'a':
                             strcpy(eB + k, " an axis number");
@@ -236,12 +261,15 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                             k += strlen(eB + k);
                             if (val->objType != PPLOBJ_NUM) break;
                             if (val->flagComplex) break;
+                            // Dimensionless angles are in degrees, and are converted to radians; otherwise the value
+                            // must have dimensions of angle
                             if (val->dimensionless) {
                                 val->real *= M_PI / 180;
                                 passed = 1;
                                 break;
                             }
                             for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
+                                // The exponent of every base unit must be zero, except angle, which must be one
                                 if (val->exponent[p] != (p == UNIT_ANGLE)) {
                                     p = -1;
                                     break;
@@ -275,12 +303,15 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                             k += strlen(eB + k);
                             if (val->objType != PPLOBJ_NUM) break;
                             if (val->flagComplex) break;
+                            // Dimensionless lengths are in centimetres, and are converted to metres; otherwise the
+                            // value must have dimensions of length
                             if (val->dimensionless) {
                                 val->real *= 0.01;
                                 passed = 1;
                                 break;
                             }
                             for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
+                                // The exponent of every base unit must be zero, except length, which must be one
                                 if (val->exponent[p] != (p == UNIT_LENGTH)) {
                                     p = -1;
                                     break;
@@ -306,14 +337,19 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                         case 'P':
                             strcpy(eB + k, " a position vector");
                             k += strlen(eB + k);
+                            // A position may be a vector of two components (or three for type P), which are unpacked
+                            // into consecutive slots on the output stack
                             if (val->objType == PPLOBJ_VEC) {
                                 double m = 1, x = 0, y = 0, z = 0;
                                 gsl_vector *v = ((pplVector *) val->auxil)->v;
                                 int l = v->size, rc;
                                 if ((l < 2) || (l > ((item->options[j] == 'P') ? 3 : 2))) break; // wrong size
                                 if (val->dimensionless) m = 0.01;
+                                // Otherwise the vector must have dimensions of length
                                 else {
                                     for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
+                                        // The exponent of every base unit must be zero, except length, which must be
+                                        // one
                                         if (val->exponent[p] != (p == UNIT_LENGTH)) {
                                             p = -1;
                                             break;
@@ -335,14 +371,18 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
                                 list *li = (list *) val->auxil;
                                 int l = li->length, i, rc;
                                 if ((l < 2) || (l > ((item->options[j] == 'P') ? 3 : 2))) break; // wrong size
+                                // A position may also be a list of two (or three) numbers, which are unpacked into
+                                // consecutive slots on the output stack
                                 for (i = 0; i < l; i++) {
                                     double m = 1;
                                     pplObj *xo = ppl_listGetItem(li, i);
                                     if (xo->objType != PPLOBJ_NUM) break;
                                     if (xo->flagComplex) break;
                                     if (xo->dimensionless) m = 0.01;
+                                    // Otherwise the coordinate must have dimensions of length
                                     else {
                                         for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
+                                            // Check the coordinate's units
                                             if (val->exponent[p] != UNIT_LENGTH) {
                                                 p = -1;
                                                 break;
@@ -412,6 +452,7 @@ void ppl_parserExecute(ppl_context *c, parserLine *in, const char *dirName, cons
         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
         ppl_parserOutFree(out);
 
+        // Move on to the next line
         in = in->next;
     }
     return;

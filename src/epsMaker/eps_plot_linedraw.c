@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws lines through series of data points on graphs, used by plot styles such as lines and by function plots. Each
+// point is converted to a position on the page; the segment from the previous point is clipped to the faces of the
+// graph, and the visible part is passed to the depth-sorting buffer in eps_plot_threedimbuff.c, which writes it as
+// postscript immediately in two-dimensional plots. Points with non-finite positions break the line.
+
 #define _PPL_EPS_PLOT_LINEDRAW_C 1
 
 #include <stdlib.h>
@@ -212,23 +217,28 @@ void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double
     double theta_x, theta_y, theta_z;
     double cx1, cy1, cz1, cx2, cy2, cz2;
 
+    // Find where the point lies on the page, and as fractions of the axes
     eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, &theta_x, &theta_y, &theta_z, ld->ThreeDim, x, y, z,
                          ld->xa, ld->ya, ld->za, ld->xrn, ld->yrn, ld->zrn, ld->sg, ld->origin_x, ld->origin_y,
                          ld->width, ld->height, ld->zdepth, 1);
 
+    // A point which cannot be placed breaks the line
     if ((!gsl_finite(xpos)) || (!gsl_finite(ypos)) || (!gsl_finite(depth))) {
         LineDraw_PenUp(X, ld);
         return;
     }
 
+    // Apply any offset to the position on the page
     xpos += x_offset * M_TO_PS;
     ypos += y_offset * M_TO_PS;
     depth += z_offset * M_TO_PS;
 
+    // Apply the same offset to the fractional positions along the axes
     xap += x_offset / ld->width;
     yap += y_offset / ld->height;
     zap += z_offset / ld->zdepth;
 
+    // The first point of a line only records where the line starts
     if (!ld->x1set) {
         ld->x1set = 1;
         ld->x1 = xpos;
@@ -243,6 +253,7 @@ void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double
         return;
     }
 
+    // Clip the segment from the previous point to the faces of the graph
     LineDraw_FindCrossingPoints(X, ld->x1, ld->y1, ld->z1, ld->xap1, ld->yap1, ld->zap1, xpos, ypos, depth, xap, yap,
                                 zap, &Inside1, &Inside2, &cx1, &cy1, &cz1, &cx2, &cy2, &cz2, &f1, &ap1, &f2, &ap2,
                                 &NCrossings);
@@ -263,6 +274,7 @@ void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double
     } else if ((!Inside1) && (Inside2)) // We have just entered clip region; previous point was outside
     {
         ThreeDimBuffer_linesegment(ld->x, z, linetype, linewidth, colstr, cx1, cy1, cx1, cy1, cx2, cy2, 1, 0, 0.0);
+        // Remember where this run of the line started
         if ((!ld->x0set) || (cx1 != cx2) || (cy1 != cy2)) {
             ld->x0 = cx1;
             ld->y0 = cy1;
@@ -285,6 +297,7 @@ void LineDraw_Point(EPSComm *X, LineDrawHandle *ld, const double x, const double
         else
             ThreeDimBuffer_linesegment(ld->x, depth, linetype, linewidth, colstr, cx1, cy1, cx1, cy1, cx2, cy2, 1, 0,
                                        0.0);
+        // Remember where this run of the line started
         if ((!ld->x0set) || (cx1 != cx2) || (cy1 != cy2)) {
             ld->x0 = cx1;
             ld->y0 = cy1;

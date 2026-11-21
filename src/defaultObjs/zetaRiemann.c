@@ -21,8 +21,10 @@
 
 // ----------------------------------------------------------------------------
 
-// This file contains an implementation of the Riemann Zeta Function for
-// general complex inputs provided courtesy of Matthew Smith.
+// The Riemann zeta function for complex arguments, used by the zeta() function when its argument is complex (GSL only
+// handles real arguments). It uses Peter Borwein's algorithm, the Laurent series near the pole at z=1, and the
+// reflection formula for arguments with real part below one half. The implementation was provided courtesy of Matthew
+// Smith.
 
 #define DECIMAL_PLACES 18
 
@@ -51,6 +53,7 @@
 //! \param [in] errText - Unused
 
 void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *status, const char *errText) {
+    // a is the argument; b is a - 1; g is |a - 1|
     gsl_complex a, am, b, c, d, e;
     double g, h;
     int j, n, m, sign;
@@ -59,6 +62,7 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
     b = gsl_complex_sub_real(a, 1);
     g = gsl_complex_abs(b);
 
+    // Near the pole at z = 1, use the Laurent series about the pole, whose coefficients are the Stieltjes constants
     if (g < 0.01) {
         e = gsl_complex_inverse(b); /* build up the Laurent sum as we are near the pole */
         e = gsl_complex_add_real(e, 0.57721566490153286061);
@@ -93,18 +97,23 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
     g = 1.0;
     h = 0.0;
 
+    // Accumulate the first sum of Borwein's method; h accumulates the binomial coefficients g, and the sum and
+    // coefficients are halved whenever they grow large, to avoid overflow, with m counting the halvings left
     for (j = 0; j <= (n - 1); j++) {
         sign = -sign;
         d = gsl_complex_pow(gsl_complex_rect(((double) (2 * n - j)), 0.0), am);
         h += g;
         d = gsl_complex_mul_real(d, h);
 
+        // The terms alternate in sign
         if (sign == 1) e = gsl_complex_add(e, d);
         else e = gsl_complex_sub(e, d);
 
+        // The next binomial coefficient, (n choose j+1)
         g *= (double) (n - j);
         g /= (double) (j + 1);
 
+        // Rescale to keep the numbers small
         while ((h > 0.5) && (m > 0)) {
             g /= 2.0;
             h /= 2.0;
@@ -113,17 +122,21 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
         }
     }
 
+    // Add the second, simpler, alternating sum
     e = gsl_complex_add_real(e, 1.0);
     sign = 1;
 
+    // Add each term of the second sum
     for (j = 1; j <= (n - 1); j++) {
         sign = -sign;
         d = gsl_complex_pow(gsl_complex_rect(((double) (j + 1)), 0.0), am);
 
+        // The terms alternate in sign
         if (sign == 1) e = gsl_complex_add(e, d);
         else e = gsl_complex_sub(e, d);
     }
 
+    // Divide by (1 - 2^(1-a)), which turns the alternating eta function into the zeta function
     d = gsl_complex_pow(gsl_complex_rect(2.0, 0.0), gsl_complex_negative(b));
     d = gsl_complex_add_real(gsl_complex_negative(d), 1.0);
     e = gsl_complex_div(e, d);
@@ -140,13 +153,16 @@ void riemann_zeta_complex__(double x, double y, gsl_complex *output, const int *
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char *errText) {
+    // x and y are the real and imaginary parts of the argument
     double x, y;
     gsl_complex b, c;
     gsl_sf_result dr, dt;
 
+    // Deal first with the special points, and with arguments which would take too long or overflow
     x = GSL_REAL(in);
     y = GSL_IMAG(in);
 
+    // The pole at z = 1
     if ((x == 1.0) && (y == 0.0)) {
         *status = 1; /* pole at z=1 */
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s",
@@ -180,8 +196,10 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
         b = gsl_complex_mul_real(in, M_LN2);
         c = gsl_complex_mul_real(gsl_complex_sub_real(in, 1.0), log(M_PI));
         b = gsl_complex_add(b, c);
+        // At the trivial zeros (negative even integers), the sine term is exactly zero
         if (abs(y) < 41) {
             c = gsl_complex_sin(gsl_complex_mul_real(in, M_PI_2));
+            // A trivial zero
             if ((GSL_REAL(c) == 0) && (GSL_IMAG(c) == 0)) {
                 *status = 0;
                 *output = GSL_COMPLEX_ZERO;
@@ -197,6 +215,7 @@ void riemann_zeta_complex(gsl_complex in, gsl_complex *output, int *status, char
         c = gsl_complex_rect(dr.val, dt.val);
         b = gsl_complex_add(b, c);
 
+        // The gamma function term would overflow
         if (GSL_REAL(b) > 660) {
             *status = 1; /* risk of overflow */
             ppl_snprintfTrunc(errText, LSTR_LENGTH,

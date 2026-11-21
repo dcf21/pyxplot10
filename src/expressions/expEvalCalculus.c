@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The int_dx() and diff_dx() functions, which numerically integrate and differentiate expressions with respect to a
+// dummy variable, using GSL's QAGS integrator and its central-difference derivative. The expression is compiled from
+// the function's text argument, and evaluated repeatedly with the dummy variable set to each point GSL asks for.
+// Complex integrands are integrated by integrating their real and imaginary parts separately.
+
 #define _EXPEVALCALCULUS_C 1
 
 #include <stdlib.h>
@@ -61,6 +66,8 @@ typedef struct calculusComm {
 //! \return The real or imaginary part of the expression, as selected by <params>, or NaN if an error occurred
 
 double ppl_expEvalCalculusSlave(const double x, void *params) {
+    // data carries the expression, the dummy variable, and which part of the result is wanted, from GSL into this
+    // callback
     int lastOpAssign;
     double r, i;
     pplObj *output;
@@ -68,6 +75,8 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
 
     if (data->context->errStat.status) return GSL_NAN; // We've previously had an error... so don't do any more work
 
+    // Set the dummy variable to x, which varies either its real part or, when checking the Cauchy-Riemann equations,
+    // its imaginary part
     if (data->varyingReal) {
         data->dummy->real = x;
         data->dummy->imag = data->dummyImag;
@@ -78,6 +87,7 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
         data->dummy->flagComplex = !ppl_dblEqual(data->dummy->imag, 0);
     }
 
+    // Evaluate the expression; any error is returned as NaN, and recorded in the context
     output = ppl_expEval(data->context, data->expr, &lastOpAssign, data->dollarAllowed, data->iterDepth + 1);
     if (data->context->errStat.status) return GSL_NAN;
 
@@ -96,6 +106,7 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
         memcpy(&data->first, output, sizeof(pplObj));
         data->isFirst = 0;
     } else {
+        // Every value must have the same units as the first, which are remembered
         if (!ppl_unitsDimEqual(&data->first, output)) {
             strcpy(data->context->errStat.errBuff,
                    "This operand does not have consistent units across the range where calculus is being attempted.");
@@ -106,6 +117,7 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
         }
     }
 
+    // Take the result, and pop it from the stack
     r = output->real;
     i = output->imag;
     ppl_garbageObject(&data->context->stack[--data->context->stackPtr]); // trash and pop output from stack
@@ -114,6 +126,7 @@ double ppl_expEvalCalculusSlave(const double x, void *params) {
     if ((!ppl_dblEqual(output->imag, 0)) && (data->context->set->term_current.ComplexNumbers == SW_ONOFF_OFF))
         return GSL_NAN;
 
+    // Return the real or the imaginary part, as requested
     if (data->testingReal) return r;
     else return i;
 }
@@ -144,6 +157,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
     int explen;
     double resultReal = 0, resultImag = 0, error;
 
+    // The limits must have the same units
     if (!ppl_unitsDimEqual(min, max)) {
         strcpy(c->errStat.errBuff,
                "The minimum and maximum limits of this integration operation are not dimensionally compatible.");
@@ -152,6 +166,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
         return;
     }
 
+    // The limits must be real
     if (min->flagComplex || max->flagComplex) {
         strcpy(c->errStat.errBuff,
                "The minimum and maximum limits of this integration operation must be real numbers; supplied values are complex.");
@@ -164,6 +179,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
         int errPos = -1, errType = -1;
         ppl_expCompile(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, expr, &explen, dollarAllowed, 1, 1, &expr2,
                        &errPos, &errType, c->errStat.errBuff);
+        // The integrand could not be compiled
         if (errPos >= 0) {
             pplExpr_free(expr2);
             expr2 = NULL;
@@ -171,6 +187,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
                       "int_d?() function");
             return;
         }
+        // The integrand must use the whole of its text
         if (explen < strlen(expr)) {
             strcpy(c->errStat.errBuff, "Unexpected trailing matter at the end of integrand.");
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, ERR_SYNTAX, explen + exprPos,
@@ -181,6 +198,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
         }
     }
 
+    // Set up the parameters passed to the callback
     commlink.context = c;
     commlink.integrate = 1;
     commlink.expr = expr2;
@@ -191,6 +209,7 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
     commlink.iterDepth = iterDepth;
     pplObjNum(&commlink.first, 0, 0, 0);
 
+    // Take over the dummy variable, saving its old value, and give it the units of the limits
     ppl_contextGetVarPointer(c, dummy, &dummyVar, &dummyTemp);
     dummyVar->objType = min->objType;
     dummyVar->real = min->real;
@@ -201,17 +220,21 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
     commlink.dummyReal = dummyVar->real;
     commlink.dummyImag = dummyVar->imag;
 
+    // GSL's workspace, with room for 1000 subintervals
     ws = gsl_integration_workspace_alloc(1000);
     fn.function = &ppl_expEvalCalculusSlave;
     fn.params = &commlink;
 
+    // Integrate the real part, with a relative accuracy of 1e-7
     gsl_integration_qags(&fn, min->real, max->real, 0, 1e-7, 1000, ws, &resultReal, &error);
 
+    // If complex arithmetic is on, integrate the imaginary part too
     if ((!c->errStat.status) && (c->set->term_current.ComplexNumbers == SW_ONOFF_ON)) {
         commlink.testingReal = 0;
         gsl_integration_qags(&fn, min->real, max->real, 0, 1e-7, 1000, ws, &resultImag, &error);
     }
 
+    // Free the workspace and the compiled integrand
     gsl_integration_workspace_free(ws);
     ws = NULL;
     pplExpr_free(expr2);
@@ -219,9 +242,11 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
 
     ppl_contextRestoreVarPointer(c, dummy, &dummyTemp); // Restore old value of the dummy variable we've been using
 
+    // The integral has the units of the integrand multiplied by those of the dummy variable
     if (!c->errStat.status) {
         int status = 0, errType = -1;
         ppl_uaMul(c, &commlink.first, min, out, &status, &errType, c->errStat.errBuff); // Get units of output right
+        // Report a failure to combine the units
         if (status) {
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, errType, inExprCharPos, inExpr->ascii,
                       "int_d?() function");
@@ -232,8 +257,10 @@ void ppl_expIntegrate(ppl_context *c, const pplExpr *inExpr, const int inExprCha
         out->flagComplex = !ppl_dblEqual(resultImag, 0);
         if (!out->flagComplex) out->imag = 0.0; // Enforce that real numbers have positive zero imaginary components
 
+        // A result which is not finite, or is complex when complex arithmetic is off, is an error or NaN
         if ((!gsl_finite(out->real)) || (!gsl_finite(out->imag)) ||
             ((out->flagComplex) && (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF))) {
+            // Report it, or return NaN if errors are switched off
             if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Integral does not evaluate to a finite value.");
@@ -280,6 +307,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
     double resultReal = 0, resultImag = 0, dIdI, dRdI;
     double resultReal_error, resultImag_error, dIdI_error, dRdI_error;
 
+    // The point and the step must have the same units
     if (!ppl_unitsDimEqual(point, step)) {
         strcpy(c->errStat.errBuff,
                "The arguments x and step to this differentiation operation are not dimensionally compatible.");
@@ -288,6 +316,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
         return;
     }
 
+    // The step must be real
     if (step->flagComplex) {
         strcpy(c->errStat.errBuff,
                "The argument 'step' to this differentiation operation must be a real number; supplied value is complex.");
@@ -300,6 +329,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
         int errPos = -1, errType = -1;
         ppl_expCompile(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, expr, &explen, dollarAllowed, 1, 1, &expr2,
                        &errPos, &errType, c->errStat.errBuff);
+        // The expression could not be compiled
         if (errPos >= 0) {
             pplExpr_free(expr2);
             expr2 = NULL;
@@ -307,6 +337,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
                       "diff_d?() function");
             return;
         }
+        // The expression must use the whole of its text
         if (explen < strlen(expr)) {
             strcpy(c->errStat.errBuff, "Unexpected trailing matter at the end of differentiated expression.");
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, ERR_SYNTAX, explen, inExpr->ascii,
@@ -317,6 +348,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
         }
     }
 
+    // Set up the parameters passed to the callback
     commlink.context = c;
     commlink.integrate = 0;
     commlink.expr = expr2;
@@ -327,6 +359,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
     commlink.iterDepth = iterDepth;
     pplObjNum(&commlink.first, 0, 0, 0);
 
+    // Take over the dummy variable, saving its old value, and set it to the point
     ppl_contextGetVarPointer(c, dummy, &dummyVar, &dummyTemp);
     dummyVar->objType = point->objType;
     dummyVar->real = point->real;
@@ -337,13 +370,17 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
     commlink.dummyReal = dummyVar->real;
     commlink.dummyImag = dummyVar->imag;
 
+    // The function which GSL differentiates
     fn.function = &ppl_expEvalCalculusSlave;
     fn.params = &commlink;
 
+    // Differentiate the real part of the expression with respect to the real part of x
     gsl_deriv_central(&fn, point->real, step->real, &resultReal, &resultReal_error);
     pplExpr_free(expr2);
     expr2 = NULL;
 
+    // With complex arithmetic, also differentiate the imaginary part, and both parts with respect to the imaginary part
+    // of x, to check that the expression is complex-differentiable there
     if ((!c->errStat.status) && (c->set->term_current.ComplexNumbers == SW_ONOFF_ON)) {
         commlink.testingReal = 0;
         gsl_deriv_central(&fn, point->real, step->real, &resultImag, &resultImag_error);
@@ -352,6 +389,7 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
         commlink.testingReal = 1;
         gsl_deriv_central(&fn, point->imag, step->real, &dRdI, &dRdI_error);
 
+        // The Cauchy-Riemann equations, du/dx = dv/dy and du/dy = -dv/dx, must hold
         if ((!ppl_dblApprox(resultReal, dIdI, 2 * (resultReal_error + dIdI_error))) ||
             (!ppl_dblApprox(resultImag, -dRdI, 2 * (resultImag_error + dRdI_error)))) {
             ppl_snprintfTrunc(
@@ -366,12 +404,14 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
 
     ppl_contextRestoreVarPointer(c, dummy, &dummyTemp); // Restore old value of the dummy variable we've been using
 
+    // The derivative has the units of the expression divided by those of the dummy variable
     if (!c->errStat.status) {
         int status = 0, errType = -1;
         point->real = 1.0;
         point->imag = 0.0;
         point->flagComplex = 0;
         ppl_uaDiv(c, &commlink.first, point, out, &status, &errType, c->errStat.errBuff); // Get units of output right
+        // Report a failure to combine the units
         if (status) {
             ppl_tbAdd(c, inExpr->srcLineN, inExpr->srcId, inExpr->srcFname, 0, errType, inExprCharPos, inExpr->ascii,
                       "diff_d?() function");
@@ -383,8 +423,10 @@ void ppl_expDifferentiate(ppl_context *c, const pplExpr *inExpr, const int inExp
         if (!out->flagComplex) out->imag = 0.0; // Enforce that real numbers have positive zero imaginary components
     }
 
+    // A result which is not finite, or is complex when complex arithmetic is off, is an error or NaN
     if ((!gsl_finite(out->real)) || (!gsl_finite(out->imag)) ||
         ((out->flagComplex) && (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF))) {
+        // Report it, or return NaN if errors are switched off
         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Differentiated expression does not evaluate to a finite value.");

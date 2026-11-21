@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The table of named paper sizes which the "set papersize" command accepts, e.g. a4 and letter, and functions to look
+// sizes up by name and to name a size from its dimensions. The ISO, Japanese and Swedish series are added to the table
+// when Pyxplot starts.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +39,8 @@ typedef struct PaperSize {
     double width;
 } PaperSize;
 
+// The named paper sizes, with their heights and widths in mm. The table is completed by ppl_PaperSizeInit(), which adds
+// 2A0, 4A0, and 11 sizes from each of the 9 series below, giving 27 + 2 + 99 entries and the END marker.
 PaperSize PaperSizeList[129] = {{"crown", 508, 381},
                                 {"demy", 572, 445},
                                 {"double_demy", 889, 597},
@@ -111,19 +117,24 @@ static const PaperSeries PaperSeriesList[] = {
 void ppl_PaperSizeInit() {
     int pos, i, j;
 
+    // Find the end of the fixed part of the table, where the computed entries begin
     for (pos = 0; (strcmp(PaperSizeList[pos].name, "END") != 0); pos++);
 
+    // 4A0 is four times the size of A0
     strcpy(PaperSizeList[pos].name, "4A0");
     PaperSizeList[pos].width = 1682;
     PaperSizeList[pos].height = 2378;
     pos++;
 
+    // 2A0 is twice the size of A0
     strcpy(PaperSizeList[pos].name, "2A0");
     PaperSizeList[pos].width = 1189;
     PaperSizeList[pos].height = 1682;
     pos++;
 
+    // Add sizes 0-10 of each series, e.g. a0 to a10
     for (j = 0; PaperSeriesList[j].name != NULL; j++)
+        // Name each size by its series and number, e.g. b5
         for (i = 0; i < 11; i++) {
             ppl_snprintfTrunc(PaperSizeList[pos].name, sizeof(PaperSizeList[pos].name), "%s%d",
                               PaperSeriesList[j].name, i);
@@ -141,6 +152,7 @@ void ppl_PaperSizeInit() {
 
 void ppl_PaperSizeByName(const char *name, double *height, double *width) {
     int i = 0;
+    // Search the table for the name, case-insensitively
     while (1) {
         if (strcmp(PaperSizeList[i].name, "END") == 0) // The requested papersize doesn't exist
         {
@@ -166,6 +178,7 @@ void ppl_PaperSizeByName(const char *name, double *height, double *width) {
 
 void ppl_GetPaperName(char *name, const double *height, const double *width) {
     int i = 0;
+    // Search the table for a size within half a millimetre of the given dimensions
     while (1) {
         if (strcmp(PaperSizeList[i].name, "END") == 0) // The requested papersize doesn't exist
         {

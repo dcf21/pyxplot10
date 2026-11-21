@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Constructors for each type of pplObj, the structure which holds every value in Pyxplot: numbers, strings, booleans,
+// dates, colors, dictionaries, modules, lists, vectors, matrices, files, functions, types, exceptions and class
+// instances. It also copies objects, and sets up the type objects (e.g. types.string) which hold the methods of each
+// type. Every part of Pyxplot which creates a value calls these functions.
+
 #define _PPLOBJ_C 1
 
 #include <stdlib.h>
@@ -36,10 +41,14 @@
 #include "userspace/pplObjUnits.h"
 
 // Items with ! should never be displayed because they are internal markers
+// The name of each type, indexed by its PPLOBJ_* code; names beginning ! are for internal markers which users never see
 const char *pplObjTypeNames[] = {"number",    "string",  "boolean", "date",        "color",     "dictionary", "module",
                                  "list",      "vector",  "matrix",  "fileHandle",  "function",  "type",       "null",
                                  "exception", "!global", "!zombie", "!expression", "!bytecode", "instance",   NULL};
+// The order in which values of different types sort, indexed by PPLOBJ_* code; equal entries, e.g. numbers and
+// booleans, are compared with one another as values
 const int pplObjTypeOrder[] = {2, 4, 2, 3, 5, 9, 11, 7, 6, 8, 13, 12, 14, 0, 15, 0, 0, 0, 0, 10};
+// A type object for each type, which every object points to as its prototype, so that it can find its methods
 pplObj *pplObjPrototypes;
 
 //! pplObjInit - Create the prototype objects for each of Pyxplot's object types, which hold their methods. Has no
@@ -56,6 +65,7 @@ void pplObjInit(ppl_context *c) {
     if ((typeObjs == NULL) || (pplObjPrototypes == NULL))
         ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Out of memory.");
     pplObjMethodsInit(c);
+    // Create the type object for each type, holding the dictionary of its methods
     for (i = 0; i < n; i++) {
         typeObjs[i].refCount = 1;
         typeObjs[i].id = i;
@@ -100,6 +110,8 @@ pplObj *pplObjNum(pplObj *in, const unsigned char amMalloced, const double real,
 //! \return Pointer to <in>
 
 pplObj *pplObjStr(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, char *str) {
+    // While an object is being built, it is marked as a zombie, so that if Ctrl-C interrupts us, it is not mistaken for
+    // a complete object
     in->objType = PPLOBJ_ZOM; // In case we get interrupted
     in->auxil = (void *) str;
     in->auxilMalloced = auxilMalloced;
@@ -282,6 +294,8 @@ pplObj *pplObjList(pplObj *in, const unsigned char amMalloced, unsigned char aux
 //! \return Pointer to <in>, or NULL if memory allocation failed
 
 pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned char auxilMalloced, const int size) {
+    // A vector consists of a descriptor (pplVector), which may view part of a raw storage structure (pplVectorRaw)
+    // shared with other vectors, e.g. slices of it
     int i;
     pplVector *pv;
     pplVectorRaw *pvr;
@@ -291,14 +305,18 @@ pplObj *pplObjVector(pplObj *in, const unsigned char amMalloced, const unsigned 
     if (pv == NULL) return NULL;
     if (auxilMalloced) pvr = pv->raw = (pplVectorRaw *) malloc(sizeof(pplVectorRaw));
     else pvr = pv->raw = (pplVectorRaw *) ppl_memAlloc(sizeof(pplVectorRaw));
+    // Failure to allocate memory: free what has been allocated, and return NULL
     if (pvr == NULL) {
+        // Memory from a memory context cannot be freed individually
         if (auxilMalloced) {
             free(pv);
             pv = NULL;
         }
         return NULL;
     }
+    // Create the GSL vector, initialised to zeros; on failure, free what has been allocated, and return NULL
     if ((pvr->v = gsl_vector_calloc(size)) == NULL) {
+        // Memory from a memory context cannot be freed individually
         if (auxilMalloced) {
             free(pv);
             pv = NULL;
@@ -345,14 +363,18 @@ pplObj *pplObjMatrix(pplObj *in, const unsigned char amMalloced, const unsigned 
     if (pm == NULL) return NULL;
     if (auxilMalloced) pmr = pm->raw = (pplMatrixRaw *) malloc(sizeof(pplMatrixRaw));
     else pmr = pm->raw = (pplMatrixRaw *) ppl_memAlloc(sizeof(pplMatrixRaw));
+    // Failure to allocate memory: free what has been allocated, and return NULL
     if (pmr == NULL) {
+        // Memory from a memory context cannot be freed individually
         if (auxilMalloced) {
             free(pm);
             pm = NULL;
         }
         return NULL;
     }
+    // Create the GSL matrix, initialised to zeros; on failure, free what has been allocated, and return NULL
     if ((pmr->m = gsl_matrix_calloc(size1, size2)) == NULL) {
+        // Memory from a memory context cannot be freed individually
         if (auxilMalloced) {
             free(pm);
             pm = NULL;
@@ -610,16 +632,21 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsig
     const int rc = (out == NULL) ? 1 : out->refCount;
     int t;
 
+    // Nothing to copy
     if (in == NULL) return NULL;
 
+    // If no destination is given, allocate one
     if (out == NULL) {
         if (outMalloced) out = (pplObj *) malloc(sizeof(pplObj));
         else out = (pplObj *) ppl_memAlloc(sizeof(pplObj));
         if (out == NULL) return out;
     }
 
+    // Start with a shallow copy, keeping the destination's own reference count. If the copy is an lvalue, it remembers
+    // the variable it came from, so that methods can modify that variable.
     t = in->objType;
     memcpy(out, in, sizeof(pplObj));
+    // Keep a reference to the original variable
     if (lval) {
         out->self_lval = in;
         __sync_add_and_fetch(&out->self_lval->refCount, 1);
@@ -635,15 +662,19 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsig
              (t == PPLOBJ_DICT) || (t == PPLOBJ_MOD) || (t == PPLOBJ_USER) || (t == PPLOBJ_FILE) ||
              (t == PPLOBJ_FUNC) || (t == PPLOBJ_TYPE));
 
+    // Strings are copied. Larger structures, such as lists and dictionaries, are shared between the copies, which each
+    // hold a reference to them; so changing a list through one copy changes it for the others too, as in Python.
     switch (in->objType) {
         case PPLOBJ_STR:
         case PPLOBJ_EXC: // copy string value
+            // A string with no text
             if (in->auxil == NULL) {
                 out->auxilMalloced = 0;
                 return out;
             }
             if (useMalloc) out->auxil = (void *) malloc(in->auxilLen);
             else out->auxil = (void *) ppl_memAlloc(in->auxilLen);
+            // Failure to allocate memory leaves the copy as a zombie
             if (out->auxil == NULL) {
                 out->objType = PPLOBJ_ZOM;
                 return NULL;
@@ -661,8 +692,11 @@ pplObj *pplObjCpy(pplObj *out, pplObj *in, const unsigned char lval, const unsig
             if (item != NULL) __sync_add_and_fetch(&item->refCount, 1);
             break;
         }
+        // An instance of a class falls through to share its dictionary of members, like a module
         case PPLOBJ_USER: {
             pplObj *p = (pplObj *) malloc(sizeof(pplObj)); // Copy prototype pointer object
+            // A class instance also needs its own copy of the pointer to its class. Failure to allocate memory leaves
+            // the copy as a zombie.
             if (p == NULL) {
                 out->objType = PPLOBJ_ZOM;
                 return NULL;
@@ -721,14 +755,18 @@ pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned ch
                       unsigned char useMalloc) {
     const int t = in->objType;
 
+    // Nothing to copy
     if (in == NULL) return NULL;
 
+    // If no destination is given, allocate one
     if (out == NULL) {
         if (outMalloced) out = (pplObj *) malloc(sizeof(pplObj));
         else out = (pplObj *) ppl_memAlloc(sizeof(pplObj));
         if (out == NULL) return out;
     }
 
+    // Unlike pplObjCpy(), the containers themselves are copied, so that changing the copy does not change the original.
+    // Their contents are copied shallowly, or, if deep is set, recursively.
     switch (t) {
         case PPLOBJ_DICT:
         case PPLOBJ_MOD:
@@ -745,6 +783,7 @@ pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned ch
             out->amMalloced = outMalloced;
             out->auxil = (void *) (d = ppl_dictInit(useMalloc));
             if (out->auxil == NULL) return NULL;
+            // Copy each member into the new dictionary
             while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
                 pplObj v;
                 v.refCount = 1;
@@ -767,6 +806,7 @@ pplObj *pplObjDeepCpy(pplObj *out, pplObj *in, const int deep, const unsigned ch
             out->amMalloced = outMalloced;
             out->auxil = (void *) (l = ppl_listInit(useMalloc));
             if (out->auxil == NULL) return NULL;
+            // Copy each item into the new list
             while ((item = (pplObj *) ppl_listIterate(&li)) != NULL) {
                 pplObj v;
                 v.refCount = 1;

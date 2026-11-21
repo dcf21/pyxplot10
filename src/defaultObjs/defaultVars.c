@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Creates Pyxplot's built-in namespace when it starts: the constants (pi, e, ...), the built-in functions, and the
+// modules ast, colors, exceptions, fractals, os, phy, random, stats, time and types, with the help text and LaTeX form
+// of each function. It also marks the functions which must not be called from several threads at once.
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -60,6 +64,7 @@ static void markModuleThreadUnsafe(dict *d) {
     dictIterator *di = ppl_dictIterateInit(d);
     char *key;
     pplObj *item;
+    // Mark every function in the module, and in any modules within it, as unsafe
     while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
         if (item->objType == PPLOBJ_FUNC) ((pplFunc *) item->auxil)->threadSafe = 0;
         else if (item->objType == PPLOBJ_MOD) markModuleThreadUnsafe((dict *) item->auxil);
@@ -77,16 +82,19 @@ static void markThreadUnsafeFuncs(dict *defaults) {
     static const char *const unsafeModules[] = {"os", "random", NULL};
     pplObj *item;
     int i;
+    // Mark each unsafe built-in function
     for (i = 0; unsafe[i] != NULL; i++) {
         item = (pplObj *) ppl_dictLookup(defaults, unsafe[i]);
         if ((item != NULL) && (item->objType == PPLOBJ_FUNC)) ((pplFunc *) item->auxil)->threadSafe = 0;
     }
+    // Mark every function in each unsafe module
     for (i = 0; unsafeModules[i] != NULL; i++) {
         item = (pplObj *) ppl_dictLookup(defaults, unsafeModules[i]);
         if ((item != NULL) && (item->objType == PPLOBJ_MOD)) markModuleThreadUnsafe((dict *) item->auxil);
     }
     // time.sleep() and time.sleepUntil() would block worker threads
     item = (pplObj *) ppl_dictLookup(defaults, "time");
+    // The time module's sleep functions must not be run in parallel, since they would not sleep for the intended time
     if ((item != NULL) && (item->objType == PPLOBJ_MOD)) {
         pplObj *f = (pplObj *) ppl_dictLookup((dict *) item->auxil, "sleep");
         if ((f != NULL) && (f->objType == PPLOBJ_FUNC)) ((pplFunc *) f->auxil)->threadSafe = 0;
@@ -100,6 +108,7 @@ static void markThreadUnsafeFuncs(dict *defaults) {
 //! \param [in|out] out - The Pyxplot context, whose default namespace is populated
 
 void ppl_makeDefaultVars(ppl_context *out) {
+    // Namespace 0 holds the built-ins, and namespace 1, which starts empty, holds the user's global variables
     out->ns_ptr = 1;
     out->ns_branch = 0;
     out->namespaces[0] = NULL; // Will be defaults namespace
@@ -131,11 +140,13 @@ void ppl_makeDefaultVars(ppl_context *out) {
         v.flagComplex = 1;
         ppl_dictAppendCpy(d, "i", (void *) &v, sizeof(v)); // i
 
+        // The boolean constants
         pplObjBool(&v, 1, 1);
         ppl_dictAppendCpy(d, "true", (void *) &v, sizeof(v)); // True
         pplObjBool(&v, 1, 0);
         ppl_dictAppendCpy(d, "false", (void *) &v, sizeof(v)); // False
 
+        // The version string
         pplObjStr(&v, 1, 0, VERSION);
         ppl_dictAppendCpy(d, "version", (void *) &v, sizeof(v)); // Pyxplot version string
 
@@ -143,6 +154,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         ppl_dictAppendCpy(d, "types", pplObjModule(&m, 1, 1, 1), sizeof(v));
         d2 = (dict *) m.auxil;
         for (i = 0; i <= PPLOBJ_USER; i++)
+            // Every type which users can see has a type object in the types module, e.g. types.string
             if ((i != PPLOBJ_GLOB) && (i != PPLOBJ_ZOM) && (i != PPLOBJ_EXP) && (i != PPLOBJ_BYT)) {
                 pplObjCpy(&v, &pplObjPrototypes[i], 0, 1, 1);
                 ppl_dictAppendCpy(d2, pplObjTypeNames[i], (void *) &v, sizeof(v));
@@ -179,6 +191,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
         // colors module
         ppl_dictAppendCpy(d, "colors", pplObjModule(&m, 1, 1, 1), sizeof(v));
         d2 = (dict *) m.auxil;
+        // The colors module holds a color object for each named color; exponent[2] records the color's number
         for (i = 0; SW_COLOR_INT[i] >= 0; i++) {
             pplObjColor(&v, 1, SW_COLSPACE_CMYK, SW_COLOR_CMYK_C[i], SW_COLOR_CMYK_M[i], SW_COLOR_CMYK_Y[i],
                         SW_COLOR_CMYK_K[i]);
@@ -898,6 +911,7 @@ void ppl_makeDefaultVars(ppl_context *out) {
                 "string(t,<s>) returns a string representation of the date object t; a format string may optionally be supplied");
     }
 
+    // Mark the functions which must not be called from several threads at once
     markThreadUnsafeFuncs(out->namespaces[0]);
     return;
 }

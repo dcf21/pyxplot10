@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The withWords structure records the style options which follow the keyword "with" in commands such as plot and arrow,
+// e.g. "with lines color red linewidth 2". This file reads them from parsed commands, merges styles in order of
+// priority (including numbered styles set with "set style"), compares, copies and frees them, and writes them back out
+// as text for the show and save commands.
+
 #define _PPL_SETTINGS_C 1
 
 #include <stdlib.h>
@@ -93,6 +98,8 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     // Other settings
     pos = ptab[PARSE_INDEX_linetype];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
+    // A line type given as a number is stored directly; one given as an expression (for each data point) is stored as
+    // an expression. The other options below work in the same way.
     if (got) {
         tempint = (int) round(stk[pos].real);
         out->linetype = tempint;
@@ -100,6 +107,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_linetype];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_EXP);
+    // Line type as an expression
     if (got) {
         tempexp = (pplExpr *) stk[pos].auxil;
         out->EXPlinetype = tempexp;
@@ -107,6 +115,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_linewidth];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
+    // Line width as a number
     if (got) {
         tempdbl = stk[pos].real;
         out->linewidth = tempdbl;
@@ -114,6 +123,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_linewidth];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_EXP);
+    // Line width as an expression
     if (got) {
         tempexp = (pplExpr *) stk[pos].auxil;
         out->EXPlinewidth = tempexp;
@@ -121,6 +131,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_pointsize];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
+    // Point size as a number
     if (got) {
         tempdbl = stk[pos].real;
         out->pointsize = tempdbl;
@@ -128,6 +139,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_pointsize];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_EXP);
+    // Point size as an expression
     if (got) {
         tempexp = (pplExpr *) stk[pos].auxil;
         out->EXPpointsize = tempexp;
@@ -135,6 +147,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_pointtype];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
+    // Point type as a number
     if (got) {
         tempint = (int) round(stk[pos].real);
         out->pointtype = tempint;
@@ -142,6 +155,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_pointtype];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_EXP);
+    // Point type as an expression
     if (got) {
         tempexp = (pplExpr *) stk[pos].auxil;
         out->EXPpointtype = tempexp;
@@ -149,6 +163,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_style_number];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
+    // The number of a style set with "set style"
     if (got) {
         tempint = (int) round(stk[pos].real);
         out->style = tempint;
@@ -156,6 +171,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_pointlinewidth];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_NUM);
+    // Point line width as a number
     if (got) {
         tempdbl = stk[pos].real;
         out->pointlinewidth = tempdbl;
@@ -163,6 +179,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_pointlinewidth];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_EXP);
+    // Point line width as an expression
     if (got) {
         tempexp = (pplExpr *) stk[pos].auxil;
         out->EXPpointlinewidth = tempexp;
@@ -170,6 +187,7 @@ void ppl_withWordsFromDict(ppl_context *context, parserOutput *in, const parserL
     }
     pos = ptab[PARSE_INDEX_style];
     got = (pos >= 0) && (stk[pos].objType == PPLOBJ_STR);
+    // The plot style, e.g. lines or points
     if (got) {
         tempstr = (char *) stk[pos].auxil;
         i = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_STYLE_INT, SW_STYLE_STR);
@@ -239,6 +257,7 @@ int ppl_withWordsCmp(ppl_context *context, const withWords *a, const withWords *
                 (a->color4 != b->color4) || (a->Col1234Space != b->Col1234Space)))
         return 0;
     else if ((a->USEcolor) && ((a->color != b->color))) return 0;
+    // Compare fill colors given as expressions, components or named colors
     if (a->EXPfillcolor != NULL) {
         if ((strcmp(a->EXPfillcolor->ascii, b->EXPfillcolor->ascii) != 0)) return 0;
         if (a->FillCol1234Space != b->FillCol1234Space) return 0;
@@ -283,9 +302,14 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
     unsigned char BlockStyleSubstitution[25] = {0, 0, 0, 0, 0};
     const withWords *x;
 
+    // The inputs are applied in order of increasing priority, from e up to a, so that options set in a override those
+    // set in the others. A numbered style is expanded by inserting it into the list just below the input which refers
+    // to it, so that options given explicitly override those of the style.
     ppl_withWordsZero(context, out);
 
+    // Apply each input in turn
     for (i = 4; i >= 0; i--) {
+        // Numbered styles which refer to one another in a loop would expand forever
         if (i > 24) {
             ppl_error(&context->errcontext, ERR_GENERIC, -1, -1,
                       "Iteration depth exceeded whilst substituting plot styles. Infinite plot style loop suspected.");
@@ -295,6 +319,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
         if (x == NULL) continue;
         if ((x->USEstyle) && (!BlockStyleSubstitution[i])) // Substitute for numbered plot styles
         {
+            // Insert the numbered style below this input, and process it next, before returning to this input
             if (ExpandStyles) {
                 BlockStyleSubstitution[i] = 1; // Only do this once, to avoid infinite loop
                 BlockStyleSubstitution[i + 1] = 0; // Allow recursive substitutions
@@ -306,6 +331,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
                 out->USEstyle = 1;
             }
         }
+        // A color given by its components overrides any other color
         if (x->USEcolor1234) {
             out->color1 = x->color1;
             out->color2 = x->color2;
@@ -318,6 +344,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             out->EXPcolor = NULL;
             out->AUTOcolor = x->AUTOcolor;
         }
+        // A named color, or palette color, overrides any other color
         if (x->USEcolor) {
             out->color = x->color;
             out->USEcolor = 1;
@@ -326,6 +353,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             out->EXPcolor = NULL;
             out->AUTOcolor = x->AUTOcolor;
         }
+        // A color given by an expression overrides any other color
         if (x->EXPcolor != NULL) {
             pplExpr_free(out->EXPcolor);
             out->EXPcolor = x->EXPcolor;
@@ -334,6 +362,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             out->USEcolor1234 = 0;
             out->AUTOcolor = x->AUTOcolor;
         }
+        // A fill color given by its components overrides any other fill color
         if (x->USEfillcolor1234) {
             out->fillcolor1 = x->fillcolor1;
             out->fillcolor2 = x->fillcolor2;
@@ -345,6 +374,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             pplExpr_free(out->EXPfillcolor);
             out->EXPfillcolor = NULL;
         }
+        // A named fill color overrides any other fill color
         if (x->USEfillcolor) {
             out->fillcolor = x->fillcolor;
             out->USEfillcolor = 1;
@@ -352,6 +382,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             pplExpr_free(out->EXPfillcolor);
             out->EXPfillcolor = NULL;
         }
+        // A fill color given by an expression overrides any other fill color
         if (x->EXPfillcolor != NULL) {
             pplExpr_free(out->EXPfillcolor);
             out->EXPfillcolor = x->EXPfillcolor;
@@ -359,10 +390,12 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             out->USEfillcolor = 0;
             out->USEfillcolor1234 = 0;
         }
+        // The plot style
         if (x->USElinespoints) {
             out->linespoints = x->linespoints;
             out->USElinespoints = 1;
         }
+        // A line type given as a number overrides an expression
         if (x->USElinetype) {
             out->linetype = x->linetype;
             out->USElinetype = 1;
@@ -370,47 +403,55 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             out->EXPlinetype = NULL;
             out->AUTOlinetype = x->AUTOlinetype;
         }
+        // A line type given as an expression
         if (x->EXPlinetype != NULL) {
             pplExpr_free(out->EXPlinetype);
             out->EXPlinetype = x->EXPlinetype;
             out->EXPlinetype->refCount++;
         }
+        // A line width given as a number overrides an expression
         if (x->USElinewidth) {
             out->linewidth = x->linewidth;
             out->USElinewidth = 1;
             pplExpr_free(out->EXPlinewidth);
             out->EXPlinewidth = NULL;
         }
+        // A line width given as an expression overrides a number
         if (x->EXPlinewidth != NULL) {
             pplExpr_free(out->EXPlinewidth);
             out->EXPlinewidth = x->EXPlinewidth;
             out->EXPlinewidth->refCount++;
             out->USElinewidth = 0;
         }
+        // A point line width given as a number overrides an expression
         if (x->USEpointlinewidth) {
             out->pointlinewidth = x->pointlinewidth;
             out->USEpointlinewidth = 1;
             pplExpr_free(out->EXPpointlinewidth);
             out->EXPpointlinewidth = NULL;
         }
+        // A point line width given as an expression overrides a number
         if (x->EXPpointlinewidth != NULL) {
             pplExpr_free(out->EXPpointlinewidth);
             out->EXPpointlinewidth = x->EXPpointlinewidth;
             out->EXPpointlinewidth->refCount++;
             out->USEpointlinewidth = 0;
         }
+        // A point size given as a number overrides an expression
         if (x->USEpointsize) {
             out->pointsize = x->pointsize;
             out->USEpointsize = 1;
             pplExpr_free(out->EXPpointsize);
             out->EXPpointsize = NULL;
         }
+        // A point size given as an expression overrides a number
         if (x->EXPpointsize != NULL) {
             pplExpr_free(out->EXPpointsize);
             out->EXPpointsize = x->EXPpointsize;
             out->EXPpointsize->refCount++;
             out->USEpointsize = 0;
         }
+        // A point type given as a number overrides an expression
         if (x->USEpointtype) {
             out->pointtype = x->pointtype;
             out->USEpointtype = 1;
@@ -418,6 +459,7 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
             out->EXPpointtype = NULL;
             out->AUTOpointtype = x->AUTOpointtype;
         }
+        // A point type given as an expression
         if (x->EXPpointtype != NULL) {
             pplExpr_free(out->EXPpointtype);
             out->EXPpointtype = x->EXPpointtype;
@@ -436,14 +478,17 @@ void ppl_withWordsMerge(ppl_context *context, withWords *out, const withWords *a
 //! \param [in] outLen - The size of the buffer <out>
 
 void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, const size_t outLen) {
+    // Write each option which is set, in the syntax of the with clause
     int i = 0;
     out[i] = '\0';
+    // The plot style
     if (defn->USElinespoints) {
         ppl_strAppendf(out, outLen, &i, "%s ",
                        *(char **) ppl_fetchSettingName(&context->errcontext, defn->linespoints, SW_STYLE_INT,
                                                        (void *) SW_STYLE_STR, sizeof(char *)));
         i += strlen(out + i);
     }
+    // The color, as an expression, components, or a named color
     if (defn->EXPcolor != NULL) {
         ppl_strAppendf(out, outLen, &i, "color %s", defn->EXPcolor->ascii);
     } else if (defn->USEcolor1234) {
@@ -467,6 +512,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
                                                        (void *) SW_COLOR_STR, sizeof(char *)));
     }
     i += strlen(out + i);
+    // The fill color, as an expression, components, or a named color
     if (defn->EXPfillcolor != NULL) {
         ppl_strAppendf(out, outLen, &i, "fillcolor %s", defn->EXPfillcolor->ascii);
     } else if (defn->USEfillcolor1234) {
@@ -492,6 +538,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
                                                        (void *) SW_COLOR_STR, sizeof(char *)));
     }
     i += strlen(out + i);
+    // The line type
     if (defn->EXPlinetype != NULL) {
         ppl_strAppendf(out, outLen, &i, "linetype %s ", defn->EXPlinetype->ascii);
         i += strlen(out + i);
@@ -499,6 +546,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "linetype %d ", defn->linetype);
         i += strlen(out + i);
     }
+    // The line width
     if (defn->EXPlinewidth != NULL) {
         ppl_strAppendf(out, outLen, &i, "linewidth %s ", defn->EXPlinewidth->ascii);
         i += strlen(out + i);
@@ -506,6 +554,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "linewidth %s ", ppl_numericDisplayDefault(context, defn->linewidth, 0));
         i += strlen(out + i);
     }
+    // The point line width
     if (defn->EXPpointlinewidth != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointlinewidth %s ", defn->EXPpointlinewidth->ascii);
         i += strlen(out + i);
@@ -514,6 +563,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
                        ppl_numericDisplayDefault(context, defn->pointlinewidth, 0));
         i += strlen(out + i);
     }
+    // The point size
     if (defn->EXPpointsize != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointsize %s ", defn->EXPpointsize->ascii);
         i += strlen(out + i);
@@ -521,6 +571,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "pointsize %s ", ppl_numericDisplayDefault(context, defn->pointsize, 0));
         i += strlen(out + i);
     }
+    // The point type
     if (defn->EXPpointtype != NULL) {
         ppl_strAppendf(out, outLen, &i, "pointtype %s ", defn->EXPpointtype->ascii);
         i += strlen(out + i);
@@ -528,6 +579,7 @@ void ppl_withWordsPrint(ppl_context *context, const withWords *defn, char *out, 
         ppl_strAppendf(out, outLen, &i, "pointtype %d ", defn->pointtype);
         i += strlen(out + i);
     }
+    // The number of the style
     if (defn->USEstyle) {
         ppl_strAppendf(out, outLen, &i, "style %d ", defn->style);
         i += strlen(out + i);
@@ -555,30 +607,37 @@ void ppl_withWordsAppend(ppl_context *context, const withWords *defn, char *out,
 //! \param [in|out] a - The plot style modifiers to clean up
 
 void ppl_withWordsDestroy(const ppl_context *context, withWords *a) {
+    // Release each of the expressions which the structure holds
     if (a->EXPlinetype != NULL) {
         pplExpr_free(a->EXPlinetype);
         a->EXPlinetype = NULL;
     }
+    // Line width expression
     if (a->EXPlinewidth != NULL) {
         pplExpr_free(a->EXPlinewidth);
         a->EXPlinewidth = NULL;
     }
+    // Point line width expression
     if (a->EXPpointlinewidth != NULL) {
         pplExpr_free(a->EXPpointlinewidth);
         a->EXPpointlinewidth = NULL;
     }
+    // Point size expression
     if (a->EXPpointsize != NULL) {
         pplExpr_free(a->EXPpointsize);
         a->EXPpointsize = NULL;
     }
+    // Point type expression
     if (a->EXPpointtype != NULL) {
         pplExpr_free(a->EXPpointtype);
         a->EXPpointtype = NULL;
     }
+    // Color expression
     if (a->EXPcolor != NULL) {
         pplExpr_free(a->EXPcolor);
         a->EXPcolor = NULL;
     }
+    // Fill color expression
     if (a->EXPfillcolor != NULL) {
         pplExpr_free(a->EXPfillcolor);
         a->EXPfillcolor = NULL;
@@ -594,30 +653,37 @@ void ppl_withWordsDestroy(const ppl_context *context, withWords *a) {
 
 void ppl_withWordsCpy(const ppl_context *context, withWords *out, const withWords *in) {
     *out = *in;
+    // The copy shares the original's expressions, so each needs an extra reference
     if (in->EXPlinetype != NULL) {
         out->EXPlinetype = in->EXPlinetype;
         out->EXPlinetype->refCount++;
     }
+    // Line width expression
     if (in->EXPlinewidth != NULL) {
         out->EXPlinewidth = in->EXPlinewidth;
         out->EXPlinewidth->refCount++;
     }
+    // Point line width expression
     if (in->EXPpointlinewidth != NULL) {
         out->EXPpointlinewidth = in->EXPpointlinewidth;
         out->EXPpointlinewidth->refCount++;
     }
+    // Point size expression
     if (in->EXPpointsize != NULL) {
         out->EXPpointsize = in->EXPpointsize;
         out->EXPpointsize->refCount++;
     }
+    // Point type expression
     if (in->EXPpointtype != NULL) {
         out->EXPpointtype = in->EXPpointtype;
         out->EXPpointtype->refCount++;
     }
+    // Color expression
     if (in->EXPcolor != NULL) {
         out->EXPcolor = in->EXPcolor;
         out->EXPcolor->refCount++;
     }
+    // Fill color expression
     if (in->EXPfillcolor != NULL) {
         out->EXPfillcolor = in->EXPfillcolor;
         out->EXPfillcolor->refCount++;

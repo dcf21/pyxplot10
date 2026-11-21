@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Low-level string handling used throughout Pyxplot: parsing numbers from strings, rendering numbers as text, reading
+// lines from files, splitting strings into words, comparing strings, and handling UTF-8. It depends on nothing else in
+// Pyxplot except the global cancellation flag, so it is used by every other part of the code, including the helper
+// programs.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -40,6 +45,7 @@
 //! \return The floating point value extracted
 
 double ppl_getFloat(const char *str, int *Nchars) {
+    // The value accumulated so far, and the number of digits read after the decimal point
     double accumulator = 0;
     int decimals = 0;
     unsigned char past_decimal_point = 0;
@@ -47,6 +53,7 @@ double ppl_getFloat(const char *str, int *Nchars) {
     int pos = 0;
     int pos2 = 0;
 
+    // The strings "nan" and "NAN", followed by whitespace or the end of the string, mean not-a-number
     if ((str[pos + 0] == 'n') && (str[pos + 1] == 'a') && (str[pos + 2] == 'n') && (str[pos + 3] >= '\0') &&
         ((unsigned char) str[pos + 3] <= ' ')) {
         if (Nchars != NULL) *Nchars = 3;
@@ -58,6 +65,7 @@ double ppl_getFloat(const char *str, int *Nchars) {
         return GSL_NAN;
     }
 
+    // Read an optional leading sign
     if (str[pos] == '-') {
         negative = 1;
         pos++;
@@ -69,6 +77,7 @@ double ppl_getFloat(const char *str, int *Nchars) {
     if ((str[pos + 0] == '0') && (str[pos + 1] == 'x')) // Hexadecimal
     {
         pos += 2;
+        // Accumulate hexadecimal digits; 48, 55 and 87 are the ASCII offsets of '0', 'A'-10 and 'a'-10
         while (1) {
             if ((str[pos] >= '0') && (str[pos] <= '9')) accumulator = ((16 * accumulator) + (((int) str[pos]) - 48));
             else if ((str[pos] >= 'A') && (str[pos] <= 'F'))
@@ -80,7 +89,9 @@ double ppl_getFloat(const char *str, int *Nchars) {
         }
         if (negative == 1) accumulator *= -1; /* Deals with negatives */
     } else {
+        // Accumulate decimal digits as an integer, counting how many fall after the decimal point
         while (((str[pos] >= '0') && (str[pos] <= '9')) || (str[pos] == '.')) {
+            // A decimal point switches on the counting of decimal places; 48 is the ASCII code of '0'
             if (str[pos] == '.') {
                 past_decimal_point = 1;
             } else {
@@ -98,6 +109,7 @@ double ppl_getFloat(const char *str, int *Nchars) {
 
         if (negative == 1) accumulator *= -1; /* Deals with negatives */
 
+        // An exponent follows an 'e' or 'E', and is itself parsed recursively as a float
         if ((str[pos] == 'e') || (str[pos] == 'E'))
             accumulator *= pow(10.0, ppl_getFloat(str + pos + 1, &pos2)); /* Deals with exponents */
 
@@ -114,10 +126,12 @@ double ppl_getFloat(const char *str, int *Nchars) {
 //! \return Boolean flag indicating whether a valid floating-point value was found.
 
 int ppl_validFloat(const char *str, int *end) {
+    // Flags recording whether we have passed a decimal point, read any digits, and found a valid exponent
     unsigned char past_decimal_point = 0, had_number = 0, expvalid = 1;
     int pos = 0;
     int pos2 = 0;
 
+    // The strings "nan" and "NAN", followed by whitespace or the end of the string, are valid floats
     if ((str[pos + 0] == 'n') && (str[pos + 1] == 'a') && (str[pos + 2] == 'n') && (str[pos + 3] >= '\0') &&
         ((unsigned char) str[pos + 3] <= ' ')) {
         pos += 3;
@@ -131,6 +145,7 @@ int ppl_validFloat(const char *str, int *end) {
         goto VALID_FLOAT_ENDED;
     }
 
+    // Skip over an optional leading sign
     if (str[pos] == '-') {
         pos++;
     } /* Deal with negatives */
@@ -141,6 +156,7 @@ int ppl_validFloat(const char *str, int *end) {
     if ((str[pos + 0] == '0') && (str[pos + 1] == 'x')) // Hexadecimal
     {
         pos += 2;
+        // Skip over hexadecimal digits
         while (1) {
             if ((str[pos] >= '0') && (str[pos] <= '9')) pos++;
             else if ((str[pos] >= 'A') && (str[pos] <= 'F')) pos++;
@@ -150,7 +166,9 @@ int ppl_validFloat(const char *str, int *end) {
         }
         if (!had_number) return 0;
     } else {
+        // Skip over decimal digits, allowing at most one decimal point
         while (((str[pos] >= '0') && (str[pos] <= '9')) || (str[pos] == '.')) {
+            // A second decimal point ends the number
             if (str[pos] == '.') {
                 if (past_decimal_point) goto VALID_FLOAT_ENDED;
                 else past_decimal_point = 1;
@@ -160,6 +178,7 @@ int ppl_validFloat(const char *str, int *end) {
             pos++;
         }
 
+        // A number must contain at least one digit; it may then be followed by an exponent
         if (!had_number) return 0;
 
         if ((str[pos] == 'e') || (str[pos] == 'E')) /* Deals with exponents */
@@ -169,6 +188,8 @@ int ppl_validFloat(const char *str, int *end) {
         }
     }
 
+// The number has ended: it is valid if only whitespace follows it, or if the caller accepts trailing text. If *end is
+// non-negative on entry, the number must occupy at least that many characters.
 VALID_FLOAT_ENDED:
     while ((str[pos] != '\0') && ((unsigned char) str[pos] <= ' ')) pos++; /* Fast-forward over spaces at end */
     if ((!had_number) || (!expvalid)) return 0;
@@ -187,9 +208,12 @@ VALID_FLOAT_ENDED:
 //! \return Pointer to <output>
 
 char *ppl_numericDisplay(const double in, char *output, const int SigFig, const int latex) {
+    // A printf format string, built to show the required number of decimal places
     char format[16];
     double x, AccLevel;
     int decimal_level, dp_max, i, j, k, l;
+    // Moderately-sized numbers are shown in %f format, with the fewest decimal places which display the value to SigFig
+    // significant figures
     if ((fabs(in) < 1e10) && (fabs(in) > 1e-3)) {
         x = fabs(in);
         AccLevel = x * (1.0 + pow(10, -SigFig));
@@ -199,6 +223,8 @@ char *ppl_numericDisplay(const double in, char *output, const int SigFig, const 
         snprintf(format, 16, "%%.%df", decimal_level);
         snprintf(output, 128, format, in);
     } else {
+        // Very large and very small numbers are shown in %e format, with the fewest decimal places which display the
+        // mantissa to SigFig significant figures
         if (in == 0) {
             strcpy(output, "0");
         } else {
@@ -212,9 +238,11 @@ char *ppl_numericDisplay(const double in, char *output, const int SigFig, const 
             if (latex) // Turn 1e10 into nice latex
             {
                 for (i = 0; ((output[i] != '\0') && (output[i] != 'e') && (output[i] != 'E')); i++);
+                // Shift the exponent 32 characters to the right, to make room to rewrite "e" as "\times10^{"
                 if (output[i] != '\0') {
                     for (j = i, k = i + 32; output[j] != '\0'; j++) output[j + 32] = output[j];
                     output[j + 32] = '\0';
+                    // A mantissa of exactly 1 is omitted, giving 10^{n} rather than 1\times10^{n}
                     if ((i == 1) && (output[0] == '1')) {
                         strcpy(output, "10^{");
                         i = strlen(output); // Don't output 1 times 10^3
@@ -224,6 +252,8 @@ char *ppl_numericDisplay(const double in, char *output, const int SigFig, const 
                     }
                     k++; // FFW over the E
                     if (output[k] == '+') k++; // We don't need to say +8... 8 will do
+                    // Copy the exponent's digits, dropping leading zeros; l is set once the first non-zero digit is
+                    // reached
                     for (l = 0, j = k; output[j] != '\0'; j++) {
                         if ((output[j] > '0') && (output[j] <= '9')) l = 1;
                         if ((l == 1) || (output[j] != '0')) output[i++] = output[j];
@@ -279,9 +309,11 @@ unsigned char ppl_dblApprox(const double a, const double b, const double err) {
 //! if <MaxLenPtr> is NULL.
 
 void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength) {
+    // The caller's buffer, used if it has a fixed size, and the number of characters read so far
     char *const fixedBuffer = *output;
     int i = 0;
 
+    // A malloced buffer may grow beyond MaxLength, starting from its current size
     if (MaxLenPtr != NULL) MaxLength = *MaxLenPtr;
 
     // Read the file one character at a time with getc(), which is much faster than calling fscanf() per character
@@ -292,6 +324,7 @@ void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength)
         // Drop ASCII control characters other than tab (e.g. the \r of DOS line endings). Bytes above 127 are kept,
         // so that UTF-8 text survives.
         if ((ch < 32) && (c != '\t')) continue;
+        // Store the character, growing or truncating as the type of buffer requires
         if (MaxLenPtr != NULL) {
             // Grow the malloced buffer as needed, leaving room for the null terminator
             if (i > MaxLength - 4) {
@@ -306,6 +339,7 @@ void ppl_file_readline(FILE *file, char **output, int *MaxLenPtr, int MaxLength)
             fixedBuffer[i++] = c;
         }
     }
+    // Null-terminate the line, and report the new size of a malloced buffer
     if (MaxLenPtr != NULL) {
         *MaxLenPtr = MaxLength;
         (*output)[i] = '\0';
@@ -349,6 +383,7 @@ char *ppl_friendlyTimestring() {
     time_t timenow;
     int override = 0;
     const char *source_date_epoch = getenv("SOURCE_DATE_EPOCH");
+    // Use SOURCE_DATE_EPOCH, if it is set and is a valid integer
     if (source_date_epoch) {
         errno = 0;
         timenow = (time_t) strtol(source_date_epoch, NULL, 10);
@@ -367,6 +402,8 @@ char *ppl_strStrip(const char *in, char *out) {
     char *scan = out;
     while (((unsigned char) *in <= ' ') && (*in > '\0')) in++;
     while ((*in != '\0')) *(scan++) = *(in++);
+    // Step back from the end of the copied string over any trailing whitespace, then terminate the string after the
+    // last printable character
     scan--;
     while ((scan > out) && ((unsigned char) *scan <= ' ') && (*scan >= '\0')) scan--;
     *++scan = '\0';
@@ -381,6 +418,8 @@ char *ppl_strStrip(const char *in, char *out) {
 char *ppl_strUpper(const char *in, char *out) {
     char *scan = out;
     while (*in != '\0')
+        // Shift ASCII lower-case letters into upper case; other bytes, including UTF-8 multi-byte characters, are
+        // unchanged
         if ((*in >= 'a') && (*in <= 'z')) *scan++ = *in++ + 'A' - 'a';
         else *scan++ = *in++;
     *scan = '\0';
@@ -395,6 +434,7 @@ char *ppl_strUpper(const char *in, char *out) {
 char *ppl_strLower(const char *in, char *out) {
     char *scan = out;
     while (*in != '\0')
+        // Shift ASCII upper-case letters into lower case; other bytes are unchanged
         if ((*in >= 'A') && (*in <= 'Z')) *scan++ = *in++ + 'a' - 'A';
         else *scan++ = *in++;
     *scan = '\0';
@@ -408,6 +448,7 @@ char *ppl_strLower(const char *in, char *out) {
 
 char *ppl_strUnderline(const char *in, char *out) {
     char *scan = out;
+    // Write one dash for each printable character; control characters such as newlines get none
     while (*in != '\0') {
         if (((unsigned char) *in >= ' ') || (*in < '\0')) *scan++ = '-';
         in++;
@@ -480,14 +521,20 @@ char *ppl_strCommaSeparatedListScan(char **inscan, char *out) {
 //! \return The number of characters of <candidate> which were matched, or -1 if there was no match
 
 int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin) {
+    // i counts through <test>, and j through <candidate>
     int i, j;
 
+    // Missing strings never match
     if ((candidate == NULL) || (test == NULL)) return -1;
 
+    // Skip leading whitespace in the candidate
     for (j = 0; ((candidate[j] > '\0') && ((unsigned char) candidate[j] <= ' '));
          j++); // Fast-forward over whitespace at beginning
 
+    // Compare the two strings character by character, case-insensitively, until the candidate stops matching
     for (i = 0; 1; i++, j++)
+        // Within the test string, a mismatch ends the comparison: the match is valid if enough characters matched and
+        // the candidate's word has ended
         if (test[i] != '\0') {
             if (toupper(test[i]) != toupper(candidate[j])) // Candidate string has deviated from test string
             {
@@ -530,17 +577,21 @@ int ppl_strAutocomplete(const char *candidate, const char *test, const int Nmin)
 //! \param [in] width The maximum line length
 
 void ppl_strWordWrap(const char *in, char *out, const int width) {
+    // State of the word-wrapping: whether we are in a run of whitespace, and the positions in <out> of the last space
+    // and of the start of the current line
     int WhiteSpace = 1;
     int LastSpace = -1;
     int LineStart = 0;
     int LineFeeds =
             0; // If we meet > 1 linefeed during a period of whitespace, it marks the beginning of a new paragraph
     int i, j;
+    // Copy the input to the output one character at a time; i counts through the input, and j through the output
     for (i = 0, j = 0; in[i] != '\0'; i++) {
         if ((WhiteSpace == 1) &&
             ((unsigned char) in[i] <= ' ')) // Once we've encountered one space, ignore any further whitespaceness
         {
             if (j == 0) j++; // If we open document with a new paragraph, we haven't already put down a space character
+            // Two linefeeds in a period of whitespace means a new paragraph
             if ((in[i] == '\n') && (++LineFeeds == 2)) {
                 // Two linefeeds in a period of whitespace means a new paragraph
                 out[j - 1] = '\n';
@@ -558,6 +609,7 @@ void ppl_strWordWrap(const char *in, char *out, const int width) {
             WhiteSpace = 1;
             continue;
         }
+        // The markup used in the help text: "\\" forces a line break
         if ((in[i] == '\\') && (in[i + 1] == '\\')) {
             // Double-backslash implies a hard linebreak.
             i++;
@@ -567,6 +619,7 @@ void ppl_strWordWrap(const char *in, char *out, const int width) {
             WhiteSpace = 1;
             continue;
         }
+        // A hash character is a hard space, which is never broken
         if (in[i] == '#') {
             // A hash character implies a hard space character, used to tabulate data
             out[j++] = ' ';
@@ -575,35 +628,41 @@ void ppl_strWordWrap(const char *in, char *out, const int width) {
         }
         WhiteSpace = 0;
         LineFeeds = 0;
+        // A printable character: if the line is now too long, break it at the last space
         if (((j - LineStart) > width) && (LastSpace != -1)) {
             // If line is too long, insert a linebreak
             out[LastSpace] = '\n';
             LineStart = LastSpace;
             LastSpace = -1;
         }
+        // The markup \lab and \rab stands for the angle brackets < and >
         if (strncmp(in + i, "\\lab", 4) == 0) {
             // Macros for left-angle-brackets, etc.
             i += 3;
             out[j++] = '<';
             continue;
         }
+        // Right angle bracket
         if (strncmp(in + i, "\\rab", 4) == 0) {
             i += 3;
             out[j++] = '>';
             continue;
         }
+        // The markup \VERSION and \DATE are replaced by Pyxplot's version number and release date
         if (strncmp(in + i, "\\VERSION", 8) == 0) {
             i += 7;
             strcpy(out + j, VERSION);
             j += strlen(out + j);
             continue;
         }
+        // Release date
         if (strncmp(in + i, "\\DATE", 5) == 0) {
             i += 4;
             strcpy(out + j, DATE);
             j += strlen(out + j);
             continue;
         }
+        // The word "Elephants" is the markup for a literal hash character, since # itself means a hard space
         if (strncmp(in + i, "Elephants", 9) == 0) {
             i += 8;
             out[j++] = '#';
@@ -637,6 +696,7 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
     int done = 0;
     int btype;
 
+    // Scan through the string, keeping count of how deeply nested we are in each type of bracket
     for (; in[inpos] != '\0'; inpos++) {
         if (QuoteType != '\0') // Do not pay attention to brackets inside quoted strings
         {
@@ -644,6 +704,8 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
             continue;
         } else if ((in[inpos] == '\'') || (in[inpos] == '\"')) QuoteType = in[inpos]; // Entering a quoted string
 
+        // Check whether this character opens or closes any of the three types of bracket. BracketLevel[idx] counts the
+        // type we are matching; the other two must be at level zero for a match to count.
         for (btype = 0; btype < 3; btype++) {
             if (in[inpos] == bopen[btype]) // Entering a nested level of brackets
             {
@@ -663,6 +725,7 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
             }
         }
 
+        // Commas at the top level of the bracket we are matching separate its arguments
         if ((in[inpos] == ',') && (BracketLevel[idx] == 1) && (BracketLevel[(idx + 1) % 3] == 0) &&
             (BracketLevel[(idx + 2) % 3] == 0)) // Found a new comma-separated item
         {
@@ -672,6 +735,7 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
         if (done) break;
     }
 
+    // Report the closing bracket, or that none was found
     if (in[inpos] == '\0') {
         if (Nargs != NULL) *Nargs = -1;
         if (ClosingBracketPos != NULL) *ClosingBracketPos = -1;
@@ -691,8 +755,10 @@ void ppl_strBracketMatch(const char *in, const char open, const char close, int 
 
 int ppl_strCmpNoCase(const char *a, const char *b) {
     char aU, bU;
+    // Compare the strings one character at a time, until they differ or both end
     while (1) {
         if ((*a == '\0') && (*b == '\0')) return 0;
+        // Identical characters: move on to the next pair
         if (*a == *b) {
             a++;
             b++;
@@ -702,6 +768,7 @@ int ppl_strCmpNoCase(const char *a, const char *b) {
         else aU = *a;
         if ((*b >= 'a') && (*b <= 'z')) bU = *b - 'a' + 'A';
         else bU = *b;
+        // Characters which match once converted to upper case: move on to the next pair
         if (aU == bU) {
             a++;
             b++;
@@ -721,8 +788,10 @@ int ppl_strCmpNoCase(const char *a, const char *b) {
 //! \return Pointer to <out>
 
 char *ppl_strEscapify(const char *in, char *out, const size_t outLen) {
+    // scanin points to the next character of the input; j is the number of bytes written to the output
     const char *scanin = in;
     size_t j = 0;
+    // A buffer too small to hold even a pair of quotes receives an empty string
     if (outLen < 3) {
         if (outLen > 0) out[0] = '\0';
         return out;
@@ -731,6 +800,7 @@ char *ppl_strEscapify(const char *in, char *out, const size_t outLen) {
     // Leave room for the closing quote and the null terminator
     while ((*scanin != '\0') && (j + 2 < outLen - 1)) {
         char escape = '\0';
+        // Characters which must be escaped, and the letters which follow the backslash in each case
         switch (*scanin) {
             case '\?':
                 escape = '?';
@@ -764,6 +834,7 @@ char *ppl_strEscapify(const char *in, char *out, const size_t outLen) {
             default:
                 break;
         }
+        // Write the character, preceded by a backslash if it needs escaping
         if (escape != '\0') {
             out[j++] = '\\';
             out[j++] = escape;
@@ -794,6 +865,7 @@ int ppl_strAppendf(char *out, const size_t outLen, int *pos, const char *format,
     va_start(args, format);
     n = vsnprintf(out + *pos, outLen - *pos, format, args);
     va_end(args);
+    // vsnprintf() always terminates the string, but this guarantees it even if the buffer was filled exactly
     out[outLen - 1] = '\0';
     *pos += (int) strlen(out + *pos);
     return n;
@@ -861,6 +933,7 @@ int ppl_utf8Length(const char *in) {
 int ppl_utf8ByteOffset(const char *in, const int charIndex) {
     int i, n = -1;
     for (i = 0; in[i] != '\0'; i++)
+        // Each byte which starts a character advances the character count
         if (!utf8IsContinuation(in[i])) {
             n++;
             if (n == charIndex) return i;
@@ -887,9 +960,13 @@ int ppl_utf8CharIndex(const char *in, const int byteOffset) {
 //! <pos> is advanced by one byte)
 
 long ppl_utf8NextChar(const char *in, int *pos) {
+    // s points to the first byte of the character; the number of bytes it occupies is given by the high bits of that
+    // byte
     const unsigned char *s = (const unsigned char *) in + *pos;
     long codePoint;
     int nBytes, i;
+    // The first byte gives the length of the character: 0xxxxxxx is ASCII, 110xxxxx starts two bytes, 1110xxxx three,
+    // and 11110xxx four. Its remaining bits are the most significant bits of the code point.
     if (s[0] < 0x80) {
         nBytes = 1;
         codePoint = s[0];
@@ -906,7 +983,9 @@ long ppl_utf8NextChar(const char *in, int *pos) {
         (*pos)++; // A continuation byte, or a byte which never appears in UTF-8
         return -1;
     }
+    // Each continuation byte contributes six more bits of the code point
     for (i = 1; i < nBytes; i++) {
+        // Every byte after the first must be a continuation byte, 10xxxxxx
         if ((s[i] & 0xC0) != 0x80) {
             (*pos)++; // A multi-byte character which is cut short
             return -1;
@@ -924,6 +1003,7 @@ long ppl_utf8NextChar(const char *in, int *pos) {
 static locale_t utf8Locale() {
     static int tried = 0;
     static locale_t locale = (locale_t) 0;
+    // Look for a UTF-8 locale only once, since newlocale() is slow
     if (!tried) {
         tried = 1;
         locale = newlocale(LC_CTYPE_MASK, "C.UTF-8", (locale_t) 0);
@@ -960,16 +1040,23 @@ int ppl_utf8IsDigit(const long codePoint) {
 //! \return Boolean flag indicating whether <test> matches <wildcard>
 
 int ppl_strWildcardTest(const char *test, const char *wildcard) {
+    // i is the position reached in both strings; j is the end of the run of wildcard characters; mineat and maxeat are
+    // the fewest and most characters which that run may match
     int i = 0, j, k, mineat = 0, maxeat = 0;
 
+    // Match the literal characters before the first wildcard character
     while ((wildcard[i] != '\0') && (wildcard[i] != '?') && (wildcard[i] != '*')) {
         if (test[i] != wildcard[i]) return 0;
         i++;
     }
     if (wildcard[i] == '\0') return (test[i] == '\0');
 
+    // Measure the run of wildcard characters which follows: each ? matches exactly one character, and any * makes the
+    // number of characters unlimited
     j = i;
+    // Count the wildcard characters
     while ((wildcard[j] == '?') || (wildcard[j] == '*')) {
+        // A ? consumes one character; a * consumes any number
         if (wildcard[j] == '?') {
             mineat++;
             maxeat++;
@@ -979,9 +1066,11 @@ int ppl_strWildcardTest(const char *test, const char *wildcard) {
         j++;
     }
 
+    // Consume the characters which the run must match
     for (k = 0; k < mineat; k++)
         if (test[i++] == '\0') return 0;
 
+    // Try matching the rest of the pattern after each possible number of further characters, recursively
     for (k = 0; k < maxeat - mineat; k++) {
         if (ppl_strWildcardTest(test + i, wildcard + j)) return 1;
         if (test[i++] == '\0') return 0;

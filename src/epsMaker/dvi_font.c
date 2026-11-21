@@ -19,7 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for manupulating dvi files -- font section
+// Loads the fonts used in LaTeX's dvi output, for dvi_interpreter.c. For each TeX font, the TeX font metric (TFM) file
+// is read to find the sizes of its characters, and the Type 1 font which draws it is located: either a font built into
+// postscript interpreters, a PFA or PFB file of the same name, or the font named in the dvips font map psfonts.map,
+// possibly re-encoded or slanted. PFB files are converted to PFA so that they can be embedded in the postscript output.
+// Files are found using kpse_wrap.c.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,6 +56,7 @@ static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font);
 //! \return Zero on success, or a DVIE_* error code
 
 int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
+    // Variables for finding and reading the TFM file
     char msg[PPL_MSG_LENGTH];
     char *TFMpath;
     char *s;
@@ -62,12 +67,14 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
 
     // Get the TFM file
     s = (char *) ppl_memAlloc(strlen(font->name) + 5);
+    // Failure to allocate memory is reported as an error
     if (s == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
     }
     sprintf(s, "%s.tfm", font->name);
     TFMpath = ppl_kpse_wrap_find_tfm(ec, s);
+    // Report a TFM file which cannot be found
     if (TFMpath == NULL) {
         snprintf(errStr, SSTR_LENGTH,
                  "Could not find TFM file '%s'. You may be able to fix this with a more complete installation of tex.",
@@ -75,11 +82,13 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, errStr);
         return 1;
     }
+    // Log the path in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Font file %s: TFM path: %s", font->name, TFMpath);
         ppl_log(ec, msg);
     }
     TFMfp = fopen(TFMpath, "r");
+    // Report a TFM file which cannot be opened
     if (TFMfp == NULL) {
         snprintf(errStr, SSTR_LENGTH,
                  "Could not open TFM file '%s'. You may be able to fix this with a more complete installation of tex.",
@@ -105,6 +114,7 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
     // This is a list of bonkers fonts
     if (strncmp(font->tfm->family, "WASY", 4) == 0) font->fontType = FONT_SYMBOL;
 
+    // Log the font type in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "TFM: font type %d", font->fontType);
         ppl_log(ec, msg);
@@ -112,16 +122,19 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
 
     // Deal with built-in fonts
     font->psName = NULL;
+    // Fonts built into postscript interpreters need no font file
     for (i = 0; i < N_BUILTIN_FONTS; i++) {
         if (strlen(font->name) == strlen(builtinFonts[i]) &&
             strncmp(font->name, builtinFonts[i], L_BUILTIN_FNAME) == 0) {
             font->pfaPath = NULL;
             font->psName = (char *) ppl_memAlloc(strlen(builtinFontNames[i]) + 1);
+            // Failure to allocate memory is reported as an error
             if (font->name == NULL) {
                 ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
                 return DVIE_MEMORY;
             }
             strcpy(font->psName, builtinFontNames[i]);
+            // Log the font in debugging mode
             if (DEBUG) {
                 snprintf(errStr, SSTR_LENGTH, "Found builtin font %sXXX%sXXX%sXXX %d", builtinFonts[i], font->psName,
                          builtinFontNames[i], i);
@@ -158,6 +171,7 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
         err = dviGetPfa(ec, font, font->name);
         if (err == DVIE_NOFONT) err = dviGetFontFromMap(ec, font);
         if (err == DVIE_NOFONT) err = dviGetPfa(ec, font, font->tfm->family);
+        // Report a font for which no font file could be found
         if (err == DVIE_NOFONT) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot find pfa or pfb file for font %s", font->name);
             ppl_error(ec, ERR_GENERIC, -1, -1, errStr);
@@ -172,6 +186,7 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
     }
     if (font->basePsName == NULL) font->basePsName = font->psName;
 
+    // Done
     return 0;
 }
 
@@ -184,12 +199,15 @@ int dviGetTFM(pplerr_context *ec, dviFontDetails *font) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
+    // Variables for finding the font file
     FILE *fpin, *fpout;
     char errStr[SSTR_LENGTH];
     char *s, *PFApath, *PFBpath;
     int err, i;
 
+    // The filename with the extension .pfa or .pfb
     s = (char *) ppl_memAlloc(strlen(filename) + 5);
+    // Failure to allocate memory is reported as an error
     if (s == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
@@ -199,6 +217,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
     for (i = 0; i < strlen(filename); i++)
         if (s[i] >= 'A' && s[i] <= 'Z') s[i] = s[i] + 'a' - 'A';
     PFApath = ppl_kpse_wrap_find_pfa(ec, s);
+    // Use a PFA file if there is one
     if (PFApath != NULL) {
         font->pfaPath = PFApath;
     } else {
@@ -208,6 +227,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
         for (i = 0; i < strlen(filename); i++)
             if (s[i] >= 'A' && s[i] <= 'Z') s[i] = s[i] + 'a' - 'A';
         PFBpath = ppl_kpse_wrap_find_pfb(ec, s);
+        // Otherwise there must be a PFB file
         if (PFBpath == NULL) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot find pfa or pfb file for font %s using name %s",
                      font->name, filename);
@@ -215,6 +235,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
             return DVIE_NOFONT;
         }
         fpin = fopen(PFBpath, "r");
+        // Report a PFB file which cannot be opened
         if (fpin == NULL) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot open pfb file %s", PFBpath);
             ppl_error(ec, ERR_GENERIC, -1, -1, errStr);
@@ -224,6 +245,7 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
         // Make a filename for the destination pfa file
         // free(PFApath);
         PFApath = (char *) ppl_memAlloc(SSTR_LENGTH);
+        // Failure to allocate memory is reported as an error
         if (PFApath == NULL) {
             ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
             fclose(fpin);
@@ -236,13 +258,16 @@ int dviGetPfa(pplerr_context *ec, dviFontDetails *font, char *filename) {
             return DVIE_INTERNAL;
         }
         fpout = fopen(PFApath, "w");
+        // Report a PFA file which cannot be written
         if (fpout == NULL) {
             snprintf(errStr, SSTR_LENGTH, "dviGetTfm: Cannot write to pfa file %s", PFApath);
             ppl_error(ec, ERR_GENERIC, -1, -1, errStr);
             fclose(fpin);
             return DVIE_ACCESS;
         }
+        // Convert the PFB file to PFA
         if ((err = pfb2pfa(ec, fpin, fpout)) != 0) {
+            // Log the failure in debugging mode
             if (DEBUG) {
                 snprintf(errStr, SSTR_LENGTH, "Fail in pfb2pfa: %d", err);
                 ppl_log(ec, errStr);
@@ -278,6 +303,7 @@ typedef struct dviFontMapEntry {
 
 static const char *dviCopyToken(const char *in, char *out, const size_t outLen) {
     size_t i = 0;
+    // Copy characters until a space, truncating the token if the buffer is too short
     while ((*in != '\0') && !isspace((unsigned char) *in)) {
         if (i < outLen - 1) out[i++] = *in;
         in++;
@@ -292,22 +318,28 @@ static const char *dviCopyToken(const char *in, char *out, const size_t outLen) 
 //! \return Zero on success, or nonzero if the line could not be parsed
 
 static int dviParseFontMapLine(const char *line, dviFontMapEntry *entry) {
+    // Variables for parsing the line; numbers precede the postscript operator which they modify
     char token[SSTR_LENGTH];
     double lastNumber = 0;
     memset(entry, 0, sizeof(dviFontMapEntry));
     entry->extend = 1;
 
     line = dviCopyToken(line, token, sizeof(token)); // Skip the TeX font name
+    // Process each remaining token: the postscript font name, quoted postscript instructions, and font and encoding
+    // files prefixed with <
     while (1) {
         while (isspace((unsigned char) *line)) line++;
         if (*line == '\0') break;
+        // Quoted postscript instructions, which may slant or extend the font
         if (*line == '"') {
             // Postscript instructions, e.g. " .167 SlantFont ". Encodings are applied using the encoding file.
             line++;
+            // Read each token within the quotes
             while ((*line != '"') && (*line != '\0')) {
                 while (isspace((unsigned char) *line)) line++;
                 if ((*line == '"') || (*line == '\0')) break;
                 line = dviCopyToken(line, token, sizeof(token));
+                // The final token ends with the closing quote
                 if (token[strlen(token) - 1] == '"') {
                     token[strlen(token) - 1] = '\0';
                     line--;
@@ -342,18 +374,22 @@ static int dviParseFontMapLine(const char *line, dviFontMapEntry *entry) {
 //! \return Zero on success, or DVIE_NOFONT if the font map could not be found or does not list the font
 
 static int dviLookupFontMap(pplerr_context *ec, const char *texName, dviFontMapEntry *entry) {
+    // Variables for reading the font map
     char line[LSTR_LENGTH];
     const size_t nameLen = strlen(texName);
     char *mapPath;
     FILE *fp;
     int found = 0;
 
+    // Find the font map
     mapPath = ppl_kpse_wrap_find_map(ec, "psfonts.map");
+    // Without a font map, no fonts can be found in it
     if (mapPath == NULL) {
         if (DEBUG) ppl_log(ec, "Could not find TeX font map psfonts.map");
         return DVIE_NOFONT;
     }
     if ((fp = fopen(mapPath, "r")) == NULL) return DVIE_NOFONT;
+    // Find the line which describes the font, skipping comments
     while (fgets(line, sizeof(line), fp) != NULL) {
         // Find the line which starts with the font name. (Comment lines start with one of %#;* so never match.)
         if ((strncmp(line, texName, nameLen) != 0) || !isspace((unsigned char) line[nameLen])) continue;
@@ -361,6 +397,7 @@ static int dviLookupFontMap(pplerr_context *ec, const char *texName, dviFontMapE
         break;
     }
     fclose(fp);
+    // Log what was found in debugging mode
     if (DEBUG && found) {
         char msg[PPL_MSG_LENGTH];
         ppl_snprintfTrunc(msg, sizeof(msg),
@@ -378,6 +415,7 @@ static int dviLookupFontMap(pplerr_context *ec, const char *texName, dviFontMapE
 //! ppl_memAlloc context, or NULL on error
 
 static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
+    // Variables for reading the encoding file
     char errStr[SSTR_LENGTH];
     char name[SSTR_LENGTH];
     char *path, *out;
@@ -385,13 +423,16 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
     int c, inArray = 0, nNames = 0, lineLen = 0;
     size_t outLen = 0, outAlloc = 8192;
 
+    // Find and open the encoding file
     snprintf(name, sizeof(name), "%s", encFile);
     path = ppl_kpse_wrap_find_enc(ec, name);
+    // Report an encoding file which cannot be found
     if ((path == NULL) || ((fp = fopen(path, "r")) == NULL)) {
         ppl_snprintfTrunc(errStr, SSTR_LENGTH, "Could not find font encoding file '%s'.", encFile);
         ppl_error(ec, ERR_FILE, -1, -1, errStr);
         return NULL;
     }
+    // Failure to allocate memory is reported as an error
     if ((out = (char *) ppl_memAlloc(outAlloc)) == NULL) {
         fclose(fp);
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
@@ -405,6 +446,7 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
             while ((c != '\n') && (c != EOF)) c = getc(fp);
         } else if (c == '[') inArray = 1;
         else if (c == ']') break;
+        // Copy each glyph name in the encoding's array, wrapping lines
         else if (inArray && (c == '/')) {
             int len = 0;
             while (((c = getc(fp)) != EOF) && !isspace(c) && (c != '/') && (c != ']') && (c != '%')) {
@@ -413,6 +455,7 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
             name[len] = '\0';
             if (c != EOF) ungetc(c, fp);
             if (outLen + len + 4 >= outAlloc) break; // Malformed: far longer than 256 glyph names
+            // Start a new line before lines become too long
             if (lineLen + len > 72) {
                 out[outLen++] = '\n';
                 lineLen = 0;
@@ -423,6 +466,7 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
         }
     }
     fclose(fp);
+    // An encoding must contain 256 glyph names
     if (nNames != 256) {
         ppl_snprintfTrunc(errStr, SSTR_LENGTH, "Font encoding file '%s' contains %d glyph names, rather than 256.",
                           encFile, nNames);
@@ -440,14 +484,17 @@ static char *dviReadEncoding(pplerr_context *ec, const char *encFile) {
 //! \return Zero on success, DVIE_NOFONT if the font is not in the map, or another DVIE_* error code
 
 static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font) {
+    // Variables for finding the font
     dviFontMapEntry entry;
     char *encoding = NULL;
     char *setup;
     size_t setupLen;
     int err;
 
+    // Find the font in the font map
     if ((err = dviLookupFontMap(ec, font->name, &entry)) != 0) return err;
 
+    // The font may be in a font file, or resident in the postscript interpreter
     if (entry.fontFile[0] != '\0') {
         // The font file is given with its extension, e.g. sfrm1000.pfb, but dviGetPfa() adds its own extension
         char fileStem[SSTR_LENGTH];
@@ -462,6 +509,7 @@ static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font) {
         // A font resident in the postscript interpreter, e.g. Times-Roman
         font->pfaPath = NULL;
         font->basePsName = (char *) ppl_memAlloc(strlen(entry.psName) + 1);
+        // Failure to allocate memory is reported as an error
         if (font->basePsName == NULL) {
             ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
             return DVIE_MEMORY;
@@ -482,6 +530,7 @@ static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font) {
     font->psName = (char *) ppl_memAlloc(strlen(font->basePsName) + strlen(font->name) + 2);
     setupLen = 2 * strlen(font->basePsName) + strlen(font->name) + (encoding ? strlen(encoding) : 0) + 512;
     setup = (char *) ppl_memAlloc(setupLen);
+    // Failure to allocate memory is reported as an error
     if ((font->psName == NULL) || (setup == NULL)) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return DVIE_MEMORY;
@@ -507,11 +556,13 @@ static int dviGetFontFromMap(pplerr_context *ec, dviFontDetails *font) {
 //! \return The postscript font name, allocated in the current ppl_memAlloc context, or NULL if it could not be found
 
 char *psNameFromPFA(pplerr_context *ec, const char *PFApath) {
+    // Variables for reading the font file
     FILE *fp;
     char *s;
     char buf[SSTR_LENGTH], c;
     int i;
 
+    // Report a font file which cannot be opened
     if ((fp = fopen(PFApath, "r")) == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Cannot open pfa file");
         return NULL;
@@ -523,6 +574,7 @@ char *psNameFromPFA(pplerr_context *ec, const char *PFApath) {
 
     // Grab characters until the next space
     i = 0;
+    // Copy the font name, up to the next space
     while ((c = getc(fp)) != ' ' && i < SSTR_LENGTH - 1) {
         buf[i] = c;
         i++;
@@ -532,6 +584,7 @@ char *psNameFromPFA(pplerr_context *ec, const char *PFApath) {
 
     // Produce a malloced string with the name in and return it
     s = (char *) ppl_memAlloc(i + 1);
+    // Failure to allocate memory is reported as an error
     if (s == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return NULL;
@@ -551,15 +604,20 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
     int len; // Record length
     char c; // Input string
 
+    // A PFB file is a series of records, each starting with the byte 128 and a type: 1 for text, 2 for binary data, and
+    // 3 for the end of the file
     while (!feof(in)) {
+        // Every record starts with the byte 128
         if (getc(in) != 128) {
             ppl_error(ec, ERR_INTERNAL, -1, -1, "Error in pfb file format");
             return 1;
         }
         i = getc(in);
+        // Copy text records, converting carriage returns to newlines; write binary records in hexadecimal
         if (i == 1) {
             // Ascii text record
             len = getc(in) | getc(in) << 8 | getc(in) << 16 | getc(in) << 24;
+            // Copy each character of the text record
             for (j = 0; j < len; j++) {
                 if ((c = getc(in)) == '\r') putc('\n', out);
                 else putc(c, out);
@@ -567,6 +625,7 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
         } else if (i == 2) {
             // Binary data record
             len = getc(in) | getc(in) << 8 | getc(in) << 16 | getc(in) << 24;
+            // Write each byte of the binary record as two hexadecimal digits
             for (j = 0; j < len; j++) {
                 fprintf(out, "%02x", getc(in));
                 if ((j + 1) % 30 == 0) putc('\n', out);
@@ -590,6 +649,7 @@ int pfb2pfa(pplerr_context *ec, FILE *in, FILE *out) {
 //! \return The font metrics, allocated in the current ppl_memAlloc context, or NULL on failure
 
 dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
+    // Variables for reading the TFM file
     char msg[PPL_MSG_LENGTH];
     dviTFM *tfm;
     unsigned long int buff[12];
@@ -597,9 +657,12 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     int lh;
     int Nchars;
 
+    // The names of the twelve lengths in the TFM file's header, for debugging
     char *tit[12] = {"lf", "lh", "bc", "ec", "nw", "nh", "nd", "ni", "nl", "nk", "ne", "np"};
 
+    // Allocate the font metrics
     tfm = (dviTFM *) ppl_memAlloc(sizeof(dviTFM));
+    // Failure to allocate memory is reported as an error
     if (tfm == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Out of memory");
         *err = DVIE_MEMORY;
@@ -621,9 +684,11 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     tfm->ne = buff[10];
     tfm->np = buff[11];
 
+    // Log the header in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "TFM: ");
         j = strlen(msg);
+        // Write each length
         for (i = 0; i < 12; i++) {
             ppl_snprintfTrunc(msg + j, sizeof(msg) - (j), "%s:%lu  ", tit[i], buff[i]);
             j += strlen(msg + j);
@@ -648,21 +713,26 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     tfm->ds = ReadFixWord(ec, fp, err);
     if (*err) return NULL;
     lh--;
+    // Log progress in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "TFM: lh now %d", lh);
         ppl_log(ec, msg);
     }
+    // If present, read the character coding scheme, as a string of up to 39 characters
     if (lh >= 10) {
         int len;
         if ((*err = ReadUChar(ec, fp, &len)) != 0) return NULL;
+        // Log the length in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "TFM: Coding length: %d", len);
             ppl_log(ec, msg);
         }
+        // The string may be no longer than 39 characters
         if (len > 39) {
             ppl_error(ec, ERR_INTERNAL, -1, -1, "Malformed DVI header. coding len>40");
             len = 39;
         }
+        // Read the string, which occupies 39 bytes
         for (i = 0; i < 39; i++) {
             int t;
             if ((*err = ReadUChar(ec, fp, &t)) != 0) return NULL;
@@ -671,17 +741,21 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
         tfm->coding[len] = '\0';
         lh -= 10;
     }
+    // If present, read the font family, as a string of up to 19 characters
     if (lh >= 5) {
         int len;
         if ((*err = ReadUChar(ec, fp, &len)) != 0) return NULL;
+        // The string may be no longer than 19 characters
         if (len > 19) {
             ppl_error(ec, ERR_INTERNAL, -1, -1, "Malformed DVI header. coding len>19");
             len = 19;
         }
+        // Log the length in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "TFM: Family length: %d", len);
             ppl_log(ec, msg);
         }
+        // Read the string, which occupies 19 bytes
         for (i = 0; i < 19; i++) {
             int t;
             if ((*err = ReadUChar(ec, fp, &t)) != 0) return NULL;
@@ -690,10 +764,12 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
         tfm->family[len] = '\0';
         lh -= 5;
     }
+    // Log the header in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "TFM: coding:%s: family:%s: lh now %d", tfm->coding, tfm->family, lh);
         ppl_log(ec, msg);
     }
+    // If present, read the seven-bit safe flag and the face code
     if (lh > 0) {
         int temp;
         if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
@@ -702,11 +778,13 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
         if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
         if ((*err = ReadUChar(ec, fp, &temp)) != 0) return NULL;
         lh--;
+        // Log the face code in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "TFM: face:%d", tfm->face);
             ppl_log(ec, msg);
         }
     }
+    // Skip any remaining words of the header
     while (lh > 0) {
         unsigned long int i;
         ReadLongInt(ec, fp, &i, 4);
@@ -716,11 +794,14 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     // Read the char info tables
     Nchars = tfm->ec - tfm->bc + 1;
     tfm->charInfo = (TFMcharInfo *) ppl_memAlloc(Nchars * sizeof(TFMcharInfo));
+    // Failure to allocate memory is reported as an error
     if (tfm->charInfo == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Out of memory");
         *err = DVIE_MEMORY;
         return NULL;
     }
+    // Read the information about each character: indices into the tables of widths, heights, depths and italic
+    // corrections, and its ligature, kerning or extensible recipe
     for (i = 0; i < Nchars; i++) {
         int j;
         int t[4];
@@ -739,24 +820,29 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
     tfm->height = (double *) ppl_memAlloc(tfm->nh * sizeof(double));
     tfm->depth = (double *) ppl_memAlloc(tfm->nd * sizeof(double));
     tfm->italic = (double *) ppl_memAlloc(tfm->ni * sizeof(double));
+    // Failure to allocate memory is reported as an error
     if ((tfm->width == NULL) || (tfm->height == NULL) || (tfm->depth == NULL) || (tfm->italic == NULL)) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Out of memory");
         *err = DVIE_MEMORY;
         return NULL;
     }
 
+    // Read the table of widths
     for (i = 0; i < tfm->nw; i++) {
         tfm->width[i] = ReadFixWord(ec, fp, err);
         if (*err) return NULL;
     }
+    // Read the table of heights
     for (i = 0; i < tfm->nh; i++) {
         tfm->height[i] = ReadFixWord(ec, fp, err);
         if (*err) return NULL;
     }
+    // Read the table of depths
     for (i = 0; i < tfm->nd; i++) {
         tfm->depth[i] = ReadFixWord(ec, fp, err);
         if (*err) return NULL;
     }
+    // Read the table of italic corrections
     for (i = 0; i < tfm->ni; i++) {
         tfm->italic[i] = ReadFixWord(ec, fp, err);
         if (*err) return NULL;
@@ -764,11 +850,13 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
 
     // Read the lig_kern table
     tfm->ligKern = (TFMligKern *) ppl_memAlloc(tfm->nl * sizeof(TFMligKern));
+    // Failure to allocate memory is reported as an error
     if (tfm->ligKern == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Out of memory");
         *err = DVIE_MEMORY;
         return NULL;
     }
+    // Read the ligature and kerning program
     for (i = 0; i < tfm->nl; i++) {
         int j;
         if ((*err = ReadUChar(ec, fp, &j)) != 0) return NULL;
@@ -783,11 +871,13 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
 
     // Read the kern table
     tfm->kern = (double *) ppl_memAlloc(tfm->nk * sizeof(double));
+    // Failure to allocate memory is reported as an error
     if (tfm->kern == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Out of memory");
         *err = DVIE_MEMORY;
         return NULL;
     }
+    // Read the table of kerns
     for (i = 0; i < tfm->nk; i++) {
         tfm->kern[i] = ReadFixWord(ec, fp, err);
         if (*err) return NULL;
@@ -795,11 +885,13 @@ dviTFM *dviReadTFM(pplerr_context *ec, FILE *fp, int *err) {
 
     // Read the extensible character recipies
     tfm->extensibleRecipe = (TFMextRec *) ppl_memAlloc(tfm->ne * sizeof(TFMextRec));
+    // Failure to allocate memory is reported as an error
     if (tfm->extensibleRecipe == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Out of memory");
         *err = DVIE_MEMORY;
         return NULL;
     }
+    // Read the recipes for extensible characters
     for (i = 0; i < tfm->ne; i++) {
         int j;
         if ((*err = ReadUChar(ec, fp, &j)) != 0) return NULL;
@@ -838,6 +930,7 @@ double ReadFixWord(pplerr_context *ec, FILE *fp, int *err) {
 //! \return Zero on success, or a DVIE_* error code
 
 int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
+    // Variables for finding the size of the font's capital letters
     char msg[PPL_MSG_LENGTH];
     dviTFM *tfm; // Details of this font
     int hi, di; // Indices
@@ -846,6 +939,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     int i, loopMax, hmax, dmax;
     double height, depth;
 
+    // There must be a font
     if (!font) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Internal font failure!");
         return DVIE_INTERNAL;
@@ -858,6 +952,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     loopMax = tfm->ec > ASCII_CHAR_Z_UP ? ASCII_CHAR_Z_UP : tfm->ec;
     hmax = 0;
     dmax = 0;
+    // Find the greatest height and depth among the upper-case letters
     for (i = ASCII_CHAR_A_UP; i <= loopMax; i++) {
         chnum = i - tfm->bc;
         chin = tfm->charInfo + chnum;
@@ -865,10 +960,12 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
         di = (int) chin->di;
         height = tfm->height[hi];
         depth = tfm->depth[di];
+        // Keep the greatest height
         if (font->maxHeight < height) {
             font->maxHeight = height;
             hmax = i;
         }
+        // Keep the greatest depth
         if (font->maxDepth < depth) {
             font->maxDepth = depth;
             dmax = i;
@@ -877,6 +974,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
 
     // Loop over lower-case characters
     loopMax = tfm->ec > ASCII_CHAR_Z_DN ? ASCII_CHAR_Z_DN : tfm->ec;
+    // Also among the lower-case letters
     for (i = ASCII_CHAR_A_DN; i <= loopMax; i++) {
         chnum = i - tfm->bc;
         chin = tfm->charInfo + chnum;
@@ -884,10 +982,12 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
         di = (int) chin->di;
         height = tfm->height[hi];
         depth = tfm->depth[di];
+        // Keep the greatest height
         if (font->maxHeight < height) {
             font->maxHeight = height;
             hmax = i;
         }
+        // Keep the greatest depth
         if (font->maxDepth < depth) {
             font->maxDepth = depth;
             dmax = i;
@@ -895,6 +995,7 @@ int dviFindMaxSize(pplerr_context *ec, dviFontDetails *font) {
     }
     font->maxHeight *= font->useSize;
     font->maxDepth *= font->useSize;
+    // Log the sizes in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "TFM: Maximum height %f depth %f from characters %d %d %s %s",
                           font->maxHeight, font->maxDepth, hmax, dmax, (char *) (&hmax), (char *) (&dmax));

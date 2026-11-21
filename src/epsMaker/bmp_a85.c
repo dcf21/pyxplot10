@@ -21,10 +21,9 @@
 
 // ----------------------------------------------------------------------------
 
-// This file is edited from code which was kindly contributed to Pyxplot by
-// Michael Rutter. It efficiently encodes a string of raw image data into
-// postscript's ASCII 85 data format, making use of all of the printable ASCII
-// characters.
+// Encodes binary data, such as bitmap images and their palettes, in postscript's ASCII85 format, which uses all of the
+// printable ASCII characters, so that it can be included in the text of a postscript file. Used by eps_image.c and by
+// the colormap plot style. Edited from code kindly contributed to Pyxplot by Michael Rutter.
 
 #define _PPL_BMP_A85_C 1
 
@@ -47,11 +46,13 @@
 //! \return The number of characters written
 
 unsigned int ppl_bmp_A85(const pplerr_context *ec, FILE *fout, const unsigned char *in, int len) {
+    // Each group of four bytes is written as five base-85 digits, offset by '!'
     int i, j;
     unsigned int tmp, t, line, length = 0;
     unsigned int pow85[] = {52200625, 614125, 7225, 85, 1}; // powers of 85
     unsigned char out[LINELEN / 4 * 5 + 4], *outp;
 
+    // Encode the data one line at a time
     while (len > 0) {
         line = (len > LINELEN) ? LINELEN : len;
         len = len - line;
@@ -59,11 +60,14 @@ unsigned int ppl_bmp_A85(const pplerr_context *ec, FILE *fout, const unsigned ch
         for (i = 0; i < (line & 0xfffc); i += 4) // encode groups of four bytes
         {
             tmp = 0;
+            // Make a 32-bit number from four bytes
             for (j = 0; j < 4; j++) {
                 tmp = tmp << 8;
                 tmp += *(in++);
             }
+            // Write the five base-85 digits, most significant first
             if (tmp) {
+                // Each of the first four digits
                 for (j = 0; j < 4; j++) {
                     t = tmp / pow85[j];
                     tmp -= t * pow85[j];
@@ -77,10 +81,12 @@ unsigned int ppl_bmp_A85(const pplerr_context *ec, FILE *fout, const unsigned ch
         {
             i = line & 0xfffc;
             tmp = 0;
+            // Make a 32-bit number from the remaining bytes, padded with zeros
             for (j = 0; j < 4; j++) {
                 tmp = tmp << 8;
                 if ((i + j) < line) tmp += *(in++);
             }
+            // A group of n bytes is written as n+1 digits
             for (j = 0; j < ((line & 0x3) + 1); j++) {
                 t = tmp / pow85[j];
                 tmp -= t * pow85[j];
@@ -93,10 +99,12 @@ unsigned int ppl_bmp_A85(const pplerr_context *ec, FILE *fout, const unsigned ch
         // Assist things which parse DSC comments by ensuring that any line which
         // would start %! or %% has a space prefixed.
 
+        // Write the line, with a leading space if it could be mistaken for a postscript comment
         if ((out[0] == '%') && ((out[1] == '%') || (out[1] == '!'))) length += fprintf(fout, " %s\n", out);
         else length += fprintf(fout, "%s\n", out);
     }
 
+    // Mark the end of the data
     length += fprintf(fout, "~>\n");
     return length;
 }

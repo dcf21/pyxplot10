@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The appearance of lines and points in Pyxplot's postscript output: the dash patterns of the nine line types, and the
+// postscript procedures which draw each point type and star type, together with their sizes. Only the procedures for
+// the point and star types actually used are written into the prolog of each output file, by canvasDraw.c.
+
 #define _PPL_EPS_STYLE_C 1
 
 #include <stdlib.h>

@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Sets every one of Pyxplot's settings to its default value when Pyxplot starts, before any configuration files are
+// read. The default paper size is taken from the environment, /etc/papersize or the locale, and the default timezone
+// from $TZ. Both the default and the current copy of each setting are initialised, so that "reset" and "unset" can
+// restore the defaults.
+
 #define _SETTINGSINIT_C 1
 
 int cancellationFlag = 0;
@@ -54,6 +59,7 @@ int cancellationFlag = 0;
 //! \param [in|out] context - The Pyxplot context whose settings are to be initialised
 
 void pplset_makedefault(ppl_context *context) {
+    // Workspace for reading the paper size from the environment, and pointers to the settings and error context
     char msg[PPL_MSG_LENGTH];
     FILE *LocalePipe;
     int Nchars, i, gotPaperSize;
@@ -65,6 +71,7 @@ void pplset_makedefault(ppl_context *context) {
     ppl_settings *s = context->set;
     pplerr_context *se = &context->errcontext;
 
+    // The colors of the default palette, used in turn for each dataset on a plot
     const int default_cols[] = {
             COLOR_BLACK,    COLOR_RED,         COLOR_BLUE,   COLOR_MAGENTA,       COLOR_CYAN,       COLOR_BROWN,
             COLOR_SALMON,   COLOR_GRAY,        COLOR_GREEN,  COLOR_NAVYBLUE,      COLOR_PERIWINKLE, COLOR_PINEGREEN,
@@ -163,6 +170,7 @@ void pplset_makedefault(ppl_context *context) {
     s->graph_default.c1TickLabelRotate = 0.0;
     s->graph_default.c1TickLabelRotation = SW_TICLABDIR_HORI;
     s->graph_default.clip = SW_ONOFF_OFF;
+    // The color scales c1-c4, used by the colormap plot style, are autoscaled and linear by default
     for (i = 0; i < 4; i++) {
         s->graph_default.Clog[i] = SW_BOOL_FALSE;
         s->graph_default.Cmax[i].refCount = 1;
@@ -324,6 +332,8 @@ void pplset_makedefault(ppl_context *context) {
     s->axis_default.unit.refCount = 1;
     pplObjNum(&(s->axis_default.unit), 0, 0.0, 0.0);
 
+    // Major and minor ticks point inwards, and are placed automatically. Every axis starts with the default settings,
+    // but only axes x1, y1 and z1 are shown, and axes x2, y2 and z2 are placed on the opposite sides of the graph.
     s->axis_default.tics.tickDir = SW_TICDIR_IN;
     s->axis_default.tics.logBase = 10;
     s->axis_default.tics.tickMaxSet = 0;
@@ -375,6 +385,7 @@ void pplset_makedefault(ppl_context *context) {
     for (i = 0; i < MAX_AXES; i++) s->XAxes[i] = s->YAxes[i] = s->ZAxes[i] = s->axis_default;
     s->XAxes[1].enabled = s->YAxes[1].enabled = s->ZAxes[1].enabled = 1; // By default, only axes 1 are enabled
     s->XAxes[2].topbottom = s->YAxes[2].topbottom = s->ZAxes[2].topbottom = 1; // By default, axes 2 are opposite axes 1
+    // Keep a copy of these as the default axes, which "unset" restores
     for (i = 0; i < MAX_AXES; i++) {
         s->XAxesDefault[i] = s->XAxes[i];
         s->YAxesDefault[i] = s->YAxes[i];
@@ -393,17 +404,23 @@ void pplset_makedefault(ppl_context *context) {
     // Estimate the machine precision of the floating point unit we are using
     ppl_makeMachineEpsilon();
 
+    // The default paper size may be set by $PAPERSIZE, /etc/papersize, or the locale, which are tried in that order. As
+    // the line which sets gotPaperSize is commented out in each case, all three are tried, and the last one which
+    // succeeds wins.
     gotPaperSize = 0;
 
     // Try and find out the default papersize from PAPERSIZE environment variable
     if (!gotPaperSize) {
         if (DEBUG) ppl_log(&context->errcontext, "Querying papersize from $PAPERSIZE");
         PaperSizePtr = getenv("PAPERSIZE");
+        // $PAPERSIZE should be the name of a paper size, e.g. a4
         if (PaperSizePtr == NULL) {
             if (DEBUG) ppl_log(&context->errcontext, "Environment variable $PAPERSIZE not set.");
         } else {
             ppl_PaperSizeByName(PaperSizePtr, &PaperHeight, &PaperWidth);
+            // A recognised paper size: store its dimensions, in metres
             if (PaperHeight > 0) {
+                // Log the paper size
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Read papersize %s, with dimensions %f x %f", PaperSizePtr,
                                       PaperWidth, PaperHeight);
@@ -412,6 +429,7 @@ void pplset_makedefault(ppl_context *context) {
                 s->term_default.PaperHeight.real = PaperHeight / 1000;
                 s->term_default.PaperWidth.real = PaperWidth / 1000;
                 ppl_GetPaperName(s->term_default.PaperName, &PaperHeight, &PaperWidth);
+                // Log the name of the paper size
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Papersize name: %s", s->term_default.PaperName);
                     ppl_log(&context->errcontext, msg);
@@ -426,12 +444,15 @@ void pplset_makedefault(ppl_context *context) {
     // Try and find out the default papersize from /etc/papersize
     if (!gotPaperSize) {
         if (DEBUG) ppl_log(&context->errcontext, "Querying papersize from /etc/papersize.");
+        // /etc/papersize should contain the name of a paper size, e.g. a4
         if ((LocalePipe = fopen("/etc/papersize", "r")) == NULL) {
             if (DEBUG) ppl_log(&context->errcontext, "Failed to open /etc/papersize.");
         } else {
             ppl_file_readline(LocalePipe, &ConfigFnamePtr, NULL, FNAME_LENGTH); // Should be a papersize name
             ppl_PaperSizeByName(ConfigFname, &PaperHeight, &PaperWidth);
+            // A recognised paper size: store its dimensions, in metres
             if (PaperHeight > 0) {
+                // Log the paper size
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Read papersize %s, with dimensions %f x %f", ConfigFname,
                                       PaperWidth, PaperHeight);
@@ -440,6 +461,7 @@ void pplset_makedefault(ppl_context *context) {
                 s->term_default.PaperHeight.real = PaperHeight / 1000;
                 s->term_default.PaperWidth.real = PaperWidth / 1000;
                 ppl_GetPaperName(s->term_default.PaperName, &PaperHeight, &PaperWidth);
+                // Log the name of the paper size
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Papersize name: %s", s->term_default.PaperName);
                     ppl_log(&context->errcontext, msg);
@@ -456,6 +478,8 @@ void pplset_makedefault(ppl_context *context) {
     // Do this using the popen() command rather than direct calls to nl_langinfo(_NL_PAPER_WIDTH), because the latter is gnu-specific
     if (!gotPaperSize) {
         if (DEBUG) ppl_log(&context->errcontext, "Querying papersize from the locale command.");
+        // "locale -c LC_PAPER" prints the heading LC_PAPER, followed by the paper's height and width in mm, one per
+        // line
         if ((LocalePipe = popen("locale -c LC_PAPER 2> /dev/null", "r")) == NULL) {
             if (DEBUG) ppl_log(&context->errcontext, "Failed to open a pipe to the locale command.");
         } else {
@@ -466,18 +490,21 @@ void pplset_makedefault(ppl_context *context) {
             ppl_file_readline(LocalePipe, &ConfigFnamePtr, NULL, FNAME_LENGTH); // Should quote the default paper width
             PaperWidth = ppl_getFloat(ConfigFname, &Nchars);
             if (Nchars != strlen(ConfigFname)) goto LC_PAPERSIZE_DONE;
+            // Log the paper size
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Read papersize %f x %f", PaperWidth, PaperHeight);
                 ppl_log(&context->errcontext, msg);
             }
             s->term_default.PaperHeight.real = PaperHeight / 1000;
             s->term_default.PaperWidth.real = PaperWidth / 1000;
+            // This block is only entered via the goto, when the locale's output could not be read
             if (0) {
             LC_PAPERSIZE_DONE:
                 if (DEBUG) ppl_log(&context->errcontext, "Failed to read papersize from the locale command.");
             }
             pclose(LocalePipe);
             ppl_GetPaperName(s->term_default.PaperName, &PaperHeight, &PaperWidth);
+            // Log the name of the paper size
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Papersize name: %s", s->term_default.PaperName);
                 ppl_log(&context->errcontext, msg);
@@ -489,6 +516,7 @@ void pplset_makedefault(ppl_context *context) {
     // Copy Default Settings to Current Settings
     s->term_current = s->term_default;
     s->graph_current = s->graph_default;
+    // Copy the default palette to the current palette
     for (i = 0; i < PALETTE_LENGTH; i++) {
         s->palette_current[i] = s->palette_default[i];
         s->paletteS_current[i] = s->paletteS_default[i];

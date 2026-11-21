@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Chooses special rasters of sample points for functions created by the histogram and fft commands. These functions are
+// step functions, so sampling them uniformly would misrepresent them; instead, when an expression plotted is just such
+// a function of the dummy variable, it is sampled once at the centre of each bin of the histogram, or at each grid
+// point of the Fourier transform. Used when plotting and tabulating functions (datafile.c and eps_plot.c).
+
 #define _DATAFILE_RASTERS_C 1
 
 #include <stdlib.h>
@@ -77,10 +82,13 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
     bracketStack = ppl_listInit(0);
     bracketCommaPos = ppl_listInit(0);
 
+    // Parse each expression, to check that the dummy variable appears only as a bare argument of a single function
     for (i = 0; i < fnlist_len; i++) {
         j = pos = 0;
+        // Step through each character of the expression
         while (1) {
             c = fnlist[i]->ascii[j++];
+            // Accumulate the characters of a word
             if ((isalnum(c)) || (c == '_')) {
                 newWord = 0;
                 buf[pos++] = c;
@@ -91,6 +99,8 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
             newWord = 1;
             pos = 0;
             if (((unsigned char) c <= ' ') && (c != '\0')) continue;
+            // The word is the dummy variable; it must be the only thing in an argument of a function, and always of the
+            // same function
             if (strcmp(buf, dummyVar) == 0) {
                 containsDummy = 1;
                 if (containsOperator || (NWords > 1)) fail = 1;
@@ -98,11 +108,13 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
                     if ((strcmp(dummyInFunction, currentFnName) != 0) || (dummyArgNo != commaPos)) fail = 1;
                 }
                 if (currentFnName == NULL) fail = 1;
+                // Note which function, and which argument
                 else {
                     dummyInFunction = currentFnName;
                     dummyArgNo = commaPos;
                 }
             }
+            // An opening bracket starts the arguments of the function named by the preceding word
             if (c == '(') {
                 if (containsDummy) fail = 1;
                 ppl_listAppendCpy(bracketCommaPos, &commaPos, sizeof(int));
@@ -116,7 +128,9 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
                 continue;
             }
             buf[0] = '\0';
+            // A closing bracket ends the arguments of a function
             if (c == ')') {
+                // Return to the enclosing function
                 if (bracketLevel > 0) {
                     ppl_listPop(bracketStack);
                     currentFnName = (char *) ppl_listLast(bracketStack);
@@ -128,6 +142,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
                 }
                 continue;
             }
+            // A comma starts the next argument
             if (c == ',') {
                 commaPos++;
                 containsOperator = 0;
@@ -141,6 +156,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         }
     }
 
+    // Give up unless the dummy variable is an argument of a single function
     if (fail || (dummyInFunction == NULL) || (dummyInFunction[0] == '\0')) goto CLEANUP;
 
     // Look up function which dummy variable is an argument to
@@ -159,9 +175,11 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         long NInput = desc->Nbins - 1;
         if (NInput < 1) NInput = 1;
 
+        // Allocate the raster in the caller's memory context
         outputRaster = (double *) ppl_memAlloc_incontext(NInput * sizeof(double), outputContext);
         if (outputRaster == NULL) goto CLEANUP;
 
+        // Sample at the centre of each bin within the plot range, using geometric centres for logarithmic bins
         for (i = 0; i < (desc->Nbins - 1); i++) {
             const double midpoint =
                     desc->log ? sqrt(desc->bins[i] * desc->bins[i + 1]) : ((desc->bins[i] + desc->bins[i + 1]) / 2);
@@ -177,10 +195,12 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         double *outputRaster;
         int rasterCount = 0;
 
+        // The dummy variable must be one of the transform's arguments
         if (dummyArgNo >= desc->Ndims) goto CLEANUP;
         outputRaster = (double *) ppl_memAlloc_incontext(desc->XSize[dummyArgNo] * sizeof(double), outputContext);
         if (outputRaster == NULL) goto CLEANUP;
 
+        // Sample at each grid point within the plot range
         for (i = 0; i < desc->XSize[dummyArgNo]; i++) {
             const double x = (i - desc->XSize[dummyArgNo] / 2.0) / desc->range[dummyArgNo].real;
             if (((min == NULL) || (*min <= x)) && ((max == NULL) || (*max >= x))) { outputRaster[rasterCount++] = x; }
@@ -190,6 +210,7 @@ void ppldata_fromFuncs_checkSpecialRaster(ppl_context *C, pplExpr **fnlist, cons
         *rasterLen = rasterCount;
     }
 
+// Free the temporary workspace
 CLEANUP:
     // Delete rough workspace
     if (contextRough > 0) ppl_memAlloc_AscendOutOfContext(contextRough);

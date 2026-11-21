@@ -19,6 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
+// The fractals module, whose functions julia() and mandelbrot() count how many iterations of z -> z^2 + c a point takes
+// to escape, for drawing images of the Julia and Mandelbrot sets with the colormap plot style.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -64,6 +67,7 @@ void pplfunc_julia(ppl_context *c, pplObj *in, const int nArgs, int *status, int
         double cy = in[1].imag, cx = in[1].real;
         long MaxIter = (long) (in[2].real), iter;
 
+        // Iterate z -> z^2 + c, with z = x + iy, until |z| exceeds 2 (when the point has escaped) or MaxIter is reached
         for (iter = 0; ((iter < MaxIter) && ((x * x + y * y) < 4)); iter++) {
             x2 = x * x - y * y + cx;
             y = 2 * x * y + cy;
@@ -93,6 +97,7 @@ void pplfunc_mandelbrot(ppl_context *c, pplObj *in, const int nArgs, int *status
         double cy = in[0].imag, cx = in[0].real;
         long MaxIter = (long) (in[1].real), iter;
 
+        // Iterate z -> z^2 + c, with z = x + iy starting from zero, until |z| exceeds 2 or MaxIter is reached
         for (iter = 0; ((iter < MaxIter) && ((x * x + y * y) < 4)); iter++) {
             x2 = x * x - y * y + cx;
             y = 2 * x * y + cy;

@@ -1,0 +1,8 @@
+mathsTools
+==========
+
+dcfmath.c, dcfmath.h
+    Small mathematical helpers which the standard C maths library lacks:
+    minima and maxima, signs, degree/radian conversion, linear and logarithmic
+    rasters of sample points, a qsort() comparison for doubles, the greatest
+    common divisor, and the machine epsilon.

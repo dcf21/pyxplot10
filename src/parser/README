@@ -1,0 +1,37 @@
+parser
+======
+
+Pyxplot's command-line parser. The grammar of every command is written in
+buildScripts/parser_data.dat; at build time, buildScripts/parser_data.py turns
+it into cmdList.c and cmdList.h. Each line of input is compiled into a list of
+atoms, which are executed to fill a stack of the command's parameters, and the
+command is then dispatched to the code which implements it.
+
+cmdList.c, cmdList.h (generated at build time; not in the repository)
+    The grammar of every command, in a compact form, and #defines giving the
+    stack slot in which each of a command's parameters is stored.
+
+parser.h
+    The types used throughout the parser: the nodes of the syntax trees, the
+    atoms and lines of compiled commands, and the state of the parser between
+    lines of a multi-line command.
+
+parserInit.c
+    When Pyxplot starts, reads the grammar in cmdList.c into a tree of syntax
+    nodes for each command.
+
+parserCompile.c
+    Matches each line of input against the syntax trees, and compiles it into
+    atoms. It also handles { } blocks of code and inline data which span
+    several lines, macro and `shell command` substitution, the list of what was
+    expected in syntax error messages, and tab completion.
+
+parserExecute.c
+    Executes compiled lines: evaluates each atom, checks that its value has the
+    type required (e.g. a length or an angle), and places it on the command's
+    stack of parameters.
+
+parserShell.c
+    Dispatches each command, with its stack of parameters, to the function
+    which implements it, mostly in commands/ and canvasItems.c. A few short
+    commands are implemented here directly.

@@ -19,8 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
-// This file contains various numerical constants which are used by the eps
-// generation routines
+// Dimensions used throughout the drawing of postscript output: the default line width and point size, the sizes of
+// arrowheads, the lengths of axis ticks, the gaps around axis labels and color scales, and the widths of grid lines.
+// They are variables rather than constants because they can be scaled from Pyxplot's configuration file (readConf.c).
 
 #define _PPL_EPS_SETTINGS_C 1
 
@@ -30,7 +31,7 @@
 
 #include "epsMaker/eps_settings.h"
 
-// Constant to convert between millimetres and 72nds of an inch
+// Factor which converts metres into postscript points (72nds of an inch)
 double M_TO_PS = 1.0 / (GSL_CONST_MKSA_INCH / 72.0);
 
 double EPS_DEFAULT_LINEWIDTH = 1.0 * EPS_BASE_DEFAULT_LINEWIDTH;

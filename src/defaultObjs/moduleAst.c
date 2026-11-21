@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The ast module of astronomical functions: cosmological distances, ages and redshifts in a Lambda-CDM universe, the
+// sidereal time, and the phase of the Moon. The cosmological functions integrate the Friedmann equation numerically
+// using GSL.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -109,10 +113,12 @@ double Lcdm_DA(const double z, const double H, const double OmegaM, const double
     gsl_function fn;
     double result, error;
 
+    // Only positive redshifts have a distance; the integrand needs the densities of matter and dark energy
     if (z <= 0) return GSL_NAN;
     p.OmegaM = OmegaM;
     p.OmegaL = OmegaL;
 
+    // Integrate numerically, with GSL's workspace for up to 1000 subintervals
     ws = gsl_integration_workspace_alloc(1000);
     fn.function = &__Lcdm_DA_integrand;
     fn.params = &p;
@@ -137,10 +143,12 @@ double Lcdm_t_from_z(const double z, const double H, const double OmegaM, const 
     gsl_function fn;
     double result, error;
 
+    // Only positive redshifts have a look-back time; the integrand needs the densities of matter and dark energy
     if (z <= 0) return GSL_NAN;
     p.OmegaM = OmegaM;
     p.OmegaL = OmegaL;
 
+    // Integrate numerically, with GSL's workspace for up to 1000 subintervals
     ws = gsl_integration_workspace_alloc(1000);
     fn.function = &__Lcdm_t_integrand;
     fn.params = &p;
@@ -172,6 +180,8 @@ double __Lcdm_z_from_t_slave(const double z, void *params) {
 //! \return The redshift, or NaN if it could not be computed
 
 double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const double OmegaL) {
+    // The redshift is found by minimising the difference between the requested time and the time at a trial redshift,
+    // searching in log(z) with the golden-section method
     Lcdm_comm p;
     int iter = 0, max_iter = 100, status;
     double m, a, b;
@@ -179,26 +189,31 @@ double Lcdm_z_from_t(const double t, const double H, const double OmegaM, const 
     gsl_min_fminimizer *s;
     gsl_function fn;
 
+    // Times outside the age of the universe have no redshift
     if ((t <= 0) || (t > Lcdm_age(H, OmegaM, OmegaL))) return GSL_NAN;
     p.OmegaM = OmegaM;
     p.OmegaL = OmegaL;
     p.H = H;
     p.t = t;
 
+    // Search for log10(z) between -3 and 8, starting at 0
     fn.function = &__Lcdm_z_from_t_slave;
     fn.params = &p;
     s = gsl_min_fminimizer_alloc(T);
     if (s == NULL) return GSL_NAN;
     gsl_min_fminimizer_set(s, &fn, 0.0, -3.0, 8.0);
 
+    // Iterate until the interval containing the minimum is small enough
     do {
         iter++;
         status = gsl_min_fminimizer_iterate(s);
 
+        // The current best estimate, and the interval which contains the minimum
         m = gsl_min_fminimizer_x_minimum(s);
         a = gsl_min_fminimizer_x_lower(s);
         b = gsl_min_fminimizer_x_upper(s);
 
+        // Stop when the interval is narrower than 0.001 in log10(z)
         status = gsl_min_test_interval(a, b, 0.001, 0.0);
     } while ((status == GSL_CONTINUE) && (iter < max_iter));
     gsl_min_fminimizer_free(s);
@@ -221,6 +236,7 @@ static int checkLcdmInputs(pplFuncCall *f, const int h0Index, const char *h0Posi
     if (ppl_funcCheckUnit(f, &in[h0Index], h0Position, "a recession velocity per unit distance", UNIT_TIME, -1))
         return 1;
     if (in[h0Index].dimensionless) in[h0Index].real *= 1e3 / (PPL_CONST_PARSEC * 1e6); // From km/s/Mpc
+    // The densities of matter and dark energy must be dimensionless
     if (!(in[h0Index + 1].dimensionless && in[h0Index + 2].dimensionless)) {
         *f->status = 1;
         *f->errType = ERR_UNIT;
@@ -399,8 +415,10 @@ void pplfunc_Lcdm_z(ppl_context *c, pplObj *in, const int nArgs, int *status, in
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // The argument must be a date, or a unix time given as a number
     char *FunctionDescription = "siderealTime(d)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Check the type of the argument
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -412,6 +430,7 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
     }
     if (ppl_funcCheckFinite(&call, 1)) return;
     if (ppl_funcCheckDimensionless(&call, 1)) return;
+    // The time must be real
     if ((in[0].flagComplex)) {
         {
             ppl_funcNeedsRealArguments(&call);
@@ -442,8 +461,10 @@ void pplfunc_sidereal_time(ppl_context *c, pplObj *in, const int nArgs, int *sta
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // The argument must be a date, or a unix time given as a number
     char *FunctionDescription = "moonPhase(d)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
+    // Check the type of the argument
     if ((nArgs != 1) && ((in[0].objType != PPLOBJ_NUM) || (in[0].objType != PPLOBJ_DATE))) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -455,6 +476,7 @@ void pplfunc_moonphase(ppl_context *c, pplObj *in, const int nArgs, int *status,
     }
     if (ppl_funcCheckFinite(&call, 1)) return;
     if (ppl_funcCheckDimensionless(&call, 1)) return;
+    // The time must be real
     if ((in[0].flagComplex)) {
         {
             ppl_funcNeedsRealArguments(&call);

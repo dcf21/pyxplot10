@@ -19,6 +19,13 @@
 
 // ----------------------------------------------------------------------------
 
+// Reads Pyxplot's configuration files, ~/.pyxplotrc and ./.pyxplotrc, which can change the default values of settings.
+// The files are divided into sections: [settings] for the defaults of the set command, [terminal] for the terminal
+// session, [colors] for the palette, [latex] for the LaTeX preamble, [variables] and [functions] for definitions to
+// make at startup, [units] for new physical units, [filters] for input filters, [script] for any commands, and
+// [styling] for the dimensions of postscript output. After reading them, the defaults are copied into the current
+// settings.
+
 #define _PPL_READCONF_C 1
 
 #include <stdlib.h>
@@ -97,6 +104,7 @@ static int readConfigCrangeFlag(ppl_context *c, const char *setvalue, int *out) 
 static int readConfigCrangeLimit(const char *setvalue, pplObj *limit, int *limitAuto) {
     int nChars;
     double fl;
+    // The limit may be auto, or a finite number
     if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
         *limitAuto = SW_BOOL_TRUE;
         return 0;
@@ -126,11 +134,14 @@ static int readConfigCrange(ppl_context *c, const char *setkey, const char *setv
     char key[SSTR_LENGTH], msg[PPL_MSG_LENGTH];
     int C, j, status = 0;
 
+    // Find which of the seven settings of which of the four color ranges the key names
     for (C = 0; C < 4; C++)
+        // Each setting
         for (j = 0; j < nSuffixes; j++) {
             ppl_snprintfTrunc(key, sizeof(key), "C%dRANGE_%s", C + 1, suffixes[j]);
             if (strcmp(setkey, key) != 0) continue;
 
+            // Read the value of the setting
             switch (j) {
                 case 0:
                     status = readConfigCrangeFlag(c, setvalue, &g->Clog[C]);
@@ -155,6 +166,7 @@ static int readConfigCrange(ppl_context *c, const char *setkey, const char *setv
                     break;
             }
 
+            // Warn about an invalid value
             if (status == 0) return 1;
             ppl_snprintfTrunc(msg, sizeof(msg),
                               "Error in line %d of configuration file %s: Illegal value for setting <c%dRange_%s>.",
@@ -203,6 +215,7 @@ static int readConfigUnitName(ppl_context *c, const char *setkey, int *pos, char
         ppl_warning(&c->errcontext, ERR_PREFORMED, msg);
         return 1;
     }
+    // Use the fallback, or a copy of the name
     if (i == start) {
         *output = strdup(fallback);
     } else {
@@ -212,6 +225,7 @@ static int readConfigUnitName(ppl_context *c, const char *setkey, int *pos, char
             (*output)[i - start] = '\0';
         }
     }
+    // Report a failure to allocate memory
     if (*output == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg),
                           "Error in line %d of configuration file %s: Out of memory error whilst generating new unit.",
@@ -233,6 +247,7 @@ static int readConfigUnitName(ppl_context *c, const char *setkey, int *pos, char
 //! \param [in] ConfigFname - The filename of the configuration file
 
 static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
+    // Variables for reading the file
     char msg[PPL_MSG_LENGTH];
     char linebuffer[LSTR_LENGTH], setkey[LSTR_LENGTH], setvalue[LSTR_LENGTH], ColorName[SSTR_LENGTH], *StringScan;
     char *linebufferPtr = &linebuffer[0];
@@ -243,21 +258,25 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
     int i, j, k, PalettePos, ColorNumber, crangeStatus;
     double fl, PaperHeight, PaperWidth;
 
+    // Log progress in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Scanning configuration file %s.", ConfigFname);
         ppl_log(&c->errcontext, msg);
     }
 
+    // A missing configuration file is not an error
     if ((infile = fopen(ConfigFname, "r")) == NULL) {
         if (DEBUG) { ppl_log(&c->errcontext, "File does not exist."); }
         return;
     }
 
+    // Read each line of the file, noting which section it is in
     while ((!feof(infile)) && (!ferror(infile))) {
         linecounter++;
         ppl_file_readline(infile, &linebufferPtr, NULL, LSTR_LENGTH);
         ppl_strStrip(linebuffer, linebuffer);
         if (linebuffer[0] == '\0') continue;
+        // Lines in square brackets start new sections
         else if (ppl_strCmpNoCase(linebuffer, "[settings]") == 0) {
             state = 1;
             continue;
@@ -293,12 +312,14 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             continue;
         }
 
+        // Split the line into its key and value
         _ReadConfig_FetchKey(linebuffer, setkey);
         _ReadConfig_FetchValue(linebuffer, setvalue);
 
         if (state == 1) // [settings] section
         {
             ppl_strUpper(setkey, setkey);
+            // Each setting in the [settings] section sets a default value
             if (strcmp(setkey, "ASPECT") == 0) {
                 if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
                     c->set->graph_default.AutoAspect = SW_ONOFF_ON;
@@ -316,6 +337,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AUTOASPECT") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->graph_default.AutoAspect = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -341,6 +363,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AUTOZASPECT") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->graph_default.AutoZAspect = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -352,6 +375,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "AXESCOLOUR") == 0) || (strcmp(setkey, "AXESCOLOR") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_COLOR_INT, SW_COLOR_STR)) > 0)
                     c->set->graph_default.AxesColor = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <color>.",
@@ -362,6 +386,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AXISUNITSTYLE") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_AXISUNITSTY_INT, SW_AXISUNITSTY_STR)) > 0)
                     c->set->graph_default.AxisUnitStyle = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -373,6 +398,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "BACKUP") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.backup = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <backup>.",
@@ -383,6 +409,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "BAR") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.bar = fl;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <bar>.",
@@ -391,6 +418,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "BINORIGIN") == 0) {
+                // The value may be auto, or a number
                 if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
                     c->set->term_default.BinOriginAuto = 1;
                 } else if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
@@ -405,6 +433,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "BINWIDTH") == 0) {
+                // The value may be auto, or a number
                 if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
                     c->set->term_default.BinWidthAuto = 1;
                 } else if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
@@ -419,6 +448,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "BOXFROM") == 0) {
+                // The value may be auto, or a number
                 if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
                     c->set->graph_default.BoxFromAuto = 1;
                 } else if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
@@ -432,6 +462,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "BOXWIDTH") == 0) {
+                // The value may be auto, or a number
                 if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
                     c->set->graph_default.BoxWidthAuto = 1;
                 } else if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
@@ -446,12 +477,14 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "CALENDARIN") == 0) {
+                // The calendar is named, with muslim accepted as an alternative name for the Islamic calendar
                 if (ppl_strCmpNoCase(setvalue, "muslim") == 0) {
                     c->set->term_default.CalendarIn = SW_CALENDAR_ISLAMIC;
                 } else if (ppl_strCmpNoCase(setvalue, "jewish") == 0) {
                     c->set->term_default.CalendarIn = SW_CALENDAR_HEBREW;
                 } else if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_CALENDAR_INT, SW_CALENDAR_STR)) > 0)
                     c->set->term_default.CalendarIn = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -461,12 +494,14 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "CALENDAROUT") == 0) {
+                // The calendar is named, with muslim accepted as an alternative name for the Islamic calendar
                 if (ppl_strCmpNoCase(setvalue, "muslim") == 0) {
                     c->set->term_default.CalendarOut = SW_CALENDAR_ISLAMIC;
                 } else if (ppl_strCmpNoCase(setvalue, "jewish") == 0) {
                     c->set->term_default.CalendarOut = SW_CALENDAR_HEBREW;
                 } else if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_CALENDAR_INT, SW_CALENDAR_STR)) > 0)
                     c->set->term_default.CalendarOut = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -478,6 +513,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "CLIP") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->graph_default.clip = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <clip>.",
@@ -488,6 +524,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "COLKEY") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->graph_default.ColKey = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <colKey>.",
@@ -496,6 +533,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "COLKEYPOS") == 0) {
+                // The position is named, with outside accepted as an alternative to right
                 if (ppl_strCmpNoCase(setvalue, "outside") == 0) {
                     c->set->graph_default.ColKeyPos = SW_COLKEYPOS_R;
                 } else if (ppl_strCmpNoCase(setvalue, "below") == 0) {
@@ -503,6 +541,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 } else if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_COLKEYPOS_INT, SW_COLKEYPOS_STR)) >
                            0)
                     c->set->graph_default.ColKeyPos = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -514,6 +553,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "COLOUR") == 0) || (strcmp(setkey, "COLOR") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.color = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <color>.",
@@ -524,6 +564,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "CONTOURS") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.ContoursN = ppl_max((int) fl, 2);
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -535,6 +576,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "CONTOURS_LABEL") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->graph_default.ContoursLabel = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -545,10 +587,12 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 }
             }
 
+            // Settings for the color ranges, e.g. C1RANGE_LOG
             else if ((crangeStatus = readConfigCrange(c, setkey, setvalue, ConfigFname, linecounter)) != 0) {
                 // A setting for the colour range c1-c4; skip to the next line if its value was illegal
                 if (crangeStatus < 0) continue;
             } else if (strcmp(setkey, "DATASTYLE") == 0) {
+                // The value must be one of the recognised names
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_STYLE_INT, SW_STYLE_STR)) > 0) {
                     c->set->graph_default.dataStyle.linespoints = i;
                     c->set->graph_default.dataStyle.USElinespoints = 1;
@@ -563,6 +607,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "DISPLAY") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.display = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <display>.",
@@ -573,6 +618,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "DPI") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)) && (fl > 2)))
                     c->set->term_default.dpi = fl;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <dpi>.",
@@ -583,6 +629,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "FONTSIZE") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.FontSize = fl;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -592,6 +639,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "FUNCSTYLE") == 0) {
+                // The value must be one of the recognised names
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_STYLE_INT, SW_STYLE_STR)) > 0) {
                     c->set->graph_default.funcStyle.linespoints = i;
                     c->set->graph_default.funcStyle.USElinespoints = 1;
@@ -606,6 +654,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "GRID") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->graph_default.grid = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <grid>.",
@@ -655,6 +704,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "GRIDMAJCOLOUR") == 0) || (strcmp(setkey, "GRIDMAJCOLOR") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_COLOR_INT, SW_COLOR_STR)) > 0)
                     c->set->graph_default.GridMajColor = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -666,6 +716,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "GRIDMINCOLOUR") == 0) || (strcmp(setkey, "GRIDMINCOLOR") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_COLOR_INT, SW_COLOR_STR)) > 0)
                     c->set->graph_default.GridMinColor = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -677,6 +728,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "KEY") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->graph_default.key = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <key>.",
@@ -687,6 +739,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "KEYCOLUMNS") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.KeyColumns = ppl_max((int) fl, 0);
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -698,6 +751,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "KEYPOS") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_KEYPOS_INT, SW_KEYPOS_STR)) > 0)
                     c->set->graph_default.KeyPos = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <keyPos>.",
@@ -708,6 +762,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "KEY_XOFF") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.KeyXOff.real = fl / 100;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -719,6 +774,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "KEY_YOFF") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.KeyYOff.real = fl / 100;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -730,6 +786,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "LANDSCAPE") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.landscape = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -741,6 +798,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "LINEWIDTH") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.LineWidth = fabs(fl);
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -752,6 +810,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "MULTIPLOT") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.multiplot = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -763,6 +822,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "NUMCOMPLEX") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.ComplexNumbers = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -774,6 +834,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "NUMDISPLAY") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_DISPLAY_INT, SW_DISPLAY_STR)) > 0)
                     c->set->term_default.NumDisplay = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -785,6 +846,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "NUMERR") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.ExplicitErrors = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <numErr>.",
@@ -795,6 +857,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "NUMSF") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->term_default.SignificantFigures = ppl_min(ppl_max((int) fl, 1), 30);
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <numSF>.",
@@ -805,6 +868,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "ORIGINX") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.OriginX.real = fl / 100;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <originX>.",
@@ -815,6 +879,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "ORIGINY") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.OriginY.real = fl / 100;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <originY>.",
@@ -825,6 +890,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "OUTPUT") == 0) {
                 ppl_snprintfTrunc(c->set->term_default.output, sizeof(c->set->term_default.output), "%s", setvalue);
             } else if (strcmp(setkey, "PAPERHEIGHT") == 0) {
+                // Paper sizes may be given as a height and width in millimetres, or by name
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->term_default.PaperHeight.real = fl / 1000;
                     PaperHeight = c->set->term_default.PaperHeight.real * 1000;
@@ -841,6 +907,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "PAPERNAME") == 0) {
                 {
                     ppl_PaperSizeByName(setvalue, &PaperHeight, &PaperWidth);
+                    // Warn about a paper size which is not recognised
                     if (PaperHeight <= 0) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -854,6 +921,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     ppl_GetPaperName(c->set->term_default.PaperName, &PaperHeight, &PaperWidth);
                 }
             } else if (strcmp(setkey, "PAPERWIDTH") == 0) {
+                // The width of the paper, in millimetres
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->term_default.PaperWidth.real = fl / 1000;
                     PaperHeight = c->set->term_default.PaperHeight.real * 1000;
@@ -870,6 +938,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "POINTLINEWIDTH") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.PointLineWidth = fl;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -881,6 +950,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "POINTSIZE") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.PointSize = fl;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -896,6 +966,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             else if (strcmp(setkey, "SAMPLES") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.samples = ppl_max((int) fl, 2);
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <samples>.",
@@ -907,6 +978,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_SAMPLEMETHOD_INT, SW_SAMPLEMETHOD_STR)) >
                     0)
                     c->set->graph_default.Sample2DMethod = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -915,7 +987,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     ppl_warning(&c->errcontext, ERR_PREFORMED, msg);
                     continue;
                 }
+            // The number of samples in each direction for two-dimensional plots, or auto
             else if (strcmp(setkey, "SAMPLES_X") == 0) {
+                // The value may be auto, or a number
                 if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
                     c->set->graph_default.SamplesXAuto = SW_BOOL_TRUE;
                 } else if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
@@ -932,6 +1006,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "SAMPLES_X_AUTO") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_BOOL_INT, SW_BOOL_STR)) > 0)
                     c->set->graph_default.SamplesXAuto = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -941,6 +1016,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "SAMPLES_Y") == 0) {
+                // The value may be auto, or a number
                 if (ppl_strCmpNoCase(setvalue, "auto") == 0) {
                     c->set->graph_default.SamplesYAuto = SW_BOOL_TRUE;
                 } else if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
@@ -957,6 +1033,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "SAMPLES_Y_AUTO") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_BOOL_INT, SW_BOOL_STR)) > 0)
                     c->set->graph_default.SamplesYAuto = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -968,6 +1045,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "TERMANTIALIAS") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.TermAntiAlias = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -979,6 +1057,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "TERMENLARGE") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.TermEnlarge = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -992,6 +1071,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.TermEnlarge = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <enlarge>.",
@@ -1002,6 +1082,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "TERMINVERT") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.TermInvert = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1013,6 +1094,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "TERMTRANSPARENT") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.TermTransparent = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1022,6 +1104,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "TERMTYPE") == 0) {
+                // The value must be one of the recognised names
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_TERMTYPE_INT, SW_TERMTYPE_STR)) > 0) {
                     c->set->term_default.TermType = i;
                     c->termtypeSetInConfigfile = 1;
@@ -1036,6 +1119,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "TEXTCOLOUR") == 0) || (strcmp(setkey, "TEXTCOLOR") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_COLOR_INT, SW_COLOR_STR)) > 0)
                     c->set->graph_default.TextColor = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1045,12 +1129,14 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "TEXTHALIGN") == 0) {
+                // The alignment is named, with centre accepted as an alternative spelling
                 if (ppl_strCmpNoCase(setvalue, "centre") == 0) {
                     c->set->graph_default.TextHAlign = SW_HALIGN_CENT;
                 } else if (ppl_strCmpNoCase(setvalue, "middle") == 0) {
                     c->set->graph_default.TextHAlign = SW_HALIGN_CENT;
                 } else if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_HALIGN_INT, SW_HALIGN_STR)) > 0)
                     c->set->graph_default.TextHAlign = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1060,12 +1146,14 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "TEXTVALIGN") == 0) {
+                // The alignment is named, with centre accepted as an alternative spelling
                 if (ppl_strCmpNoCase(setvalue, "centre") == 0) {
                     c->set->graph_default.TextVAlign = SW_VALIGN_CENT;
                 } else if (ppl_strCmpNoCase(setvalue, "middle") == 0) {
                     c->set->graph_default.TextVAlign = SW_VALIGN_CENT;
                 } else if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_VALIGN_INT, SW_VALIGN_STR)) > 0)
                     c->set->graph_default.TextVAlign = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1079,6 +1167,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "TITLE_XOFF") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.TitleXOff.real = fl / 100;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1090,6 +1179,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "TITLE_YOFF") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.TitleYOff.real = fl / 100;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1101,6 +1191,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "TRANGE_LOG") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_BOOL_INT, SW_BOOL_STR)) > 0)
                     c->set->graph_default.Tlog = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1110,6 +1201,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "TRANGE_MIN") == 0) {
+                // The lower limit of the parametric variable t
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->graph_default.Tmin.real = fl;
                     c->set->graph_default.USE_T_or_uv = 1;
@@ -1122,6 +1214,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "TRANGE_MAX") == 0) {
+                // The upper limit of the parametric variable t
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->graph_default.Tmax.real = fl;
                     c->set->graph_default.USE_T_or_uv = 1;
@@ -1136,6 +1229,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "UNITABBREV") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.UnitDisplayAbbrev = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1147,6 +1241,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "UNITANGLEDIMLESS") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.UnitAngleDimless = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1158,6 +1253,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "UNITPREFIX") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->set->term_default.UnitDisplayPrefix = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1169,6 +1265,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "UNITSCHEME") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_UNITSCH_INT, SW_UNITSCH_STR)) > 0)
                     c->set->term_default.UnitScheme = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1180,6 +1277,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "URANGE_LOG") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_BOOL_INT, SW_BOOL_STR)) > 0)
                     c->set->graph_default.Ulog = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1189,6 +1287,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "URANGE_MIN") == 0) {
+                // The lower limit of the parametric variable u
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->graph_default.Umin.real = fl;
                     c->set->graph_default.USE_T_or_uv = 0;
@@ -1201,6 +1300,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "URANGE_MAX") == 0) {
+                // The upper limit of the parametric variable u
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->graph_default.Umax.real = fl;
                     c->set->graph_default.USE_T_or_uv = 0;
@@ -1215,6 +1315,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "VRANGE_LOG") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_BOOL_INT, SW_BOOL_STR)) > 0)
                     c->set->graph_default.Vlog = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1224,6 +1325,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "VRANGE_MIN") == 0) {
+                // The lower limit of the parametric variable v
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->graph_default.Vmin.real = fl;
                     c->set->graph_default.USE_T_or_uv = 0;
@@ -1236,6 +1338,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
                 }
             } else if (strcmp(setkey, "VRANGE_MAX") == 0) {
+                // The upper limit of the parametric variable v
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue)))) {
                     c->set->graph_default.Vmax.real = fl;
                     c->set->graph_default.USE_T_or_uv = 0;
@@ -1250,6 +1353,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "WIDTH") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.width.real = fl / 100;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <width>.",
@@ -1260,6 +1364,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "VIEW_XY") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.XYview.real = fl / 180 * M_PI;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <view_xy>.",
@@ -1270,6 +1375,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "VIEW_YZ") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     c->set->graph_default.YZview.real = fl / 180 * M_PI;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <view_yz>.",
@@ -1287,9 +1393,11 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         } else if (state == 2) // [terminal] section
         {
             ppl_strUpper(setkey, setkey);
+            // Each setting in the [terminal] section sets a property of the terminal session
             if ((strcmp(setkey, "COLOUR") == 0) || (strcmp(setkey, "COLOR") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->errcontext.session_default.color = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <color>.",
@@ -1300,6 +1408,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "COLOUR_ERR") == 0) || (strcmp(setkey, "COLOR_ERR") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_TERMCOL_INT, SW_TERMCOL_STR)) > 0)
                     c->errcontext.session_default.color_err = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1311,6 +1420,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "COLOUR_REP") == 0) || (strcmp(setkey, "COLOR_REP") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_TERMCOL_INT, SW_TERMCOL_STR)) > 0)
                     c->errcontext.session_default.color_rep = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1322,6 +1432,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "COLOUR_WRN") == 0) || (strcmp(setkey, "COLOR_WRN") == 0)) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_TERMCOL_INT, SW_TERMCOL_STR)) > 0)
                     c->errcontext.session_default.color_wrn = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1333,6 +1444,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "SPLASH") == 0) {
                 if ((i = ppl_fetchSettingByName(&c->errcontext, setvalue, SW_ONOFF_INT, SW_ONOFF_STR)) > 0)
                     c->errcontext.session_default.splash = i;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s: Illegal value for setting <splash>.",
@@ -1350,10 +1462,13 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         } else if (state == 3) // [colors] section
         {
             ppl_strUpper(setkey, setkey);
+            // The palette is a comma-separated list of named colors
             if (strcmp(setkey, "PALETTE") == 0) {
                 PalettePos = 0;
                 StringScan = setvalue;
+                // Read each color of the list
                 while (strlen(ppl_strCommaSeparatedListScan(&StringScan, ColorName)) != 0) {
+                    // Warn if the palette is too long
                     if (PalettePos == PALETTE_LENGTH - 1) {
                         ppl_snprintfTrunc(msg, sizeof(msg),
                                           "Error in line %d of configuration file %s: Specified palette is too long.",
@@ -1364,6 +1479,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     } else {
                         ppl_strUpper(ColorName, ColorName);
                         ColorNumber = ppl_fetchSettingByName(&c->errcontext, ColorName, SW_COLOR_INT, SW_COLOR_STR);
+                        // Warn about a color which is not recognised
                         if (ColorNumber <= 0) {
                             ppl_snprintfTrunc(msg, sizeof(msg),
                                               "Error in line %d of configuration file %s: Color '%s' not recognised.",
@@ -1379,6 +1495,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                         }
                     }
                 }
+                // Terminate the palette, if it has any colors
                 if (PalettePos > 0) {
                     c->set->palette_default[PalettePos] = -1;
                 } else {
@@ -1401,6 +1518,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             if (strcmp(setkey, "PREAMBLE") == 0)
                 ppl_snprintfTrunc(c->set->term_default.LatexPreamble, sizeof(c->set->term_default.LatexPreamble), "%s",
                                   setvalue);
+            // Otherwise, warn about the invalid value and ignore the line
             else {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Error in line %d of configuration file %s: Unrecognised setting name '%s'.",
@@ -1415,6 +1533,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             parserStatus *ps = NULL;
             ppl_error_setstreaminfo(&c->errcontext, linecounter, ConfigFname);
             ppl_parserStatInit(&ps, &pl);
+            // Failure to allocate memory is reported as an error
             if ((ps == NULL) || (c->inputLineBuffer == NULL)) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
                 continue;
@@ -1425,6 +1544,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             {
                 int i = 0, j = 0;
                 for (i = 0; linebuffer[i] != '\0'; i++)
+                    // Look for any non-blank character
                     if ((unsigned char) linebuffer[i] > ' ') {
                         j = 1;
                         break;
@@ -1432,6 +1552,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 if (j == 0) continue;
             }
 
+            // Execute the line as an assignment, with the parser's var_set command
             stat = ppl_parserCompile(c, ps, c->errcontext.error_input_linenumber, c->errcontext.error_input_sourceId,
                                      c->errcontext.error_input_filename, linebuffer, 0, 0);
             if ((!stat) && (!c->errStat.status) && (ps->blockDepth == 0))
@@ -1445,6 +1566,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             parserStatus *ps = NULL;
             ppl_error_setstreaminfo(&c->errcontext, linecounter, ConfigFname);
             ppl_parserStatInit(&ps, &pl);
+            // Failure to allocate memory is reported as an error
             if ((ps == NULL) || (c->inputLineBuffer == NULL)) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
                 continue;
@@ -1455,6 +1577,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             {
                 int i = 0, j = 0;
                 for (i = 0; linebuffer[i] != '\0'; i++)
+                    // Look for any non-blank character
                     if ((unsigned char) linebuffer[i] > ' ') {
                         j = 1;
                         break;
@@ -1462,6 +1585,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 if (j == 0) continue;
             }
 
+            // Execute the line as a function definition, with the parser's func_set command
             stat = ppl_parserCompile(c, ps, c->errcontext.error_input_linenumber, c->errcontext.error_input_sourceId,
                                      c->errcontext.error_input_filename, linebuffer, 0, 0);
             if ((!stat) && (!c->errStat.status) && (ps->blockDepth == 0))
@@ -1471,6 +1595,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         } else if (state == 7) // [units] section
         {
             i = j = 0;
+            // There is a fixed limit on the number of units
             if (c->unit_pos == UNITS_MAX) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Error in line %d of configuration file %s: Unit definition list full.", linecounter,
@@ -1497,7 +1622,9 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     continue;
             }
 
+            // A unit with no definition is a new base unit, measuring a new dimension
             if (setvalue[0] == '\0') {
+                // There is a fixed limit on the number of base units
                 if (c->baseunit_pos == UNITS_MAX_BASEUNITS) {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Error in line %d of configuration file %s:\nBase unit definition list full.",
@@ -1511,12 +1638,14 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 setnumeric.refCount = 1;
                 j = k = -1;
                 ppl_unitsStringEvaluate(c, setvalue, &setnumeric, &k, &j, errtext);
+                // Report a definition which cannot be evaluated
                 if (j >= 0) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Error in line %d of configuration file %s: %s", linecounter,
                                       ConfigFname, errtext);
                     ppl_warning(&c->errcontext, ERR_PREFORMED, msg);
                     continue;
                 }
+                // The whole definition must be evaluated
                 if (setvalue[k] != '\0') {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1525,6 +1654,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     ppl_warning(&c->errcontext, ERR_PREFORMED, msg);
                     continue;
                 }
+                // Units must have real values
                 if (setnumeric.flagComplex) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1542,6 +1672,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         {
             pplObj setnumeric;
             char *tmp = (char *) malloc(strlen(setvalue) + 1);
+            // Store the filter command for files matching the pattern
             if (tmp != NULL) {
                 strcpy(tmp, setvalue);
                 pplObjStr(&setnumeric, 1, 1, tmp);
@@ -1552,6 +1683,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         {
             c->set->term_current = c->set->term_default; // Copy settings for directive_set()
             c->set->graph_current = c->set->graph_default;
+            // Copy each palette color
             for (i = 0; i < PALETTE_LENGTH; i++) {
                 c->set->palette_current[i] = c->set->palette_default[i];
                 c->set->paletteS_current[i] = c->set->paletteS_default[i];
@@ -1560,6 +1692,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 c->set->palette3_current[i] = c->set->palette3_default[i];
                 c->set->palette4_current[i] = c->set->palette4_default[i];
             }
+            // Copy each axis
             for (i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(c->set->XAxes[i]));
                 pplaxis_copy(c, &(c->set->XAxes[i]), &(c->set->XAxesDefault[i]));
@@ -1568,6 +1701,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 pplaxis_destroy(c, &(c->set->ZAxes[i]));
                 pplaxis_copy(c, &(c->set->ZAxes[i]), &(c->set->ZAxesDefault[i]));
             }
+            // Copy each numbered plot style
             for (i = 0; i < MAX_PLOTSTYLES; i++) {
                 ppl_withWordsDestroy(c, &(c->set->plot_styles[i]));
                 ppl_withWordsCpy(c, &(c->set->plot_styles[i]), &(c->set->plot_styles_default[i]));
@@ -1583,6 +1717,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 parserStatus *ps = NULL;
                 ppl_parserStatInit(&ps, &pl);
                 ppl_error_setstreaminfo(&c->errcontext, linecounter, ConfigFname);
+                // Failure to allocate memory is reported as an error
                 if ((ps == NULL) || (c->inputLineBuffer == NULL)) {
                     ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
                     continue;
@@ -1593,6 +1728,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 {
                     int i = 0, j = 0;
                     for (i = 0; linebuffer[i] != '\0'; i++)
+                        // Look for any non-blank character
                         if ((unsigned char) linebuffer[i] > ' ') {
                             j = 1;
                             break;
@@ -1600,6 +1736,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                     if (j == 0) continue;
                 }
 
+                // Execute the line as a set command
                 stat = ppl_parserCompile(c, ps, c->errcontext.error_input_linenumber,
                                          c->errcontext.error_input_sourceId, c->errcontext.error_input_filename,
                                          linebuffer, 0, 0);
@@ -1611,6 +1748,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
 
             c->set->term_default = c->set->term_current; // Copy changed settings into defaults
             c->set->graph_default = c->set->graph_current;
+            // Copy each palette color into the defaults
             for (i = 0; i < PALETTE_LENGTH; i++) {
                 c->set->palette_default[i] = c->set->palette_current[i];
                 c->set->paletteS_default[i] = c->set->paletteS_current[i];
@@ -1619,6 +1757,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 c->set->palette3_default[i] = c->set->palette3_current[i];
                 c->set->palette4_default[i] = c->set->palette4_current[i];
             }
+            // Copy each axis into the defaults
             for (i = 0; i < MAX_AXES; i++) {
                 pplaxis_destroy(c, &(c->set->XAxesDefault[i]));
                 pplaxis_copy(c, &(c->set->XAxesDefault[i]), &(c->set->XAxes[i]));
@@ -1627,6 +1766,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
                 pplaxis_destroy(c, &(c->set->ZAxesDefault[i]));
                 pplaxis_copy(c, &(c->set->ZAxesDefault[i]), &(c->set->ZAxes[i]));
             }
+            // Copy each numbered plot style into the defaults
             for (i = 0; i < MAX_PLOTSTYLES; i++) {
                 ppl_withWordsDestroy(c, &(c->set->plot_styles_default[i]));
                 ppl_withWordsCpy(c, &(c->set->plot_styles_default[i]), &(c->set->plot_styles[i]));
@@ -1638,9 +1778,11 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
         } else if (state == 10) // [styling] section
         {
             ppl_strUpper(setkey, setkey);
+            // Each setting in the [styling] section scales one of the dimensions used in postscript output
             if (strcmp(setkey, "BASELINE_LINEWIDTH") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_DEFAULT_LINEWIDTH = fl * EPS_BASE_DEFAULT_LINEWIDTH;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1652,6 +1794,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "BASELINE_POINTSIZE") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_DEFAULT_PS = fl * EPS_BASE_DEFAULT_PS;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1663,6 +1806,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "ARROW_HEADANGLE") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_ARROW_ANGLE = fl * M_PI / 180;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1674,6 +1818,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "ARROW_HEADSIZE") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_ARROW_HEADSIZE = fl * EPS_BASE_ARROW_HEADSIZE;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1685,6 +1830,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "ARROW_HEADBACKINDENT") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_ARROW_CONSTRICT = fl;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1696,6 +1842,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AXES_SEPARATION") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_AXES_SEPARATION = fl * EPS_BASE_AXES_SEPARATION;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1707,6 +1854,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AXES_TEXTGAP") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_AXES_TEXTGAP = fl * EPS_BASE_AXES_TEXTGAP;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1718,6 +1866,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AXES_LINEWIDTH") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_AXES_LINEWIDTH = fl * EPS_BASE_AXES_LINEWIDTH;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1729,6 +1878,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AXES_MAJTICKLEN") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_AXES_MAJTICKLEN = fl * EPS_BASE_AXES_MAJTICKLEN;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1740,6 +1890,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "AXES_MINTICKLEN") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_AXES_MINTICKLEN = fl * EPS_BASE_AXES_MINTICKLEN;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1751,6 +1902,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "COLOURSCALE_MARGIN") == 0) || (strcmp(setkey, "COLORSCALE_MARGIN") == 0)) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_COLORSCALE_MARGIN = fl * EPS_BASE_COLORSCALE_MARG;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1762,6 +1914,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if ((strcmp(setkey, "COLOURSCALE_WIDTH") == 0) || (strcmp(setkey, "COLORSCALE_WIDTH") == 0)) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_COLORSCALE_WIDTH = fl * EPS_BASE_COLORSCALE_WIDTH;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1773,6 +1926,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "GRID_MAJLINEWIDTH") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_GRID_MAJLINEWIDTH = fl * EPS_BASE_GRID_MAJLINEWIDTH;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1784,6 +1938,7 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
             } else if (strcmp(setkey, "GRID_MINLINEWIDTH") == 0) {
                 if (fl = ppl_getFloat(setvalue, &i), ((gsl_finite(fl)) && (i == strlen(setvalue))))
                     EPS_GRID_MINLINEWIDTH = fl * EPS_BASE_GRID_MINLINEWIDTH;
+                // Otherwise, warn about the invalid value and ignore the line
                 else {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -1816,9 +1971,11 @@ static void ppl_readConfigFile(ppl_context *c, char *ConfigFname) {
 //! \param [in] c - The Pyxplot context
 
 void ppl_readconfig(ppl_context *c) {
+    // Variables for reading the configuration files
     int i;
     char ConfigFname[FNAME_LENGTH];
 
+    // Read the configuration file in the user's home directory, then any in the current directory
     if (snprintf(ConfigFname, FNAME_LENGTH, "%s%s%s", c->errcontext.session_default.homedir, PATHLINK, ".pyxplotrc") <
         FNAME_LENGTH)
         ppl_readConfigFile(c, ConfigFname);
@@ -1829,6 +1986,7 @@ void ppl_readconfig(ppl_context *c) {
     c->set->term_current = c->set->term_default;
     c->set->graph_current = c->set->graph_default;
 
+    // Copy each palette color
     for (i = 0; i < PALETTE_LENGTH; i++) {
         c->set->palette_current[i] = c->set->palette_default[i];
         c->set->paletteS_current[i] = c->set->paletteS_default[i];
@@ -1837,6 +1995,7 @@ void ppl_readconfig(ppl_context *c) {
         c->set->palette3_current[i] = c->set->palette3_default[i];
         c->set->palette4_current[i] = c->set->palette4_default[i];
     }
+    // Copy each axis
     for (i = 0; i < MAX_AXES; i++) {
         pplaxis_destroy(c, &(c->set->XAxes[i]));
         pplaxis_copy(c, &(c->set->XAxes[i]), &(c->set->XAxesDefault[i]));
@@ -1845,6 +2004,7 @@ void ppl_readconfig(ppl_context *c) {
         pplaxis_destroy(c, &(c->set->ZAxes[i]));
         pplaxis_copy(c, &(c->set->ZAxes[i]), &(c->set->ZAxesDefault[i]));
     }
+    // Copy each numbered plot style
     for (i = 0; i < MAX_PLOTSTYLES; i++) {
         ppl_withWordsDestroy(c, &(c->set->plot_styles[i]));
         ppl_withWordsCpy(c, &(c->set->plot_styles[i]), &(c->set->plot_styles_default[i]));

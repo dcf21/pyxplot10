@@ -19,6 +19,13 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the commands which add items to the multiplot canvas (arrow, line, box, circle, arc, ellipse, eps, image,
+// piechart, plot, point, polygon and text), and those which manage it (list, delete, undelete, move, swap and clear).
+// Each item is stored as a canvas_item in a list kept in order of item number, recording everything needed to draw it,
+// including a copy of the settings in force when it was made; after each change, the canvas is redrawn by
+// epsMaker/canvasDraw.c, and an item which fails to draw is removed again. ppl_canvas_item_textify() turns an item back
+// into the command which would make it.
+
 #define _CANVASITEMS_C 1
 
 #include <stdlib.h>
@@ -67,15 +74,18 @@
 //! \param [in] ptr - The canvas item to free
 
 static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
+    // Variables for freeing the item
     int i;
     canvas_itemlist *canvas_items = c->canvas_items;
     canvas_plotrange *pr, *pr2;
     canvas_plotdesc *pd, *pd2;
 
+    // Free the points of a polygon
     if (ptr->polygonPoints != NULL) {
         free(ptr->polygonPoints);
         ptr->polygonPoints = NULL;
     }
+    // Free the item's text
     if (ptr->text != NULL) {
         free(ptr->text);
         ptr->text = NULL;
@@ -88,16 +98,19 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     ptr->settings.MaskExpr = NULL;
     pplExpr_free(ptr->settings.c1format);
     ptr->settings.c1format = NULL;
+    // Free the x axes
     if (ptr->XAxes != NULL) {
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
         free(ptr->XAxes);
         ptr->XAxes = NULL;
     }
+    // Free the y axes
     if (ptr->YAxes != NULL) {
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
         free(ptr->YAxes);
         ptr->YAxes = NULL;
     }
+    // Free the z axes
     if (ptr->ZAxes != NULL) {
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
         free(ptr->ZAxes);
@@ -109,6 +122,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
 
     // Delete range structures
     pr = ptr->plotranges;
+    // Free the list of ranges given in a plot command
     while (pr != NULL) {
         pr2 = pr->next;
         free(pr);
@@ -117,44 +131,54 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
 
     // Delete plot item descriptors
     pd = ptr->plotitems;
+    // Free each dataset of a plot
     while (pd != NULL) {
         pd2 = pd->next;
         if (pd->functions != NULL)
+            // Free the functions plotted
             for (i = 0; i < pd->NFunctions; i++) {
                 pplExpr_free(pd->functions[i]);
                 pd->functions[i] = NULL;
             }
         if (pd->UsingList != NULL)
+            // Free the using expressions
             for (i = 0; i < pd->NUsing; i++) {
                 pplExpr_free(pd->UsingList[i]);
                 pd->UsingList[i] = NULL;
             }
         if (pd->vectors != NULL)
             for (i = 0; i < pd->NFunctions; i++) ppl_garbageObject(&pd->vectors[i]);
+        // Free the filename
         if (pd->filename != NULL) {
             free(pd->filename);
             pd->filename = NULL;
         }
+        // Free the list of functions
         if (pd->functions != NULL) {
             free(pd->functions);
             pd->functions = NULL;
         }
+        // Free the list of vectors
         if (pd->vectors != NULL) {
             free(pd->vectors);
             pd->vectors = NULL;
         }
+        // Free the label expression
         if (pd->label != NULL) {
             pplExpr_free(pd->label);
             pd->label = NULL;
         }
+        // Free the select expression
         if (pd->SelectCriterion != NULL) {
             pplExpr_free(pd->SelectCriterion);
             pd->SelectCriterion = NULL;
         }
+        // Free the title
         if (pd->title != NULL) {
             free(pd->title);
             pd->title = NULL;
         }
+        // Free the list of using expressions
         if (pd->UsingList != NULL) {
             free(pd->UsingList);
             pd->UsingList = NULL;
@@ -171,6 +195,7 @@ static void canvas_item_delete(ppl_context *c, canvas_item *ptr) {
     if (ptr->next != NULL) ptr->next->prev = ptr->prev;
     else canvas_items->last = ptr->prev;
 
+    // Free the item itself
     free(ptr);
     ptr = NULL;
     return;
@@ -200,6 +225,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
     // Ensure that multiplot canvas list is initialised before trying to use it
     if (canvas_items == NULL) {
         canvas_items = (canvas_itemlist *) malloc(sizeof(canvas_itemlist));
+        // Failure to allocate memory is reported as an error
         if (canvas_items == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -209,7 +235,9 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
         canvas_items->last = NULL;
     }
 
+    // With no item number given, the item is added after the last one; otherwise it replaces the item with that number
     gotEditNo = (command[PARSE_arc_editno].objType == PPLOBJ_NUM);
+    // Number the item after the last item on the canvas
     if (!gotEditNo) {
         int prevId;
         insertpointA = &(canvas_items->last);
@@ -218,6 +246,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
         insertpointB = (*insertpointA == NULL) ? &(canvas_items->first) : &(canvas_items->last->next);
         prevId = (*insertpointA == NULL) ? 0 : canvas_items->last->id;
         editNo = prevId + 1;
+        // There is a fixed limit on the number of items
         if (editNo >= MULTIPLOT_MAXINDEX) {
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, "The multiplot canvas is full.");
             return 1;
@@ -225,6 +254,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
     } else {
         // Item numbers index arrays of MULTIPLOT_MAXINDEX entries, so must be within range
         const double editNoReal = command[PARSE_arc_editno].real;
+        // The item number must be within range
         if (!(editNoReal > -0.5) || !(editNoReal < MULTIPLOT_MAXINDEX - 0.5)) {
             char msg[PPL_MSG_LENGTH];
             ppl_snprintfTrunc(msg, sizeof(msg), "Multiplot item numbers must be in the range 0 to %d.",
@@ -235,11 +265,13 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
         editNo = (int) round(editNoReal);
         insertpointB = &(canvas_items->first);
         prev = NULL;
+        // Find where the item goes in the list, which is kept in order of item number
         while ((*insertpointB != NULL) && ((*insertpointB)->id < editNo)) {
             prev = *insertpointB;
             insertpointB = &((*insertpointB)->next);
         }
         next = *insertpointB;
+        // Link the item at the end of the list, or before the next item
         if (next == NULL) {
             insertpointA = &(canvas_items->last);
         } else if (next->id == editNo) {
@@ -252,6 +284,7 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
         }
     }
     ptr = (canvas_item *) malloc(sizeof(canvas_item));
+    // Failure to allocate memory is reported as an error
     if (ptr == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
         return 1;
@@ -275,20 +308,25 @@ static int canvas_itemlist_add(ppl_context *c, pplObj *command, const int type, 
     ptr->settings.c1format = pplExpr_cpy(c->set->graph_current.c1format);
     ppl_withWordsCpy(c, &ptr->settings.dataStyle, &c->set->graph_current.dataStyle);
     ppl_withWordsCpy(c, &ptr->settings.funcStyle, &c->set->graph_current.funcStyle);
+    // Graphs have their own copies of the axes
     if (includeAxes) {
         ptr->XAxes = (pplset_axis *) malloc(MAX_AXES * sizeof(pplset_axis));
         ptr->YAxes = (pplset_axis *) malloc(MAX_AXES * sizeof(pplset_axis));
         ptr->ZAxes = (pplset_axis *) malloc(MAX_AXES * sizeof(pplset_axis));
+        // Report a failure to allocate memory, freeing any axes which were allocated
         if ((ptr->XAxes == NULL) || (ptr->YAxes == NULL) || (ptr->ZAxes == NULL)) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (A).");
+            // Free the x axes
             if (ptr->XAxes != NULL) {
                 free(ptr->XAxes);
                 ptr->XAxes = NULL;
             }
+            // Free the y axes
             if (ptr->YAxes != NULL) {
                 free(ptr->YAxes);
                 ptr->YAxes = NULL;
             }
+            // Free the z axes
             if (ptr->ZAxes != NULL) {
                 free(ptr->ZAxes);
                 ptr->ZAxes = NULL;
@@ -327,8 +365,10 @@ int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput
     canvas_itemlist *canvas_items = c->canvas_items;
     canvas_item *ptr, *next;
 
+    // There is nothing to clear if the canvas has never been used
     if (canvas_items == NULL) return 0;
     ptr = canvas_items->first;
+    // Free each item
     while (ptr != NULL) {
         next = ptr->next;
         ptr->prev = NULL;
@@ -350,6 +390,7 @@ int ppl_directive_clear(ppl_context *c, const parserLine *pl, const parserOutput
 //! \return Pointer to <output>
 
 char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, const size_t outLen) {
+    // Write the command for the item's type, with all of its parameters
     int i, j;
     if (ptr->type == CANVAS_ARROW) // Produce textual representations of arrow commands
     {
@@ -407,6 +448,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                 ppl_numericDisplay(ptr->xpos2 * 100, c->numdispBuff[2], c->set->term_current.SignificantFigures,
                                    (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i = strlen(output);
+        // The position of the focus, if given
         if (ptr->xfset) {
             ppl_strAppendf(
                     output, outLen, &i, " from %s to %s",
@@ -510,10 +552,12 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                                           c->set->term_current.SignificantFigures,
                                           (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i += strlen(output + i);
+        // The clip option
         if (ptr->clip) {
             ppl_strAppendf(output, outLen, &i, " clip");
             i += strlen(output + i);
         }
+        // The calcbbox option
         if (ptr->calcbbox) {
             ppl_strAppendf(output, outLen, &i, " calcbbox");
             i += strlen(output + i);
@@ -530,14 +574,17 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                        ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
                                           (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i += strlen(output + i);
+        // The smooth option
         if (ptr->smooth) {
             ppl_strAppendf(output, outLen, &i, " smooth");
             i += strlen(output + i);
         }
+        // The notransparent option
         if (ptr->NoTransparency) {
             ppl_strAppendf(output, outLen, &i, " NoTransparency");
             i += strlen(output + i);
         }
+        // A custom transparent color
         if (ptr->CustomTransparency) {
             ppl_strAppendf(output, outLen, &i, " transparent rgb%d:%d:%d", ptr->TransColR, ptr->TransColG,
                            ptr->TransColB);
@@ -563,11 +610,15 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
     {
         canvas_plotdesc *pd;
 
+        // A piechart command, followed by the description of its data
         ppl_snprintfTrunc(output, outLen, "piechart item %d", ptr->id);
         i = strlen(output);
         pd = ptr->plotitems;
+        // Describe the dataset, if there is one
         if (pd != NULL) {
+            // Data from a file or vectors, or from functions
             if (!pd->function) {
+                // The data file or vectors
                 if ((pd->filename != NULL) || (pd->vectors != NULL)) {
                     ppl_strAppendChar(output, outLen, &i, ' ');
                     ppl_strEscapify(pd->filename, output + i, outLen - i);
@@ -580,30 +631,37 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                     ppl_strAppendStripped(output, outLen, &i, pd->functions[j]->ascii);
                     i += strlen(output + i);
                 }
+            // The every modifier
             if (pd->EverySet > 0) {
                 ppl_strAppendf(output, outLen, &i, " every %ld", pd->EveryList[0]);
                 i += strlen(output + i);
             } // Print out 'every' clause of plot command
+            // Its second field
             if (pd->EverySet > 1) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[1]);
                 i += strlen(output + i);
             }
+            // Its third field
             if (pd->EverySet > 2) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[2]);
                 i += strlen(output + i);
             }
+            // Its fourth field
             if (pd->EverySet > 3) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[3]);
                 i += strlen(output + i);
             }
+            // Its fifth field
             if (pd->EverySet > 4) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[4]);
                 i += strlen(output + i);
             }
+            // Its sixth field
             if (pd->EverySet > 5) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[5]);
                 i += strlen(output + i);
             }
+            // The format of the labels
             if (ptr->text == NULL) {
                 ppl_strAppendf(output, outLen, &i, " format auto");
                 i += strlen(output + i);
@@ -611,10 +669,12 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                 ppl_strAppendf(output, outLen, &i, " format %s", ptr->text);
                 i += strlen(output + i);
             }
+            // The index modifier
             if (pd->IndexSet) {
                 ppl_strAppendf(output, outLen, &i, " index %d", pd->index);
                 i += strlen(output + i);
             } // Print index to use
+            // The label modifier, and the position of the labels
             if ((pd->label != NULL) || (ptr->ArrowType != SW_PIEKEYPOS_AUTO)) {
                 ppl_strAppendf(output, outLen, &i, " label %s",
                                *(char **) ppl_fetchSettingName(&c->errcontext, ptr->ArrowType, SW_PIEKEYPOS_INT,
@@ -624,6 +684,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                     ppl_strAppendf(output, outLen, &i, " %s", pd->label->ascii); // Print label string
                 i += strlen(output + i);
             }
+            // The select modifier
             if (pd->SelectCriterion != NULL) {
                 ppl_strAppendf(output, outLen, &i, " select %s", pd->SelectCriterion->ascii);
                 i += strlen(output + i);
@@ -632,6 +693,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             i += strlen(output + i);
             ppl_strAppendf(output, outLen, &i, " using %s", (pd->UsingRowCols == DATAFILE_COL) ? "columns" : "rows");
             i += strlen(output + i); // Print using list
+            // Each using item
             for (j = 0; j < pd->NUsing; j++) {
                 ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                 ppl_strAppendf(output, outLen, &i, "%s", pd->UsingList[j]->ascii);
@@ -645,29 +707,35 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         pplObj v;
         unsigned char pr_first = 1, pd_first = 1;
 
+        // A plot command, followed by its ranges and the description of each dataset
         ppl_snprintfTrunc(output, outLen, "plot item %d", ptr->id);
         i = strlen(output);
         if (ptr->ThreeDim) ppl_strAppendf(output, outLen, &i, "%s", " 3d");
         i += strlen(output + i);
         pr = ptr->plotranges; // Print out plot ranges
+        // Write each range
         while (pr != NULL) {
+            // Separate the ranges with spaces
             if (pr_first) {
                 ppl_strAppendChar(output, outLen, &i, ' ');
                 pr_first = 0;
             }
             ppl_strAppendChar(output, outLen, &i, '[');
             if (pr->AutoMinSet) ppl_strAppendChar(output, outLen, &i, '*');
+            // The minimum, or * if automatic
             if (pr->MinSet) {
                 v = pr->unit;
                 v.real = pr->min;
                 ppl_strAppendf(output, outLen, &i, "%s", ppl_unitsNumericDisplay(c, &v, 0, 0, 0));
                 i += strlen(output + i);
             }
+            // A colon, if either limit is given
             if (pr->MinSet || pr->MaxSet || pr->AutoMinSet || pr->AutoMaxSet) {
                 ppl_strAppendf(output, outLen, &i, "%s", ":");
                 i += strlen(output + i);
             }
             if (pr->AutoMaxSet) ppl_strAppendChar(output, outLen, &i, '*');
+            // The maximum, or * if automatic
             if (pr->MaxSet) {
                 v = pr->unit;
                 v.real = pr->max;
@@ -679,27 +747,34 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             pr = pr->next;
         }
         pd = ptr->plotitems; // Print out plotted items one by one
+        // Write each dataset, separated by commas
         while (pd != NULL) {
+            // Separate the datasets with commas
             if (pd_first) {
                 pd_first = 0;
             } else {
                 ppl_strAppendChar(output, outLen, &i, ',');
             }
+            // Parametric plots
             if (pd->parametric) {
                 ppl_strAppendf(output, outLen, &i, " parametric");
                 i += strlen(output + i);
             }
+            // The range of t
             if (pd->TRangeSet) {
                 ppl_strAppendf(output, outLen, &i, " [%s:%s]", ppl_unitsNumericDisplay(c, &pd->Tmin, 0, 0, 0),
                                ppl_unitsNumericDisplay(c, &pd->Tmax, 1, 0, 0));
                 i += strlen(output + i);
             }
+            // The range of v
             if (pd->VRangeSet) {
                 ppl_strAppendf(output, outLen, &i, " [%s:%s]", ppl_unitsNumericDisplay(c, &pd->Vmin, 0, 0, 0),
                                ppl_unitsNumericDisplay(c, &pd->Vmax, 1, 0, 0));
                 i += strlen(output + i);
             }
+            // Data from a file or vectors, or from functions
             if ((!pd->function) || (pd->vectors != NULL)) {
+                // The data file, or the vectors
                 if (pd->filename != NULL) {
                     ppl_strAppendChar(output, outLen, &i, ' ');
                     ppl_strEscapify(pd->filename, output + i, outLen - i);
@@ -716,57 +791,70 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             {
                 ppl_strAppendf(output, outLen, &i, "%s", " axes ");
                 i += strlen(output + i);
+                // The first axis
                 if (pd->axis1set) {
                     ppl_strAppendf(output, outLen, &i, "%c%d", "xyzc"[pd->axis1xyz], pd->axis1);
                     i += strlen(output + i);
                 }
+                // The second axis
                 if (pd->axis2set) {
                     ppl_strAppendf(output, outLen, &i, "%c%d", "xyzc"[pd->axis2xyz], pd->axis2);
                     i += strlen(output + i);
                 }
+                // The third axis
                 if (pd->axis3set) {
                     ppl_strAppendf(output, outLen, &i, "%c%d", "xyzc"[pd->axis3xyz], pd->axis3);
                     i += strlen(output + i);
                 }
             }
+            // The every modifier
             if (pd->EverySet > 0) {
                 ppl_strAppendf(output, outLen, &i, " every %ld", pd->EveryList[0]);
                 i += strlen(output + i);
             } // Print out 'every' clause of plot command
+            // Its second field
             if (pd->EverySet > 1) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[1]);
                 i += strlen(output + i);
             }
+            // Its third field
             if (pd->EverySet > 2) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[2]);
                 i += strlen(output + i);
             }
+            // Its fourth field
             if (pd->EverySet > 3) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[3]);
                 i += strlen(output + i);
             }
+            // Its fifth field
             if (pd->EverySet > 4) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[4]);
                 i += strlen(output + i);
             }
+            // Its sixth field
             if (pd->EverySet > 5) {
                 ppl_strAppendf(output, outLen, &i, ":%ld", pd->EveryList[5]);
                 i += strlen(output + i);
             }
+            // The index modifier
             if (pd->IndexSet) {
                 ppl_strAppendf(output, outLen, &i, " index %d", pd->index);
                 i += strlen(output + i);
             } // Print index to use
+            // The label modifier
             if (pd->label != NULL) {
                 ppl_strAppendf(output, outLen, &i, " label %s", pd->label->ascii);
                 i += strlen(output + i);
             } // Print label string
+            // The select modifier
             if (pd->SelectCriterion != NULL) {
                 ppl_strAppendf(output, outLen, &i, " select %s", pd->SelectCriterion->ascii);
                 i += strlen(output + i);
             } // Print select criterion
             if (pd->ContinuitySet) // Print continuous / discontinuous flag
             {
+                // The continuity of the data
                 if (pd->continuity == DATAFILE_DISCONTINUOUS) {
                     ppl_strAppendf(output, outLen, &i, " discontinuous");
                     i += strlen(output + i);
@@ -775,10 +863,12 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                     i += strlen(output + i);
                 }
             }
+            // The title, or notitle
             if (pd->NoTitleSet) {
                 ppl_strAppendf(output, outLen, &i, "%s", " notitle");
                 i += strlen(output + i);
             } // notitle is set
+            // A title given by the user
             else if (pd->TitleSet) {
                 ppl_strAppendf(output, outLen, &i, "%s", " title ");
                 i += strlen(output + i);
@@ -788,6 +878,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
             ppl_withWordsAppend(c, &pd->ww, output, outLen, &i);
             ppl_strAppendf(output, outLen, &i, " using %s", (pd->UsingRowCols == DATAFILE_COL) ? "columns" : "rows");
             i += strlen(output + i); // Print using list
+            // Each using item
             for (j = 0; j < pd->NUsing; j++) {
                 ppl_strAppendChar(output, outLen, &i, (j != 0) ? ':' : ' ');
                 ppl_strAppendf(output, outLen, &i, "%s", pd->UsingList[j]->ascii);
@@ -804,6 +895,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
                 ppl_numericDisplay(ptr->ypos * 100, c->numdispBuff[1], c->set->term_current.SignificantFigures,
                                    (c->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i = strlen(output);
+        // A point's label
         if (ptr->text != NULL) {
             ppl_strAppendf(output, outLen, &i, " label ");
             i += strlen(output + i);
@@ -816,6 +908,7 @@ char *ppl_canvas_item_textify(ppl_context *c, canvas_item *ptr, char *output, co
         int p;
         ppl_snprintfTrunc(output, outLen, "polygon item %d [", ptr->id);
         i = strlen(output);
+        // Each point of a polygon
         for (p = 0; p < ptr->NpolygonPoints; p++) {
             if (p > 0) ppl_strAppendChar(output, outLen, &i, ',');
             ppl_strAppendf(output, outLen, &i, "[%s,%s]",
@@ -867,9 +960,11 @@ int ppl_directive_list(ppl_context *c, const parserLine *pl, const parserOutput 
     int i;
     canvas_item *ptr;
 
+    // There is nothing to list if the canvas has never been used
     ppl_report(&c->errcontext, "# ID   Command");
     if (canvas_items == NULL) return 0;
     ptr = canvas_items->first;
+    // List each item, marking those which have been deleted
     while (ptr != NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "%5d  %s", ptr->id, (ptr->deleted) ? "[deleted] " : "");
         i = strlen(msg);
@@ -891,6 +986,7 @@ static int canvas_delete(ppl_context *c, const int id) {
     canvas_itemlist *canvas_items = c->canvas_items;
     canvas_item *ptr = canvas_items->first;
     while ((ptr != NULL) && (ptr->id != id)) ptr = ptr->next;
+    // Report an item which does not exist
     if (ptr == NULL) {
         ppl_snprintfTrunc(msg, sizeof(msg), "There is no multiplot item with ID %d.", id);
         ppl_warning(&c->errcontext, ERR_GENERIC, msg);
@@ -915,6 +1011,7 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
     canvas_itemlist *canvas_items = c->canvas_items;
     int pos;
 
+    // Report a canvas which has never been used
     if (canvas_items == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
                           "There are currently no items on the multiplot canvas.");
@@ -922,7 +1019,9 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
         return 1;
     }
 
+    // Delete each item named
     pos = PARSE_delete_deleteno;
+    // Walk the linked list of item numbers on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         int id;
         pos = (int) round(stk[pos].real);
@@ -933,6 +1032,7 @@ int ppl_directive_delete(ppl_context *c, const parserLine *pl, const parserOutpu
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -959,8 +1059,10 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     pplObj *stk = in->stk;
     canvas_itemlist *canvas_items = c->canvas_items;
 
+    // Variables for restoring items
     int pos;
 
+    // Report a canvas which has never been used
     if (canvas_items == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
                           "There are currently no items on the multiplot canvas.");
@@ -968,7 +1070,9 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
         return 1;
     }
 
+    // Restore each item named
     pos = PARSE_undelete_undeleteno;
+    // Walk the linked list of item numbers on the parser stack
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         canvas_item *ptr;
         int id;
@@ -976,6 +1080,7 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
         id = (int) round(stk[pos + PARSE_undelete_number_undeleteno].real);
         ptr = canvas_items->first;
         while ((ptr != NULL) && (ptr->id != id)) ptr = ptr->next;
+        // Report an item which does not exist
         if (ptr == NULL) {
             ppl_snprintfTrunc(msg, sizeof(msg), "There is no multiplot item with ID %d.", id);
             ppl_warning(&c->errcontext, ERR_GENERIC, msg);
@@ -988,6 +1093,7 @@ int ppl_directive_undelete(ppl_context *c, const parserLine *pl, const parserOut
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1018,6 +1124,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     unsigned char rotatable;
     canvas_item *ptr;
 
+    // Report a canvas which has never been used
     if (canvas_items == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
                           "There are currently no items on the multiplot canvas.");
@@ -1025,14 +1132,17 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
         return 1;
     }
 
+    // Read the item number and its new position and rotation
     moveno = (int) round(stk[PARSE_move_moveno].real);
     x = stk[PARSE_move_p].real;
     y = stk[PARSE_move_p + 1].real;
     rotation = stk[PARSE_move_rotation].real;
     gotRotation = (stk[PARSE_move_rotation].objType == PPLOBJ_NUM);
 
+    // Find the item
     ptr = canvas_items->first;
     while ((ptr != NULL) && (ptr->id != moveno)) ptr = ptr->next;
+    // Report an item which does not exist
     if (ptr == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "There is no multiplot item with ID %d.",
                           moveno);
@@ -1041,21 +1151,26 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     }
     rotatable = ((ptr->type != CANVAS_ARROW) && (ptr->type != CANVAS_CIRC) && (ptr->type != CANVAS_PIE) &&
                  (ptr->type != CANVAS_PLOT) && (ptr->type != CANVAS_POINT));
+    // Warn that items such as plots cannot be rotated
     if (gotRotation && !rotatable) {
         ppl_snprintfTrunc(msg, sizeof(msg), "It is not possible to rotate multiplot item %d.", moveno);
         ppl_warning(&c->errcontext, ERR_GENERIC, msg);
     }
 
+    // Polygons are moved by moving each of their points; other items by their positions
     if (ptr->type == CANVAS_POLYGON) {
         int c;
+        // Move the polygon so that its first point is at the new position, or rotate it about its first point
         if (!gotRotation) {
             const double ox = x - ptr->polygonPoints[0];
             const double oy = y - ptr->polygonPoints[1];
+            // Shift each point
             for (c = 0; c < ptr->NpolygonPoints; c++) {
                 ptr->polygonPoints[2 * c] += ox;
                 ptr->polygonPoints[2 * c + 1] += oy;
             }
         } else {
+            // Rotate each point about the first point, and place it relative to the new position
             for (c = 0; c < ptr->NpolygonPoints; c++) {
                 double ox = ptr->polygonPoints[2 * c] - ptr->polygonPoints[0];
                 double oy = ptr->polygonPoints[2 * c + 1] - ptr->polygonPoints[1];
@@ -1080,6 +1195,7 @@ int ppl_directive_move(ppl_context *c, const parserLine *pl, const parserOutput 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1107,6 +1223,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     int item1, item2;
     canvas_item **ptr1, **ptr2, *temp;
 
+    // Report a canvas which has never been used
     if (canvas_items == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s",
                           "There are currently no items on the multiplot canvas.");
@@ -1121,6 +1238,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     // Seek the first item to be swapped
     ptr1 = &canvas_items->first;
     while ((*ptr1 != NULL) && ((*ptr1)->id != item1)) ptr1 = &((*ptr1)->next);
+    // Report an item which does not exist
     if (*ptr1 == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "There is no multiplot item with ID %d.",
                           item1);
@@ -1131,6 +1249,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     // Seek the second item to be swapped
     ptr2 = &canvas_items->first;
     while ((*ptr2 != NULL) && ((*ptr2)->id != item2)) ptr2 = &((*ptr2)->next);
+    // Report an item which does not exist
     if (*ptr2 == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "There is no multiplot item with ID %d.",
                           item2);
@@ -1151,6 +1270,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
     // Redisplay the canvas as required
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1171,6 +1291,7 @@ int ppl_directive_swap(ppl_context *c, const parserLine *pl, const parserOutput 
 //! \return Zero on success, or one on failure
 
 int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gotTempstr;
@@ -1205,6 +1326,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1213,6 +1335,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1232,6 +1355,7 @@ int ppl_directive_arrow(ppl_context *c, parserLine *pl, parserOutput *in, const 
 //! \return Zero on success, or one on failure
 
 int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gotx2, gotWidth, gotHeight, gotAng;
@@ -1290,6 +1414,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1298,6 +1423,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1318,6 +1444,7 @@ int ppl_directive_box(ppl_context *c, parserLine *pl, parserOutput *in, const in
 //! \return Zero on success, or one on failure
 
 int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gota1, amArc;
@@ -1339,6 +1466,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
     ptr->xpos = x;
     ptr->ypos = y;
     ptr->xpos2 = r;
+    // An arc's start and end angles, if given
     if (gota1) {
         ptr->xfset = 1;
         ptr->xf = a1;
@@ -1355,6 +1483,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1363,6 +1492,7 @@ int ppl_directive_circle(ppl_context *c, parserLine *pl, parserOutput *in, const
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1420,6 +1550,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     ecc = stk[PARSE_ellipse_eccentricity].real;
     gotEcc = (stk[PARSE_ellipse_eccentricity].objType == PPLOBJ_NUM);
 
+    // Read the angles of an arc, if given
     arcfrom = stk[PARSE_ellipse_arcfrom].real;
     gotarc = (stk[PARSE_ellipse_arcfrom].objType == PPLOBJ_NUM);
     arcto = stk[PARSE_ellipse_arcto].real;
@@ -1436,8 +1567,10 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     if (gotB2) { e++; }
     if (gotA) { e++; }
     if (gotB) { e++; }
+    // The eccentricity
     if (gotEcc) {
         e++;
+        // The eccentricity must be between zero and one
         if ((ecc < 0.0) || (ecc >= 1.0)) {
             strcpy(c->errStat.errBuff, "Supplied eccentricity is not in the range 0 <= e < 1.");
             ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
@@ -1452,10 +1585,12 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         a = a2 / 2;
         gotA = 1;
     }
+    // A minor axis length is a drop-in replacement for the semi-minor axis length
     if (gotB2) {
         b = b2 / 2;
         gotB = 1;
     }
+    // A latus rectum is a drop-in replacement for the semi-latus rectum
     if (gotLr) {
         slr = lr / 2;
         gotSlr = 1;
@@ -1478,6 +1613,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         b = fabs(y2 - y1) / 2.0;
     } else if (p == 2) // User has specified both centre and focus of the ellipse, and one further piece of information
     {
+        // Measure the angle of the major axis from the centre to the focus
         if (ppl_dblEqual(xc, xf) && ppl_dblEqual(yc, yf)) {
             ang = 0.0;
         } else {
@@ -1490,12 +1626,14 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         {
             a = fabs(a);
             ecc = hypot(xc - xf, yc - yf) / a;
+            // The eccentricity must be between zero and one
             if ((ecc < 0.0) || (ecc >= 1.0)) {
                 strcpy(c->errStat.errBuff,
                        "Supplied semi-major axis length is shorter than the distance between the supplied focus and centre of the ellipse. No ellipse may have such parameters.");
                 ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
                 return 1;
             }
+            // A circle has its focus at its centre
             if (ppl_dblEqual(ecc, 0.0)) {
                 b = a;
             } else {
@@ -1505,6 +1643,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         {
             b = fabs(b);
             a = hypot(hypot(xc - xf, yc - yf), b);
+            // The semi-minor axis may not exceed the semi-major axis
             if (b > a) {
                 strcpy(c->errStat.errBuff,
                        "Supplied minor axis length is longer than the implied major axis length of the ellipse.");
@@ -1515,6 +1654,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         } else if (gotEcc) // eccentricity...
         {
             a = hypot(xc - xf, yc - yf) / ecc;
+            // A circle has its focus at its centre
             if (ppl_dblEqual(ecc, 0.0)) {
                 b = a;
             } else {
@@ -1524,6 +1664,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         {
             ratio = hypot(xc - xf, yc - yf) / slr;
             ecc = (sqrt(1 + 4 * pow(ratio, 2)) - 1.0) / (2 * ratio);
+            // The eccentricity must be between zero and one
             if ((ecc < 0.0) || (ecc >= 1.0)) {
                 strcpy(c->errStat.errBuff, "Eccentricity implied for ellipse is not in the range 0 <= e < 1.");
                 ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
@@ -1542,6 +1683,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         {
             a = fabs(a);
             b = fabs(b);
+            // The semi-minor axis may not exceed the semi-major axis
             if (b > a) {
                 strcpy(c->errStat.errBuff,
                        "Supplied minor axis length is longer than the supplied major axis length of the ellipse.");
@@ -1557,6 +1699,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         } else if (gotA && gotSlr) // major axis and SLR...
         {
             a = fabs(a);
+            // The semi-latus rectum may not exceed the semi-major axis
             if (fabs(slr) > a) {
                 strcpy(c->errStat.errBuff,
                        "Supplied semi-latus rectum is longer than the supplied semi-major axis length of the ellipse. No ellipse may have such parameters.");
@@ -1572,6 +1715,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         } else if (gotB && gotSlr) // minor axis and SLR...
         {
             b = fabs(b);
+            // The semi-latus rectum may not exceed the semi-minor axis
             if (fabs(slr) > b) {
                 strcpy(c->errStat.errBuff,
                        "Supplied semi-latus rectum is longer than the supplied semi-minor axis length of the ellipse. No ellipse may have such parameters.");
@@ -1617,6 +1761,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     ptr->x1set = ptr->xcset = ptr->xfset = ptr->aset = ptr->bset = ptr->eccset = ptr->slrset = 0;
     ptr->x1 = ptr->y1 = ptr->x2 = ptr->y2 = ptr->xc = ptr->yc = ptr->xf = ptr->yf = ptr->ecc = ptr->slr = 0.0;
     ptr->arcset = 0;
+    // Record which parameters were given, so that the item can be listed as it was typed
     if (gotX1) {
         ptr->x1set = 1;
         ptr->x1 = x1;
@@ -1628,27 +1773,33 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         ptr->xc = xc;
         ptr->yc = yc;
     }
+    // The focus
     if (gotXf) {
         ptr->xfset = 1;
         ptr->xf = xf;
         ptr->yf = yf;
     }
+    // The semi-major axis
     if (gotA) {
         ptr->aset = 1;
         ptr->a = a;
     }
+    // The semi-minor axis
     if (gotB) {
         ptr->bset = 1;
         ptr->b = b;
     }
+    // The eccentricity
     if (gotEcc) {
         ptr->eccset = 1;
         ptr->ecc = ecc;
     }
+    // The semi-latus rectum
     if (gotSlr) {
         ptr->slrset = 1;
         ptr->slr = slr;
     }
+    // The angles of the arc
     if (gotarc) {
         ptr->arcset = 1;
         ptr->arcfrom = arcfrom;
@@ -1662,6 +1813,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1670,6 +1822,7 @@ int ppl_directive_ellipse(ppl_context *c, parserLine *pl, parserOutput *in, cons
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1712,6 +1865,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
     calcbbox = (stk[PARSE_eps_calcbbox].objType != PPLOBJ_ZOM);
     fname = (char *) stk[PARSE_eps_filename].auxil;
     text = (char *) malloc(strlen(fname) + 1);
+    // Failure to allocate memory is reported as an error
     if (text == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (F).");
         return 1;
@@ -1725,21 +1879,25 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
         return 1;
     }
 
+    // Store each property which was given
     if (gotX) {
         ptr->xpos = x;
     } else {
         ptr->xpos = c->set->graph_current.OriginX.real;
     }
+    // The y position
     if (gotY) {
         ptr->ypos = y;
     } else {
         ptr->ypos = c->set->graph_current.OriginY.real;
     }
+    // The rotation
     if (gotAng) {
         ptr->rotation = ang;
     } else {
         ptr->rotation = 0.0;
     }
+    // The width
     if (gotWidth) {
         ptr->xpos2 = width;
         ptr->xpos2set = 1;
@@ -1747,6 +1905,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
         ptr->xpos2 = 0.0;
         ptr->xpos2set = 0;
     }
+    // The height
     if (gotHeight) {
         ptr->ypos2 = height;
         ptr->ypos2set = 1;
@@ -1762,6 +1921,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1770,6 +1930,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1790,6 +1951,7 @@ int ppl_directive_eps(ppl_context *c, const parserLine *pl, const parserOutput *
 //! \return Zero on success, or one on failure
 
 int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id;
@@ -1811,6 +1973,7 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
     if (stk[PARSE_point_label].objType == PPLOBJ_STR) {
         char *tempstr = (char *) stk[PARSE_point_label].auxil;
         char *text = (char *) malloc(strlen(tempstr) + 1);
+        // Failure to allocate memory is reported as an error
         if (text == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (I).");
             return 1;
@@ -1825,6 +1988,7 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1833,6 +1997,7 @@ int ppl_directive_point(ppl_context *c, parserLine *pl, parserOutput *in, const 
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -1871,29 +2036,37 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     ptListObj = (list *) stk[PARSE_polygon_pointlist].auxil;
     Npts = ppl_listLen(ptListObj);
     ptList = (double *) malloc(2 * Npts * sizeof(double));
+    // Failure to allocate memory is reported as an error
     if (ptList == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (J).");
         return 1;
     }
+    // A polygon needs at least two points
     if (Npts < 2) {
         printf(msg, "A minimum of two points are required to specify the outline of a polygon.");
         goto fail;
     }
+    // Read each point, which may be a vector or a list of two numbers, with units of length or dimensionless (in
+    // centimetres)
     for (i = 0; i < Npts; i++) {
         double x, y;
         pplObj *item = (pplObj *) ppl_listGetItem(ptListObj, i);
+        // A point given as a vector
         if (item->objType == PPLOBJ_VEC) {
             pplVector *v = (pplVector *) item->auxil;
             int l = v->v->size;
             double m = 1;
             if (item->dimensionless) m = 0.01;
+            // Dimensionless positions are in centimetres; otherwise they must be lengths
             else {
                 int p;
                 for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
+                    // Check the units are those of length
                     if (item->exponent[p] != (p == UNIT_LENGTH)) {
                         p = -1;
                         break;
                     }
+                // Report a position with the wrong units
                 if (p < 0) {
                     printf(msg,
                            "Point %d of polygon should have specified as a position vector; supplied position had wrong units.",
@@ -1901,6 +2074,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
                     goto fail;
                 }
             }
+            // The vector must have two components
             if (l != 2) {
                 printf(msg,
                        "Point %d of polygon should have specified as a two-component position vector; supplied vector had %d components.",
@@ -1914,20 +2088,24 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
             double m = 1;
             list *l = (list *) item->auxil;
             pplObj *xo[2];
+            // A point given as a list must have two items
             if (ppl_listLen(l) != 2) {
                 printf(msg,
                        "Point %d of polygon should have specified as a two-component position vector; supplied vector had %d components.",
                        i + 1, ppl_listLen(l));
                 goto fail;
             }
+            // Each coordinate must be a real number
             for (j = 0; j < 2; j++) {
                 xo[j] = (pplObj *) ppl_listGetItem(l, j);
+                // The coordinate must be a number
                 if (xo[j]->objType != PPLOBJ_NUM) {
                     printf(msg,
                            "Point %d of polygon should have specified as a position vector; supplied object had type <%s>.",
                            i + 1, pplObjTypeNames[xo[j]->objType]);
                     goto fail;
                 }
+                // The coordinate must be real
                 if (xo[j]->flagComplex) {
                     printf(msg,
                            "Point %d of polygon should have specified as a position vector; supplied object was complex.",
@@ -1935,12 +2113,15 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
                     goto fail;
                 }
                 if (xo[j]->dimensionless) m = 0.01;
+                // Dimensionless coordinates are in centimetres; otherwise they must be lengths
                 else {
                     for (p = 0; p < UNITS_MAX_BASEUNITS; p++)
+                        // Check the units are those of length
                         if (xo[j]->exponent[p] != UNIT_LENGTH) {
                             p = -1;
                             break;
                         }
+                    // Report a coordinate with the wrong units
                     if (p < 0) {
                         printf(msg,
                                "Point %d of polygon should have specified as a position vector; supplied position had wrong units.",
@@ -1978,6 +2159,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -1986,6 +2168,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2005,6 +2188,7 @@ int ppl_directive_polygon(ppl_context *c, parserLine *pl, parserOutput *in, cons
 //! \return Zero on success, or one on failure
 
 int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    // Variables for creating the item
     pplObj *stk = in->stk;
     canvas_item *ptr;
     int id, gotX, gotY, gotAng, gotGap, gotTempstr;
@@ -2024,12 +2208,14 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Read the string which we are to render
     tempstr = (char *) stk[PARSE_text_string].auxil;
     text = (char *) malloc(strlen(tempstr) + 1);
+    // Failure to allocate memory is reported as an error
     if (text == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (L).");
         return 1;
     }
     strcpy(text, tempstr);
 
+    // Add the item to the canvas
     if (canvas_itemlist_add(c, stk, CANVAS_TEXT, &ptr, &id, 0)) {
         free(text);
         text = NULL;
@@ -2046,21 +2232,25 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     if (gotTempstr)
         ptr->settings.TextVAlign = ppl_fetchSettingByName(&c->errcontext, tempstr, SW_VALIGN_INT, SW_VALIGN_STR);
 
+    // Store each property which was given
     if (gotX) {
         ptr->xpos = x;
     } else {
         ptr->xpos = c->set->graph_current.OriginX.real;
     }
+    // The y position
     if (gotY) {
         ptr->ypos = y;
     } else {
         ptr->ypos = c->set->graph_current.OriginY.real;
     }
+    // The gap between the text and its position
     if (gotGap) {
         ptr->xpos2 = gap;
     } else {
         ptr->xpos2 = 0.0;
     }
+    // The rotation
     if (gotAng) {
         ptr->rotation = ang;
     } else {
@@ -2075,6 +2265,7 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -2083,6 +2274,7 @@ int ppl_directive_text(ppl_context *c, parserLine *pl, parserOutput *in, const i
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2110,6 +2302,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     int gotX, gotY, gotAng, gotWidth, gotHeight;
     char *text, *fname;
 
+    // Read the parameters of the image
     x = stk[PARSE_image_p].real;
     gotX = (stk[PARSE_image_p].objType == PPLOBJ_NUM);
     y = stk[PARSE_image_p + 1].real;
@@ -2123,6 +2316,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     smooth = (stk[PARSE_image_smooth].objType == PPLOBJ_STR);
     noTrans = (stk[PARSE_image_notrans].objType == PPLOBJ_STR);
     cTrans = (stk[PARSE_image_colorR].objType == PPLOBJ_NUM);
+    // A transparent color, given by red, green and blue components between 0 and 1
     if (cTrans) {
         transR = (int) floor(stk[PARSE_image_colorR].real * 255);
         transR = ppl_max(ppl_min(transR, 255), 0);
@@ -2133,6 +2327,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     }
     fname = (char *) stk[PARSE_eps_filename].auxil;
     text = (char *) malloc(strlen(fname) + 1);
+    // Failure to allocate memory is reported as an error
     if (text == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (N).");
         return 1;
@@ -2146,21 +2341,25 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
         return 1;
     }
 
+    // Store each property which was given
     if (gotX) {
         ptr->xpos = x;
     } else {
         ptr->xpos = c->set->graph_current.OriginX.real;
     }
+    // The y position
     if (gotY) {
         ptr->ypos = y;
     } else {
         ptr->ypos = c->set->graph_current.OriginY.real;
     }
+    // The rotation
     if (gotAng) {
         ptr->rotation = ang;
     } else {
         ptr->rotation = 0.0;
     }
+    // The width
     if (gotWidth) {
         ptr->xpos2 = width;
         ptr->xpos2set = 1;
@@ -2168,6 +2367,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
         ptr->xpos2 = 0.0;
         ptr->xpos2set = 0;
     }
+    // The height
     if (gotHeight) {
         ptr->ypos2 = height;
         ptr->ypos2set = 1;
@@ -2176,16 +2376,19 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
         ptr->ypos2set = 0;
     }
     ptr->text = text;
+    // Smooth the image when it is scaled
     if (smooth) {
         ptr->smooth = 1;
     } else {
         ptr->smooth = 0;
     }
+    // Ignore any transparency in the image
     if (noTrans) {
         ptr->NoTransparency = 1;
     } else {
         ptr->NoTransparency = 0;
     }
+    // Make a color transparent
     if (cTrans) {
         ptr->CustomTransparency = 1;
         ptr->TransColR = transR;
@@ -2199,6 +2402,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -2207,6 +2411,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2228,6 +2433,7 @@ int ppl_directive_image(ppl_context *c, const parserLine *pl, const parserOutput
 //! \return Zero on success, or one if there are fewer than <wildcardMatchNumber>+1 matches or an error occurred
 
 static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNumber, canvas_plotdesc *out) {
+    // Variables for expanding the wildcard
     char msg[PPL_MSG_LENGTH];
     int i, C;
     char escaped[FNAME_LENGTH];
@@ -2243,6 +2449,7 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
     {
         if (wildcardMatchNumber > 0) return 1;
         out->filename = (char *) malloc(4);
+        // Failure to allocate memory is reported as an error
         if (out->filename == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (P).");
             return 1;
@@ -2252,31 +2459,38 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
     }
     {
         int j, k;
+        // Escape spaces in the filename before passing it to wordexp
         for (j = k = 0; ((in[j] != '\0') && (k < FNAME_LENGTH - 1));) {
             if (in[j] == ' ') escaped[k++] = '\\';
             escaped[k++] = in[j++];
         }
         escaped[k++] = '\0';
     }
+    // Expand ~ and environment variables in the filename
     if ((wordexp(escaped, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", escaped);
         ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
         return 1;
     }
+    // Find the requested match of the wildcards among the files matching each word of the expanded filename
     for (i = 0; i < wordExp.we_wordc; i++) {
+        // A word which matches no files
         if ((glob(wordExp.we_wordv[i], 0, NULL, &globData) != 0) || ((i == 0) && (globData.gl_pathc == 0))) {
+            // Report it on the first pass only
             if (wildcardMatchNumber == 0) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", escaped);
                 ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
             }
             return 1;
         }
+        // Count past the matches of this word
         if (C >= globData.gl_pathc) {
             C -= globData.gl_pathc;
             globfree(&globData);
             continue;
         }
         out->filename = (char *) malloc(strlen(globData.gl_pathv[C]) + 1);
+        // Failure to allocate memory is reported as an error
         if (out->filename == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (Q).");
             return 1;
@@ -2287,6 +2501,7 @@ static int ppl_getPlotFname(ppl_context *c, const char *in, int wildcardMatchNum
         return 0;
     }
     wordfree(&wordExp);
+    // Report that no file matched, on the first pass only
     if (wildcardMatchNumber == 0) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Could not open file '%s'.", escaped);
         ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
@@ -2320,6 +2535,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
 
     // Malloc a structure to hold this plot item
     new = (canvas_plotdesc *) malloc(sizeof(canvas_plotdesc));
+    // Failure to allocate memory is reported as an error
     if (new == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (R).");
         return 1;
@@ -2347,6 +2563,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 if (pos <= 0) break;
                 Nexprs++;
             }
+            // There must be at least one expression
             if (Nexprs < 1) {
                 ppl_error(&c->errcontext, ERR_SYNTAX, -1, -1, "Fewer than one expression was supplied to evaluate.");
                 free(new);
@@ -2354,18 +2571,22 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 return 1;
             }
             exprList = (pplExpr **) ppl_memAlloc(Nexprs * sizeof(pplExpr *));
+            // Failure to allocate memory is reported as an error
             if (exprList == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (S).");
                 free(new);
                 new = NULL;
                 return 1;
             }
+            // Collect the expressions from the linked list on the parser stack
             for (i = 0, pos = pos1; stk[pos].objType == PPLOBJ_NUM; i++) {
                 pos = (int) round(stk[pos].real);
                 if (pos <= 0) break;
                 exprList[i] = (pplExpr *) stk[pos + ptab[PARSE_INDEX_expression]].auxil;
             }
 
+            // A single expression which evaluates to a string is a filename; expressions which evaluate to vectors
+            // supply vectors of data; others are functions to sample
             first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
             if ((!c->errStat.status) && (first->objType == PPLOBJ_STR) &&
                 (Nexprs == 1)) // If we have a single expression that evaluates to a string, it's a filename
@@ -2381,15 +2602,18 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 const int l = v->size;
                 int j;
                 vecs = (pplObj *) ppl_memAlloc(Nexprs * sizeof(pplObj));
+                // Failure to allocate memory is reported as an error
                 if (vecs == NULL) {
                     ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (T).");
                     free(new);
                     new = NULL;
                     return 1;
                 }
+                // Evaluate each expression, which must be a vector of the same length as the first
                 for (i = 0; i < Nexprs; i++) {
                     int l2;
                     pplObj *obj = ppl_expEval(c, exprList[i], &j, 0, iterDepth);
+                    // Report a failure to evaluate the expression
                     if (c->errStat.status) {
                         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                           "Could not evaluate vector expressions.");
@@ -2402,6 +2626,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         new = NULL;
                         return 1;
                     }
+                    // The expression must evaluate to a vector
                     if (obj->objType != PPLOBJ_VEC) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -2415,6 +2640,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                         return 1;
                     }
                     l2 = ((pplVector *) first->auxil)->v->size;
+                    // All the vectors must have the same length
                     if (l != l2) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -2431,11 +2657,13 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                     vecs[i].refCount = 1;
                     ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
                 }
+                // Store the vectors, on the first pass only
                 if (wildcardMatchNumber <= 0) {
                     new->function = 0;
                     new->NFunctions = Nexprs;
                     new->vectors = (pplObj *) malloc(Nexprs * sizeof(pplObj));
                     new->functions = (pplExpr **) malloc(Nexprs * sizeof(pplExpr *));
+                    // Failure to allocate memory is reported as an error
                     if ((new->vectors == NULL) || (new->functions == NULL)) {
                         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (U).");
                         for (i = 0; i < Nexprs; i++) ppl_garbageObject(vecs + i);
@@ -2454,11 +2682,13 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             } else {
                 ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
                 ppl_tbClear(c);
+                // Store copies of the functions, on the first pass only
                 if (wildcardMatchNumber <= 0) {
                     new->function = 1;
                     new->NFunctions = Nexprs;
                     new->functions = (pplExpr **) malloc(Nexprs * sizeof(pplExpr *));
                     new->vectors = NULL;
+                    // Failure to allocate memory is reported as an error
                     if (new->functions == NULL) {
                         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (V).");
                         free(new);
@@ -2494,9 +2724,11 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     new->TRangeSet = ((ptab[PARSE_INDEX_tmin] > 0) && (stk[stkbase + ptab[PARSE_INDEX_tmin]].objType != PPLOBJ_ZOM));
     new->VRangeSet = ((ptab[PARSE_INDEX_vmin] > 0) && (stk[stkbase + ptab[PARSE_INDEX_vmin]].objType != PPLOBJ_ZOM));
 
+    // The range of t for a parametric plot, if given
     if (new->TRangeSet) {
         new->Tmin = stk[stkbase + ptab[PARSE_INDEX_tmin]];
         new->Tmax = stk[stkbase + ptab[PARSE_INDEX_tmax]];
+        // The limits must be finite, and have the same units
         if (!gsl_finite(new->Tmin.real)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Lower limit specified for parameter t is not finite.");
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
@@ -2516,9 +2748,11 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         }
     }
 
+    // The range of v for a parametric plot, if given
     if (new->VRangeSet) {
         new->Vmin = stk[stkbase + ptab[PARSE_INDEX_vmin]];
         new->Vmax = stk[stkbase + ptab[PARSE_INDEX_vmax]];
+        // The limits must be finite, and have the same units
         if (!gsl_finite(new->Vmin.real)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Lower limit specified for parameter v is not finite.");
             ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
@@ -2545,6 +2779,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     new->axis2xyz = 1;
     new->axis3xyz = 2;
 
+    // The axes to plot against, if given
     if (ptab[PARSE_INDEX_axis_1] > 0) {
         const int got1 = (stk[stkbase + ptab[PARSE_INDEX_axis_1]].objType == PPLOBJ_NUM);
         const int xyz1 = got1 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_1]].exponent[0])) : -1;
@@ -2555,16 +2790,19 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         const int got3 = (stk[stkbase + ptab[PARSE_INDEX_axis_3]].objType == PPLOBJ_NUM);
         const int xyz3 = got3 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_3]].exponent[0])) : -1;
         const int n3 = got3 ? ((int) round(stk[stkbase + ptab[PARSE_INDEX_axis_3]].real)) : -1;
+        // The first axis
         if (got1) {
             new->axis1set = 1;
             new->axis1xyz = xyz1;
             new->axis1 = n1;
         }
+        // The second axis
         if (got2) {
             new->axis2set = 1;
             new->axis2xyz = xyz2;
             new->axis2 = n2;
         }
+        // The third axis
         if (got3) {
             new->axis3set = 1;
             new->axis3xyz = xyz3;
@@ -2579,10 +2817,13 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         int pos = ptab[PARSE_INDEX_using_list] + stkbase;
         const int o = ptab[PARSE_INDEX_using_item];
 
+        // Count the using items
         if (o > 0) {
+            // Walk the linked list of using items on the parser stack
             while (stk[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(stk[pos].real);
                 if (pos <= 0) break;
+                // There is a fixed limit on the number of using items
                 if (Nusing >= USING_ITEMS_MAX) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Too many using items; maximum of %d are allowed.",
                                       USING_ITEMS_MAX);
@@ -2597,12 +2838,14 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             if ((!hadNonNullUsingItem) && (Nusing == 1))
                 Nusing = 0; // If we've only had one using item, and it was blank, this is a parser abberation
             new->NUsing = Nusing;
+            // Store copies of the using items, with room for extra items needed by style modifiers
             if (Nusing < 1) {
                 new->UsingList = NULL;
             } else {
                 new->UsingList = (pplExpr **) malloc(
                         (Nusing + 8) *
                         sizeof(pplExpr *)); // we may add some more using items later; leave room for eight
+                // Failure to allocate memory is reported as an error
                 if (new->UsingList == NULL) {
                     ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (W).");
                     free(new);
@@ -2610,6 +2853,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                     return 1;
                 }
                 pos = ptab[PARSE_INDEX_using_list] + stkbase;
+                // Copy each using item
                 while (stk[pos].objType == PPLOBJ_NUM) {
                     pos = (int) round(stk[pos].real);
                     if (pos <= 0) break;
@@ -2624,8 +2868,10 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
 
     // Read data label
     new->label = NULL;
+    // The label expression, if given
     if (ptab[PARSE_INDEX_label] > 0) {
         pplObj *o = &stk[stkbase + ptab[PARSE_INDEX_label]];
+        // The label must be an expression
         if (o->objType != PPLOBJ_EXP) {
             new->label = NULL;
         } else {
@@ -2636,11 +2882,14 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     // Read continuous flag
     new->ContinuitySet = 0;
     new->continuity = DATAFILE_CONTINUOUS;
+    // Whether the data are continuous or discontinuous, if specified
     if (ptab[PARSE_INDEX_continuous] > 0) {
+        // Continuous data
         if (stk[stkbase + ptab[PARSE_INDEX_continuous]].objType == PPLOBJ_STR) {
             new->ContinuitySet = 1;
             new->continuity = DATAFILE_CONTINUOUS;
         }
+        // Discontinuous data
         if (stk[stkbase + ptab[PARSE_INDEX_discontinuous]].objType == PPLOBJ_STR) {
             new->ContinuitySet = 1;
             new->continuity = DATAFILE_DISCONTINUOUS;
@@ -2650,9 +2899,11 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     // Read title/notitle setting
     new->NoTitleSet = new->TitleSet = 0;
     new->title = NULL;
+    // The title of the dataset, or notitle
     if (ptab[PARSE_INDEX_title] > 0) {
         pplObj *o1 = &stk[stkbase + ptab[PARSE_INDEX_notitle]];
         pplObj *o2 = &stk[stkbase + ptab[PARSE_INDEX_title]];
+        // notitle suppresses the dataset's entry in the legend
         if (o1->objType == PPLOBJ_STR) {
             new->NoTitleSet = 1;
             new->TitleSet = 0;
@@ -2670,6 +2921,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
         const int p1 = ptab[PARSE_INDEX_index];
         const int p2 = ptab[PARSE_INDEX_use_rows];
         const int p3 = ptab[PARSE_INDEX_use_columns];
+        // The index modifier
         if ((p1 > 0) && (stk[stkbase + p1].objType == PPLOBJ_NUM)) {
             new->IndexSet = 1;
             new->index = (int) round(stk[stkbase + p1].real);
@@ -2677,6 +2929,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             new->IndexSet = 0;
             new->index = -1;
         }
+        // Read the data in rows rather than columns
         if ((p2 > 0) && (stk[stkbase + p2].objType == PPLOBJ_STR)) {
             new->UsingRowCols = DATAFILE_ROW;
         } else if ((p3 > 0) && (stk[stkbase + p3].objType == PPLOBJ_STR)) {
@@ -2690,14 +2943,17 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
     new->EverySet = 0;
     new->EveryList[0] = new->EveryList[1] = 1;
     new->EveryList[2] = new->EveryList[3] = new->EveryList[4] = new->EveryList[5] = -1;
+    // The every modifier
     if (ptab[PARSE_INDEX_every_list] > 0) {
         int Nevery = 0;
         int pos = ptab[PARSE_INDEX_every_list] + stkbase;
         const int o = ptab[PARSE_INDEX_every_item];
+        // Read each item of the every modifier
         while (stk[pos].objType == PPLOBJ_NUM) {
             long x;
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There may be no more than six items
             if (Nevery >= 6) {
                 ppl_warning(&c->errcontext, ERR_SYNTAX,
                             "More than six numbers supplied to the every modifier -- trailing entries ignored.");
@@ -2733,7 +2989,9 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
                 (NExpectIn > 0) ? NExpectIn : eps_plot_styles_NDataColumns(&c->errcontext, linespoints, ci->ThreeDim);
         char *errbuff = (char *) malloc(LSTR_LENGTH);
 
+        // Check that the number of using items suits the plot style
         UsingList = (pplExpr **) malloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
+        // Failure to allocate memory is reported as an error
         if ((errbuff == NULL) || (UsingList == NULL)) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (X).");
             free(new);
@@ -2752,6 +3010,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             if ((listlen >= 3) && (listlen <= 6)) NExpect = listlen;
         }
 
+        // Add any using items needed by style modifiers
         if (eps_plot_AddUsingItemsForWithWords(c, &new->ww, &NExpect, &autoUsingList, &UsingList, &NUsing, &nObjs,
                                                errbuff)) {
             free(new);
@@ -2763,6 +3022,7 @@ static int ppl_getPlotData(ppl_context *c, parserLine *pl, parserOutput *in, can
             UsingList = NULL;
             return 1;
         } // Add extra using items for, e.g. "linewidth $3".
+        // The number of using items must match the number of columns the style needs
         if (NExpect != NUsing) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -2829,6 +3089,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
 
     // Fetch options in common with the plot command
     status = ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_piechart_, 0, 0, iterDepth, dataSpool, 1);
+    // Give up if the data description could not be read
     if (status) {
         canvas_delete(c, id);
         return 1;
@@ -2838,6 +3099,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -2846,6 +3108,7 @@ int ppl_directive_piechart(ppl_context *c, parserLine *pl, parserOutput *in, con
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,
@@ -2879,10 +3142,12 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     if (replot) {
         const int gotEditNo = (stk[PARSE_replot_editno].objType == PPLOBJ_NUM);
         const int editNo = gotEditNo ? ((int) round(stk[PARSE_replot_editno].real)) : c->replotFocus;
+        // replot adds to the previous plot, or to the plot with the item number given
         if (canvas_items != NULL) {
             ptr = canvas_items->first;
             while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
         }
+        // Report that there is no plot to add to
         if (ptr == NULL) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No plot found to replot.");
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
@@ -2904,18 +3169,21 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     ptr->settings.MaskExpr = NULL;
     pplExpr_free(ptr->settings.c1format);
     ptr->settings.c1format = NULL;
+    // Free the old x axes
     if (ptr->XAxes != NULL) {
         int i;
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->XAxes[i]));
         free(ptr->XAxes);
         ptr->XAxes = NULL;
     }
+    // Free the old y axes
     if (ptr->YAxes != NULL) {
         int i;
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->YAxes[i]));
         free(ptr->YAxes);
         ptr->YAxes = NULL;
     }
+    // Free the old z axes
     if (ptr->ZAxes != NULL) {
         int i;
         for (i = 0; i < MAX_AXES; i++) pplaxis_destroy(c, &(ptr->ZAxes[i]));
@@ -2933,16 +3201,20 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     ptr->XAxes = (pplset_axis *) malloc(MAX_AXES * sizeof(pplset_axis));
     ptr->YAxes = (pplset_axis *) malloc(MAX_AXES * sizeof(pplset_axis));
     ptr->ZAxes = (pplset_axis *) malloc(MAX_AXES * sizeof(pplset_axis));
+    // Report a failure to allocate memory, freeing any axes which were allocated
     if ((ptr->XAxes == NULL) || (ptr->YAxes == NULL) || (ptr->ZAxes == NULL)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (0).");
+        // Free the x axes
         if (ptr->XAxes != NULL) {
             free(ptr->XAxes);
             ptr->XAxes = NULL;
         }
+        // Free the y axes
         if (ptr->YAxes != NULL) {
             free(ptr->YAxes);
             ptr->YAxes = NULL;
         }
+        // Free the z axes
         if (ptr->ZAxes != NULL) {
             free(ptr->ZAxes);
             ptr->ZAxes = NULL;
@@ -2971,9 +3243,11 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int o3 = PARSE_replot_minauto_0range_list;
         const int o4 = PARSE_replot_maxauto_0range_list;
         canvas_plotrange **rangePtr = &ptr->plotranges;
+        // Read each range, e.g. [0:1], adding it to those of any plot being replotted
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There is a fixed limit on the number of ranges
             if (nr >= USING_ITEMS_MAX) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
@@ -2981,6 +3255,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 canvas_delete(c, id);
                 return 1;
             }
+            // Make a new range, if the plot does not already have one in this position
             if (*rangePtr == NULL) {
                 *rangePtr = (canvas_plotrange *) malloc(sizeof(canvas_plotrange));
                 if (*rangePtr == NULL) {
@@ -3002,6 +3277,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                         (max->objType == PPLOBJ_NUM) || (max->objType == PPLOBJ_DATE) || (max->objType == PPLOBJ_BOOL);
                 const int minAuto = (stk[pos + o3].objType == PPLOBJ_STR);
                 const int maxAuto = (stk[pos + o4].objType == PPLOBJ_STR);
+                // The limits must have the same type
                 if (gotMin && gotMax && (min->objType != max->objType)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -3011,6 +3287,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     canvas_delete(c, id);
                     return 1;
                 }
+                // The limits must have the same units
                 if (gotMin && gotMax && !ppl_unitsDimEqual(min, max)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -3022,6 +3299,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     return 1;
                 }
 
+                // A minimum alone must have the same type as any existing maximum
                 if (gotMin && (!gotMax) && (!maxAuto) && ((*rangePtr)->MaxSet) &&
                     (min->objType != (*rangePtr)->unit.objType)) {
                     ppl_snprintfTrunc(
@@ -3044,6 +3322,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     return 1;
                 }
 
+                // A maximum alone must have the same type as any existing minimum
                 if (gotMax && (!gotMin) && (!minAuto) && ((*rangePtr)->MinSet) &&
                     (max->objType != (*rangePtr)->unit.objType)) {
                     ppl_snprintfTrunc(
@@ -3066,16 +3345,19 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     return 1;
                 }
 
+                // An automatic minimum
                 if (minAuto) {
                     (*rangePtr)->AutoMinSet = 1;
                     (*rangePtr)->MinSet = 0;
                     (*rangePtr)->min = 0.0;
                 }
+                // An automatic maximum
                 if (maxAuto) {
                     (*rangePtr)->AutoMaxSet = 1;
                     (*rangePtr)->MaxSet = 0;
                     (*rangePtr)->max = 0.0;
                 }
+                // A minimum given
                 if (gotMin) {
                     (*rangePtr)->AutoMinSet = 0;
                     (*rangePtr)->MinSet = 1;
@@ -3083,6 +3365,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     (*rangePtr)->unit = *min;
                     (*rangePtr)->unit.real = 1.0;
                 }
+                // A maximum given
                 if (gotMax) {
                     (*rangePtr)->AutoMaxSet = 0;
                     (*rangePtr)->MaxSet = 1;
@@ -3105,6 +3388,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Read list of plotted items
     {
         int pos = PARSE_replot_0plot_list;
+        // Walk the linked list of datasets on the parser stack
         while (stk[pos].objType == PPLOBJ_NUM) {
             int w;
             pos = (int) round(stk[pos].real);
@@ -3135,6 +3419,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
                              ((ptr->ThreeDim) && ((xyz1 == xyz2) || (xyz2 == xyz3))))
                         ppl_snprintfTrunc(msg, sizeof(msg),
                                           "The axes clause in the plot command may not list multiple parallel axes.");
+                    // Report any problems with the axes clause
                     if (msg[0] != '\0') {
                         ppl_error(&c->errcontext, ERR_NUMERICAL, -1, -1, msg);
                         canvas_delete(c, id);
@@ -3147,7 +3432,10 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
             for (w = 0;; w++) {
                 const int status =
                         ppl_getPlotData(c, pl, in, ptr, PARSE_TABLE_replot_, pos, w, iterDepth, dataSpool, -1);
+                // Give up if the description cannot be read; a later wildcard match which fails just means there are no
+                // more files
                 if (status) {
+                    // The first match failed
                     if (w == 0) {
                         canvas_delete(c, id);
                         return 1;
@@ -3163,6 +3451,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
     if ((c->set->term_current.display == SW_ONOFF_ON) && (!cancellationFlag)) {
         unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
         int failed;
+        // Failure to allocate memory is reported as an error
         if (unsuccessful_ops == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             return 1;
@@ -3171,6 +3460,7 @@ int ppl_directive_plot(ppl_context *c, parserLine *pl, parserOutput *in, const i
         failed = unsuccessful_ops[id];
         free(unsuccessful_ops);
         unsuccessful_ops = NULL;
+        // If the new item could not be drawn, remove it again
         if (failed) {
             canvas_delete(c, id);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1,

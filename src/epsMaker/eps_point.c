@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws point canvas items, made with the point command, into the postscript buffer during the final rendering pass of
+// canvasDraw.c, using the same point symbols as plots. A point may have a text label, which is passed to LaTeX in the
+// earlier text-collecting pass.
+
 #define _PPL_EPS_POINT 1
 
 #include <stdlib.h>
@@ -46,11 +50,14 @@
 void eps_point_YieldUpText(EPSComm *x) {
     CanvasTextItem *i;
 
+    // Record where this item's text starts in the list of text items, then add its label, if any
     if (x->current->text != NULL) {
         x->current->FirstTextID = x->NTextItems;
         if (x->current->text[0] == '\0') return;
 
+        // Add the label to the list of text to typeset
         i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+        // Failure to allocate memory is reported as an error
         if (i == NULL) {
             ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
             *(x->status) = 1;
@@ -68,11 +75,13 @@ void eps_point_YieldUpText(EPSComm *x) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_point_RenderEPS(EPSComm *x) {
+    // Variables for the style of the point
     int pt, lt;
     double lw, lw_scale, xpos, ypos;
     withWords ww, ww_default;
     int pageno;
 
+    // This item's label is on the page of the typeset text which was recorded in eps_point_YieldUpText()
     pageno = x->LaTeXpageno = x->current->FirstTextID;
     x->LaTeXpageno++;
 
@@ -90,6 +99,7 @@ void eps_point_RenderEPS(EPSComm *x) {
 
     // Display point
     eps_core_SetColor(x, &ww, 1);
+    // Draw the point, unless it is invisible
     if (eps_core_isVisible(x)) {
         // Set linewidth and linetype of point
         if (ww.USElinewidth) lw_scale = ww.pointlinewidth;
@@ -99,6 +109,8 @@ void eps_point_RenderEPS(EPSComm *x) {
         eps_core_SetLinewidth(x, lw, lt, 0.0);
         fprintf(x->epsbuffer, "/ps { %f } def\n", ww.pointsize * EPS_DEFAULT_PS);
 
+        // Point types cycle through the available symbols; note which are used, so that only those are defined in the
+        // postscript prolog
         pt = (ww.pointtype - 1) % N_POINTTYPES;
         while (pt < 0) pt += N_POINTTYPES;
         x->PointTypesUsed[pt] = 1;

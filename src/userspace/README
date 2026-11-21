@@ -1,0 +1,66 @@
+userspace
+=========
+
+Pyxplot's data model: the pplObj structure which holds every value, the
+types of object and their methods, physical units, dates, and the context
+structure which holds the state of a whole session. Several modules split
+their header in two: a .h file of types, and a _fns.h file of functions.
+
+context.c, context.h
+    The ppl_context structure, which holds the whole state of a session
+    (settings, namespaces, evaluation stack, error status, multiplot canvas),
+    and the functions which create and free it.
+
+contextVarDef.c, contextVarDef.h
+    Looks up variables in the namespaces (built-in, global, and the local
+    namespaces of subroutines), including dotted names such as a.b.c.
+
+pplObj.h
+    The pplObj structure and the codes of its types (number, string, list,
+    dictionary, etc.), and the structures which hold vectors, matrices, files
+    and types.
+
+pplObj.c, pplObj_fns.h
+    Constructors for each type of object, and functions to copy objects
+    shallowly or deeply.
+
+pplObjUnits.h
+    The base units (length, time, mass, ...) in which physical dimensions are
+    expressed, and the structure describing each unit in the unit database.
+
+pplObjFunc.c, pplObjFunc.h, pplObjFunc_fns.h
+    The descriptors of function objects, of each kind (built-in, user-defined,
+    subroutines, splines, histograms, Fourier transforms), and functions to
+    free and copy them.
+
+pplObjMethods.c, pplObjMethods.h
+    The methods of each built-in type, e.g. string.len(), list.sort() and
+    matrix.inv(), and the methods common to all objects.
+
+pplObjCmp.c, pplObjCmp.h
+    Compares objects, for comparison operators and sorting, and converts colors
+    between the RGB, HSB and CMYK color spaces.
+
+pplObjPrint.c, pplObjPrint.h
+    Renders objects as text, for print, str() and the display of results.
+
+pplObjDump.c, pplObjDump.h
+    Writes objects as Pyxplot expressions which recreate them, for the save
+    command and file.dump().
+
+garbageCollector.c, garbageCollector.h, stack.h
+    Reference counting: freeing objects when their last reference goes. Also
+    the functions which push, pop and resize the stack on which expressions
+    are evaluated.
+
+unitsArithmetic.c, unitsArithmetic.h
+    Arithmetic on quantities with physical units, including the special
+    handling of temperatures in degrees Celsius and Fahrenheit.
+
+unitsDisp.c, unitsDisp.h
+    Chooses the units and SI prefixes in which to display a quantity, renders
+    numbers with their units, and parses unit names such as "km/s**2".
+
+calendars.c, calendars.h
+    Converts between dates and unix times in the Julian, Gregorian, Hebrew and
+    Islamic calendars, formats dates as strings, and handles timezones.

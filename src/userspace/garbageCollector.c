@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Pyxplot's reference-counting garbage collector, and the operations on the stack on which expressions are evaluated.
+// Every pplObj carries a reference count; ppl_garbageObject() decrements it, and when it reaches zero frees whatever
+// the object owns (strings, lists, dictionaries, matrices, files, functions...), recursively. Reference counts are
+// changed atomically, so that objects may be shared between threads which evaluate functions in parallel.
+
 #include "stdlib.h"
 #include "stdio.h"
 
@@ -44,6 +49,8 @@ void ppl_garbageNamespace(dict *n) {
     dictItem *ptr, *ptrnext;
     if ((n == NULL) || (!n->useMalloc)) return;
     ptr = n->first;
+    // Release the value of each variable, and free its key and item. Each value is freed by the garbage collector
+    // itself, since the dictionary was created with malloc().
     while (ptr != NULL) {
         ptrnext = ptr->next;
         ppl_garbageObject((pplObj *) ptr->data);
@@ -66,6 +73,7 @@ void ppl_garbageList(list *l) {
     listItem *ptr, *ptrnext;
     if ((l == NULL) || (!l->useMalloc)) return;
     ptr = l->first;
+    // Release each item in the list, and free the list item which held it
     while (ptr != NULL) {
         ptrnext = ptr->next;
         ppl_garbageObject((pplObj *) ptr->data);
@@ -83,25 +91,34 @@ void ppl_garbageList(list *l) {
 //! \param [in] o - The object to release
 
 void ppl_garbageObject(pplObj *o) {
+    // Drop one reference; if others remain, the object stays alive. Otherwise mark it as a zombie, so that any stray
+    // use of it is harmless, and free what it owns.
     int objType;
     if (o == NULL) return;
     if (__sync_sub_and_fetch(&o->refCount, 1) > 0) return;
     objType = o->objType;
     o->objType = PPLOBJ_ZOM; // Object is now a zombie
+    // Release the variable from which the object was read, kept so that methods such as list.append() can modify it in
+    // place
     if (o->self_lval != NULL) {
         ppl_garbageObject(o->self_lval);
         o->self_lval = NULL;
     }
+    // Release the object to which a method belongs, kept so that the method can be called
     if (o->self_this != NULL) {
         ppl_garbageObject(o->self_this);
         o->self_this = NULL;
     }
+    // Free what the object owns, according to its type. Objects with sub-structures shared between copies, e.g. lists
+    // and vectors, are only freed when the sub-structure's own reference count reaches zero.
     switch (objType) {
         case PPLOBJ_STR:
         case PPLOBJ_EXC:
+            // Strings and exception messages may be static, in which case they are not freed
             if (o->auxilMalloced) {
                 void *old = o->auxil;
                 o->auxil = NULL;
+                // Free the text
                 if (old != NULL) {
                     free(old);
                     old = NULL;
@@ -111,6 +128,7 @@ void ppl_garbageObject(pplObj *o) {
         case PPLOBJ_EXP: {
             void *old = o->auxil;
             o->auxil = NULL;
+            // Free the compiled expression
             if ((old != NULL) && o->auxilMalloced) {
                 pplExpr_free((pplExpr *) old);
                 old = NULL;
@@ -126,7 +144,9 @@ void ppl_garbageObject(pplObj *o) {
         case PPLOBJ_FILE: {
             pplFile *f = (pplFile *) (o->auxil);
             o->auxil = NULL;
+            // When the last reference to a file handle goes, close the file
             if ((f != NULL) && (__sync_sub_and_fetch(&f->refCount, 1) <= 0)) {
+                // Close the file, or the pipe; pipe == 2 marks stdin, which is never closed
                 if ((f->open) && (f->file != NULL)) {
                     FILE *old = f->file;
                     f->file = NULL;
@@ -162,22 +182,28 @@ void ppl_garbageObject(pplObj *o) {
             pplVectorRaw *vr = v->raw;
             pplMatrixRaw *vrm = v->rawm;
             o->auxil = NULL;
+            // A vector holds a reference to its raw storage, which may be shared with other vectors (e.g. slices of
+            // it), and possibly to the matrix of which it is a row or column. Free each when its last reference goes.
             if ((vr != NULL) && (__sync_sub_and_fetch(&vr->refCount, 1) <= 0)) {
                 gsl_vector_free(vr->v);
                 vr->v = NULL;
+                // Free the raw storage structure itself
                 if (o->auxilMalloced) {
                     free(vr);
                     vr = NULL;
                 }
             }
+            // The matrix of which the vector is a row or column
             if ((vrm != NULL) && (__sync_sub_and_fetch(&vrm->refCount, 1) <= 0)) {
                 gsl_matrix_free(vrm->m);
                 vrm->m = NULL;
+                // Free the raw matrix structure itself
                 if (o->auxilMalloced) {
                     free(vrm);
                     vrm = NULL;
                 }
             }
+            // Free the vector's own descriptor
             if ((v != NULL) && (__sync_sub_and_fetch(&v->refCount, 1) <= 0) && (o->auxilMalloced)) {
                 free(v);
                 v = NULL;
@@ -188,20 +214,25 @@ void ppl_garbageObject(pplObj *o) {
             pplMatrix *m = (pplMatrix *) (o->auxil);
             pplMatrixRaw *mr = m->raw;
             o->auxil = NULL;
+            // A matrix holds a reference to its raw storage, which may be shared with other matrices
             if ((mr != NULL) && (__sync_sub_and_fetch(&mr->refCount, 1) <= 0)) {
                 gsl_matrix_free(mr->m);
                 mr->m = NULL;
+                // Free the raw storage structure itself
                 if (o->auxilMalloced) {
                     free(mr);
                     mr = NULL;
                 }
             }
+            // Free the matrix's own descriptor
             if ((m != NULL) && (__sync_sub_and_fetch(&m->refCount, 1) <= 0) && (o->auxilMalloced)) {
                 free(m);
                 m = NULL;
             }
             break;
         }
+        // An instance of a class also holds a reference to its class, and then has a dictionary of members like a
+        // module
         case PPLOBJ_USER: {
             ppl_garbageObject(o->objPrototype);
         }
@@ -213,6 +244,7 @@ void ppl_garbageObject(pplObj *o) {
         }
     }
 
+    // Objects which were themselves malloced, e.g. variables in a namespace, are freed too
     if (o->amMalloced) {
         free(o);
         o = NULL;
@@ -228,6 +260,7 @@ void ppl_garbageObject(pplObj *o) {
 int ppl_stackPop(ppl_context *c) {
     c->stackPtr--;
     ppl_garbageObject(&c->stack[c->stackPtr]);
+    // Something else still refers to the object which has just been popped, which should never happen
     if (c->stack[c->stackPtr].refCount != 0) {
         ppl_error(&c->errcontext, ERR_INTERNAL, -1, -1, "Stack forward reference detected.");
         return 1;
@@ -266,9 +299,12 @@ int ppl_stackClean(ppl_context *c, const int level) {
 
 void ppl_stackRequest(ppl_context *c, const int n) {
     c->stackFull = 0;
+    // If the stack is nearly full, double its size; if that fails, flag the stack as full, which is reported as an
+    // error
     if (c->stackPtr > c->stackSize - 1024 - n) {
         const int newStackSize = 2 * c->stackSize;
         pplObj *newStack = (pplObj *) realloc(c->stack, newStackSize * sizeof(pplObj));
+        // Use the enlarged stack
         if (newStack != NULL) {
             c->stack = newStack;
             c->stackSize = newStackSize;
@@ -290,8 +326,10 @@ void ppl_stackMustHave(ppl_context *c, const int n) {
 
 void ppl_stackReinit(ppl_context *c) {
     ppl_stackClean(c, 0);
+    // Shrink a stack which has grown back to its default size
     if (c->stackSize > STACK_DEFAULT) {
         pplObj *newStack = (pplObj *) malloc(STACK_DEFAULT * sizeof(pplObj));
+        // Replace the stack, which is now empty
         if (newStack != NULL) {
             free(c->stack);
             c->stack = newStack;

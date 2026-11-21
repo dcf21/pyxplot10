@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// A buffer which depth-sorts the postscript of three-dimensional plots, so that items further from the viewer are drawn
+// first and are hidden by nearer ones. While the buffer is active, postscript fragments and line segments are stored
+// with their depths; when it is deactivated they are sorted and written out from back to front. When it is inactive, as
+// for two-dimensional plots, everything is written immediately, and consecutive line segments are joined into single
+// paths.
+
 #define _PPL_EPS_PLOT_THREEDIMBUFF_C 1
 
 #include <stdlib.h>
@@ -93,6 +99,7 @@ static int ThreeDimBuffer_qsort_slave(const void *x, const void *y) {
     const struct DepthArrayEntry *x1 = (const struct DepthArrayEntry *) x;
     const struct DepthArrayEntry *y1 = (const struct DepthArrayEntry *) y;
 
+    // Sort into decreasing depth, i.e. from back to front
     if (x1->depth > y1->depth) return -1.0;
     else if (x1->depth < y1->depth) return 1.0;
     else return 0.0;
@@ -104,22 +111,26 @@ static int ThreeDimBuffer_qsort_slave(const void *x, const void *y) {
 //! \return Zero on success, or one if memory allocation failed
 
 int ThreeDimBuffer_Deactivate(EPSComm *x) {
+    // Variables for sorting the buffer
     int Nitems, i, j;
     struct DepthArrayEntry *DepthArray;
     ThreeDimBufferItem *item;
     listIterator *ListIter;
 
+    // If the buffer is not active, there is nothing to write
     if (!ThreeDimBuffer_ACTIVE) {
         ThreeDimBuffer_Reset(x);
         return 0;
     }
     Nitems = ppl_listLen(ThreeDimBuffer_buffer);
     ThreeDimBuffer_ACTIVE = 0;
+    // Write out the buffered items, if there are any
     if (Nitems > 0) {
         eps_core_WritePSColor(x);
 
         // Display all items in 3D display buffer, from back to front
         DepthArray = (struct DepthArrayEntry *) malloc(Nitems * sizeof(struct DepthArrayEntry));
+        // Failure to allocate memory is reported as an error
         if (DepthArray == NULL) {
             ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             ThreeDimBuffer_Reset(x);
@@ -127,6 +138,7 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         }
         i = 0;
         ListIter = ppl_listIterateInit(ThreeDimBuffer_buffer);
+        // Make an array of the items and their depths
         while (ListIter != NULL) {
             DepthArray[i].item = ListIter->data;
             DepthArray[i].depth = ((ThreeDimBufferItem *) (ListIter->data))->depth;
@@ -135,8 +147,10 @@ int ThreeDimBuffer_Deactivate(EPSComm *x) {
         }
         qsort((void *) DepthArray, i, sizeof(struct DepthArrayEntry), ThreeDimBuffer_qsort_slave);
         ThreeDimBuffer_LineSegmentID = -5;
+        // Write each item; line segments continue the previous path if they followed it in the original line
         for (j = 0; j < i; j++) {
             item = (ThreeDimBufferItem *) DepthArray[j].item;
+            // A line segment, or a fragment of postscript
             if (item->FlagLineSegment) {
                 ThreeDimBuffer_linesegment(x, item->depth, item->linetype, item->linewidth, item->colstr, item->x0,
                                            item->y0, item->x1, item->y1, item->x2, item->y2, item->FirstLineSegment,
@@ -174,7 +188,9 @@ int ThreeDimBuffer_writeps(EPSComm *x, const double z, const int linetype, const
     ThreeDimBufferItem *item;
     char *tempstr;
 
+    // When the buffer is inactive, write the fragment now with its style; otherwise store a copy of it
     if (!ThreeDimBuffer_ACTIVE) {
+        // Redefine the point size used by point symbols, if it has changed
         if ((!pointsize_old_SET) || (pointsize_old != pointsize)) {
             pointsize_old_SET = 1;
             pointsize_old = pointsize;
@@ -229,6 +245,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
                                const double LengthOffset) {
     ThreeDimBufferItem *item;
 
+    // When the buffer is inactive, write the segment now, continuing the current path if possible; otherwise store it
     if (!ThreeDimBuffer_ACTIVE) {
         if (FirstSegment && (ThreeDimBuffer_LineSegmentID > 0))
             ThreeDimBuffer_linepenup(x); // If first segment of new line, finish old line
@@ -244,12 +261,15 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
                 y0 = y1;
             }
 
+            // Finish any previous path, and set the new style; for a broken line, offset the dash pattern by the length
+            // already drawn
             ThreeDimBuffer_linepenup(x);
             linetype_old_SET = linewidth_old_SET = 1;
             linetype_old = linetype;
             linewidth_old = linewidth;
             eps_core_SetLinewidth(x, linewidth * EPS_DEFAULT_LINEWIDTH, linetype,
                                   broken ? (LengthOffset - hypot(x1 - x0, y1 - y0)) : 0.0);
+            // Write the color, if it has changed
             if ((colstr_old == NULL) || (strcmp(colstr_old, colstr) != 0)) {
                 colstr_old = colstr;
                 ppl_snprintfTrunc(x->CurrentColor, sizeof(x->CurrentColor), "%s", colstr);
@@ -257,6 +277,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
             }
 
 
+            // Start a new path
             if (FirstSegment) fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n", x1, y1, x2, y2);
             else
                 fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\n%.2f %.2f lineto\n", x0, y0, x1, y1,
@@ -272,6 +293,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
         ThreeDimBuffer_LineSegmentID = 1;
     } else {
         if (FirstSegment) ThreeDimBuffer_LineLength = 0.0;
+        // A change of line type restarts the dash pattern
         if ((!linetype_old_SET) || (linetype_old != linetype)) {
             ThreeDimBuffer_LineLength = 0.0;
             linetype_old_SET = 1;
@@ -305,6 +327,7 @@ int ThreeDimBuffer_linesegment(EPSComm *x, const double z, const int linetype, c
 //! \return Zero
 
 int ThreeDimBuffer_linepenup(const EPSComm *x) {
+    // Stroke the current path, if there is one
     if (!ThreeDimBuffer_ACTIVE) {
         if (ThreeDimBuffer_LineSegmentID >= 0) fprintf(x->epsbuffer, "stroke\n");
         ThreeDimBuffer_LineSegmentID = -5;

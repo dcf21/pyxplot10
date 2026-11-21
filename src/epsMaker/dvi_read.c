@@ -19,7 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for manupulating dvi files
+// Reads the dvi files which LaTeX produces when it typesets the text of a canvas. Each operator in the file is read,
+// with its arguments, and passed to the interpreter in dvi_interpreter.c, which turns each page of text into
+// postscript; canvasDraw.c then places these pages wherever text appears on the canvas. Reading stops at the postamble.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -47,6 +49,7 @@ const char *dviops[58] = {"set1",    "set2",    "set3",    "set4",    "setrule",
 //! \return The DVI interpreter, containing the postscript for each page, or NULL on failure
 
 dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *status) {
+    // Variables for reading the file
     FILE *fp;
     DVIOperator op;
     int i;
@@ -54,13 +57,16 @@ dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *
     int POST = 0;
     int err;
 
+    // The operator has no string arguments yet
     op.s[0] = NULL;
     op.s[1] = NULL;
 
     // Set up the interpreter
     interpreter = dviNewInterpreter(ec);
 
+    // Open the dvi file
     fp = fopen(filename, "r");
+    // Report a failure to open the file
     if (fp == NULL) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "dvi file does not exist!");
         *status = 1;
@@ -71,6 +77,7 @@ dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *
     while (!feof(fp)) {
         // Read the next operator from the dvi file
         if ((err = GetDVIOperator(ec, &op, fp)) != 0) {
+            // Give up on any error
             if (err) {
                 *status = err;
                 fclose(fp);
@@ -85,13 +92,16 @@ dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *
         // A slightly more sophisticated interpreter that makes some postscript
         if (!POST) {
             err = dviInterpretOperator(ec, interpreter, &op);
+            // Give up on any error
             if (err) {
                 *status = err;
                 fclose(fp);
                 return NULL;
             }
         }
+        // Forget the operator's string arguments, which are freed with the memory context
         for (i = 0; i < 2; i++) {
+            // Each string argument
             if (op.s[i] != NULL) {
                 //free(op.s[i]);
                 op.s[i] = NULL;
@@ -105,6 +115,7 @@ dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *
         }
     }
 
+    // Return the interpreter, which holds the postscript for each page
     fclose(fp);
     return interpreter;
 }
@@ -117,6 +128,7 @@ dviInterpreterState *ReadDviFile(pplerr_context *ec, const char *filename, int *
 //! \return Zero on success, or a DVIE_* error code
 
 int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
+    // Variables for reading the operator
     int i, v, err;
 
     // First read in the opcode
@@ -229,11 +241,13 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
         }
         Ndata = op->ul[4] + op->ul[5];
         op->s[0] = (char *) ppl_memAlloc(Ndata + 1);
+        // Failure to allocate memory is reported as an error
         if (op->s[0] == NULL) {
             ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
             return DVIE_MEMORY;
         }
         op->s[0][Ndata] = '\0';
+        // Read the string, byte by byte
         for (i = 0; i < Ndata; i++) {
             int j;
             if ((err = ReadUChar(ec, fp, &j)) != 0) return err;
@@ -293,6 +307,7 @@ int GetDVIOperator(pplerr_context *ec, DVIOperator *op, FILE *fp) {
 int ReadUChar(pplerr_context *ec, FILE *fp, int *uc) {
     int i;
     i = getc(fp);
+    // Report an unexpected end of file
     if (i == EOF) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Unexpected EOF in dvi file");
         return 1;
@@ -313,6 +328,7 @@ int ReadLongInt(pplerr_context *ec, FILE *fp, unsigned long int *uli, const int 
     unsigned long int fv;
     if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
     fv = v;
+    // Read each further byte, most significant first
     for (i = 0; i < n - 1; i++) {
         if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
         fv = (fv << 8) | v;
@@ -333,6 +349,7 @@ int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int 
     signed long int fv;
     if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
     fv = v < 128 ? v : v - 256;
+    // Read each further byte, most significant first
     for (i = 0; i < n - 1; i++) {
         if ((err = ReadUChar(ec, fp, &v)) != 0) return err;
         fv = (fv * 256) + v; // Not (fv << 8), since left-shifting a negative value is undefined behaviour
@@ -347,8 +364,10 @@ int ReadSignedInt(pplerr_context *ec, FILE *fp, signed long int *sli, const int 
 //! \return Zero
 
 int DisplayDVIOperator(pplerr_context *ec, DVIOperator *op) {
+    // The message to log
     char *s, s2[128];
     s = NULL;
+    // Describe the operator, with its arguments, according to its type
     if (op->op <= DVI_CHARMAX) {
         int i;
         i = op->op;
@@ -365,6 +384,7 @@ int DisplayDVIOperator(pplerr_context *ec, DVIOperator *op) {
         s = s2;
     } else if (op->op < DVI_FNTNUMMIN) {
         s = (char *) dviops[op->op - DVI_CHARMAX - 1];
+        // Operators whose names end in a digit take a numeric argument
         if (strlen(s) == 2 && (char) s[1] > '0') {
             snprintf(s2, 128, "DVI: Read %s %lu", dviops[op->op - DVI_CHARMAX - 1], *(op->ul));
             s = s2;

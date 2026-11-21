@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The fixed texts which Pyxplot displays: its version string, the help shown by "pyxplot --help", the welcome banner,
+// and the lists of options shown when the set, unset and show commands are used incorrectly. They are assembled when
+// Pyxplot starts, since they include the version number and the location of the documentation.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,8 +31,6 @@
 #include "stringTools/strConstants.h"
 #include "settings/textConstants.h"
 #include "pplConstants.h"
-
-// Contains text messages which pyxplot displays
 
 char ppltxt_version[SSTR_LENGTH];
 char ppltxt_version_underline[SSTR_LENGTH];
@@ -46,8 +48,10 @@ char ppltxt_show[LSTR_LENGTH];
 //! command-line help text and the startup banner
 
 void ppltxt_init() {
+    // The version string, e.g. "Pyxplot 0.10.0"
     ppl_snprintfTrunc(ppltxt_version, sizeof(ppltxt_version), "Pyxplot %s", VERSION);
 
+    // The text shown by "pyxplot --help"
     ppl_snprintfTrunc(ppltxt_help, sizeof(ppltxt_help), "%s\n\
 %s\n\
 \n\
@@ -67,6 +71,7 @@ Extensive documentation is also available at <http://www.pyxplot.org.uk>, which\
 also provides contact information for bug reports.\n",
                       ppltxt_version, ppl_strUnderline(ppltxt_version, ppltxt_version_underline), DOCDIR, PATHLINK);
 
+    // The welcome banner shown when Pyxplot starts interactively
     ppl_snprintfTrunc(ppltxt_welcome, sizeof(ppltxt_welcome), "\n\
                         _       _      PYXPLOT\n\
  _ __  _   ___  ___ __ | | ___ | |_    Version %s\n\
@@ -79,6 +84,7 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 ",
                       VERSION, DATE);
 
+    // The message for an unrecognised command; %%s becomes %s, into which the command is substituted
     ppl_snprintfTrunc(ppltxt_invalid, sizeof(ppltxt_invalid), "\n\
  %%s\n\
 /|\\ \n\
@@ -86,6 +92,7 @@ For documentation and more information, see <http://www.pyxplot.org.uk>.\n\
 Error: Unrecognised command.\n\
 ");
 
+    // The list of options which the set command accepts
     ppl_snprintfTrunc(ppltxt_valid_set_options, sizeof(ppltxt_valid_set_options), "\n\
 'arrow', 'autoscale', 'axescolor', 'axis', 'axisunitstyle', 'backup', 'bar',\n\
 'binorigin', 'binwidth', 'boxfrom', 'boxwidth', 'c1format', 'c1label',\n\
@@ -102,12 +109,14 @@ Error: Unrecognised command.\n\
 '[xyz]<n>format', '[xyz]<n>label', '[xyz]<n>range', '<m>[xyz]<n>tics'\n\
 ");
 
+    // Shown by "set" with no option
     ppl_snprintfTrunc(ppltxt_set_noword, sizeof(ppltxt_set_noword), "\n\
 Set options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 %s\n\
 ",
                       ppltxt_valid_set_options);
 
+    // Shown by "unset" with no option
     ppl_snprintfTrunc(ppltxt_unset_noword, sizeof(ppltxt_unset_noword), "\n\
 Unset options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 \n\
@@ -125,18 +134,21 @@ Unset options which Pyxplot recognises are: [] = choose one, <> = optional\n\
 '[xyz]<n>range', '<m>[xyz]<n>tics'\n\
 ");
 
+    // Shown by "set" with an unrecognised option
     ppl_snprintfTrunc(ppltxt_set, sizeof(ppltxt_set), "\n\
 Error: Invalid set option '%%s'.\n\
 \n\
 %s",
                       ppltxt_set_noword);
 
+    // Shown by "unset" with an unrecognised option
     ppl_snprintfTrunc(ppltxt_unset, sizeof(ppltxt_unset), "\n\
 Error: Invalid unset option '%%s'.\n\
 \n\
 %s",
                       ppltxt_unset_noword);
 
+    // Shown by "show" with an unrecognised option
     ppl_snprintfTrunc(ppltxt_show, sizeof(ppltxt_show), "\n\
 Valid 'show' options are:\n\
 \n\

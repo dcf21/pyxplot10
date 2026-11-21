@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws the axes of graphs, with their ticks, tick labels and axis labels. Axes are drawn along the edges of the graph
+// (or of the cube of a three-dimensional graph), several axes on the same side being stacked outwards, or through the
+// zero of the perpendicular axes for axes set with "set axis ... atzero". In three-dimensional plots, axes on the back
+// of the cube are drawn before the data, and those at the front afterwards, through the depth-sorting buffer. Tick
+// labels are aligned so that they point away from the axis whatever its direction.
+
 #define _PPL_EPS_PLOT_AXESPAINT 1
 
 #include <stdlib.h>
@@ -56,6 +62,8 @@
 void eps_plot_LabelAlignment(double theta_pinpoint, int *HALIGN, int *VALIGN) {
     theta_pinpoint = fmod(theta_pinpoint, 2 * M_PI);
     while (theta_pinpoint < 0.0) theta_pinpoint += 2 * M_PI;
+    // Choose the alignment from the direction, measured clockwise from upright, in which the label lies from its anchor
+    // point
     if (ppl_dblApprox(theta_pinpoint, 0.0, 1e-6)) {
         *HALIGN = SW_HALIGN_CENT;
         *VALIGN = SW_VALIGN_TOP;
@@ -118,6 +126,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
     double lw, lw_scale;
     char *last_colstr = NULL;
 
+    // This axis's labels were typeset in order, starting from this page
     x->LaTeXpageno = a->FirstTextID;
     *OutputWidth = 0.0;
 
@@ -126,6 +135,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
     else lw_scale = x->current->settings.LineWidth;
     lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
+    // The line type is the one requested, or solid
     if (ww->USElinetype) lt = ww->linetype;
     else lt = 1;
 
@@ -139,6 +149,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
         else if (a->ArrowType == SW_AXISDISP_BACKA)
             eps_primitive_arrow(x, SW_ARROWTYPE_HEAD, x2, y2, z2, x1, y1, z1, ww);
 
+        // The direction of the axis on the page
         theta_axis = atan2(x2 - x1, y2 - y1);
         if (!gsl_finite(theta_axis)) theta_axis = 0.0;
 
@@ -148,6 +159,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
             double *TLP, TRA, TLEN;
             char **TLS;
 
+            // The positions, labels and length of the major ticks, or the minor ticks
             if (i == 0) {
                 TLP = a->TickListPositions;
                 TLS = a->TickListStrings;
@@ -155,6 +167,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                 TR = a->TickLabelRotation;
                 TLEN = EPS_AXES_MAJTICKLEN;
             } // Major ticks
+            // Minor ticks
             else {
                 TLP = a->MTickListPositions;
                 TLS = a->MTickListStrings;
@@ -172,7 +185,9 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                     theta + M_PI / 2 + theta_axis + M_PI * (!Lr); // Angle around textboxes where it is anchored
             eps_plot_LabelAlignment(theta_pinpoint, &HALIGN, &VALIGN);
 
+            // Draw each tick, unless there are none
             if (TLP != NULL) {
+                // Draw each tick and its label
                 for (l = 0; TLS[l] != NULL; l++) {
                     unsigned char state = 0;
                     double tic_lab_xoff = 0.0;
@@ -180,6 +195,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                     const double tic_y1 = y1 + (y2 - y1) * TLP[l];
                     double tic_x2, tic_y2, tic_x3, tic_y3;
 
+                    // Draw the tick on each face of the graph which meets the axis, until one is drawn
                     for (m = 0; ((m < 2) && (!state)); m++) {
                         const double theta_ab = m ? theta_a : theta_b;
                         if (!gsl_finite(theta_ab)) continue;
@@ -197,6 +213,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                         // Check for special case of ticks at zero on axes crossed by atzero axes
                         HALIGN_THIS = HALIGN;
                         VALIGN_THIS = VALIGN;
+                        // Where axes cross at zero, a tick at zero would clash with the other axis
                         if ((a->CrossedAtZero) && (a->atzero)) {
                             const double CP1 = TLP[l];
                             double xl = TLP[l] - 1e-3;
@@ -211,6 +228,7 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                                 ((xl == 0) || (xr == 0) || ((xl < 0) && (xr > 0)) || ((xl > 0) && (xr < 0)))) {
                                 if (xyz != 0) // y/z-axis -- only put label at zero if axis is at edge of graph
                                 {
+                                    // Skip the label at zero unless this axis is at the edge of the graph
                                     if (!(((CP2 < 1e-3) && (Lr)) || ((CP2 > 0.999) && (!Lr)))) {
                                         if (PrintLabels && (TLS[l][0] != '\0')) x->LaTeXpageno++;
                                         state = 1;
@@ -218,8 +236,11 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                                     }
                                 } else // x-axis -- if at edge of graph, put label at zero. If y-axis is labelled at zero, don't put label at zero...
                                 {
+                                    // Unless the y axis is at the edge of the graph, either skip the label at zero or
+                                    // move it aside
                                     if (!(((CP2 < 1e-3) && (!Lr)) || ((CP2 > 0.999) && (Lr)))) {
                                         const int Lr1 = (xyz == 0) ^ (CP1 > 0.999);
+                                        // Skip the label at zero if the x axis is at the edge of the graph
                                         if (((CP1 < 1e-3) && (Lr1)) || ((CP1 > 0.999) && (!Lr1))) {
                                             if (PrintLabels && (TLS[l][0] != '\0')) x->LaTeXpageno++;
                                             state = 1;
@@ -244,9 +265,12 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                             if (z1 == NULL)
                                 fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", tic_x2,
                                         tic_y2, tic_x3, tic_y3);
+                            // In three dimensions, the tick is drawn through the depth-sorting buffer, with a copy of
+                            // the color
                             else {
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0))
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
+                                // Write the tick with its depth
                                 if (last_colstr != NULL) {
                                     strcpy(last_colstr, x->CurrentColor);
                                     ppl_snprintfTrunc(msg, sizeof(msg),
@@ -267,20 +291,27 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                         const int pageno = x->LaTeXpageno++;
                         double xlab, ylab;
 
+                        // Place the label beyond the tick, on the outward side of the axis
                         xlab = tic_x1 / M_TO_PS + (Lr ? -1.0 : 1.0) * sin(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP +
                                 tic_lab_xoff;
                         ylab = tic_y1 / M_TO_PS + (Lr ? -1.0 : 1.0) * cos(theta_axis + M_PI / 2) * EPS_AXES_TEXTGAP;
 
+                        // Draw the label, unless it is invisible, and note the greatest extent of the labels away from
+                        // the axis
                         if (eps_core_isVisible(x)) {
                             char *text = NULL;
                             canvas_EPSRenderTextItem(x, &text, pageno, xlab, ylab, HALIGN_THIS, VALIGN_THIS,
                                                      x->CurrentColor, x->current->settings.FontSize, theta, &width,
                                                      &height);
+                            // Write the label directly, or through the depth-sorting buffer
                             if (text != NULL) {
                                 if (z1 == NULL) fprintf(x->epsbuffer, "%s", text);
+                                // In three dimensions, the label is drawn through the depth-sorting buffer, with a copy
+                                // of the color
                                 else {
                                     if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0))
                                         last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
+                                    // Write the label with its depth
                                     if (last_colstr != NULL) {
                                         strcpy(last_colstr, x->CurrentColor);
                                         ThreeDimBuffer_writeps(x, *z1 + (*z2 - *z1) * TLP[l], lt, lw, 0.0, 1,
@@ -309,11 +340,13 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
             theta_pinpoint = theta + M_PI * Lr; // Angle around textbox where it is anchored
             eps_plot_LabelAlignment(theta_pinpoint, &HALIGN, &VALIGN);
 
+            // Place the label beyond the tick labels, on the outward side of the axis
             xlab = (x1 + x2) / 2 / M_TO_PS +
                     (Lr ? -1.0 : 1.0) * (2 * EPS_AXES_TEXTGAP + TickMaxHeight / M_TO_PS) * sin(theta_axis + M_PI / 2);
             ylab = (y1 + y2) / 2 / M_TO_PS +
                     (Lr ? -1.0 : 1.0) * (2 * EPS_AXES_TEXTGAP + TickMaxHeight / M_TO_PS) * cos(theta_axis + M_PI / 2);
 
+            // Draw the label, unless it is invisible, rotated so that it reads along the axis but never upside down
             if (eps_core_isVisible(x)) {
                 char *text = NULL;
                 double theta_text = theta + M_PI / 2 - theta_axis;
@@ -326,11 +359,15 @@ void eps_plot_axispaint(EPSComm *x, withWords *ww, pplset_axis *a, const int xyz
                                          x->current->settings.FontSize, theta_text, &width, &height);
                 *OutputWidth += (EPS_AXES_TEXTGAP * M_TO_PS + height * fabs(cos(theta_pinpoint)) +
                                  width * fabs(sin(theta_pinpoint))); // Allow gap after label
+                // Write the label directly, or through the depth-sorting buffer
                 if (text != NULL) {
                     if (z1 == NULL) fprintf(x->epsbuffer, "%s", text);
+                    // In three dimensions, the label is drawn through the depth-sorting buffer, with a copy of the
+                    // color
                     else {
                         if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0))
                             last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
+                        // Write the label with its depth
                         if (last_colstr != NULL) {
                             strcpy(last_colstr, x->CurrentColor);
                             ThreeDimBuffer_writeps(x, (*z2 + *z1) / 2, lt, lw, 0.0, 1, last_colstr, text);
@@ -404,6 +441,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
 
     // Set color for painting axes
     ppl_withWordsZero(x->c, &ww);
+    // Draw axes in the color set with "set axescolor"
     if (x->current->settings.AxesColor > 0) {
         ww.color = x->current->settings.AxesColor;
         ww.USEcolor = 1;
@@ -440,6 +478,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
 
     // Work out directions of each of the axes
     if (x->current->ThreeDim)
+        // Find the direction on the page of each of the three axes of the cube
         for (j = 0; j < 3; j++) {
             double x1, y1, z1, x2, y2, z2;
             eps_plot_ThreeDimProject(0, 0, 0, &x->current->settings, origin_x, origin_y, width, height, zdepth, &x1,
@@ -456,7 +495,10 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
         else if (j == 1) axes = x->current->YAxes;
         else axes = x->current->ZAxes;
 
+        // Note whether any axis crosses the others at zero, in which case ticks at zero on the first axes are treated
+        // specially
         for (i = 0; i < MAX_AXES; i++)
+            // An active, visible axis set at zero
             if ((axes[i].FinalActive) && (!axes[i].invisible) && (axes[i].atzero)) {
                 if (j != 0) x->current->XAxes[1].CrossedAtZero = 1;
                 if (j != 1) x->current->YAxes[1].CrossedAtZero = 1;
@@ -482,9 +524,11 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
         // Loop over vertices of graph factoring into bounding box and setting pos1 and pos2
         for (xap = 0; xap <= 1; xap++)
             for (yap = 0; yap <= 1; yap++)
+                // Each corner of the graph, as projected onto the page
                 for (zap = 0; zap <= 1; zap++) {
                     double tmp_x, tmp_y, tmp_z;
                     int k = 0, l = 0;
+                    // Project the corner onto the page
                     if (x->current->ThreeDim) {
                         eps_plot_ThreeDimProject(xap, yap, zap, &x->current->settings, origin_x, origin_y, width,
                                                  height, zdepth, &tmp_x, &tmp_y, &tmp_z);
@@ -499,6 +543,8 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                     else l = yap;
                     if (j != 0) k = 2 * k + xap;
                     else l = xap;
+                    // Each edge parallel to the axis joins a pair of corners; number the edges by the coordinates of
+                    // their other directions
                     if (l == 0) {
                         xpos1[k] = tmp_x;
                         ypos1[k] = tmp_y;
@@ -516,6 +562,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
             // Bubble sort the four edges into order of decreasing distance from the origin
             static const int swaps[5][2] = {{2, 3}, {1, 2}, {0, 1}, {2, 3}, {1, 2}};
             int sw;
+            // Sort the four edges into order of decreasing distance from the centre
             for (sw = 0; sw < 5; sw++) {
                 const int A = swaps[sw][0], B = swaps[sw][1];
                 if (cubeEdgeDistance(xpos1, ypos1, xpos2, ypos2, A, origin_x, origin_y) <
@@ -539,6 +586,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
 
         // Loop over all axes in this direction and draw any which are active and visible
         for (i = 0; i < MAX_AXES; i++)
+            // Draw each active, visible axis
             if ((axes[i].FinalActive) && (!axes[i].invisible)) {
                 // 2D Gnomonic axes
                 if (x->current->settings.projection == SW_PROJ_GNOM) {
@@ -546,6 +594,8 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
 
                 // Flat axes
                 else {
+                    // Axes at zero are drawn through the zero of each monotonic section of the perpendicular axes;
+                    // others along the edges of the graph
                     if (axes[i].atzero) {
                         pplset_axis *PerpAxisX =
                                 &(x->current->XAxes[1]); // Put axis at zero of perpendicular x1-, y1- and z1-axes
@@ -555,6 +605,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                         int xrn, yrn, zrn;
                         double pos[3], xpos1, ypos1, zpos1, xpos2, ypos2, zpos2, dummy;
 
+                        // Each section of the perpendicular x axis
                         for (DoneX = LastX = 0, xrn = 0; !LastX; xrn++) {
                             pos[0] = 0.5;
                             LastX = ((j == 0) || (!PerpAxisX->FinalActive) || (xrn > PerpAxisX->AxisValueTurnings));
@@ -563,6 +614,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                             if ((!gsl_finite(pos[0])) && (!DoneX) && LastX) pos[0] = 0.5;
                             if (!gsl_finite(pos[0])) continue;
 
+                            // Each section of the perpendicular y axis
                             for (DoneY = LastY = 0, yrn = 0; !LastY; yrn++) {
                                 pos[1] = 0.5;
                                 LastY = ((j == 1) || (!PerpAxisY->FinalActive) || (yrn > PerpAxisY->AxisValueTurnings));
@@ -571,6 +623,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                                 if ((!gsl_finite(pos[1])) && (!DoneY) && LastY) pos[1] = 0.5;
                                 if (!gsl_finite(pos[1])) continue;
 
+                                // Each section of the perpendicular z axis
                                 for (DoneZ = LastZ = 0, zrn = 0; !LastZ; zrn++) {
                                     pos[2] = 0.5;
                                     LastZ = ((j == 2) || (!x->current->ThreeDim) || (!PerpAxisZ->FinalActive) ||
@@ -580,7 +633,9 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                                     if ((!gsl_finite(pos[2])) && (!DoneZ) && LastZ) pos[2] = 0.5;
                                     if (!gsl_finite(pos[2])) continue;
 
+                                    // The start of the axis
                                     pos[j] = 0.0;
+                                    // Project it onto the page
                                     if (x->current->ThreeDim) {
                                         eps_plot_ThreeDimProject(pos[0], pos[1], pos[2], &x->current->settings,
                                                                  origin_x, origin_y, width, height, zdepth, &xpos1,
@@ -590,6 +645,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                                         ypos1 = origin_y + pos[1] * height;
                                     }
                                     pos[j] = 1.0;
+                                    // Project the end of the axis onto the page
                                     if (x->current->ThreeDim) {
                                         eps_plot_ThreeDimProject(pos[0], pos[1], pos[2], &x->current->settings,
                                                                  origin_x, origin_y, width, height, zdepth, &xpos2,
@@ -599,6 +655,7 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                                         ypos2 = origin_y + pos[1] * height;
                                     }
 
+                                    // Draw the axis, behind the data in three dimensions or in front of it in two
                                     if ((pass == 0) && (x->current->ThreeDim)) {
                                         const double b =
                                                 atan2((xpos2 + xpos1) / 2 - xc, (ypos2 + ypos1) / 2 - yc) - theta[j];
@@ -622,9 +679,12 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
                             for (k = 0; k < 4; k++)
                                 if ((k != axes[i].topbottom) && (FirstAutoMirror[k] < 0)) FirstAutoMirror[k] = i;
 
+                        // Draw the axis on its own side of the graph, and on the others if it is mirrored
                         for (k = 0; k < NDIRS; k++)
                             if ((k == axes[i].topbottom) || (axes[i].MirrorType == SW_AXISMIRROR_MIRROR) ||
                                 (axes[i].MirrorType == SW_AXISMIRROR_FULLMIRROR))
+                                // In three dimensions, draw back axes on the first pass and front axes on the second;
+                                // afterwards, move the side's position outwards past the axis
                                 if ((!x->current->ThreeDim) || (((zpos1[k] + zpos2[k]) > 0.0) == (pass == 0))) {
                                     const double b =
                                             atan2((xpos2[k] + xpos1[k]) / 2 - xc, (ypos2[k] + ypos1[k]) / 2 - yc) -
@@ -650,6 +710,8 @@ void eps_plot_axespaint(EPSComm *x, const double origin_x, const double origin_y
         // If there is no axis on any side, but was an auto-mirrored axis on another side, mirror it now
         for (k = 0; k < NDIRS; k++)
             if ((Naxes[k] == 0) && (FirstAutoMirror[k] >= 0))
+                // In three dimensions, draw back axes on the first pass and front axes on the second; afterwards, move
+                // the side's position outwards past the axis
                 if ((!x->current->ThreeDim) || (((zpos1[k] + zpos2[k]) > 0.0) == (pass == 0))) {
                     const double b = atan2((xpos2[k] + xpos1[k]) / 2 - xc, (ypos2[k] + ypos1[k]) / 2 - yc) - theta[j];
                     const unsigned char Lr = sin(b) < 0;

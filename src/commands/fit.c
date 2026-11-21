@@ -19,6 +19,13 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the fit command, which fits a function to data read from a file by varying its free parameters to maximise
+// the likelihood, i.e. to minimise the sum of the squared residuals, weighted by the error bars if supplied. It uses
+// GSL's Nelder-Mead simplex minimiser, then computes the Hessian matrix of the log-likelihood by numerical
+// differentiation to estimate the covariance matrix and the uncertainties of the parameters. If no error bars are
+// supplied, their size is first estimated by maximising the Bayesian evidence. On large data sets, the residuals are
+// summed in parallel with OpenMP when the function is safe to call from several threads.
+
 #define _FIT_C 1
 
 #include <stdlib.h>
@@ -116,7 +123,9 @@ static char *matrixPrint(ppl_context *c, const gsl_matrix *m, const size_t size,
     int p = 0;
     out[0] = '\0';
     ppl_strAppendf(out, outLen, &p, "[ [");
+    // Write each row in square brackets
     for (i = 0; i < size; i++) {
+        // Write each element, separated by commas
         for (j = 0; j < size; j++) {
             ppl_strAppendf(out, outLen, &p, "%s%s", (j > 0) ? "," : "",
                            ppl_numericDisplay(gsl_matrix_get(m, i, j), c->numdispBuff[0],
@@ -148,6 +157,7 @@ static int fitPoint(ppl_context *c, const fitComm *p, pplObj *fn, pplExpr *dummy
 
     // Stack: push the function to call, followed by its arguments
     ppl_stackPushCopy(c, fn, 1);
+    // Push the function's arguments onto the stack, with the units of the corresponding data columns
     for (k = 0; k < p->NArgs; k++) {
         pplObjNum(&c->stack[c->stackPtr], 0, row[k], 0);
         ppl_unitsDimCpy(&c->stack[c->stackPtr], &p->firstVals[k]);
@@ -160,12 +170,14 @@ static int fitPoint(ppl_context *c, const fitComm *p, pplObj *fn, pplExpr *dummy
     ppl_fnCall(c, dummy, 0, 1, 1, 1);
     out = &c->stack[c->stackPtr - 1];
 
+    // Report a failure to evaluate the function
     if (c->errStat.status) {
         ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s", c->errStat.errMsgExpr);
         ppl_tbClear(c);
         ppl_stackClean(c, stkLevelOld); // Stack: discard anything left by the failed call
         return 1;
     }
+    // The function must return a number
     if (out->objType != PPLOBJ_NUM) {
         ppl_snprintfTrunc(errText, LSTR_LENGTH,
                           "The supplied function to fit produces a value which is not a number but has type <%s>.",
@@ -173,6 +185,7 @@ static int fitPoint(ppl_context *c, const fitComm *p, pplObj *fn, pplExpr *dummy
         ppl_stackClean(c, stkLevelOld); // Stack: discard the function's value
         return 1;
     }
+    // The function must return values with the same units as the data it is fitted to
     if (!ppl_unitsDimEqual(out, p->firstVals + p->NArgs)) {
         ppl_snprintfTrunc(
                 errText, LSTR_LENGTH,
@@ -217,18 +230,22 @@ static void fitResidualParallel(fitComm *p, const long nBlocks, double *blockSum
         dummy.srcFname = "<dummy>";
         dummy.ascii = NULL;
 
+        // Each thread uses its own copy of the function and its own stack
         if ((w != NULL) && (myErrText != NULL)) {
             if (ppl_contextWorkerPrivatiseFunc(w, p->c, p->functionObj, &ownFn) == 0) fn = &ownFn;
             ppl_stackMustHave(w, p->NArgs + 1);
         }
 
 #pragma omp for schedule(dynamic, 1)
+        // Each thread sums the residuals of whole blocks of data points, so that the total is the same however the work
+        // is divided
         for (b = 0; b < nBlocks; b++) {
             const long start = b * FIT_BLOCK_POINTS;
             const long end =
                     ((start + FIT_BLOCK_POINTS < p->NDataPoints) ? (start + FIT_BLOCK_POINTS) : p->NDataPoints);
             double sum = 0.0, residual;
             long j;
+            // Report a thread which could not be set up as a failure at the start of its first block
             if ((w == NULL) || (myErrText == NULL) || w->stackFull) {
                 if (start < myFailIndex) { // Report the problem as if it occurred at the start of this block
                     myFailIndex = start;
@@ -237,7 +254,9 @@ static void fitResidualParallel(fitComm *p, const long nBlocks, double *blockSum
                 continue;
             }
             if (start >= myFailIndex) continue; // A failure earlier in the data has already been found
+            // Sum the residuals of the data points in this block
             for (j = start; j < end; j++) {
+                // Note where the first failure occurred, so that the earliest failure is the one reported
                 if (fitPoint(w, p, fn, &dummy, j, &residual, myErrText)) {
                     myFailIndex = j;
                     break;
@@ -249,6 +268,7 @@ static void fitResidualParallel(fitComm *p, const long nBlocks, double *blockSum
 
         // The error to report is the one at the first failing data point, as when the points are summed serially
 #pragma omp critical(fitResidualFailure)
+        // Keep the error from whichever thread failed earliest in the data
         if (myFailIndex < *failIndex) {
             *failIndex = myFailIndex;
             ppl_snprintfTrunc(errText, LSTR_LENGTH, "%s",
@@ -266,6 +286,7 @@ static void fitResidualParallel(fitComm *p, const long nBlocks, double *blockSum
 //! \return The mismatch, or NaN if the function could not be evaluated
 
 static double fitResidual(fitComm *p) {
+    // Variables for summing the residuals
     ppl_context *c = p->c;
     char *errText = p->errtext; // A buffer of LSTR_LENGTH bytes
     const long nBlocks = (p->NDataPoints + FIT_BLOCK_POINTS - 1) / FIT_BLOCK_POINTS;
@@ -278,6 +299,7 @@ static double fitResidual(fitComm *p) {
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF)
             p->varObj[i]->real =
                     gsl_vector_get(p->paramVals, i); // This is setting variables in the user's variable space
+        // With complex arithmetic, each variable has a real and an imaginary component
         else {
             p->varObj[i]->real = gsl_vector_get(p->paramVals, 2 * i);
             p->varObj[i]->imag = gsl_vector_get(p->paramVals, 2 * i + 1);
@@ -285,17 +307,21 @@ static double fitResidual(fitComm *p) {
 
     // Check there's enough space on the stack
     ppl_stackMustHave(c, p->NArgs);
+    // Report a stack overflow
     if (c->stackFull) {
         strcpy(errText, "stack overflow in the fit command.");
         return GSL_NAN;
     }
 
+    // The sum of the residuals in each block of data points
     blockSums = (double *) malloc(((nBlocks > 0) ? nBlocks : 1) * sizeof(double));
+    // Failure to allocate memory is reported as an error
     if (blockSums == NULL) {
         strcpy(errText, "Out of memory in the fit command.");
         return GSL_NAN;
     }
 
+    // Sum the residuals in parallel, or one block after another
     if (p->parallel) {
         fitResidualParallel(p, nBlocks, blockSums, &failIndex, errText);
     } else {
@@ -306,13 +332,16 @@ static double fitResidual(fitComm *p) {
         dummy.srcFname = "<dummy>";
         dummy.ascii = NULL;
         failIndex = p->NDataPoints;
+        // Sum each block, stopping at the first failure
         for (b = 0; (b < nBlocks) && (failIndex == p->NDataPoints); b++) {
             const long start = b * FIT_BLOCK_POINTS;
             const long end =
                     ((start + FIT_BLOCK_POINTS < p->NDataPoints) ? (start + FIT_BLOCK_POINTS) : p->NDataPoints);
             double sum = 0.0, residual;
             long j;
+            // Sum the residuals of the data points in this block
             for (j = start; j < end; j++) {
+                // Note where the failure occurred
                 if (fitPoint(c, p, p->functionObj, &dummy, j, &residual, errText)) {
                     failIndex = j;
                     break;
@@ -323,6 +352,7 @@ static double fitResidual(fitComm *p) {
         }
     }
 
+    // Return NaN if any data point could not be evaluated
     if (failIndex < p->NDataPoints) {
         free(blockSums);
         return GSL_NAN; // errText describes the failure
@@ -364,6 +394,7 @@ static double GetHessian_diff1(const double x, void *p_void) {
     gsl_function fn;
     fitComm *p = (fitComm *) p_void;
 
+    // Differentiate the residual with respect to the second parameter, with the first set to x
     fn.function = &GetHessian_diff2;
     fn.params = p_void;
 
@@ -381,6 +412,7 @@ static double GetHessian_diff1(const double x, void *p_void) {
 //! \return The Hessian matrix, allocated with gsl_matrix_alloc(), or NULL if it could not be computed
 
 static gsl_matrix *GetHessian(fitComm *p) {
+    // Variables for computing the Hessian matrix
     gsl_matrix *out;
     int i, j;
     double output, output_error;
@@ -394,9 +426,11 @@ static gsl_matrix *GetHessian(fitComm *p) {
     out = gsl_matrix_alloc(p->NParams, p->NParams); // Allocate memory for Hessian matrix
     if (out == NULL) return NULL;
 
+    // Each element is a second derivative of the residual, found by nesting two numerical differentiations
     fn.function = &GetHessian_diff1;
     fn.params = (void *) p;
 
+    // Loop over the elements of the Hessian, differentiating with steps of a millionth of each parameter
     for (i = 0; i < p->NParams; i++)
         for (j = 0; j < p->NParams; j++) // Loop over elements of Hessian matrix
         {
@@ -408,6 +442,7 @@ static gsl_matrix *GetHessian(fitComm *p) {
             gsl_matrix_set(out, i, j, -output); // Minus sign here since fitResidual returns the negative of log(P)
         }
 
+    // Free the vector of parameter values
     gsl_vector_free(p->paramValsHessian);
     p->paramValsHessian = NULL;
     return out;
@@ -439,6 +474,8 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
     gsl_matrix *hessian;
     gsl_permutation *perm;
 
+    // Evaluate the negative log-evidence for the best-fit parameters, assuming error bars of size sigmaData on every
+    // data point
     fitComm *p = (fitComm *) p_void;
     p->sigmaData = gsl_vector_get(x, 0);
     p->paramVals = p->bestFitParamVals;
@@ -458,6 +495,7 @@ static double FitsigmaData(const gsl_vector *x, void *p_void) {
     gsl_permutation_free(perm);
     perm = NULL;
 
+    // Return the negative log of the evidence
     return term1 + term2 +
             term3; // We return the negative of the log-likelihood, which GSL then minimises by varying the assume errorbar size
 }
@@ -484,24 +522,30 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
     gsl_vector *x, *ss;
     gsl_multimin_function fn;
 
+    // When fitting the size of the error bars, there is only one parameter to vary
     if (!FittingsigmaData) NParams = commlink->NParams;
     else NParams = 1;
     x = gsl_vector_alloc(NParams);
     ss = gsl_vector_alloc(NParams);
 
+    // Describe the function to minimise to GSL
     fn.n = NParams;
     fn.f = slave;
     fn.params = (void *) commlink;
 
+    // Restart the minimiser several times, until the result stops improving
     iter2 = 0;
+    // Each pass of the minimiser
     do {
         iter2++;
         sizelast2 = size;
 
+        // Start from the current values of the parameters, or from the current estimate of the size of the error bars
         if (!FittingsigmaData) {
             if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF)
                 for (i = 0; i < commlink->NFitVars; i++) gsl_vector_set(x, i, commlink->varObj[i]->real);
             else
+                // Each variable takes two elements of the vector
                 for (i = 0; i < commlink->NFitVars; i++) {
                     gsl_vector_set(x, 2 * i, commlink->varObj[i]->real);
                     gsl_vector_set(x, 2 * i + 1, commlink->varObj[i]->imag);
@@ -510,16 +554,19 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
             gsl_vector_set(x, 0, commlink->sigmaData);
         }
 
+        // The initial step size is 10% of each parameter
         for (i = 0; i < NParams; i++) {
             if (fabs(gsl_vector_get(x, i)) > 1e-6) gsl_vector_set(ss, i, 0.1 * gsl_vector_get(x, i));
             else gsl_vector_set(ss, i, 0.1); // Avoid having a stepsize of zero
         }
 
+        // Create the minimiser
         s = gsl_multimin_fminimizer_alloc(T, fn.n);
         gsl_multimin_fminimizer_set(s, &fn, x, ss);
 
         // If initial value we are giving the minimiser produces an algebraic error, it's not worth continuing
         (*slave)(x, (void *) commlink);
+        // Give up if the function could not be evaluated at the starting point
         if (commlink->errtext[0] != '\0') {
             gsl_vector_free(x);
             x = NULL;
@@ -530,8 +577,10 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
             return 1;
         }
 
+        // Iterate the minimiser until the simplex stops shrinking
         iter = 0;
         commlink->goneNaN = 0;
+        // Each batch of iterations
         do {
             iter++;
             for (i = 0; i < 2 + NParams * 2;
@@ -547,14 +596,17 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
                  ((size < sizelast) &&
                   (iter < 50))); // Iterate 10 times, and then see whether size carries on getting smaller
 
+        // Free the minimiser before the next pass
         gsl_multimin_fminimizer_free(s);
         s = NULL;
     } while ((iter2 < 3) ||
              ((commlink->goneNaN == 0) && (!status) && (size < sizelast2) &&
               (iter2 < 20))); // Iterate 2 times, and then see whether size carries on getting smaller
 
+    // Too many passes means the minimiser failed to converge
     if (iter2 >= 20) status = 1;
 
+    // Report a failure to converge
     if (status) {
         ppl_snprintfTrunc(commlink->errtext, LSTR_LENGTH, "Failed to converge. GSL returned error: %s",
                           gsl_strerror(status));
@@ -567,6 +619,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
     sizelast =
             (*slave)(x, (void *) commlink); // Calling minimiser slave now sets all fitting variables to desired values
 
+    // Free the minimiser's vectors
     gsl_vector_free(x);
     x = NULL;
     gsl_vector_free(ss);
@@ -583,6 +636,7 @@ static int FitMinimiseIterate(fitComm *commlink, double (*slave)(const gsl_vecto
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    // Variables for reading the data, fitting it and reporting the results
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     int status = 0, Nargs, Nvars, NExpect, Nusing;
@@ -612,9 +666,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     {
         int pos = PARSE_fit_fit_variables;
         Nvars = 0;
+        // Walk the linked list of the fitting variables on the parser stack
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There is a fixed limit on the number of fitting variables
             if (Nvars >= USING_ITEMS_MAX - 4) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many fitting variables; a maximum of %d may be specified.", USING_ITEMS_MAX - 4);
@@ -624,6 +680,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             fitVars[Nvars] = (char *) stk[pos + PARSE_fit_fit_variable_fit_variables].auxil;
             Nvars++;
         }
+        // There must be at least one fitting variable
         if (Nvars < 1) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Too few fitting variables; a minimum of one must be specified.");
@@ -635,9 +692,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Get pointers to fitting variables
     {
         int i;
+        // Look up each fitting variable, creating it if it does not exist
         for (i = 0; i < Nvars; i++) {
             pplObj dummyTemp;
             ppl_contextGetVarPointer(c, fitVars[i], &varObj[i], &dummyTemp);
+            // If the variable already had a numerical value, use it, with its units, as the starting guess
             if (dummyTemp.objType == PPLOBJ_NUM) {
                 pplObjCpy(varObj[i], &dummyTemp, 0, 1, 1);
             } else {
@@ -651,11 +710,13 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Get name of function to fit
     fnName = (char *) stk[PARSE_fit_fit_function].auxil;
     ppl_contextVarLookup(c, fnName, &funcObj, 0);
+    // The function to fit must exist
     if (funcObj == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "No such function as '%s()'.", fnName);
         ppl_tbAddLine(c, pl, ERR_NAMESPACE, in->stkCharPos[PARSE_fit_fit_function], "");
         return;
     }
+    // The object named must be a function
     if (funcObj->objType != PPLOBJ_FUNC) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Object '%s' is not a function, but has type <%s>.", fnName,
@@ -664,6 +725,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         return;
     }
     funcDef = (pplFunc *) funcObj->auxil;
+    // Magic functions such as diff_d() cannot be fitted directly
     if (funcDef->functionType == PPL_FUNC_MAGIC) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Function %s() needs wrapping in a user-defined function before it can be fit.", fnName);
@@ -679,10 +741,13 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         int pos = PARSE_fit_using_list;
         const int o = PARSE_fit_using_item_using_list;
 
+        // Count the using items, which select the columns of the data
         Nusing = 0;
+        // Walk the linked list of using items on the parser stack
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There is a fixed limit on the number of using items
             if (Nusing >= USING_ITEMS_MAX) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many using items; maximum of %d are allowed.", USING_ITEMS_MAX);
@@ -706,9 +771,11 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         const int o2 = PARSE_fit_max_0range_list;
         for (i = 0; i < USING_ITEMS_MAX; i++) minSet[i] = 0;
         for (i = 0; i < USING_ITEMS_MAX; i++) maxSet[i] = 0;
+        // Walk the linked list of ranges on the parser stack
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There is a fixed limit on the number of ranges
             if (nr >= USING_ITEMS_MAX) {
                 sprintf(c->errStat.errBuff, "Too many ranges specified; a maximum of %d are allowed.", USING_ITEMS_MAX);
                 ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
@@ -722,6 +789,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
+                // The maximum must have the same type as the minimum
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -730,6 +798,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                     ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_fit_min_0range_list], "");
                     goto cleanup;
                 }
+                // The maximum must have the same units as the minimum
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -764,7 +833,9 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Check that the firstEntries above have the same units as any supplied ranges
     for (j = 0; j < NExpect; j++)
+        // Only columns with a range need checking
         if (minSet[j] || maxSet[j]) {
+            // The range must have the same units as the data
             if (!ppl_unitsDimEqual(&unit[j], data->firstEntries + j)) {
                 ppl_snprintfTrunc(
                         c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -779,12 +850,16 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Work out how many data points we have within the specified ranges
     NDataPoints = 0;
     blk = data->first;
+    // Count the data points which fall within the ranges
     while (blk != NULL) {
         int j;
+        // Loop over the rows in each block
         for (j = 0; j < blk->blockPosition; j++) {
             int inRange = 1, k;
+            // Skip rows with any value outside its column's range
             for (k = 0; k < NExpect; k++) {
                 val = blk->data_real[k + NExpect * j];
+                // This value is outside the range
                 if ((minSet[k] && (val < min[k])) || (maxSet[k] && (val > max[k]))) {
                     inRange = 0;
                     break;
@@ -797,6 +872,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Copy data into a new table and apply the specified ranges to it
     localDataTable = (double *) ppl_memAlloc_incontext(NDataPoints * NExpect * sizeof(double), contextLocalVec);
+    // Failure to allocate memory is reported as an error
     if (localDataTable == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
@@ -804,12 +880,16 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     }
     i = 0;
     blk = data->first;
+    // Copy the data points which fall within the ranges into a single array
     while (blk != NULL) {
         int j;
+        // Loop over the rows in each block
         for (j = 0; j < blk->blockPosition; j++) {
             int inRange = 1, k;
+            // Skip rows with any value outside its column's range
             for (k = 0; k < NExpect; k++) {
                 val = blk->data_real[k + NExpect * j];
+                // This value is outside the range
                 if ((minSet[k] && (val < min[k])) || (maxSet[k] && (val > max[k]))) {
                     inRange = 0;
                     break;
@@ -853,6 +933,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 #endif
     dataComm.errtext = (char *) ppl_memAlloc_incontext(LSTR_LENGTH, contextLocalVec);
     scratchPad = (char *) ppl_memAlloc_incontext(LSTR_LENGTH, contextLocalVec);
+    // Failure to allocate memory is reported as an error
     if ((scratchPad == NULL) || (dataComm.errtext == NULL)) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         ppl_tbAddLine(c, pl, ERR_MEMORY, 0, "");
@@ -862,6 +943,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Set up a minimiser
     status = FitMinimiseIterate(&dataComm, &ResidualMinimiserSlave, 0);
+    // Report a failure to fit
     if (status) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s", dataComm.errtext);
         ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
@@ -870,6 +952,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Display the results of the minimiser
     ppl_report(&c->errcontext, "\n# Best fit parameters were:\n# -------------------------\n");
+    // Print the value of each variable, in LaTeX if the numeric display is set to latex
     for (j = 0; j < dataComm.NFitVars; j++) {
         if (c->set->term_current.NumDisplay != SW_DISPLAY_L)
             ppl_snprintfTrunc(msg, sizeof(msg), "%s = %s", fitVars[j], ppl_unitsNumericDisplay(c, varObj[j], 0, 0, 0));
@@ -889,6 +972,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     bestFitParamVals = gsl_vector_alloc(dataComm.NParams);
     for (i = 0; i < dataComm.NFitVars; i++)
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) gsl_vector_set(bestFitParamVals, i, varObj[i]->real);
+        // With complex arithmetic, each variable has a real and an imaginary component
         else {
             gsl_vector_set(bestFitParamVals, 2 * i, varObj[i]->real);
             gsl_vector_set(bestFitParamVals, 2 * i + 1, varObj[i]->imag);
@@ -902,6 +986,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 "\n# Estimating the size of the error bars on supplied data.\n# This may take a while.\n# The fit command can be made to run very substantially faster if the 'withouterrors' option is set.");
         ppl_report(&c->errcontext, msg);
         status = FitMinimiseIterate(&dataComm, &FitsigmaData, 1);
+        // Report a failure to estimate the size of the error bars
         if (status) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "%s", dataComm.errtext);
             ppl_tbAddLine(c, pl, ERR_NUMERICAL, 0, "");
@@ -931,6 +1016,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     for (i = 0; i < dataComm.NFitVars; i++)
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF)
             varObj[i]->real = gsl_vector_get(dataComm.bestFitParamVals, i);
+        // With complex arithmetic, each variable has a real and an imaginary component
         else {
             varObj[i]->real = gsl_vector_get(dataComm.bestFitParamVals, 2 * i);
             varObj[i]->imag = gsl_vector_get(dataComm.bestFitParamVals, 2 * i + 1);
@@ -953,6 +1039,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Calculate the standard deviation of each parameter
     for (i = 0; i < dataComm.NParams; i++) {
+        // A variance which is not positive means the fit has failed; warn the user
         if ((gsl_matrix_get(hessian_inv, i, i) <= 0.0) || (!gsl_finite(gsl_matrix_get(hessian_inv, i, i)))) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -978,12 +1065,15 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     // Print a list of standard deviations
     ppl_report(&c->errcontext,
                "\n# Uncertainties in best-fit parameters are:\n# -----------------------------------------\n");
+    // Print the uncertainty in each variable, with its units
     for (i = 0; i < dataComm.NFitVars; i++) {
         pplObj dummyTemp = *(varObj[i]);
+        // Real variables have one uncertainty; complex ones have one for each component
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             dummyTemp.real = stdDev[i];
             dummyTemp.imag = 0.0;
             dummyTemp.flagComplex = 0; // Apply appropriate unit to standard deviation, which is currently just a double
+            // Plain text, or LaTeX
             if (c->set->term_current.NumDisplay != SW_DISPLAY_L) {
                 ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "sigma_%s", fitVars[i]);
                 ppl_snprintfTrunc(msg, sizeof(msg), "%22s = %s", scratchPad,
@@ -991,6 +1081,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             } else {
                 ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "$\\sigma_\\textrm{");
                 sigmaPos = (int) strlen(scratchPad);
+                // Escape underscores in the variable name for LaTeX
                 for (k = 0; fitVars[i][k] != '\0'; k++) {
                     if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
                     ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
@@ -1000,6 +1091,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
             }
             ppl_report(&c->errcontext, msg);
         } else {
+            // Plain text, or LaTeX
             if (c->set->term_current.NumDisplay != SW_DISPLAY_L) {
                 dummyTemp.real = stdDev[2 * i];
                 dummyTemp.imag = 0.0;
@@ -1021,6 +1113,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                 dummyTemp.flagComplex = 0;
                 ppl_snprintfTrunc(scratchPad, LSTR_LENGTH, "$\\sigma_\\textrm{");
                 sigmaPos = (int) strlen(scratchPad);
+                // Escape underscores in the variable name for LaTeX
                 for (k = 0; fitVars[i][k] != '\0'; k++) {
                     if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
                     ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
@@ -1040,6 +1133,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
 
     // Print summary information
     ppl_report(&c->errcontext, "\n# Summary:\n# --------\n");
+    // Print each variable in the form (value +/- uncertainty) unit
     for (i = 0; i < dataComm.NFitVars; i++) {
         pplObj dummyTemp;
         char *cptr = ppl_printUnit(c, varObj[i], &tmp1, &tmp2, 0, 1,
@@ -1050,6 +1144,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                             ->real; // Set tmp3 to be the multiplicative size of this unit relative to its SI counterpart
         else if (fabs(varObj[i]->imag) > 1e-200)
             tmp3 = tmp2 / varObj[i]->imag; // Can't do this if magnitude of best-fit value is zero, though...
+        // If the value is zero, use the unit in which one would be displayed
         else {
             dummyTemp = *(varObj[i]);
             dummyTemp.real = 1.0;
@@ -1060,6 +1155,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
         }
         pplObjNum(&dummyTemp, 0, tmp1, tmp2);
         dummyTemp.refCount = 1;
+        // Real variables, or complex ones
         if (c->set->term_current.ComplexNumbers == SW_ONOFF_OFF) {
             if (c->set->term_current.NumDisplay != SW_DISPLAY_L)
                 ppl_snprintfTrunc(msg, sizeof(msg), "%16s = (%s +/- %s) %s", fitVars[i],
@@ -1067,10 +1163,12 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                                   ppl_numericDisplay(stdDev[i] * tmp3, c->numdispBuff[0],
                                                      c->set->term_current.SignificantFigures, 0),
                                   cptr);
+            // LaTeX
             else {
                 scratchPad[0] = '$';
                 scratchPad[1] = '\0';
                 sigmaPos = 1;
+                // Escape underscores in the variable name for LaTeX
                 for (k = 0; fitVars[i][k] != '\0'; k++) {
                     if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
                     ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
@@ -1092,10 +1190,12 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
                                   ppl_numericDisplay(stdDev[2 * i + 1] * tmp3, c->numdispBuff[2],
                                                      c->set->term_current.SignificantFigures, 0),
                                   cptr);
+            // LaTeX
             else if (c->set->term_current.NumDisplay == SW_DISPLAY_L) {
                 scratchPad[0] = '$';
                 scratchPad[1] = '\0';
                 sigmaPos = 1;
+                // Escape underscores in the variable name for LaTeX
                 for (k = 0; fitVars[i][k] != '\0'; k++) {
                     if (fitVars[i][k] == '_') ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, '\\');
                     ppl_strAppendChar(scratchPad, LSTR_LENGTH, &sigmaPos, fitVars[i][k]);
@@ -1134,6 +1234,7 @@ void ppl_directive_fit(ppl_context *c, parserLine *pl, parserOutput *in, const i
     perm = NULL;
     ppl_memAlloc_AscendOutOfContext(contextLocalVec);
 
+// Release the function, whose reference count was raised while it was being fitted
 cleanup:
     __sync_sub_and_fetch(&funcDef->refCount, 1);
     return;

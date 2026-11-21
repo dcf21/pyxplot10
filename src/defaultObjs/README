@@ -1,0 +1,69 @@
+defaultObjs
+===========
+
+Pyxplot's built-in namespace: the functions, constants, modules and physical
+units which are available when Pyxplot starts. defaultVars.c puts them all into
+the default namespace.
+
+airyFuncs.c, airyFuncs.h
+    The Airy functions Ai and Bi and their derivatives for complex arguments,
+    which GSL does not provide. Provided courtesy of Matthew Smith.
+
+defaultFuncs.c, defaultFuncs.h
+    The built-in mathematical, string and utility functions, e.g. sin(),
+    besselJ(), gcd(), len(), max() and eval().
+
+defaultFuncsChecks.h
+    Helper functions which built-in functions use to check their arguments
+    (e.g. that they are real, dimensionless or integers) and to report errors
+    in a consistent way.
+
+defaultUnits.c, defaultUnits.h
+    The database of physical units, with their names, dimensions, conversion
+    factors, allowed SI prefixes and unit schemes. It is used to parse units in
+    expressions and to choose units in which to display results.
+
+defaultVars.c, defaultVars.h
+    Builds the default namespace when Pyxplot starts: the constants, the
+    built-in functions with their help text and LaTeX forms, and the modules.
+
+moduleAst.c, moduleAst.h
+    The ast module: cosmological distances, ages and redshifts, the sidereal
+    time, and the phase of the Moon.
+
+moduleColor.c, moduleColor.h
+    The colors module's wavelength() and spectrum() functions, which compute the
+    color the eye sees for monochromatic light or for a spectrum.
+
+moduleFractals.c, moduleFractals.h
+    The fractals module's julia() and mandelbrot() functions, for drawing images
+    of these sets with the colormap plot style.
+
+moduleOs.c, moduleOs.h
+    The os module, which gives scripts access to the operating system: the
+    environment, running shell commands, listing files, and the os.path
+    functions.
+
+modulePhy.c, modulePhy.h
+    The phy module's black-body functions Bv() and Bvmax(); the physical
+    constants in this module are set up in defaultVars.c.
+
+moduleRandom.c, moduleRandom.h
+    The random module, which draws random numbers from various distributions
+    using GSL's random number generator.
+
+moduleStats.c, moduleStats.h
+    The stats module: probability density functions and cumulative distribution
+    functions of common statistical distributions, and their inverses.
+
+moduleTime.c, moduleTime.h
+    The time module: functions which create date objects, measure the intervals
+    between them, and format them as strings.
+
+physConstants.h
+    The physical constants used by the phy module and the unit database, from
+    CODATA 2022 and the IAU's nominal values.
+
+zetaRiemann.c, zetaRiemann.h
+    The Riemann zeta function for complex arguments, which GSL does not
+    provide. Provided courtesy of Matthew Smith.

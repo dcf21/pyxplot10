@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Stores the text labels which users add to graphs with the "set label" command: adding, removing and resetting them,
+// comparing and copying lists of them, and describing them for the show and save commands. The labels are drawn by
+// epsMaker/eps_plot_labelsarrows.c. Coordinates are read with helper functions shared with arrows.c.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,25 +71,30 @@ static int sameValue(const pplObj *a, const pplObj *b) {
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
 void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
+    // The coordinate system of each coordinate, the label's text, rotation and gap, and the record of the label
     int i, system_x, system_y, system_z, gotTempstr, gotGap, gotAng;
     char *tempstr, *label;
     double gap, ang;
     ppllabel_object *out;
 
+    // Read the coordinate system of each coordinate
     system_x = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_x_system);
     system_y = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_y_system);
     system_z = pplarrow_getSystem(context, in, ptab, PARSE_INDEX_z_system);
 
+    // Check the units of each coordinate
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_x, system_x);
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_y, system_y);
     pplarrow_checkDimensions(context, in, pl, ptab, PARSE_INDEX_z, system_z);
 
+    // Check the axis number of each coordinate
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_x_axis)) return;
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_y_axis)) return;
     if (pplarrow_checkAxis(context, in, pl, ptab, PARSE_INDEX_z_axis)) return;
 
     tempstr = (char *) in->stk[ptab[PARSE_INDEX_label_text]].auxil; // Read label text
     label = (char *) malloc(strlen(tempstr) + 1);
+    // Failure to allocate memory is reported as an error
     if (label == NULL) {
         ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
         return;
@@ -100,11 +109,13 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     // Look up ID number of the label we are adding and find appropriate place for it in label list
     i = (int) round(in->stk[ptab[PARSE_INDEX_label_id]].real);
     while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
+    // Reuse an existing label with this ID, or insert a new one
     if ((*inlist != NULL) && ((*inlist)->id == i)) {
         out = *inlist;
         ppl_withWordsDestroy(context, &out->style);
     } else {
         out = (ppllabel_object *) malloc(sizeof(ppllabel_object));
+        // Failure to allocate memory is reported as an error
         if (out == NULL) {
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
             return;
@@ -124,6 +135,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
     if (gotTempstr) out->VAlign = ppl_fetchSettingByName(&context->errcontext, tempstr, SW_VALIGN_INT, SW_VALIGN_STR);
     else out->VAlign = context->set->graph_current.TextVAlign;
 
+    // The rotation and gap default to zero
     if (gotAng) out->rotation = ang;
     else out->rotation = 0.0;
     if (gotGap) out->gap = gap;
@@ -131,14 +143,17 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
 
     // See if fontsize is specified
     out->fontsizeSet = (in->stk[ptab[PARSE_INDEX_fontsize]].objType == PPLOBJ_NUM);
+    // Font sizes must be positive and finite
     if (out->fontsizeSet) {
         double f = in->stk[ptab[PARSE_INDEX_fontsize]].real;
+        // Reject negative font sizes
         if (f < 0) {
             f = 1;
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1,
                       "Fontsize specified in 'set fontsize' command was less than zero.");
             return;
         }
+        // Reject infinite font sizes
         if (!gsl_finite(f)) {
             f = 1;
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1,
@@ -148,6 +163,7 @@ void ppllabel_add(ppl_context *context, ppllabel_object **inlist, parserOutput *
         out->fontsize = f;
     }
 
+    // Store the label's style, text, and the coordinate system, axis number and value of each coordinate
     ppl_withWordsFromDict(context, in, pl, ptab, 0, &out->style);
     out->text = label;
     out->system_x = system_x;
@@ -177,12 +193,16 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
     int pos;
     ppllabel_object **first;
 
+    // pos is the position in the parser's output stack of the list of label IDs
     first = inlist;
     pos = ptab[PARSE_INDEX_0label_list];
 
+    // With no IDs, remove every label
     if ((in->stk[pos].objType != PPLOBJ_NUM) || (in->stk[pos].real <= 0))
         ppllabel_list_destroy(context, inlist); // set noarrow with no number specified means all arrows deleted
+    // Otherwise remove each listed label
     else {
+        // Each item in the parser's list holds the position of the next item, or zero at the end of the list
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             int i;
             pos = (int) round(in->stk[pos].real);
@@ -190,6 +210,7 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
             i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
             inlist = first;
             while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
+            // Unlink and free the label, or warn that it does not exist
             if ((*inlist != NULL) && ((*inlist)->id == i)) {
                 ppllabel_object *obj = *inlist;
                 *inlist = (*inlist)->next;
@@ -216,6 +237,7 @@ void ppllabel_remove(ppl_context *context, ppllabel_object **inlist, parserOutpu
 //! \param [in] ptab - Table mapping parser variable indices onto positions in <in->stk>
 
 void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput *in, parserLine *pl, const int *ptab) {
+    // pos is the position in the parser's output stack of the list of label IDs
     int pos;
     ppllabel_object **first;
 
@@ -223,6 +245,7 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
     first = inlist;
     pos = ptab[PARSE_INDEX_0label_list];
 
+    // With no IDs, replace all labels with a copy of the default list
     if ((in->stk[pos].objType != PPLOBJ_NUM) || (in->stk[pos].real <= 0)) {
         ppllabel_list_destroy(context, inlist);
         ppllabel_list_copy(
@@ -230,6 +253,8 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
                 &context->set
                          ->ppllabel_list_default); // Check to see whether we are unsetting ALL arrows, and if so, use the copy command
     } else {
+        // Otherwise restore the default definition of each listed label. Each item in the parser's list holds the
+        // position of the next item, or zero at the end of the list.
         while (in->stk[pos].objType == PPLOBJ_NUM) {
             int i;
             ppllabel_object *obj;
@@ -237,13 +262,16 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
             if (pos <= 0) break;
             i = (int) round(in->stk[pos + ptab[PARSE_INDEX_label_id]].real);
 
+            // Look for the label in the list of defaults
             obj = context->set->ppllabel_list_default;
             while ((obj != NULL) && (obj->id < i)) obj = (obj->next);
+            // If it has a default definition, insert a copy of it into the list in the right place
             if ((obj != NULL) && (obj->id == i)) {
                 ppllabel_object *new;
                 inlist = first;
                 while ((*inlist != NULL) && ((*inlist)->id < i)) inlist = &((*inlist)->next);
                 new = (ppllabel_object *) malloc(sizeof(ppllabel_object));
+                // Failure to allocate memory is reported as an error
                 if (new == NULL) {
                     ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
                     return;
@@ -251,6 +279,7 @@ void ppllabel_unset(ppl_context *context, ppllabel_object **inlist, parserOutput
                 *new = *obj;
                 new->next = *inlist;
                 new->text = (char *) malloc(strlen(obj->text) + 1);
+                // Failure to allocate memory is reported as an error
                 if (new->text == NULL) {
                     ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
                     free(new);
@@ -299,6 +328,7 @@ void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_ob
         **out = **in;
         (*out)->next = NULL;
         (*out)->text = (char *) malloc(strlen((*in)->text) + 1);
+        // Failure to allocate memory is reported as an error
         if ((*out)->text == NULL) {
             ppl_error(&context->errcontext, ERR_MEMORY, -1, -1, "Out of memory");
             free(*out);
@@ -320,7 +350,9 @@ void ppllabel_list_copy(ppl_context *context, ppllabel_object **out, ppllabel_ob
 void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
     ppllabel_object *obj, **first;
 
+    // Free each label in turn, with its style and text
     first = inlist;
+    // Unlink the first label, and free it
     while (*inlist != NULL) {
         obj = *inlist;
         *inlist = (*inlist)->next;
@@ -341,6 +373,7 @@ void ppllabel_list_destroy(ppl_context *context, ppllabel_object **inlist) {
 //! \param [in] outLen - The size of the buffer <out>
 
 void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const size_t outLen) {
+    // Describe the label's text, and the coordinate system, axis number (if any) and value of each coordinate
     int i;
     ppl_strEscapify(in->text, out, outLen);
     i = strlen(out);
@@ -348,6 +381,7 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_x, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Coordinates given against a numbered axis include the axis number
     if (in->system_x == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_x);
         i += strlen(out + i);
@@ -358,6 +392,7 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_y, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Coordinates given against a numbered axis include the axis number
     if (in->system_y == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_y);
         i += strlen(out + i);
@@ -368,12 +403,14 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
                    *(char **) ppl_fetchSettingName(&context->errcontext, in->system_z, SW_SYSTEM_INT,
                                                    (void *) SW_SYSTEM_STR, sizeof(char *)));
     i += strlen(out + i);
+    // Coordinates given against a numbered axis include the axis number
     if (in->system_z == SW_SYSTEM_AXISN) {
         ppl_strAppendf(out, outLen, &i, " %d", in->axis_z);
         i += strlen(out + i);
     }
     ppl_strAppendf(out, outLen, &i, " %s", ppl_unitsNumericDisplay(context, &(in->z), 0, 0, 0));
     i += strlen(out + i);
+    // Rotation, stored in radians, is shown in degrees
     if (in->rotation != 0.0) {
         ppl_strAppendf(out, outLen, &i, " rotate %s",
                        ppl_numericDisplay(in->rotation * 180 / M_PI, context->numdispBuff[0],
@@ -381,18 +418,21 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
                                           (context->set->term_current.NumDisplay == SW_DISPLAY_L)));
         i += strlen(out + i);
     }
+    // Horizontal alignment, if set
     if (in->HAlign > 0) {
         ppl_strAppendf(out, outLen, &i, " halign %s",
                        *(char **) ppl_fetchSettingName(&context->errcontext, in->HAlign, SW_HALIGN_INT,
                                                        (void *) SW_HALIGN_STR, sizeof(char *)));
         i += strlen(out + i);
     }
+    // Vertical alignment, if set
     if (in->VAlign > 0) {
         ppl_strAppendf(out, outLen, &i, " valign %s",
                        *(char **) ppl_fetchSettingName(&context->errcontext, in->VAlign, SW_VALIGN_INT,
                                                        (void *) SW_VALIGN_STR, sizeof(char *)));
         i += strlen(out + i);
     }
+    // The gap, stored in metres, is shown in centimetres
     if (in->gap != 0.0) {
         ppl_strAppendf(out, outLen, &i, " gap %s",
                        ppl_numericDisplay(in->gap * 100, context->numdispBuff[0],
@@ -406,6 +446,7 @@ void ppllabel_print(ppl_context *context, ppllabel_object *in, char *out, const 
         if ((words[0] != '\0') || in->fontsizeSet) ppl_strAppendf(out, outLen, &i, " with %s", words);
     }
     i += strlen(out + i);
+    // The font size, if set
     if (in->fontsizeSet) {
         ppl_strAppendf(out, outLen, &i, " fontsize %s",
                        ppl_numericDisplay(in->fontsize, context->numdispBuff[0],

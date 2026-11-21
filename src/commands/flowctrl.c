@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements Pyxplot's flow-control commands: the do, for, foreach, foreach datum and while loops, if statements, with
+// blocks (which run commands inside a module's namespace), subroutine definitions, and break, continue and return. Loop
+// bodies are compiled blocks of commands, executed with ppl_parserExecute(); break, continue and return set flags in
+// the context, which each enclosing loop checks after running its body. Loops may be named, so that break and continue
+// can be aimed at an outer loop.
+
 #define _FLOWCTRL_C 1
 
 #include <stdio.h>
@@ -76,10 +82,12 @@ void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutpu
     const int named = (stk[PARSE_break_loopname].objType == PPLOBJ_STR);
     char *name = (char *) stk[PARSE_break_loopname].auxil;
 
+    // If a loop name was given, check that we are inside a loop with that name, and aim the break at it
     if (named) {
         int i;
         for (i = iterDepth; i >= 0; i--)
             if ((c->shellLoopName[i] != NULL) && (strcmp(c->shellLoopName[i], name) == 0)) break;
+        // No enclosing loop has the name given
         if (i < 0) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Not inside any loop with the name '%s'.", name);
             ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_break_loopname], "");
@@ -87,6 +95,7 @@ void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutpu
         }
         c->shellBreakLevel = i;
     } else {
+        // Otherwise, we must be inside a loop
         if (!c->shellBreakable) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH,
                      "The break statement can only be placed inside a loop structure.");
@@ -96,6 +105,7 @@ void ppl_directive_break(ppl_context *c, const parserLine *pl, const parserOutpu
         c->shellBreakLevel = -1;
     }
 
+    // Flag that execution should break out of the loop
     c->shellBroken = 1;
     return;
 }
@@ -114,10 +124,12 @@ void ppl_directive_continue(ppl_context *c, const parserLine *pl, const parserOu
     const int named = (stk[PARSE_continue_loopname].objType == PPLOBJ_STR);
     char *name = (char *) stk[PARSE_continue_loopname].auxil;
 
+    // If a loop name was given, check that we are inside a loop with that name, and aim the continue at it
     if (named) {
         int i;
         for (i = iterDepth; i >= 0; i--)
             if ((c->shellLoopName[i] != NULL) && (strcmp(c->shellLoopName[i], name) == 0)) break;
+        // No enclosing loop has the name given
         if (i < 0) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Not inside any loop with the name '%s'.", name);
             ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[PARSE_continue_loopname], "");
@@ -125,6 +137,7 @@ void ppl_directive_continue(ppl_context *c, const parserLine *pl, const parserOu
         }
         c->shellBreakLevel = i;
     } else {
+        // Otherwise, we must be inside a loop
         if (!c->shellBreakable) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH,
                      "The continue statement can only be placed inside a loop structure.");
@@ -134,6 +147,7 @@ void ppl_directive_continue(ppl_context *c, const parserLine *pl, const parserOu
         c->shellBreakLevel = -1;
     }
 
+    // Flag that execution should skip to the next iteration of the loop
     c->shellContinued = 1;
     return;
 }
@@ -151,15 +165,18 @@ void ppl_directive_return(ppl_context *c, const parserLine *pl, const parserOutp
     pplObj *retval = &stk[PARSE_return_return_value];
     const int gotval = (retval->objType != PPLOBJ_ZOM);
 
+    // We must be inside a subroutine
     if (!c->shellReturnable) {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "The return statement can only be placed inside subroutines.");
         ppl_tbAddLine(c, pl, ERR_SYNTAX, 0, "");
         return;
     }
 
+    // Flag that execution should return from the subroutine, breaking out of any loops within it
     c->shellBreakLevel = -1;
     c->shellReturned = 1;
 
+    // Store the return value, if any
     if (gotval) pplObjCpy(&c->shellReturnVal, retval, 0, 0, 1);
     else pplObjNum(&c->shellReturnVal, 0, 0, 0);
     return;
@@ -183,20 +200,24 @@ void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *
     const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
+    // Record the loop's name, if any, for named break and continue statements, and allow break and continue inside it
     if (named) c->shellLoopName[iterDepth] = name;
     else c->shellLoopName[iterDepth] = NULL;
     c->shellBreakable = 1;
 
+    // Run the body of the loop, then evaluate the condition, repeating while it is true
     do {
         int lastOpAssign, dollarAllowed = 1;
         pplObj *val;
         ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
+        // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "do loop");
             goto cleanup;
         }
         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
+        // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
         if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
             c->shellContinued = 0;
             c->shellBreakLevel = 0;
@@ -204,6 +225,7 @@ void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *
         }
         if ((c->shellBroken) || (c->shellContinued) || (c->shellReturned) || (c->shellExiting)) break;
         val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+        // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "do loop stopping criterion");
@@ -214,7 +236,9 @@ void ppl_directive_do(ppl_context *c, const parserLine *pl, const parserOutput *
         ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
     } while (criterion && !cancellationFlag);
 
+// Tidy up when the loop finishes
 cleanup:
+    // A break statement aimed at this loop, or at the innermost loop, has now taken effect, so clear it
     if ((c->shellBroken) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
         c->shellBroken = 0;
         c->shellBreakLevel = 0;
@@ -253,10 +277,13 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
     const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
+    // Record the loop's name, if any, for named break and continue statements, and allow break and continue inside it
     if (named) c->shellLoopName[iterDepth] = name;
     else c->shellLoopName[iterDepth] = NULL;
     c->shellBreakable = 1;
 
+    // BASIC-style loops step a numeric variable from one value to another; C-style loops evaluate an initialiser, a
+    // condition and an increment
     if (BASICstyle) {
         double iter;
         const int forwards = stepGot ? (stepVal->real > 0) : (endVal->real > beginVal->real);
@@ -269,6 +296,7 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             stepTmp.real = forwards ? 1 : -1;
             stepVal = &stepTmp;
         }
+        // The start and end values must have the same units
         if (!ppl_unitsDimEqual(beginVal, endVal)) {
             ppl_snprintfTrunc(
                     c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -277,6 +305,7 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[PARSE_for_final_value], "");
             goto cleanup;
         }
+        // The start value and step must have the same units
         if (!ppl_unitsDimEqual(beginVal, stepVal)) {
             ppl_snprintfTrunc(
                     c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -285,12 +314,14 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[PARSE_for_start_value], "");
             goto cleanup;
         }
+        // The step must move from the start value towards the end value
         if ((stepVal->real == 0) || ((endVal->real != beginVal->real) && ((stepVal->real > 0) != forwards))) {
             strcpy(c->errStat.errBuff, "The number of iterations in this for loop is infinite.");
             ppl_tbAddLine(c, pl, ERR_NUMERICAL, in->stkCharPos[PARSE_for_start_value], "");
             goto cleanup;
         }
 
+        // Run the body of the loop for each value of the variable, unless the user presses control-C
         for (iter = beginVal->real; (forwards ? (iter <= endVal->real) : (iter >= endVal->real)) && !cancellationFlag;
              iter += stepVal->real) {
             pplObj *varObj, vartmp;
@@ -300,12 +331,14 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
             vartmp.amMalloced = 0;
             ppl_garbageObject(&vartmp);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "for loop");
                 goto cleanup;
             }
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
+            // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
             if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
                 c->shellContinued = 0;
                 c->shellBreakLevel = 0;
@@ -314,9 +347,11 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             if ((c->shellBroken) || (c->shellContinued) || (c->shellReturned) || (c->shellExiting)) break;
         }
     } else {
+        // Evaluate the initialiser, if any
         if (beginGot) {
             int lastOpAssign, dollarAllowed = 1;
             ppl_expEval(c, begin, &lastOpAssign, dollarAllowed, iterDepth + 1);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "for loop initialisation expression");
@@ -324,11 +359,14 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
             }
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
         }
+        // Repeat until the condition becomes false
         while (1) {
+            // Evaluate the condition, if any, and stop when it becomes false
             if (condGot) {
                 int lastOpAssign, dollarAllowed = 1, criterion = 1;
                 pplObj *val;
                 val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+                // Add this statement to the traceback of any error
                 if (c->errStat.status) {
                     strcpy(c->errStat.errBuff, "");
                     ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "for loop stopping criterion");
@@ -340,20 +378,24 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
                 if (!criterion || cancellationFlag) break;
             }
             ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "for loop");
                 goto cleanup;
             }
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
+            // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
             if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
                 c->shellContinued = 0;
                 c->shellBreakLevel = 0;
             }
             if ((c->shellBroken) || (c->shellContinued) || (c->shellReturned) || (c->shellExiting)) break;
+            // Evaluate the increment, if any
             if (endGot) {
                 int lastOpAssign, dollarAllowed = 1;
                 ppl_expEval(c, end, &lastOpAssign, dollarAllowed, iterDepth + 1);
+                // Add this statement to the traceback of any error
                 if (c->errStat.status) {
                     strcpy(c->errStat.errBuff, "");
                     ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "for loop stopping criterion");
@@ -364,7 +406,9 @@ void ppl_directive_for(ppl_context *c, const parserLine *pl, const parserOutput 
         }
     }
 
+// Tidy up when the loop finishes
 cleanup:
+    // A break statement aimed at this loop, or at the innermost loop, has now taken effect, so clear it
     if ((c->shellBroken) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
         c->shellBroken = 0;
         c->shellBreakLevel = 0;
@@ -403,6 +447,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
     const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
+    // Record the loop's name, if any, for named break and continue statements, and allow break and continue inside it
     if (named) c->shellLoopName[iterDepth] = name;
     else c->shellLoopName[iterDepth] = NULL;
     c->shellBreakable = 1;
@@ -415,6 +460,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         char *raw = (char *) iter->auxil, fName[FNAME_LENGTH];
         {
             int j, k;
+            // Escape spaces in the filename pattern before passing it to wordexp
             for (j = k = 0; ((raw[j] != '\0') && (k < FNAME_LENGTH - 1));) {
                 if (raw[j] == ' ') fName[k++] = '\\';
                 fName[k++] = raw[j++];
@@ -422,19 +468,23 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
             fName[k++] = '\0';
         }
         if (wordexp(fName, &w, 0) != 0) goto cleanup; // No matches
+        // Run the loop once for each file matching each word of the expanded pattern
         for (i = 0; i < w.we_wordc && !foreachStop(c); i++) {
             if (glob(w.we_wordv[i], 0, NULL, &g) != 0) continue;
+            // Run the body of the loop once for each matching file, with the variable set to its filename
             for (j = 0; j < g.gl_pathc && !foreachStop(c); j++) {
                 pplObj *varObj, vartmp;
                 ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
                 pplObjStr(varObj, varObj->amMalloced, 0, g.gl_pathv[j]);
                 ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
                 ppl_contextRestoreVarPointer(c, varname, &vartmp);
+                // Add this statement to the traceback of any error
                 if (c->errStat.status) {
                     strcpy(c->errStat.errBuff, "");
                     ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "foreach loop");
                 }
                 ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
+                // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
                 if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
                     c->shellContinued = 0;
                     c->shellBreakLevel = 0;
@@ -449,6 +499,7 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         gsl_vector *vin = ((pplVector *) iter->auxil)->v;
         const int vinl = vin->size;
         int i;
+        // Run the body of the loop once for each element of the vector
         for (i = 0; i < vinl && !foreachStop(c); i++) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
@@ -456,11 +507,13 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
             ppl_unitsDimCpy(varObj, iter);
             ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
             ppl_contextRestoreVarPointer(c, varname, &vartmp);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "foreach loop");
             }
             ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
+            // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
             if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
                 c->shellContinued = 0;
                 c->shellBreakLevel = 0;
@@ -473,17 +526,20 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         list *lin = (list *) iter->auxil;
         listIterator *li = ppl_listIterateInit(lin);
         pplObj *obj;
+        // Run the body of the loop once for each item of the list
         while (((obj = (pplObj *) ppl_listIterate(&li)) != NULL) && !foreachStop(c)) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
             pplObjCpy(varObj, obj, 0, varObj->amMalloced, 1);
             ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
             ppl_contextRestoreVarPointer(c, varname, &vartmp);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "foreach loop");
             }
             ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
+            // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
             if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
                 c->shellContinued = 0;
                 c->shellBreakLevel = 0;
@@ -498,10 +554,12 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         dictIterator *di = ppl_dictIterateInit(din);
         pplObj *obj;
         char *key, *cpy;
+        // Run the body of the loop once for each key of the dictionary
         while (((obj = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) && !foreachStop(c)) {
             pplObj *varObj, vartmp;
             ppl_contextGetVarPointer(c, varname, &varObj, &vartmp);
             cpy = (char *) malloc(strlen(key) + 1);
+            // Stop if memory cannot be allocated for the key
             if (cpy == NULL) {
                 ppl_contextRestoreVarPointer(c, varname, &vartmp);
                 break;
@@ -510,11 +568,13 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
             pplObjStr(varObj, varObj->amMalloced, 1, cpy);
             ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
             ppl_contextRestoreVarPointer(c, varname, &vartmp);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "foreach loop");
             }
             ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
+            // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
             if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
                 c->shellContinued = 0;
                 c->shellBreakLevel = 0;
@@ -529,7 +589,9 @@ void ppl_directive_foreach(ppl_context *c, const parserLine *pl, const parserOut
         goto cleanup;
     }
 
+// Tidy up when the loop finishes
 cleanup:
+    // A break statement aimed at this loop, or at the innermost loop, has now taken effect, so clear it
     if ((c->shellBroken) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
         c->shellBroken = 0;
         c->shellBreakLevel = 0;
@@ -565,6 +627,7 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
     dataBlock *blk = NULL;
     parserLine *spool = NULL, **dataSpool = &spool;
 
+    // Record the loop's name, if any, for named break and continue statements, and allow break and continue inside it
     if (named) c->shellLoopName[iterDepth] = name;
     else c->shellLoopName[iterDepth] = NULL;
     c->shellBreakable = 1;
@@ -573,6 +636,7 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
     while (stk[pos].objType == PPLOBJ_NUM) {
         pos = (int) round(stk[pos].real);
         if (pos <= 0) break;
+        // There is a fixed limit on the number of variables
         if (Nvars >= USING_ITEMS_MAX) {
             ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                               "Too many variable names; a maximum of %d may be specified.", USING_ITEMS_MAX);
@@ -590,9 +654,11 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
         const int o2 = PARSE_foreachdatum_max_0range_list;
         for (i = 0; i < Nvars; i++) minSet[i] = 0;
         for (i = 0; i < Nvars; i++) maxSet[i] = 0;
+        // Walk the linked list of ranges on the parser stack; there may be one for each variable
         while (stk[pos].objType == PPLOBJ_NUM) {
             pos = (int) round(stk[pos].real);
             if (pos <= 0) break;
+            // There may be no more ranges than variables
             if (nr >= Nvars) {
                 ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                                   "Too many ranges specified; there are only %d loop variables.", Nvars);
@@ -607,6 +673,7 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
             }
             if ((stk[pos + o2].objType == PPLOBJ_NUM) || (stk[pos + o2].objType == PPLOBJ_DATE) ||
                 (stk[pos + o2].objType == PPLOBJ_BOOL)) {
+                // The maximum must have the same type as the minimum
                 if ((minSet[nr]) && (unit[nr].objType != stk[pos + o2].objType)) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -616,6 +683,7 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
                     ppl_tbAddLine(c, pl, ERR_TYPE, in->stkCharPos[pos + PARSE_foreachdatum_min_0range_list], "");
                     goto cleanup;
                 }
+                // The maximum must have the same units as the minimum
                 if ((minSet[nr]) && (!ppl_unitsDimEqual(&unit[nr], &stk[pos + o2]))) {
                     ppl_snprintfTrunc(
                             c->errStat.errBuff, sizeof(c->errStat.errBuff),
@@ -636,6 +704,7 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
     // Fetch data
     ppldata_fromCmd(c, &data, pl, in, 0, NULL, dataSpool, PARSE_TABLE_foreachdatum_, 0, Nvars, Nvars, min, minSet, max,
                     maxSet, unit, 0, &status, msg, &errCount, iterDepth);
+    // Report a failure to read the data
     if (status || cancellationFlag) {
         ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
         goto cleanup;
@@ -643,12 +712,15 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
 
     // Loop over data table
     blk = data->first;
+    // Loop over the blocks of the data table
     while ((blk != NULL) && !foreachStop(c)) {
         int j;
+        // Run the body of the loop once for each row of data, with the variables set to its columns
         for (j = 0; ((j < blk->blockPosition) && !foreachStop(c)); j++) {
             const int stkLevelOld = c->stackPtr;
             int k, inRange = 1;
 
+            // Set each variable to the value in its column, skipping rows with any value outside its range
             for (k = 0; ((k < Nvars) && inRange); k++) {
                 pplObj *obj = &blk->data_obj[k + j * Nvars];
                 const int numeric = obj->objType == unit[k].objType;
@@ -659,7 +731,9 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
 
                 // Check units of ranges
                 if ((minSet[k] || maxSet[k]) && inRange) {
+                    // A non-numeric value cannot be compared with a numeric range
                     if (!numeric) {
+                        // Report an error, or skip the row silently if errors are switched off
                         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                             ppl_snprintfTrunc(
                                     msg, sizeof(msg),
@@ -669,6 +743,7 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
                         }
                         inRange = 0;
                     } else if (!ppl_unitsDimEqual(&unit[k], obj)) {
+                        // Report an error, or skip the row silently if errors are switched off
                         if (c->set->term_current.ExplicitErrors == SW_ONOFF_ON) {
                             ppl_snprintfTrunc(
                                     msg, sizeof(msg),
@@ -695,12 +770,14 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
             if (inRange) { ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1); }
             // Restore variable pointers
             for (i = 0; i < Nvars; i++) ppl_contextRestoreVarPointer(c, varname[i], &vartmp[i]);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "foreach datum statement");
                 return;
             }
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
+            // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
             if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
                 c->shellContinued = 0;
                 c->shellBreakLevel = 0;
@@ -714,8 +791,10 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
 
     // Free data tables
     blk = data->first;
+    // Free the objects held in the data table
     while (blk != NULL) {
         int j;
+        // Free each object in each row
         for (j = 0; j < blk->blockPosition; j++) {
             int k;
             for (k = 0; k < Nvars; k++) ppl_garbageObject(&blk->data_obj[k + j * Nvars]);
@@ -723,7 +802,9 @@ void ppl_directive_fordata(ppl_context *c, parserLine *pl, parserOutput *in, con
         blk = blk->next;
     }
 
+// Tidy up when the loop finishes
 cleanup:
+    // A break statement aimed at this loop, or at the innermost loop, has now taken effect, so clear it
     if ((c->shellBroken) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
         c->shellBroken = 0;
         c->shellBreakLevel = 0;
@@ -754,6 +835,7 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
 
     // Test criterion
     val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+    // Add this statement to the traceback of any error
     if (c->errStat.status) {
         strcpy(c->errStat.errBuff, "");
         ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "if criterion");
@@ -762,8 +844,10 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
     ppl_castToBool(c, val);
     criterion = (val->real != 0);
     ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
+    // If the condition is true, run the if block, and stop
     if (criterion) {
         ppl_parserExecute(c, pl_if, NULL, interactive, iterDepth + 1);
+        // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "if statement");
@@ -784,6 +868,7 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
         cond_elif = (pplExpr *) stk[pos + PARSE_if_criterion_0elifs].auxil;
         if (pos <= 0) break;
         val = ppl_expEval(c, cond_elif, &lastOpAssign, dollarAllowed, iterDepth + 1);
+        // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "else if criterion");
@@ -792,8 +877,10 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
         ppl_castToBool(c, val);
         criterion = (val->real != 0);
         ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
+        // If this condition is true, run its block, and stop
         if (criterion) {
             ppl_parserExecute(c, pl_elif, NULL, interactive, iterDepth + 1);
+            // Add this statement to the traceback of any error
             if (c->errStat.status) {
                 strcpy(c->errStat.errBuff, "");
                 ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "if statement");
@@ -807,6 +894,7 @@ void ppl_directive_if(ppl_context *c, const parserLine *pl, const parserOutput *
     // else
     if (gotelse) {
         ppl_parserExecute(c, pl_else, NULL, interactive, iterDepth + 1);
+        // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "if statement");
@@ -835,6 +923,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
 
     // Count number of arguments
     pos = PARSE_subroutine_0argument_list;
+    // Walk the linked list of argument names on the parser stack, counting them
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         char *name;
         pos = (int) round(stk[pos].real);
@@ -842,6 +931,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
         nArgs++;
         argListLen += strlen(name) + 1;
     }
+    // Refuse to define subroutines with too many arguments
     if (nArgs > FUNC_MAXARGS) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Too many arguments to function; the maximum allowed number is %d.", FUNC_MAXARGS);
@@ -851,6 +941,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
 
     // Allocate function descriptor
     f = (pplFunc *) malloc(sizeof(pplFunc));
+    // Failure to allocate memory is reported as an error
     if (f == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         ppl_tbAddLine(c, pl, ERR_MEMORY, 0, 0);
@@ -874,6 +965,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     f->LaTeX = NULL;
     f->description = NULL;
     f->descriptionShort = NULL;
+    // Failure to allocate memory is reported as an error
     if (f->argList == NULL) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff), "Out of memory.");
         ppl_tbAddLine(c, pl, ERR_MEMORY, 0, 0);
@@ -883,6 +975,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     // Put argument names into structure
     pos = PARSE_subroutine_0argument_list;
     i = 0;
+    // Store the argument names one after another, each followed by a zero byte
     while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
         char *name;
         pos = (int) round(stk[pos].real);
@@ -895,6 +988,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     ppl_contextVarHierLookup(c, pl->srcLineN, pl->srcId, pl->srcFname, pl->linetxt, stk, in->stkCharPos, &tmpObj,
                              PARSE_subroutine_subroutine_names, PARSE_subroutine_subroutine_name_subroutine_names);
     if ((c->errStat.status) || (tmpObj == NULL)) goto fail;
+    // A global declaration at the top level cannot be overwritten
     if (tmpObj->objType == PPLOBJ_GLOB) {
         ppl_snprintfTrunc(c->errStat.errBuff, sizeof(c->errStat.errBuff),
                           "Variable declared global in global namespace.");
@@ -902,6 +996,7 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
         goto fail;
     }
 
+    // Replace the variable's old value with the subroutine, keeping its reference count and storage
     om = tmpObj->amMalloced;
     rc = tmpObj->refCount;
     tmpObj->amMalloced = 0;
@@ -912,8 +1007,11 @@ void ppl_directive_subrt(ppl_context *c, const parserLine *pl, const parserOutpu
     if (plsub != NULL) __sync_add_and_fetch(&plsub->refCount, 1);
     return;
 
+// On error, free the partially built function descriptor
 fail:
+    // Free the argument names and the descriptor
     if (f != NULL) {
+        // The argument names
         if (f->argList != NULL) {
             free(f->argList);
             f->argList = NULL;
@@ -942,14 +1040,18 @@ void ppl_directive_while(ppl_context *c, const parserLine *pl, const parserOutpu
     const int shellBreakableOld = c->shellBreakable;
     const int stkLevelOld = c->stackPtr;
 
+    // Record the loop's name, if any, for named break and continue statements, and allow break and continue inside it
     if (named) c->shellLoopName[iterDepth] = name;
     else c->shellLoopName[iterDepth] = NULL;
     c->shellBreakable = 1;
 
+    // Evaluate the condition, then run the body of the loop, repeating while the condition is true, unless the user
+    // presses control-C
     while (!cancellationFlag) {
         int lastOpAssign, dollarAllowed = 1;
         pplObj *val;
         val = ppl_expEval(c, cond, &lastOpAssign, dollarAllowed, iterDepth + 1);
+        // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "while loop stopping criterion");
@@ -960,12 +1062,14 @@ void ppl_directive_while(ppl_context *c, const parserLine *pl, const parserOutpu
         ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
         if (!criterion) break;
         ppl_parserExecute(c, plc, NULL, interactive, iterDepth + 1);
+        // Add this statement to the traceback of any error
         if (c->errStat.status) {
             strcpy(c->errStat.errBuff, "");
             ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "while loop");
             goto cleanup;
         }
         ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack
+        // A continue statement aimed at this loop, or at the innermost loop, ends this iteration
         if ((c->shellContinued) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
             c->shellContinued = 0;
             c->shellBreakLevel = 0;
@@ -974,7 +1078,9 @@ void ppl_directive_while(ppl_context *c, const parserLine *pl, const parserOutpu
         if ((c->shellBroken) || (c->shellContinued) || (c->shellReturned) || (c->shellExiting)) break;
     }
 
+// Tidy up when the loop finishes
 cleanup:
+    // A break statement aimed at this loop, or at the innermost loop, has now taken effect, so clear it
     if ((c->shellBroken) && ((c->shellBreakLevel == iterDepth) || (c->shellBreakLevel < 0))) {
         c->shellBroken = 0;
         c->shellBreakLevel = 0;
@@ -1020,6 +1126,7 @@ void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput
     d->refCount++;
     c->namespaces[++c->ns_ptr] = d;
 
+    // Run the block of commands
     ppl_parserExecute(c, pl2, NULL, interactive, iterDepth + 1);
 
     // Leave namespace
@@ -1029,6 +1136,7 @@ void ppl_directive_with(ppl_context *c, const parserLine *pl, const parserOutput
     }
     c->ns_ptr--;
 
+    // Add this statement to the traceback of any error
     if (c->errStat.status) {
         strcpy(c->errStat.errBuff, "");
         ppl_tbAddLine(c, pl, ERR_GENERIC, 0, "with block");

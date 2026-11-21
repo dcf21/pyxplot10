@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// The expression compiler. ppl_expTokenise() first classifies each character of an algebraic expression into tokens
+// (numbers, strings, variable names, operators, brackets...), checking at each step that the token may follow the
+// previous one, according to the table below; this finds syntax errors and their positions. The tokens are then
+// compiled into bytecode for the stack machine in expEval.c, taking account of operator precedence. Every expression in
+// Pyxplot passes through here, e.g. in commands, function definitions and using modifiers.
+
 #define _EXPCOMPILE_C 1
 
 #include <stdlib.h>
@@ -120,6 +126,7 @@ static pplTokenCode *tokenOut(const tokeniserState *t) {
 
 static int tokenBuffEnsure(tokeniserState *t, const int n) {
     ppl_context *context = t->context;
+    // Double the size of the buffer until there is room for n more tokens
     while (t->outOffset + t->outpos + n >= context->tokenBuffLen) {
         pplTokenCode *grown =
                 (pplTokenCode *) realloc(context->tokenBuff, 2 * context->tokenBuffLen * sizeof(pplTokenCode));
@@ -146,6 +153,7 @@ static int tokenNewState(tokeniserState *t, const char state, const unsigned cha
     t->opcode = opcode;
     t->precedence = precedence;
     if (tokenBuffEnsure(t, len)) return 1;
+    // Write a token code for each of the characters which the new token occupies
     for (i = 0; i < len; i++) {
         pplTokenCode *o = tokenOut(t);
         o->state = state;
@@ -185,6 +193,7 @@ static int tokenFastForward(tokeniserState *t, const int len) {
 //! \param [in,out] j - Flag indicating whether any alternatives have been listed yet; set to true
 
 static void appendOr(char *errText, int *i, int *j) {
+    // Separate alternatives with "or", except before the first one
     if (*j != 0) {
         strcpy(errText + *i, " or ");
         *i += strlen(errText + *i);
@@ -222,17 +231,20 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
     int extraArg =
             0; // Was last named function one which has a variable name encoded in it -- i.e. int_dx() or diff_dx()?
 
+    // At the start of a new top-level expression, shrink a token buffer which has grown very large
     if ((outOffset == 0) && (context->tokenBuffLen > ALGEBRA_MAXLEN)) {
         free(context->tokenBuff);
         context->tokenBuff = NULL;
         context->tokenBuffLen = 0;
     }
 
+    // Allocate the token buffer if necessary
     if (context->tokenBuff == NULL) {
         context->tokenBuff = (pplTokenCode *) malloc(ALGEBRA_MAXLEN * sizeof(pplTokenCode));
         context->tokenBuffLen = ALGEBRA_MAXLEN;
     }
 
+    // Failure to allocate memory is reported as an error
     if (context->tokenBuff == NULL) {
         *errPos = 0;
         *errType = ERR_MEMORY;
@@ -241,12 +253,15 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         return;
     }
 
+    // Read tokens until the end of the expression (state U). At each step, skip whitespace, and then try each of the
+    // states which may follow the current one, in the order listed in the table, until one matches.
     while (t.state != 'U') {
         while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
             if (tokenSameState(&t)) goto overflow;
         } // Sop up whitespace
         oldpos = t.scanpos;
 
+        // Try each state which may follow the current one
         for (trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
             if ((expOp) && (trialstate != 'P'))
                 continue; // int_dx and diff_dx MUST be followed by arguments; they have already put one on the stack.
@@ -254,16 +269,21 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
             {
                 char quoteType;
                 int raw = 0;
+                // A string may have a prefix: r for a raw string, in which backslashes are not escapes
                 if ((in[t.scanpos] == 'r') && ((in[t.scanpos + 1] == '\'') || (in[t.scanpos + 1] == '"'))) {
                     raw = 1;
                     if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
                 } // r'hello' is raw string
+                // e for a string in which escape sequences such as
+                // are expanded
                 if ((in[t.scanpos] == 'e') && ((in[t.scanpos + 1] == '\'') || (in[t.scanpos + 1] == '"'))) {
                     raw = 0;
                     if (tokenNewState(&t, trialstate, 0, 0, 1)) goto overflow;
                 } // e'hello' is string with extended escapes
+                // A string literal, in single or double quotes, or in triple quotes, which may span several lines
                 if ((in[t.scanpos] == (quoteType = '\'')) || (in[t.scanpos] == (quoteType = '"'))) {
                     int j = 1, tripleQuote = 0;
+                    // Triple quotes
                     if ((in[t.scanpos + 1] == quoteType) && (in[t.scanpos + 2] == quoteType)) {
                         j = 3;
                         tripleQuote = 1;
@@ -275,7 +295,9 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             (in[t.scanpos + j + 2] != quoteType))));
                          j++)
                         if ((!raw) && (in[t.scanpos + j] == '\\') && (in[t.scanpos + j + 1] != '\0')) j++;
+                    // Found the closing quote
                     if (in[t.scanpos + j] == quoteType) {
+                        // Triple quotes are closed by three quote characters
                         if (tripleQuote) {
                             j += 3;
                         } else {
@@ -300,9 +322,11 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                        || (trialstate == 'E') // a bracketed sub-expression
                        || (trialstate == 'P')) // a list of function arguments
             {
+                // A bracketed sub-expression, or the arguments of a function call
                 if (markupMatch(in + t.scanpos, "(")) {
                     int j, k, l, m, n = 1, cp[3], cpl = 3, extraStrArg = 0;
                     ppl_strBracketMatch(in + t.scanpos, '(', ')', cp, &cpl, &j, cpl); // Search for a ) to match the (
+                    // The bracket must be closed
                     if (j <= 0) {
                         *errPos = t.scanpos;
                         *errType = ERR_SYNTAX;
@@ -313,6 +337,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     }
                     if (tokenNewState(&t, trialstate, 0, 0, 1))
                         goto overflow; // Record the one character opening bracket
+                    // Skip whitespace after the opening bracket
                     while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
                         if (tokenSameState(&t)) goto overflow;
                         n++;
@@ -323,6 +348,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     {
                         int explen = cp[1] + (cpl != 1) - n;
                         if (expOp > 1) explen = j - n; // texify receives all arguments as a string
+                        // ppl_strBracketMatch() should always find the closing bracket here
                         if (cpl < 1) {
                             *errPos = t.scanpos;
                             *errType = ERR_INTERNAL;
@@ -341,14 +367,17 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     k = t.scanpos;
                     l = t.outpos;
                     j -= n;
+                    // Unless the brackets are empty, tokenise their contents recursively
                     if ((in[k] != ')') || (trialstate == 'E')) {
                         ppl_expTokenise(context, in + k, &m, dollarAllowed, 1, 1, (trialstate != 'E'), 0, l + outOffset,
                                         &n, errPos, errType,
                                         errText); // Hierarchically tokenise the inside of the brackets
+                        // Report a syntax error within the brackets
                         if (*errPos >= 0) {
                             *errPos += k;
                             return;
                         }
+                        // The contents must use everything up to the closing bracket
                         if (m != j) {
                             *errPos = m + k;
                             *errType = ERR_SYNTAX;
@@ -369,6 +398,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'F') // a unary post-lvalue operator
             {
+                // Post-decrement and post-increment operators, e.g. x++
                 if (markupMatch(in + t.scanpos, "--")) {
                     if (tokenNewState(&t, trialstate, PPL_OP_POST_DECREMENT, 3, 2)) goto overflow;
                 } else if (markupMatch(in + t.scanpos, "++")) {
@@ -376,6 +406,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'H') // a unary pre-lvalue operator
             {
+                // Pre-decrement and pre-increment operators, e.g. ++x
                 if (markupMatch(in + t.scanpos, "--")) {
                     if (tokenNewState(&t, trialstate, PPL_OP_PRE_DECREMENT, 3, 2)) goto overflow;
                 } else if (markupMatch(in + t.scanpos, "++")) {
@@ -385,6 +416,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                        (trialstate == 'T') || // a dereference name
                        (trialstate == 'V')) // a $parameter name
             {
+                // A variable or function name. The names unit(), int_dx() and diff_dx() are special, since their
+                // arguments are not ordinary expressions.
                 if (isalpha(in[t.scanpos])) {
                     const char tmp = trialstate;
                     if ((strncmp(in + t.scanpos, "unit", 4) == 0) && (!isalnum(in[t.scanpos + 4])) &&
@@ -394,6 +427,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (tokenNewState(&t, trialstate, 0, 0, 4)) goto overflow;
                     } else if (strncmp(in + t.scanpos, "int_d", 5) == 0) // int_d() function
                     {
+                        // int_d must be followed by the name of the dummy variable
                         if (!isalpha(in[t.scanpos + 5])) {
                             *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
@@ -416,6 +450,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         extraArg = 1;
                     } else if (strncmp(in + t.scanpos, "diff_d", 6) == 0) // diff_d() function
                     {
+                        // diff_d must be followed by the name of the dummy variable
                         if (!isalpha(in[t.scanpos + 6])) {
                             *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
@@ -446,6 +481,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'I') // a unary value-based operator
             {
+                // Unary operators, which act on values: -, +, ~ (bitwise not) and ! (logical not)
                 if (markupMatch(in + t.scanpos, "-")) {
                     if (tokenNewState(&t, trialstate, PPL_OP_NEGATE, 3, 1)) goto overflow;
                 } else if (markupMatch(in + t.scanpos, "+")) {
@@ -461,6 +497,8 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'J') // a binary operator
             {
+                // Binary operators, longest first, so that e.g. ** is not read as *. The numbers are their precedences,
+                // smaller binding more tightly.
                 if (markupMatch(in + t.scanpos, "**")) {
                     if (tokenNewState(&t, trialstate, PPL_OP_POWER, 2, 2)) goto overflow;
                 } else if (markupMatch(in + t.scanpos, "<<")) {
@@ -511,9 +549,12 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     if (tokenNewState(&t, trialstate, PPL_OP_BITWISE_OR, 13, 1)) goto overflow;
                 } else if ((markupMatch(in + t.scanpos, ",") &&
                             (collectCommas || allowCommaOperator || (tertiaryDepth > 0)))) {
+                    // A comma is either the comma operator, or separates the items of a list, dictionary or function
+                    // arguments, which are counted
                     if ((!collectCommas) || (tertiaryDepth > 0)) {
                         if (tokenNewState(&t, trialstate, PPL_OP_COMMA, 18, 1)) goto overflow;
                     } else {
+                        // In a dictionary, a comma must follow a key:value pair
                         if (isDict && (nCommaItems >= 2 - (nDictItems == 0))) {
                             *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
@@ -529,11 +570,14 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'K') // a ternary operator
             {
+                // The ternary operator ?: ; tertiaryDepth counts the ? waiting for their :
                 if (markupMatch(in + t.scanpos, "?")) {
                     if (tokenNewState(&t, trialstate, PPL_OP_TERNARY_QUESTION, 16, 1)) goto overflow;
                     tertiaryDepth++;
                 } else if (markupMatch(in + t.scanpos, ":")) {
+                    // In a dictionary, a : which is not part of a ?: separates a key from its value
                     if (isDict && (tertiaryDepth == 0)) {
+                        // Each key must be followed by exactly one :
                         if (nCommaItems < 2 - (nDictItems == 0)) {
                             *errPos = t.scanpos;
                             *errType = ERR_SYNTAX;
@@ -547,6 +591,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         nCommaItems = 1;
                         nDictItems++;
                     } else {
+                        // The : of a ternary operator
                         if (tertiaryDepth > 0) {
                             tertiaryDepth--;
                             if (tokenNewState(&t, trialstate, PPL_OP_TERNARY_COLON, 16, 1)) goto overflow;
@@ -563,10 +608,12 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                        (trialstate == 'Q')) // an array dereference []
             {
                 expOp = 0;
+                // A list literal, or a slice or item lookup, e.g. a[1:3]
                 if (markupMatch(in + t.scanpos, "[")) {
                     int j, k, l, m = 0, n = 1;
                     int slice = 0, minSet = 0, maxSet = 0;
                     ppl_strBracketMatch(in + t.scanpos, '[', ']', NULL, NULL, &j, 0); // Search for a ] to match the [
+                    // The bracket must be closed
                     if (j <= 0) {
                         *errPos = t.scanpos;
                         *errType = ERR_SYNTAX;
@@ -582,6 +629,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         if (tokenSameState(&t)) goto overflow;
                         n++;
                         slice = 1;
+                        // Skip whitespace after the opening bracket
                         while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
                             if (tokenSameState(&t)) goto overflow;
                             n++;
@@ -598,10 +646,12 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         ppl_expTokenise(context, in + k, &m, dollarAllowed, 1, 1, trialstate != 'Q', 0, l + outOffset,
                                         &n, errPos, errType,
                                         errText); // Hierarchically tokenise the inside of the brackets
+                        // Report a syntax error within the brackets
                         if (*errPos >= 0) {
                             *errPos += k;
                             return;
                         }
+                        // A : within [] makes this a slice, with an upper limit after the :
                         if ((trialstate == 'Q') && (!slice) && (in[k + m] == ':')) {
                             slice = minSet = 1;
                             if (tokenFastForward(&t, m)) goto overflow;
@@ -609,6 +659,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             trialstate = 'J';
                             if (tokenNewState(&t, trialstate, PPL_OP_COLLECT, 18, 1)) goto overflow;
                             j--; // Treat : separating ranges as a , operator (collect items on stack)
+                            // Skip whitespace after the :
                             while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
                                 if (tokenSameState(&t)) goto overflow;
                                 j--;
@@ -617,17 +668,20 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                             k = t.scanpos;
                             l = t.outpos;
                             m = 0;
+                            // Tokenise the upper limit of the slice, if there is one
                             if (j > 0) {
                                 maxSet = 1;
                                 ppl_expTokenise(context, in + k, &m, dollarAllowed, 1, 1, trialstate != 'Q', 0,
                                                 l + outOffset, &n, errPos, errType,
                                                 errText); // Hierarchically tokenise the inside of the brackets
+                                // Report a syntax error within the brackets
                                 if (*errPos >= 0) {
                                     *errPos += k;
                                     return;
                                 }
                             }
                         }
+                        // The contents must use everything up to the closing bracket
                         if (m != j) {
                             *errPos = m + k;
                             *errType = ERR_SYNTAX;
@@ -639,6 +693,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                         }
                     } else tokenOut(&t)->depth = 0;
                     if (tokenFastForward(&t, j)) goto overflow; // Fast-forward to closing bracket
+                    // Record which limits of a slice were given in the opcode of its closing bracket
                     if (trialstate == 'Q') {
                         tokenOut(&t)->opcode = (minSet ? PPL_SLICE_MIN_SET : 0) | (maxSet ? PPL_SLICE_MAX_SET : 0) |
                                 (slice ? 0 : PPL_SLICE_SINGLE_ITEM);
@@ -649,9 +704,11 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 }
             } else if (trialstate == 'N') // a dictionary literal
             {
+                // A dictionary literal
                 if (markupMatch(in + t.scanpos, "{")) {
                     int j, k, l, m, n = 1;
                     ppl_strBracketMatch(in + t.scanpos, '{', '}', NULL, NULL, &j, 0); // Search for a } to match the {
+                    // The brace must be closed
                     if (j <= 0) {
                         *errPos = t.scanpos;
                         *errType = ERR_SYNTAX;
@@ -662,6 +719,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     }
                     if (tokenNewState(&t, trialstate, 0, 0, 1))
                         goto overflow; // Record the one character opening bracket
+                    // Skip whitespace after the opening brace
                     while ((in[t.scanpos] != '\0') && ((unsigned char) in[t.scanpos] <= ' ')) {
                         if (tokenSameState(&t)) goto overflow;
                         n++;
@@ -669,13 +727,16 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                     k = t.scanpos;
                     l = t.outpos;
                     j -= n;
+                    // Unless the dictionary is empty, tokenise its contents recursively
                     if (in[k] != '}') {
                         ppl_expTokenise(context, in + k, &m, dollarAllowed, 1, 1, 1, 1, l + outOffset, &n, errPos,
                                         errType, errText); // Hierarchically tokenise the inside of the brackets
+                        // Report a syntax error within the braces
                         if (*errPos >= 0) {
                             *errPos += k;
                             return;
                         }
+                        // The contents must use everything up to the closing brace
                         if (m != j) {
                             *errPos = m + k;
                             *errType = ERR_SYNTAX;
@@ -705,6 +766,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
                 if ((markupMatch(in + t.scanpos, "=") && (in[t.scanpos + 1] != '=') && equalsAllowed)) {
                     if (tokenNewState(&t, trialstate, PPL_ASSIGN, 17, 1)) goto overflow;
                 } // Match = but not ==
+                // The fused assignment operators
                 else if (markupMatch(in + t.scanpos, "+=")) {
                     if (tokenNewState(&t, trialstate, PPL_ASSIGN_ADD, 17, 2)) goto overflow;
                 } else if (markupMatch(in + t.scanpos, "-=")) {
@@ -766,6 +828,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         *errText = '\0';
         tokenOut(&t)->state = '@';
         tokenOut(&t)->opcode = 0;
+        // Record in the end-of-expression token how many items a list, dictionary or argument list contained
         if (isDict) {
             tokenOut(&t)->depth = nDictItems;
         } else if (collectCommas) {
@@ -788,10 +851,12 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         *errType = ERR_SYNTAX;
         ppl_snprintfTrunc(errText, PPL_MSG_LENGTH, "%s", "At this point, was expecting ");
         i = strlen(errText);
+        // Describe each of the states which could have come next, in words
         for (trialpos = 0; ((trialstate = allowed[(int) (t.state - 'A')][trialpos]) != '\0'); trialpos++) {
             if ((expOp) && (trialstate != 'P'))
                 continue; // int_dx and diff_dx MUST be followed by arguments; they have already put one on the stack.
 
+            // Literals of any kind are described just once
             if ((!B) &&
                 ((trialstate == 'B') || (trialstate == 'L') || (trialstate == 'M') || (trialstate == 'N') ||
                  (trialstate == 'O'))) {
@@ -842,6 +907,7 @@ void ppl_expTokenise(ppl_context *context, char *in, int *end, const int dollarA
         return;
     }
 
+// The token buffer could not be enlarged to hold the expression
 overflow:
     // The token buffer could not be enlarged to hold the expression
     *errPos = t.scanpos;
@@ -945,9 +1011,11 @@ static void compileError(pplExprCompiler *c, const int pos, const int type, cons
 static pplExprInstruction *emitInstruction(pplExprCompiler *c, const pplExprOpcode opcode, const int charpos) {
     pplExpr *const expr = c->expr;
     pplExprInstruction *instruction;
+    // Double the space for bytecode when it is full
     if (expr->bcLen >= c->bytecodeAlloc) {
         pplExprInstruction *const grown =
                 (pplExprInstruction *) realloc(expr->bytecode, 2 * c->bytecodeAlloc * sizeof(pplExprInstruction));
+        // Failure to allocate memory is reported as an error
         if (grown == NULL) {
             compileError(c, 0, ERR_MEMORY, "Out of memory.");
             return NULL;
@@ -972,9 +1040,11 @@ static pplExprInstruction *emitInstruction(pplExprCompiler *c, const pplExprOpco
 
 static char *reserveString(pplExprCompiler *c, const int maxLen) {
     pplExpr *const expr = c->expr;
+    // Grow the string table when it is full
     if (expr->stringsLen + maxLen + 1 > c->stringsAlloc) {
         const int newAlloc = 2 * (expr->stringsLen + maxLen + 1);
         char *const grown = (char *) realloc(expr->strings, newAlloc);
+        // Failure to allocate memory is reported as an error
         if (grown == NULL) {
             compileError(c, 0, ERR_MEMORY, "Out of memory.");
             return NULL;
@@ -1011,9 +1081,11 @@ static pplExprStackItem *pushStackItem(pplExprCompiler *c, const pplExprStackIte
                                        const int charpos) {
     ppl_context *const context = c->context;
     pplExprStackItem *item;
+    // Double the size of the compiler's stack when it is full
     if (c->stackLen >= context->parserStackLen) {
         pplExprStackItem *const grown = (pplExprStackItem *) realloc(
                 context->parserStack, 2 * context->parserStackLen * sizeof(pplExprStackItem));
+        // Failure to allocate memory is reported as an error
         if (grown == NULL) {
             compileError(c, charpos, ERR_OVERFLOW, "Stack overflow whilst parsing algebraic expression.");
             return NULL;
@@ -1037,7 +1109,9 @@ static pplExprStackItem *pushStackItem(pplExprCompiler *c, const pplExprStackIte
 //! \return Zero on success, or nonzero if memory ran out
 
 static int emitStackItem(pplExprCompiler *c, const pplExprStackItem *item) {
+    // Write the instruction which applies an operator, or completes a bracket, taken from the compiler's stack
     pplExprInstruction *instruction = NULL;
+    // The type of stack item determines the instruction
     switch (item->type) {
         case PPL_STACK_ASSIGNMENT:
             instruction = emitInstruction(c, PPL_BC_ASSIGN, item->charpos);
@@ -1052,6 +1126,7 @@ static int emitStackItem(pplExprCompiler *c, const pplExprStackItem *item) {
             return 0; // Brackets are never popped by this function
     }
 
+    // Some operators need more than one instruction
     switch (item->operatorCode) {
         case PPL_OP_LOGICAL_AND:
         case PPL_OP_LOGICAL_OR:
@@ -1098,6 +1173,8 @@ static int emitStackItem(pplExprCompiler *c, const pplExprStackItem *item) {
 //! \return Zero on success, or nonzero if memory ran out
 
 static int popOperators(pplExprCompiler *c, const int precedence, const int rightAssoc) {
+    // The shunting-yard algorithm: before an operator is pushed, emit the operators on the stack which bind at least as
+    // tightly (or, for right-associative operators, more tightly)
     while (c->stackLen > 0) {
         const pplExprStackItem *const top = &c->stack[c->stackLen - 1];
         int stackPrecedence = top->precedence;
@@ -1111,8 +1188,10 @@ static int popOperators(pplExprCompiler *c, const int precedence, const int righ
         // tightly than ** in that case.
         if ((stackPrecedence == 2) && (precedence == 3)) stackPrecedence = 4;
 
+        // Stop at an operator which binds less tightly
         if (rightAssoc ? (precedence <= stackPrecedence) : (precedence < stackPrecedence)) break;
 
+        // Emit the operator, and pop it
         if (emitStackItem(c, top)) return 1;
         c->stackLen--;
     }
@@ -1130,6 +1209,7 @@ static int popOperators(pplExprCompiler *c, const int precedence, const int righ
 static int popBracket(pplExprCompiler *c, const pplExprStackItemType type, const int tpos, const char *errorText,
                       int *openPos) {
     if (popOperators(c, 255, 0)) return 1;
+    // The top of the stack must now be the matching opening bracket
     if ((c->stackLen < 1) || (c->stack[c->stackLen - 1].type != type)) {
         compileError(c, tpos, ERR_INTERNAL, errorText);
         return 1;
@@ -1147,12 +1227,16 @@ static int popBracket(pplExprCompiler *c, const pplExprStackItemType type, const
 //! \return Zero on success, or nonzero on error
 
 static int convertToPointer(pplExprCompiler *c, const int tpos) {
+    // The instruction just written, which fetched the value being assigned to, is changed to fetch a pointer to it
+    // instead
     pplExprInstruction *instruction;
+    // There must be such an instruction
     if (c->lastInstruction < 0) {
         compileError(c, tpos, ERR_INTERNAL, "Could not find variable name preceding assignment operator.");
         return 1;
     }
     instruction = &c->expr->bytecode[c->lastInstruction];
+    // Variable lookups, member lookups and item lookups each have a pointer form
     switch (instruction->opcode) {
         case PPL_BC_LOOKUP:
             instruction->opcode = PPL_BC_LOOKUP_POINTER;
@@ -1161,6 +1245,7 @@ static int convertToPointer(pplExprCompiler *c, const int tpos) {
             instruction->opcode = PPL_BC_DEREFERENCE_POINTER;
             break;
         case PPL_BC_SLICE:
+            // A slice of several items cannot be assigned to
             if ((instruction->operand.sliceFlags & PPL_SLICE_SINGLE_ITEM) == 0) {
                 compileError(c, tpos, ERR_SYNTAX,
                              "Cannot apply an assignment operator to the output of a slice operator.");
@@ -1183,6 +1268,7 @@ static int convertToPointer(pplExprCompiler *c, const int tpos) {
 static char decodeEscape(const char next, const int extended) {
     if ((next == '\'') || (next == '\"') || (next == '\\')) return next;
     if (!extended) return '\0';
+    // Map the character after a backslash to the character it stands for; most only apply to e'...' strings
     switch (next) {
         case '?':
             return '\?';
@@ -1228,6 +1314,7 @@ static int compileStringLiteral(pplExprCompiler *c, const char *in, const pplTok
     char quote = in[start];
     int outLen = 0;
 
+    // Failure to allocate memory abandons compilation
     if ((instruction == NULL) || (out == NULL)) return 1;
 
     // Prefixes r'...' and e'...'
@@ -1237,6 +1324,7 @@ static int compileStringLiteral(pplExprCompiler *c, const char *in, const pplTok
         quote = in[start];
     }
 
+    // Unquoted strings, e.g. the arguments of unit(), are copied as they are
     if ((quote != '\'') && (quote != '\"')) {
         // Unquoted string, which ends at the end of the token, excluding any trailing comma
         while ((*tpos < tlen) && (tdata[*tpos].state == state)) out[outLen++] = in[(*tpos)++];
@@ -1248,13 +1336,17 @@ static int compileStringLiteral(pplExprCompiler *c, const char *in, const pplTok
         for (i = start + (tripleQuote ? 3 : 1);
              tripleQuote ? ((in[i] != quote) || (in[i + 1] != quote) || (in[i + 2] != quote)) : (in[i] != quote); i++) {
             char decoded = in[i];
+            // The tokeniser should have found the closing quote
             if (in[i] == '\0') {
                 compileError(c, i, ERR_INTERNAL, "Unexpected end of string.");
                 return 1;
             }
+            // Decode escape sequences, unless the string is raw
             if ((in[i] == '\\') && (escapes != ESCAPES_NONE)) {
                 // Escape sequences. Unrecognised ones are left as they are, including the backslash.
                 const char escaped = decodeEscape(in[i + 1], escapes == ESCAPES_EXTENDED);
+                // A recognised escape sequence replaces the backslash and the character after it; others are kept as
+                // they are
                 if (escaped != '\0') {
                     decoded = escaped;
                     i++; // Skip the character after the backslash
@@ -1301,6 +1393,7 @@ static int compileName(pplExprCompiler *c, const pplExprOpcode opcode, const cha
 //! \return Zero on success, or nonzero on error
 
 static int compileOperator(pplExprCompiler *c, const char tokenState, const pplTokenCode *token, const int tpos) {
+    // Assignments, and operators such as **, are right-associative: a=b=c means a=(b=c)
     const unsigned char code = token->opcode;
     const int precedence = token->precedence;
     const int isAssignment = (tokenState == 'S');
@@ -1309,8 +1402,10 @@ static int compileOperator(pplExprCompiler *c, const char tokenState, const pplT
     pplExprStackItemType type;
     pplExprStackItem *item;
 
+    // Emit the operators which bind more tightly than this one
     if (popOperators(c, precedence, rightAssoc)) return 1;
 
+    // Assignments, the ternary operator and the short-circuit operators need special treatment
     if (isAssignment) {
         // Turn the lookup of the variable being assigned into a pointer lookup now, while it is the last instruction
         if ((code == PPL_ASSIGN) && convertToPointer(c, tpos)) return 1;
@@ -1328,6 +1423,7 @@ static int compileOperator(pplExprCompiler *c, const char tokenState, const pplT
         // third operand, and point the branch written by the ? at the start of the third operand.
         int questionBranch;
         if (popOperators(c, 999, rightAssoc)) return 1;
+        // The : must match a ?
         if ((c->stackLen < 1) || (c->stack[c->stackLen - 1].type != PPL_STACK_TERNARY)) {
             compileError(c, tpos, ERR_INTERNAL, "Could not match : to a ? in the ternary operator.");
             return 1;
@@ -1366,6 +1462,7 @@ static int compileBracket(pplExprCompiler *c, const char tokenState, const pplTo
     pplExprInstruction *instruction;
     int openPos;
 
+    // Which kind of opening bracket this closing bracket must match
     switch (tokenState) {
         case 'M':
             type = PPL_STACK_LIST_BRACKET;
@@ -1434,9 +1531,12 @@ static int compileBracket(pplExprCompiler *c, const char tokenState, const pplTo
 static void optimiseBranches(pplExpr *expr) {
     pplExprInstruction *const bytecode = expr->bytecode;
     int changed;
+    // Make branches which jump to another branch jump straight to its destination, where that is equivalent, repeating
+    // until nothing changes
     do {
         int i;
         changed = 0;
+        // Examine each branch instruction
         for (i = 0; i < expr->bcLen; i++) {
             pplExprInstruction *const branch = &bytecode[i];
             const pplExprInstruction *destination;
@@ -1479,6 +1579,7 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
     int tlen;
     int maxStringLen;
 
+    // Set up the compiler's state
     c.context = context;
     c.errPos = errPos;
     c.errType = errType;
@@ -1489,6 +1590,7 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
 
     // Allocate the output structure
     expr = *outExpr = c.expr = (pplExpr *) calloc(1, sizeof(pplExpr));
+    // Failure to allocate memory is reported as an error
     if (expr == NULL) {
         compileError(&c, 0, ERR_MEMORY, "Out of memory.");
         return;
@@ -1501,6 +1603,7 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
     expr->srcFname = (char *) malloc(strlen(srcFname) + 1);
     expr->bytecode = (pplExprInstruction *) malloc(c.bytecodeAlloc * sizeof(pplExprInstruction));
     expr->strings = (char *) malloc(c.stringsAlloc);
+    // Failure to allocate memory is reported as an error
     if ((expr->bytecode == NULL) || (expr->srcFname == NULL) || (expr->strings == NULL)) {
         compileError(&c, 0, ERR_MEMORY, "Out of memory.");
         return;
@@ -1525,8 +1628,10 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
         context->parserStack = NULL;
         context->parserStackLen = 0;
     }
+    // The compiler's operator stack is kept in the context, and reused between expressions
     if (context->parserStack == NULL) {
         context->parserStack = (pplExprStackItem *) malloc(1024 * sizeof(pplExprStackItem));
+        // Failure to allocate memory is reported as an error
         if (context->parserStack == NULL) {
             compileError(&c, 0, ERR_MEMORY, "Out of memory");
             return;
@@ -1537,6 +1642,7 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
 
     // Copy the source text of the expression into the expression object
     expr->ascii = (char *) malloc(*end + 1);
+    // Keep a copy of the text of the expression, for error messages
     if (expr->ascii == NULL) {
         compileError(&c, 0, ERR_MEMORY, "Out of memory.");
         return;
@@ -1549,6 +1655,7 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
         const char state = tdata[tpos].state; // The type of token
         int status = 0;
 
+        // Compile each token, according to its type
         switch (state) {
             case 'B': // A string literal
                 status = compileStringLiteral(&c, in, tdata, tlen, maxStringLen, &tpos);
@@ -1650,6 +1757,7 @@ void ppl_expCompile(ppl_context *context, const int srcLineN, const long srcId, 
 //! \return The operator, e.g. "+"
 
 static const char *operatorSymbol(const int code) {
+    // The symbol of each operator, for debugging output
     switch (code) {
         case PPL_OP_NEGATE:
             return "-";
@@ -1715,6 +1823,7 @@ static const char *operatorSymbol(const int code) {
 //! \return The operator, e.g. "+="
 
 static const char *assignmentSymbol(const int code) {
+    // The symbol of each assignment operator, for debugging output
     switch (code) {
         case PPL_ASSIGN:
             return "=";
@@ -1751,14 +1860,17 @@ static const char *assignmentSymbol(const int code) {
 //! \param [in] expIn - The compiled expression to print
 
 void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
+    // Describe each instruction on a line of its own
     char msg[PPL_MSG_LENGTH];
     int j;
 
+    // Describe each instruction
     for (j = 0; j < expIn->bcLen; j++) {
         const pplExprInstruction *const in = &expIn->bytecode[j];
         const char *string = expIn->strings + in->operand.string; // Only meaningful for instructions with strings
         const char *op = "???", *optype = "";
         char arg[1024] = "";
+        // Name the instruction, and describe its operand
         switch (in->opcode) {
             case PPL_BC_RETURN:
                 op = "return";
@@ -1879,18 +1991,22 @@ void ppl_reversePolishPrint(ppl_context *context, const pplExpr *expIn) {
 void pplExpr_free(pplExpr *inExpr) {
     if (inExpr == NULL) return;
     if (__sync_sub_and_fetch(&inExpr->refCount, 1) > 0) return;
+    // When the last reference has gone, free the text, filename, bytecode and strings
     if (inExpr->ascii != NULL) {
         free(inExpr->ascii);
         inExpr->ascii = NULL;
     }
+    // The filename
     if (inExpr->srcFname != NULL) {
         free(inExpr->srcFname);
         inExpr->srcFname = NULL;
     }
+    // The bytecode
     if (inExpr->bytecode != NULL) {
         free(inExpr->bytecode);
         inExpr->bytecode = NULL;
     }
+    // The string table
     if (inExpr->strings != NULL) {
         free(inExpr->strings);
         inExpr->strings = NULL;
@@ -1906,25 +2022,30 @@ void pplExpr_free(pplExpr *inExpr) {
 //! \return The copy, or NULL if <i> is NULL or memory allocation failed
 
 static pplExpr *pplExpr_cpyWith(const pplExpr *i, void *(*alloc)(size_t) ) {
+    // Copy the structure, and then each of the malloced members it points to
     pplExpr *o;
     if (i == NULL) return NULL;
     o = (pplExpr *) alloc(sizeof(pplExpr));
     if (o == NULL) return NULL;
     memcpy(o, i, sizeof(pplExpr));
     o->refCount = 1;
+    // The text
     if (i->ascii != NULL) {
         if ((o->ascii = alloc(strlen(i->ascii) + 1)) == NULL) return NULL;
         strcpy(o->ascii, i->ascii);
     }
+    // The filename
     if (i->srcFname != NULL) {
         if ((o->srcFname = alloc(strlen(i->srcFname) + 1)) == NULL) return NULL;
         strcpy(o->srcFname, i->srcFname);
     }
+    // The bytecode
     if (i->bytecode != NULL) {
         const size_t size = (i->bcLen > 0 ? i->bcLen : 1) * sizeof(pplExprInstruction);
         if ((o->bytecode = alloc(size)) == NULL) return NULL;
         memcpy(o->bytecode, i->bytecode, i->bcLen * sizeof(pplExprInstruction));
     }
+    // The string table
     if (i->strings != NULL) {
         if ((o->strings = alloc(i->stringsLen > 0 ? i->stringsLen : 1)) == NULL) return NULL;
         memcpy(o->strings, i->strings, i->stringsLen);

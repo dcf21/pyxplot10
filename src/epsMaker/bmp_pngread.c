@@ -21,8 +21,10 @@
 
 // ----------------------------------------------------------------------------
 
-// This file is edited from code which was kindly contributed to Pyxplot by
-// Michael Rutter. It reads in data from PNG files uses libpng.
+// Reads PNG image files for the image command (eps_image.c) using libpng, decoding them into the bitmap_data structure
+// used by Pyxplot's image code. 16-bit channels are reduced to 8 bits, alpha channels are blended onto the image's
+// background color (or white), and a single fully transparent palette entry or color is kept as the image's transparent
+// color. Edited from code kindly contributed to Pyxplot by Michael Rutter.
 
 #define _PPL_BMP_PNGREAD_C 1
 
@@ -44,6 +46,7 @@
 //! \param [in] image - The image structure into which the image is read
 
 void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
+    // Variables describing the image
     char msg[PPL_MSG_LENGTH];
     int depth, ncols, ntrans, png_colour_type, i, j;
     unsigned width, height, row_bytes;
@@ -56,54 +59,66 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     png_color_16 background;
     png_colorp palette;
 
+    // Log progress in debugging mode
     if (DEBUG) ppl_log(ec, "Beginning to decode PNG image file");
 
     // Initialise libpng data structures
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    // Failure to allocate memory is reported as an error
     if (png_ptr == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return;
     }
 
+    // Create libpng's description of the image
     info_ptr = png_create_info_struct(png_ptr);
+    // Failure to allocate memory is reported as an error
     if (info_ptr == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return;
     }
 
+    // libpng reports errors by jumping back to here
     if (setjmp(png_jmpbuf(png_ptr))) {
         ppl_error(ec, ERR_INTERNAL, -1, -1, "Unexpected error in libpng while trying to decode PNG image file");
         return;
     }
 
+    // Read from the file, whose first three bytes have already been read to identify it
     png_init_io(png_ptr, in);
     png_set_sig_bytes(png_ptr, 3); // Three bytes consumed before this routine was called
 
     // Let libpng read header, and deal with outcome
     png_read_info(png_ptr, info_ptr);
 
+    // Read the size and type of the image
     width = png_get_image_width(png_ptr, info_ptr);
     height = png_get_image_height(png_ptr, info_ptr);
     depth = png_get_bit_depth(png_ptr, info_ptr);
     png_colour_type = png_get_color_type(png_ptr, info_ptr);
 
+    // Log the size in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Size %dx%d", width, height);
         ppl_log(ec, msg);
     }
+    // Log the depth in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Depth %d", depth);
         ppl_log(ec, msg);
     }
 
+    // Reduce 16-bit channels to 8 bits
     if (depth == 16) {
         if (DEBUG) ppl_log(ec, "Reducing 16 bit per components to 8 bits");
         png_set_strip_16(png_ptr);
         depth = 8;
     }
 
+    // Blend an alpha channel onto the image's background color, or onto white
     if (png_colour_type & PNG_COLOR_MASK_ALPHA) {
         if (DEBUG) ppl_log(ec, "PNG uses transparency");
+        // Use the background color defined in the file, if there is one
         if (png_get_bKGD(png_ptr, info_ptr, &backgndp)) {
             if (DEBUG) ppl_log(ec, "PNG defines a background colour");
             png_set_background(png_ptr, backgndp, PNG_BACKGROUND_GAMMA_FILE, 1, 1.0);
@@ -115,30 +130,36 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
         }
     }
 
+    // Greyscale or RGB images
     if ((png_colour_type == PNG_COLOR_TYPE_GRAY) || (png_colour_type == PNG_COLOR_TYPE_GRAY_ALPHA))
         image->colour = BMP_COLOUR_GREY;
     if ((png_colour_type == PNG_COLOR_TYPE_RGB) || (png_colour_type == PNG_COLOR_TYPE_RGB_ALPHA))
         image->colour = BMP_COLOUR_RGB;
 
+    // Paletted images: copy the palette
     if (png_colour_type == PNG_COLOR_TYPE_PALETTE) {
         image->type = BMP_COLOUR_PALETTE;
         image->colour = BMP_COLOUR_PALETTE;
         i = png_get_PLTE(png_ptr, info_ptr, &palette, &ncols);
+        // Report a paletted image with no palette
         if (i == 0) {
             ppl_error(ec, ERR_FILE, -1, -1, "PNG image file claims to be paletted, but no palette was found");
             return;
         }
         image->pal_len = ncols;
         image->palette = (unsigned char *) ppl_memAlloc(ncols * 3);
+        // Failure to allocate memory is reported as an error
         if (image->palette == NULL) {
             ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
             return;
         }
+        // Copy each color of the palette
         for (i = 0; i < ncols; i++) {
             *(image->palette + 3 * i) = palette[i].red;
             *(image->palette + 3 * i + 1) = palette[i].green;
             *(image->palette + 3 * i + 2) = palette[i].blue;
         }
+        // Log the size of the palette in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "PNG image file contains a palette of %d colours", ncols);
             ppl_log(ec, msg);
@@ -155,6 +176,7 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 
     // Allocate block of memory for uncompressed image
     image->data = (unsigned char *) ppl_memAlloc(row_bytes * height);
+    // Failure to allocate memory is reported as an error
     if (image->data == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         return;
@@ -162,12 +184,14 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
 
     // libpng requires a separate pointer to each row of image
     row_ptrs = (png_bytep *) ppl_memAlloc(height * sizeof(png_bytep));
+    // Failure to allocate memory is reported as an error
     if (row_ptrs == NULL) {
         ppl_error(ec, ERR_MEMORY, -1, -1, "Out of memory");
         image->data = NULL;
         return;
     }
 
+    // Point to each row of the image
     for (i = 0; i < height; i++) row_ptrs[i] = image->data + row_bytes * i;
 
     // Get uncompressed image
@@ -180,16 +204,19 @@ void ppl_bmp_pngread(pplerr_context *ec, FILE *in, bitmap_data *image) {
     if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
         if (DEBUG) ppl_log(ec, "PNG has transparency");
         png_get_tRNS(png_ptr, info_ptr, &trans_colours, &ntrans, &trans_val);
+        // Log the number of transparent entries in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "PNG has %d transparent entries in palette", ntrans);
             ppl_log(ec, msg);
         }
+        // In a paletted image, count the fully transparent entries; partially transparent ones count as many
         if (png_colour_type == PNG_COLOR_TYPE_PALETTE) {
             // We can cope with just one, fully transparent, entry in palette
             j = 0;
             for (i = 0; i < ntrans; i++)
                 if (trans_colours[i] == 0) j++;
                 else if (trans_colours[i] != 255) j += 10;
+            // Warn about transparency which cannot be represented, or note the transparent entry
             if (j != 1) {
                 ppl_warning(
                         ec, ERR_FILE,

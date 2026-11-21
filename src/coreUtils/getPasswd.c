@@ -19,7 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for getting information out of /etc/passwd
+// Looks up information about users in the system's password database: the current user's home directory and real name,
+// and the home directories of other users. It is used to expand filenames such as ~/data.dat, and to find the user's
+// configuration file.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -40,6 +42,7 @@ struct passwd *UnixGetPwEntry(const pplerr_context *context) {
     int uid;
     struct passwd *ptr;
 
+    // Search the password database for an entry with the current user's ID
     uid = getuid();
     setpwent(); // Memory leak which valgrind reveals here is probably okay; getpwent sets up a static variable with malloc
     while ((ptr = getpwent()) != NULL)
@@ -58,6 +61,7 @@ char *ppl_unixGetHomeDir(pplerr_context *context) {
     struct passwd *ptr;
     static char *failover = NULL;
     ptr = UnixGetPwEntry(context);
+    // If the user has no entry, guess that their home directory is /home/<login name>, and warn about it once
     if (ptr == NULL) {
         if (failover != NULL) return failover;
         failover = malloc(FNAME_LENGTH);
@@ -123,6 +127,7 @@ char *ppl_unixExpandUserHomeDir(pplerr_context *context, char *in, char *cwd, ch
     if (in[0] == '/') ppl_snprintfTrunc(out, outLen, "%s", in);
     else if (in[0] != '~') ppl_snprintfTrunc(out, outLen, "%s%s%s", cwd, PATHLINK, in);
     else if (in[1] == '/') ppl_snprintfTrunc(out, outLen, "%s%s%s", ppl_unixGetHomeDir(context), PATHLINK, in + 2);
+    // ~user/path: look up the home directory of the named user
     else {
         // ~user/path: look up the home directory of the named user. Names too long to be valid are left unexpanded.
         for (scanIn = in + 1, i = 0; ((*scanIn != '/') && (*scanIn != '\0') && (i < (int) sizeof(userName) - 1));

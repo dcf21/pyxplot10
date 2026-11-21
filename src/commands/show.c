@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Implements the show command, which lists the current values of settings in the syntax of the set commands which would
+// set them, along with arrows, labels, line styles, variables, functions and units. Each setting is shown if its name,
+// or a word such as settings, matches one of the words given. In interactive sessions, settings which differ from their
+// defaults are highlighted in color.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -112,11 +117,14 @@ static void ppl_directive_show3(ppl_context *c, char *out, const size_t outLen, 
                                 char *setting_value, const int modified, char *description) {
     int i = 0;
 
+    // Highlight settings which differ from their defaults
     showHighlight(c, out, outLen, &i, interactive, modified);
 
+    // Start with the word set, followed by the item number if the setting applies to a multiplot item
     ppl_snprintfTrunc(out + i, outLen - i, "set %*s", (int) strlen(itemSet), itemSetShow ? itemSet : "");
     i += strlen(out + i); // Start off with a set command
 
+    // Boolean settings are written as "set name" or "set noname"; others as "set name value"
     if (strcmp(setting_value, "on") == 0) {
         ppl_snprintfTrunc(out + i, outLen - i, "%-41s", setting_name);
         i += strlen(out + i);
@@ -131,6 +139,7 @@ static void ppl_directive_show3(ppl_context *c, char *out, const size_t outLen, 
         i += strlen(out + i);
     }
 
+    // Put a description of the setting after it, as a comment
     if (description != NULL) {
         ppl_snprintfTrunc(out + i, outLen - i, " # %s.", description);
         i += strlen(out + i);
@@ -138,6 +147,7 @@ static void ppl_directive_show3(ppl_context *c, char *out, const size_t outLen, 
     ppl_snprintfTrunc(out + i, outLen - i, "%s", "\n");
     i += strlen(out + i); // and a linefeed
 
+    // Return to the normal text colour
     showDehighlight(c, out, outLen, &i, interactive);
     return;
 }
@@ -211,6 +221,7 @@ static void showTicks(ppl_context *c, char *out, const size_t outLen, char *item
             buf, LSTR_LENGTH, "%s ",
             *(char **) ppl_fetchSettingName(&c->errcontext, T->tickDir, SW_TICDIR_INT, SW_TICDIR_STR, sizeof(char *)));
     m = strlen(buf);
+    // Write the tick positions: automatic, at regular intervals, or as a list
     if ((!T->tickStepSet) && (T->tickList == NULL)) {
         ppl_strAppendf(buf, LSTR_LENGTH, &m, "autofreq");
     } else if (T->tickList == NULL) {
@@ -219,12 +230,14 @@ static void showTicks(ppl_context *c, char *out, const size_t outLen, char *item
             U->real = T->tickMin;
             ppl_strAppendf(buf, LSTR_LENGTH, &m, "%s", ppl_unitsNumericDisplay(c, U, 0, 0, 0));
         }
+        // The step between ticks; on logarithmic axes, this is a dimensionless factor
         if (T->tickStepSet) {
             U->real = T->tickStep;
             ppl_strAppendf(buf, LSTR_LENGTH, &m, "%s%s", (T->tickMinSet) ? ", " : "",
                            (amLog == SW_BOOL_FALSE) ? ppl_unitsNumericDisplay(c, U, 0, 0, 0)
                                                     : ppl_numericDisplayDefault(c, T->tickStep, 0));
         }
+        // The position of the last tick
         if (T->tickMaxSet) {
             U->real = T->tickMax;
             ppl_strAppendf(buf, LSTR_LENGTH, &m, ", %s", ppl_unitsNumericDisplay(c, U, 0, 0, 0));
@@ -232,9 +245,11 @@ static void showTicks(ppl_context *c, char *out, const size_t outLen, char *item
     } else {
         // A list of tick positions, each optionally with a label
         ppl_strAppendChar(buf, LSTR_LENGTH, &m, '(');
+        // Write each tick position
         for (n = 0; T->tickStrs[n] != NULL; n++) {
             U->real = T->tickList[n];
             ppl_strAppendf(buf, LSTR_LENGTH, &m, "%s%s", (n == 0) ? "" : ", ", ppl_unitsNumericDisplay(c, U, 0, 0, 0));
+            // A tick label is marked as absent by a leading byte 0xFF
             if (T->tickStrs[n][0] != '\xFF') {
                 ppl_strAppendChar(buf, LSTR_LENGTH, &m, ' ');
                 ppl_strEscapify(T->tickStrs[n], buf + m, LSTR_LENGTH - m);
@@ -306,17 +321,21 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     buf = (char *) malloc(LSTR_LENGTH); // Put the value of each setting in here
     buf2 = (char *) malloc(FNAME_LENGTH);
 
+    // Report a failure to allocate the buffers, and free those that were allocated
     if ((out == NULL) || (buf == NULL) || (buf2 == NULL)) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1,
                   "Out of memory whilst trying to allocate buffers in show command.");
+        // Free the output buffer
         if (out != NULL) {
             free(out);
             out = NULL;
         }
+        // Free the value buffer
         if (buf != NULL) {
             free(buf);
             buf = NULL;
         }
+        // Free the description buffer
         if (buf2 != NULL) {
             free(buf2);
             buf2 = NULL;
@@ -324,6 +343,8 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         return 1;
     }
 
+    // Each setting is shown if its name, or "settings", matches the word given; buffers accumulate the output and the
+    // value of each setting
     out[0] = buf[0] = '\0';
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "axescolour", 1) >= 0) ||
         (ppl_strAutocomplete(word, "axescolor", 1) >= 0)) {
@@ -337,6 +358,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the axisunitstyle setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "axisunitstyle", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, sg->AxisUnitStyle, SW_AXISUNITSTY_INT,
@@ -347,6 +369,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the backup setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "backup", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.backup, SW_ONOFF_INT,
@@ -357,6 +380,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the bar setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "bar", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           ppl_numericDisplay(sg->bar, c->numdispBuff[0], c->set->term_current.SignificantFigures,
@@ -367,8 +391,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the binorigin setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "binorigin", 1) >= 0)) {
         bufp = "Used to control the exact position of the edges of the bins used by the histogram command";
+        // An automatic bin origin, or a value
         if (c->set->term_current.BinOriginAuto) {
             ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "binOrigin", "auto",
                                 c->set->term_current.BinOriginAuto == c->set->term_default.BinOriginAuto, bufp);
@@ -385,8 +411,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the binwidth setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "binwidth", 1) >= 0)) {
         bufp = "Sets the width of bins used by the histogram command";
+        // An automatic bin width, or a value
         if (c->set->term_current.BinWidthAuto) {
             ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "binWidth", "auto",
                                 c->set->term_current.BinWidthAuto == c->set->term_default.BinWidthAuto, bufp);
@@ -403,8 +431,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the boxfrom setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "boxfrom", 1) >= 0)) {
         bufp = "Sets the vertical level from which the bars of barcharts and histograms are drawn";
+        // An automatic box origin, or a value
         if (sg->BoxFromAuto) {
             ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "boxFrom", "auto",
                                 sg->BoxFromAuto == c->set->graph_default.BoxFromAuto, bufp);
@@ -420,8 +450,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the boxwidth setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "boxwidth", 1) >= 0)) {
         bufp = "Sets the width of bars on barcharts and histograms";
+        // An automatic box width, or a value
         if (sg->BoxWidthAuto) {
             ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "boxWidth", "auto",
                                 sg->BoxWidthAuto == c->set->graph_default.BoxWidthAuto, bufp);
@@ -437,6 +469,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the c1format setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c1format", 1) >= 0)) {
         pplExpr *c1format_current = (pplExpr *) sg->c1format;
         pplExpr *c1format_default = (pplExpr *) c->set->graph_default.c1format;
@@ -447,6 +480,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                           *(char **) ppl_fetchSettingName(&c->errcontext, sg->c1TickLabelRotation, SW_TICLABDIR_INT,
                                                           SW_TICLABDIR_STR, sizeof(char *)));
         m += strlen(buf + m);
+        // Rotated tick labels also have an angle
         if (sg->c1TickLabelRotation == SW_TICLABDIR_ROT) {
             pplObj valobj;
             valobj.refCount = 1;
@@ -464,6 +498,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the c1label setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c1label", 1) >= 0)) {
         pplObj valobj;
         valobj.refCount = 1;
@@ -482,6 +517,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     {
         int showMinor = 0;
+        // Show the c1tics setting, if it, or all settings, were asked for
         if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c1tics", 1) >= 0)) {
             ppl_snprintfTrunc(temp1, sizeof(temp1), "c1tics");
             showTicks(c, out + i, outLen - i, itemSet, interactive, temp1, buf, buf2, &(sg->ticsC),
@@ -501,6 +537,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             p = 1;
         }
     }
+    // Show the calendarin setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "calendarin", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.CalendarIn,
@@ -512,6 +549,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the calendarout setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "calendarout", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.CalendarOut,
@@ -523,6 +561,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the clip setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "clip", 1) >= 0)) {
         ppl_snprintfTrunc(
                 buf, LSTR_LENGTH, "%s",
@@ -535,6 +574,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "colkey", 1) >= 0) ||
         (ppl_strAutocomplete(word, "colourkey", 1) >= 0) || (ppl_strAutocomplete(word, "colorkey", 1) >= 0)) {
+        // The color key is off, or on in a given position
         if (sg->ColKey == SW_ONOFF_OFF) {
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                               *(char **) ppl_fetchSettingName(&c->errcontext, sg->ColKey, SW_ONOFF_INT, SW_ONOFF_STR,
@@ -574,7 +614,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the contours setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "contours", 1) >= 0)) {
+        // Either a number of evenly spaced contours, or a list of contour levels
         if (sg->ContoursListLen < 0) {
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "%d %slabel", sg->ContoursN,
                               (sg->ContoursLabel == SW_ONOFF_ON) ? "" : "no");
@@ -583,7 +625,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             pplObj v = sg->ContoursUnit;
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "(");
             p = strlen(buf);
+            // Write each contour level, separated by commas
             for (q = 0; q < sg->ContoursListLen; q++) {
+                // Separate the levels with commas
                 if (q != 0) {
                     ppl_snprintfTrunc(buf + p, LSTR_LENGTH - p, ", ");
                     p += strlen(buf + p);
@@ -607,21 +651,25 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the c1range setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c1range", 1) >= 0)) {
         showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 0);
         i += strlen(out + i);
         p = 1;
     }
+    // Show the c2range setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c2range", 1) >= 0)) {
         showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 1);
         i += strlen(out + i);
         p = 1;
     }
+    // Show the c3range setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c3range", 1) >= 0)) {
         showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 2);
         i += strlen(out + i);
         p = 1;
     }
+    // Show the c4range setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "c4range", 1) >= 0)) {
         showColorRange(c, out + i, outLen - i, itemSet, interactive, buf, sg, 3);
         i += strlen(out + i);
@@ -630,6 +678,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "logscale", 1) >= 0) ||
         (ppl_strAutocomplete(word, "linearscale", 1) >= 0)) {
         int C;
+        // Show the logscale setting of each of the four color axes
         for (C = 0; C < 4; C++) {
             if (sg->Clog[C] == SW_BOOL_TRUE) bufp = "logscale";
             else bufp = "nologscale";
@@ -642,6 +691,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             p = 1;
         }
     }
+    // Show the display setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "display", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.display, SW_ONOFF_INT,
@@ -653,10 +703,12 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the filters setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "filters", 1) >= 0)) {
         dictIterator *iter = ppl_dictIterateInit(c->set->filters);
         pplObj *item = NULL;
         char *key = NULL;
+        // Show each input filter, which is a shell command through which files with names matching a pattern are read
         while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
             ppl_strEscapify(key, buf, LSTR_LENGTH);
             ppl_strEscapify((char *) item->auxil, buf2, FNAME_LENGTH);
@@ -689,10 +741,13 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                             (c->set->graph_default.grid == sg->grid), "Selects whether a grid is drawn on plots");
         i += strlen(out + i);
         p = 1;
+        // If the grid is on, show which axes it is drawn from
         if (sg->grid == SW_ONOFF_ON) {
             bufp = buf;
             k = 1;
+            // List the x axes from which grid lines are drawn
             for (j = 0; j < MAX_AXES; j++) {
+                // This axis has grid lines
                 if (sg->GridAxisX[j] != 0) {
                     ppl_snprintfTrunc(bufp, LSTR_LENGTH - (bufp - buf), "x%d", j);
                     bufp += strlen(bufp);
@@ -704,9 +759,12 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                                     "Sets the x axis with whose ticks gridlines are associated");
             i += strlen(out + i);
 
+            // List the y axes from which grid lines are drawn
             bufp = buf;
             k = 1;
+            // Loop over the y axes
             for (j = 0; j < MAX_AXES; j++) {
+                // This axis has grid lines
                 if (sg->GridAxisY[j] != 0) {
                     ppl_snprintfTrunc(bufp, LSTR_LENGTH - (bufp - buf), "y%d", j);
                     bufp += strlen(bufp);
@@ -718,9 +776,12 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                                     "Sets the y axis with whose ticks gridlines are associated");
             i += strlen(out + i);
 
+            // List the z axes from which grid lines are drawn
             bufp = buf;
             k = 1;
+            // Loop over the z axes
             for (j = 0; j < MAX_AXES; j++) {
+                // This axis has grid lines
                 if (sg->GridAxisZ[j] != 0) {
                     ppl_snprintfTrunc(bufp, LSTR_LENGTH - (bufp - buf), "z%d", j);
                     bufp += strlen(bufp);
@@ -758,6 +819,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         p = 1;
     }
 
+    // Show the key setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "key", 1) >= 0)) {
         ppl_snprintfTrunc(
                 buf, LSTR_LENGTH, "%s",
@@ -782,6 +844,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the keycolumns setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "keycolumns", 1) >= 0)) {
         if (sg->KeyColumns > 0) ppl_snprintfTrunc(buf, LSTR_LENGTH, "%d", sg->KeyColumns);
         else ppl_snprintfTrunc(buf, LSTR_LENGTH, "auto");
@@ -802,6 +865,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the multiplot setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "multiplot", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.multiplot, SW_ONOFF_INT,
@@ -812,6 +876,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the numerics setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "numerics", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.ComplexNumbers,
@@ -851,6 +916,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the origin setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "origin", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s , %s", ppl_unitsNumericDisplay(c, &(sg->OriginX), 0, 0, 0),
                           ppl_unitsNumericDisplay(c, &(sg->OriginY), 1, 0, 0));
@@ -861,6 +927,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the output setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "output", 1) >= 0)) {
         ppl_strEscapify(c->set->term_current.output, buf, LSTR_LENGTH);
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "output", buf,
@@ -869,6 +936,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the palette setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "palette", 1) >= 0)) {
         l = 0;
         for (j = 0; j < PALETTE_LENGTH; j++) // Check whether the palette has been changed from its default setting
@@ -885,7 +953,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             l = 1;
             break;
         }
+        // Write each color of the palette, by name or by its components
         for (j = k = 0; c->set->palette_current[j] >= 0; j++) {
+            // Separate the colors with commas
             if (j > 0) {
                 ppl_snprintfTrunc(buf + k, LSTR_LENGTH - k, ", ");
                 k += strlen(buf + k);
@@ -917,7 +987,9 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the papersize setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "papersize", 1) >= 0)) {
+        // A named paper size, or a size given by the user
         if (ppl_strAutocomplete("user", c->set->term_current.PaperName, 1) < 0) {
             char docbuff[FNAME_LENGTH];
             ppl_snprintfTrunc(docbuff, sizeof(docbuff), "The current papersize for postscript output (%s, %s)",
@@ -962,6 +1034,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the preamble setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "preamble", 1) >= 0)) {
         ppl_strEscapify(c->set->term_current.LatexPreamble, buf, LSTR_LENGTH);
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 0, interactive, "preamble", buf,
@@ -990,6 +1063,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                           *(char **) ppl_fetchSettingName(&c->errcontext, sg->Sample2DMethod, SW_SAMPLEMETHOD_INT,
                                                           SW_SAMPLEMETHOD_STR, sizeof(char *)));
 
+        // Show the setting
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "samples", buf,
                             ((c->set->graph_default.samples == sg->samples) &&
                              (c->set->graph_default.SamplesXAuto == sg->SamplesXAuto) &&
@@ -1001,6 +1075,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the seed setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "seed", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%ld", c->set->term_current.RandomSeed);
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "seed", buf,
@@ -1009,6 +1084,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the size setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "size", 1) >= 0)) {
         if (sg->AutoAspect == SW_ONOFF_ON) ppl_snprintfTrunc(buf, LSTR_LENGTH, "auto");
         else
@@ -1052,6 +1128,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the terminal setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "terminal", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.TermType,
@@ -1151,6 +1228,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the texthalign setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "texthalign", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, sg->TextHAlign, SW_HALIGN_INT, SW_HALIGN_STR,
@@ -1161,6 +1239,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the textvalign setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "textvalign", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, sg->TextVAlign, SW_VALIGN_INT, SW_VALIGN_STR,
@@ -1171,6 +1250,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the timezone setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "timezone", 1) >= 0)) {
         ppl_strEscapify(c->set->term_current.timezone, buf, LSTR_LENGTH);
         ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, "timezone", buf,
@@ -1181,6 +1261,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the title setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "title", 1) >= 0)) {
         ppl_strEscapify(sg->title, buf, LSTR_LENGTH);
         k = strlen(buf);
@@ -1196,6 +1277,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "trange", 1) >= 0) ||
         (ppl_strAutocomplete(word, "urange", 1) >= 0) || (ppl_strAutocomplete(word, "vrange", 1) >= 0))
+        // Parametric plots use either a range of t, or ranges of u and v
         if (sg->USE_T_or_uv) {
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "[%s:%s]", ppl_unitsNumericDisplay(c, &(sg->Tmin), 0, 0, 0),
                               ppl_unitsNumericDisplay(c, &(sg->Tmax), 1, 0, 0));
@@ -1220,6 +1302,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the units setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "units", 1) >= 0)) {
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "%s",
                           *(char **) ppl_fetchSettingName(&c->errcontext, c->set->term_current.UnitAngleDimless,
@@ -1254,6 +1337,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
         for (j = 0; j < c->unit_pos; j++)
+            // Show the units which the user has chosen for particular quantities
             if (ud[j].userSel != 0) {
                 ppl_snprintfTrunc(buf, LSTR_LENGTH, "unit of %s", ud[j].quantity);
                 if (c->set->term_current.UnitDisplayAbbrev == SW_ONOFF_ON)
@@ -1269,9 +1353,11 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         {
             PreferredUnit *pu;
             listIterator *listiter = ppl_listIterateInit(c->unit_PreferredUnits);
+            // Show each preferred unit, a product of powers of units
             while ((pu = (PreferredUnit *) ppl_listIterate(&listiter)) != NULL) {
                 int pbuf = 0, ppu;
                 buf[0] = '\0';
+                // Write each unit in the product, with its prefix and power
                 for (ppu = 0; ppu < pu->NUnits; ppu++) {
                     if (ppu > 0) ppl_snprintfTrunc(buf + pbuf, LSTR_LENGTH - pbuf, "*");
                     pbuf += strlen(buf + pbuf);
@@ -1300,6 +1386,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "urange", 1) >= 0) ||
         (ppl_strAutocomplete(word, "trange", 1) >= 0))
+        // The range of u, when it is in use
         if (!sg->USE_T_or_uv) {
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "[%s:%s]", ppl_unitsNumericDisplay(c, &(sg->Umin), 0, 0, 0),
                               ppl_unitsNumericDisplay(c, &(sg->Umax), 1, 0, 0));
@@ -1324,6 +1411,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the view setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "view", 1) >= 0)) {
         int SF = c->set->term_current.SignificantFigures;
         int TY = (c->set->term_current.NumDisplay == SW_DISPLAY_L);
@@ -1337,6 +1425,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
     }
+    // Show the viewer setting, if it, or all settings, were asked for
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "viewer", 1) >= 0)) {
         unsigned char changed = (c->set->term_current.viewer != c->set->term_default.viewer);
         ppl_snprintfTrunc(buf, LSTR_LENGTH, "Selects the postscript viewer used by the X11 terminals%s%s%s",
@@ -1353,6 +1442,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     }
     if ((ppl_strAutocomplete(word, "settings", 1) >= 0) || (ppl_strAutocomplete(word, "vrange", 1) >= 0) ||
         (ppl_strAutocomplete(word, "trange", 1) >= 0))
+        // The range of v, when it is in use
         if (!sg->USE_T_or_uv) {
             ppl_snprintfTrunc(buf, LSTR_LENGTH, "[%s:%s]", ppl_unitsNumericDisplay(c, &(sg->Vmin), 0, 0, 0),
                               ppl_unitsNumericDisplay(c, &(sg->Vmax), 1, 0, 0));
@@ -1389,10 +1479,13 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     // Show axes
     l = 0;
     if ((ppl_strAutocomplete(word, "axes_", 1) >= 0) || (ppl_strAutocomplete(word, "axis", 1) >= 0)) l = 1;
+    // Show the settings of each axis
     if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
         for (k = 0; k < 3; k++)
+            // Loop over the x, y and z axes, and the axes of each direction
             for (j = 0; j < MAX_AXES; j++) {
                 pplset_axis *axisPtrDef, *axisPtr;
+                // Point to the axis, and to its default settings
                 switch (k) {
                     case 1: {
                         axisPtr = &(ya[j]);
@@ -1412,6 +1505,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                 }
                 if (!axisPtr->enabled) // Do not show any information for inactive axes, except that they're disabled
                 {
+                    // A disabled axis is shown only if it is enabled by default
                     if (axisPtrDef->enabled) {
                         ppl_snprintfTrunc(temp1, sizeof(temp1), "%c%d", "xyzc"[k], j);
                         ppl_snprintfTrunc(buf2, FNAME_LENGTH, "Axis %s has been disabled", temp1);
@@ -1422,6 +1516,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     continue;
                 }
 
+                // Show the axis if it was asked for by name, e.g. x2, or as x for x1, or if all axes were
                 ppl_snprintfTrunc(temp1, sizeof(temp1), "%c%d", "xyzc"[k], j);
                 ppl_snprintfTrunc(temp2, sizeof(temp2), "%c", "xyzc"[k]);
                 if (l || (ppl_strAutocomplete(word, temp1, 1) >= 0) ||
@@ -1448,12 +1543,14 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                                                                       SW_AXISMIRROR_INT, SW_AXISMIRROR_STR,
                                                                       sizeof(char *)));
                     m += strlen(buf + m);
+                    // A linked axis, the axis it is linked to, and the expression which maps between them
                     if (!axisPtr->linked) {
                         ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "notLinked");
                         m += strlen(buf + m);
                     } else {
                         ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, "%s", "linked");
                         m += strlen(buf + m);
+                        // An axis linked to an axis of another multiplot item
                         if (axisPtr->LinkedAxisCanvasID > 0) {
                             ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, " item %d", axisPtr->LinkedAxisCanvasID);
                             m += strlen(buf + m);
@@ -1461,6 +1558,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                         ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, " %c%d", "xyzc"[axisPtr->LinkedAxisToXYZ],
                                           axisPtr->LinkedAxisToNum);
                         m += strlen(buf + m);
+                        // An expression which maps between the axes
                         if (axisPtr->linkusing != NULL) {
                             ppl_snprintfTrunc(buf + m, LSTR_LENGTH - m, " using %s",
                                               ((pplExpr *) axisPtr->linkusing)->ascii);
@@ -1484,6 +1582,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     p = 1;
                 }
 
+                // Show the format of the axis's tick labels
                 ppl_snprintfTrunc(temp1, sizeof(temp1), "%c%dformat", "xyzc"[k], j);
                 ppl_snprintfTrunc(temp2, sizeof(temp2), "%cformat", "xyzc"[k]);
                 if (l || (ppl_strAutocomplete(word, temp1, 1) >= 0) ||
@@ -1497,6 +1596,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                                                                       SW_TICLABDIR_INT, SW_TICLABDIR_STR,
                                                                       sizeof(char *)));
                     m += strlen(buf + m);
+                    // Rotated tick labels also have an angle
                     if (axisPtr->TickLabelRotation == SW_TICLABDIR_ROT) {
                         pplObj valobj;
                         valobj.refCount = 1;
@@ -1520,6 +1620,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     p = 1;
                 }
 
+                // Show the label of the axis
                 ppl_snprintfTrunc(temp1, sizeof(temp1), "%c%dlabel", "xyzc"[k], j);
                 ppl_snprintfTrunc(temp2, sizeof(temp2), "%clabel", "xyzc"[k]);
                 if (l || (ppl_strAutocomplete(word, temp1, 1) >= 0) ||
@@ -1544,6 +1645,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     p = 1;
                 }
 
+                // Show whether the axis is logarithmic
                 if (l || (ppl_strAutocomplete(word, "logscale", 1) >= 0) ||
                     ((j == 1) && (ppl_strAutocomplete(word, "linearscale", 1) >= 0))) {
                     if (axisPtr->log == SW_BOOL_TRUE) bufp = "logscale";
@@ -1560,6 +1662,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     p = 1;
                 }
 
+                // Show the range of the axis
                 ppl_snprintfTrunc(temp1, sizeof(temp1), "%c%drange", "xyzc"[k], j);
                 ppl_snprintfTrunc(temp2, sizeof(temp2), "%crange", "xyzc"[k]);
                 if (l || (ppl_strAutocomplete(word, "autoscale", 1) >= 0) ||
@@ -1583,10 +1686,12 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     p = 1;
                 }
 
+                // Show the major ticks of the axis
                 ppl_snprintfTrunc(temp1, sizeof(temp1), "%c%dtics", "xyzc"[k], j);
                 ppl_snprintfTrunc(temp2, sizeof(temp2), "%ctics", "xyzc"[k]);
                 m = 0;
 
+                // Show them if they were asked for by name
                 if (l || (ppl_strAutocomplete(word, temp1, 1) >= 0) ||
                     ((j == 1) && (ppl_strAutocomplete(word, temp2, 1) >= 0))) {
                     showTicks(c, out + i, outLen - i, itemSet, interactive, temp1, buf, buf2, &(axisPtr->tics),
@@ -1597,6 +1702,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     m = 1; // If we've shown major tics, also show minor ticks too.
                 }
 
+                // Show the minor ticks of the axis
                 ppl_snprintfTrunc(temp1, sizeof(temp1), "m%c%dtics", "xyzc"[k], j);
                 ppl_snprintfTrunc(temp2, sizeof(temp2), "m%ctics", "xyzc"[k]);
                 if (l || m || (ppl_strAutocomplete(word, temp1, 1) >= 0) ||
@@ -1612,6 +1718,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
 
     // Showed numbered arrows
     if (ppl_strAutocomplete(word, "arrows", 1) >= 0) {
+        // Show the arrows, if the item has any
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             pplarrow_object *ai;
             pplarrow_object *ai_default_prev = c->set->pplarrow_list_default;
@@ -1621,13 +1728,17 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             i += strlen(out + i);
             p = 1;
             showDehighlight(c, out, outLen, &i, interactive);
+            // Show each arrow, in order of number, interleaved with any default arrows which have been removed
             for (ai = *al; ai != NULL; ai = ai->next) {
+                // Stop if the output buffer is nearly full
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
                     i += strlen(out + i);
                     break;
                 }
+                // Show any default arrows with lower numbers, which have been removed
                 while ((ai_default != NULL) && (ai_default->id <= ai->id)) {
+                    // This default arrow has been removed
                     if (ai_default->id < ai->id) {
                         ppl_snprintfTrunc(buf2, FNAME_LENGTH, "noarrow %6d", ai_default->id);
                         ppl_snprintfTrunc(buf, LSTR_LENGTH, "remove arrow %6d", ai_default->id);
@@ -1644,6 +1755,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                 ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, buf2, buf, unchanged, buf2);
                 i += strlen(out + i);
             }
+            // Show any remaining default arrows, which have been removed
             while (ai_default != NULL) {
                 ppl_snprintfTrunc(buf2, FNAME_LENGTH, "noarrow %6d", ai_default->id);
                 ppl_snprintfTrunc(buf, LSTR_LENGTH, "remove arrow %6d", ai_default->id);
@@ -1656,6 +1768,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
 
     // Show numbered text labels
     if (ppl_strAutocomplete(word, "labels", 1) >= 0) {
+        // Show the text labels, if the item has any
         if (!((xa == NULL) || (ya == NULL) || (za == NULL))) {
             ppllabel_object *li;
             ppllabel_object *li_default_prev = c->set->ppllabel_list_default;
@@ -1665,13 +1778,17 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             i += strlen(out + i);
             p = 1;
             showDehighlight(c, out, outLen, &i, interactive);
+            // Show each label, in order of number, interleaved with any default labels which have been removed
             for (li = *ll; li != NULL; li = li->next) {
+                // Stop if the output buffer is nearly full
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
                     i += strlen(out + i);
                     break;
                 }
+                // Show any default labels with lower numbers, which have been removed
                 while ((li_default != NULL) && (li_default->id <= li->id)) {
+                    // This default label has been removed
                     if (li_default->id < li->id) {
                         ppl_snprintfTrunc(buf2, FNAME_LENGTH, "nolabel %6d", li_default->id);
                         ppl_snprintfTrunc(buf, LSTR_LENGTH, "remove label %6d", li_default->id);
@@ -1688,6 +1805,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                 ppl_directive_show3(c, out + i, outLen - i, itemSet, 1, interactive, buf2, buf, unchanged, buf2);
                 i += strlen(out + i);
             }
+            // Show any remaining default labels, which have been removed
             while (li_default != NULL) {
                 ppl_snprintfTrunc(buf2, FNAME_LENGTH, "nolabel %6d", li_default->id);
                 ppl_snprintfTrunc(buf, LSTR_LENGTH, "remove label %6d", li_default->id);
@@ -1705,8 +1823,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
         showDehighlight(c, out, outLen, &i, interactive);
+        // Show each line style which has been defined
         for (j = 0; j < MAX_PLOTSTYLES; j++) {
             if (ppl_withWordsCmp_zero(c, &(c->set->plot_styles[j]))) continue;
+            // Stop if the output buffer is nearly full
             if (i > outLen - 1024) {
                 ppl_snprintfTrunc(out + i, outLen - i, "...\n");
                 i += strlen(out + i);
@@ -1726,6 +1846,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     if ((ppl_strAutocomplete(word, "variables", 1) >= 0) || (ppl_strAutocomplete(word, "vars", 1) >= 0) ||
         (ppl_strAutocomplete(word, "uservariables", 1) >= 0) || (ppl_strAutocomplete(word, "uservars", 1) >= 0)) {
         int l;
+        // Show the variables in the local namespace, then the global namespace, then the default namespace
         for (l = c->ns_ptr; l >= 0; l = (l > 1) ? 1 : l - 1) {
             char *key;
             pplObj *item;
@@ -1738,9 +1859,11 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             i += strlen(out + i);
             p = 1;
             showDehighlight(c, out, outLen, &i, interactive);
+            // Show each variable, skipping functions and undefined or global markers
             while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
                 if ((item->objType == PPLOBJ_ZOM) || (item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_FUNC))
                     continue;
+                // Stop if the output buffer is nearly full
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
                     i += strlen(out + i);
@@ -1768,8 +1891,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         i += strlen(out + i);
         p = 1;
         showDehighlight(c, out, outLen, &i, interactive);
+        // Show each system function
         while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
             if (item->objType != PPLOBJ_FUNC) continue;
+            // Stop if the output buffer is nearly full
             if (i > outLen - 1024) {
                 ppl_snprintfTrunc(out + i, outLen - i, "...\n");
                 i += strlen(out + i);
@@ -1788,6 +1913,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
     if ((ppl_strAutocomplete(word, "functions", 1) >= 0) || (ppl_strAutocomplete(word, "funcs", 1) >= 0) ||
         (ppl_strAutocomplete(word, "userfunctions", 1) >= 0) || (ppl_strAutocomplete(word, "userfuncs", 1) >= 0)) {
         int l;
+        // Show the functions in the local namespace, then the global namespace
         for (l = c->ns_ptr; l > 0; l = (l > 1) ? 1 : l - 1) {
             char *key;
             pplObj *item;
@@ -1798,8 +1924,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
             i += strlen(out + i);
             p = 1;
             showDehighlight(c, out, outLen, &i, interactive);
+            // Show each function
             while ((item = (pplObj *) ppl_dictIterate(&di, &key)) != NULL) {
                 if (item->objType != PPLOBJ_FUNC) continue;
+                // Stop if the output buffer is nearly full
                 if (i > outLen - 1024) {
                     ppl_snprintfTrunc(out + i, outLen - i, "...\n");
                     i += strlen(out + i);
@@ -1823,8 +1951,10 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         p = 1;
         showDehighlight(c, out, outLen, &i, interactive);
         l = -1;
+        // List the units in alphabetical order, finding the next one each time by a search; l is the last unit listed
         do {
             m = -1;
+            // Find the first unit whose name comes after unit l
             for (j = 0; j < c->unit_pos; j++) {
                 if ((l == -1) && (m == -1)) m = j;
                 else if ((l == -1) && (ppl_strCmpNoCase(ud[j].nameFs, ud[m].nameFs) < 0)) m = j;
@@ -1834,19 +1964,23 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     m = j;
             }
             l = m;
+            // Write each of the unit's names, and what it measures
             if (m != -1) {
                 k = 0;
                 showHighlight(c, out, outLen, &i, interactive, (ud[m].modified == 0));
 
 #define SHOW_ALL_UNIT_NAMES 0
 
+                // Write the unit's singular full name, followed by its other names, if they are different
                 ppl_snprintfTrunc(out + i, outLen - i, "# The '%s', also known as", ud[m].nameFs);
                 i += strlen(out + i);
+                // The plural full name
                 if ((SHOW_ALL_UNIT_NAMES) || (strcmp(ud[m].nameFp, ud[m].nameFs) != 0)) {
                     ppl_snprintfTrunc(out + i, outLen - i, " '%s' or", ud[m].nameFp);
                     i += strlen(out + i);
                     k = 1;
                 }
+                // The singular abbreviation
                 if ((SHOW_ALL_UNIT_NAMES) || (strcmp(ud[m].nameAs, ud[m].nameFs) != 0)) {
                     ppl_snprintfTrunc(out + i, outLen - i, " '%s' or", ud[m].nameAs);
                     i += strlen(out + i);
@@ -1859,26 +1993,31 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                     k = 1;
                 }
 
+                // Alternative names
                 if (ud[m].alt1 != NULL) {
                     ppl_snprintfTrunc(out + i, outLen - i, " '%s' or", ud[m].alt1);
                     i += strlen(out + i);
                     k = 1;
                 }
+                // Alternative names
                 if (ud[m].alt2 != NULL) {
                     ppl_snprintfTrunc(out + i, outLen - i, " '%s' or", ud[m].alt2);
                     i += strlen(out + i);
                     k = 1;
                 }
+                // Alternative names
                 if (ud[m].alt3 != NULL) {
                     ppl_snprintfTrunc(out + i, outLen - i, " '%s' or", ud[m].alt3);
                     i += strlen(out + i);
                     k = 1;
                 }
+                // Alternative names
                 if (ud[m].alt4 != NULL) {
                     ppl_snprintfTrunc(out + i, outLen - i, " '%s' or", ud[m].alt4);
                     i += strlen(out + i);
                     k = 1;
                 }
+                // If there were no other names, remove " also known as"; otherwise replace the final " or" with a comma
                 if (k == 0) {
                     i -= 15;
                 } else {
@@ -1887,6 +2026,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
                 }
                 ppl_snprintfTrunc(out + i, outLen - i, " is a unit of %s", ud[m].quantity);
                 i += strlen(out + i);
+                // A comment about the unit
                 if (ud[m].comment != NULL) {
                     ppl_snprintfTrunc(out + i, outLen - i, " (%s)", ud[m].comment);
                     i += strlen(out + i);
@@ -1898,6 +2038,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
         } while (m != -1);
     }
 
+    // Print the output, and free the buffers
     if (p != 0) ppl_report(&c->errcontext, out);
     free(out);
     out = NULL;
@@ -1916,6 +2057,7 @@ static int ppl_directive_show2(ppl_context *c, const char *word, char *itemSet, 
 //! \param [in] interactive - Flag indicating whether the session is interactive, i.e. attached to a terminal
 
 void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput *in, int interactive) {
+    // Variables pointing to the settings to show, which belong to a multiplot item or to the current settings
     char msg[PPL_MSG_LENGTH];
     pplObj *stk = in->stk;
     int pos;
@@ -1925,8 +2067,10 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
     ppllabel_object **ll;
     pplset_axis *xa, *ya, *za;
 
+    // Only highlight changed settings if the terminal supports color
     interactive = (interactive && (c->errcontext.session_default.color == SW_ONOFF_ON));
 
+    // Show the current settings, or those of a multiplot item
     if (stk[PARSE_show_editno].objType != PPLOBJ_NUM) {
         sg = &c->set->graph_current;
         al = &c->set->pplarrow_list;
@@ -1939,18 +2083,21 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         canvas_itemlist *canvas_items = c->canvas_items;
         canvas_item *ptr = canvas_items->first;
         int editNo = (int) round(stk[PARSE_show_editno].real);
+        // The multiplot item number must be valid
         if ((editNo < 1) || (editNo > MULTIPLOT_MAXINDEX) || (canvas_items == NULL)) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
         while ((ptr != NULL) && (ptr->id != editNo)) ptr = ptr->next;
+        // Report a multiplot item which does not exist
         if (ptr == NULL) {
             ppl_snprintfTrunc(msg, sizeof(msg), "No multiplot item with index %d.", editNo);
             ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
             return;
         }
 
+        // Use the multiplot item's settings
         sg = &(ptr->settings);
         al = &(ptr->arrow_list);
         ll = &(ptr->label_list);
@@ -1960,7 +2107,9 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
         ppl_snprintfTrunc(itemSet, sizeof(itemSet), "item %d ", editNo);
     }
 
+    // With no words after show, print help on the show command
     pos = PARSE_show_0setting_list;
+    // No words were given
     if ((stk[pos].objType != PPLOBJ_NUM) || (stk[pos].real <= 0)) {
         ppl_error(&c->errcontext, ERR_PREFORMED, -1, -1, ppltxt_show);
     } else {
@@ -1987,9 +2136,11 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
             i += strlen(textBuffer + i);
             ppl_report(&c->errcontext, textBuffer);
         }
+        // Show the settings named by each word; "all" shows everything
         while ((stk[pos].objType == PPLOBJ_NUM) && (stk[pos].real > 0)) {
             pos = (int) round(stk[pos].real);
             showWord = (char *) stk[pos + PARSE_show_setting_0setting_list].auxil;
+            // "all" shows every group of settings
             if (ppl_strAutocomplete(showWord, "all", 1) >= 0) {
                 ppl_directive_show2(c, "settings", itemSet, interactive, sg, al, ll, xa, ya, za);
                 ppl_directive_show2(c, "axes_", itemSet, interactive, sg, al, ll, xa, ya, za);
@@ -2004,6 +2155,7 @@ void ppl_directive_show(ppl_context *c, const parserLine *pl, const parserOutput
                 p = (ppl_directive_show2(c, showWord, itemSet, interactive, sg, al, ll, xa, ya, za) || p);
             }
         }
+        // Report a word which matched nothing
         if ((p == 0) && (showWord != NULL)) {
             snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unrecognised show option '%s'.\n\n%s", showWord, ppltxt_show);
             ppl_tbAddLine(c, pl, ERR_SYNTAX, in->stkCharPos[pos + PARSE_show_setting_0setting_list], "");

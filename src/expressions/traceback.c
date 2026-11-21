@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Records errors as they propagate up through nested expressions, function calls, subroutines and commands, building a
+// traceback, and prints it with arrows pointing to where in each line the error occurred. Errors in Pyxplot are not
+// reported where they occur: the code which detects them writes a message into the context and adds a traceback level,
+// and each caller adds its own level as the error unwinds, until the top level prints it.
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,8 +38,10 @@
 
 void ppl_tbClear(ppl_context *c) {
     int i;
+    // Free the copy of the line of input stored at each level of the traceback
     for (i = c->errStat.tracebackDepth - 1; i >= 0; i--) {
         traceback *t = &c->errStat.tbLevel[i];
+        // Free the copy of the line
         if (t->linetext != NULL) {
             free(t->linetext);
             t->linetext = NULL;
@@ -67,6 +74,8 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
                const int errType, const int errPos, const char *linetext, const char *context) {
     int i = c->errStat.tracebackDepth;
 
+    // Add a new level to the traceback, unless this is a command which failed because of an error already recorded
+    // within it
     if ((!cmdOrExpr) || (i == 0)) {
         traceback *t = &c->errStat.tbLevel[i];
         if ((i < 0) || (i >= TB_MAXLEVEL)) return;
@@ -78,6 +87,7 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
         t->amErrMsgExpr = t->amErrMsgCmd = 0;
         t->source[FNAME_LENGTH - 1] = '\0';
 
+        // Record the context of the error, e.g. the name of the function being called
         if (context == NULL) {
             t->context[0] = '\0';
         } else {
@@ -85,6 +95,7 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
             t->context[FNAME_LENGTH - 1] = '\0';
         }
 
+        // Keep a copy of the line in which the error occurred
         if (linetext == NULL) {
             t->linetext = NULL;
         } else {
@@ -92,8 +103,10 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
             if (t->linetext != NULL) strcpy(t->linetext, linetext);
         }
 
+        // Flag that an error has occurred. The first error in an expression is the one reported, with its position.
         c->errStat.status = 1;
         if (c->errStat.errType < 0) c->errStat.errType = errType;
+        // The first error in an expression is the one reported, with its position
         if ((!cmdOrExpr) && (c->errStat.sourceIdExpr < 0) && (strlen(c->errStat.errBuff) > 0)) {
             t->amErrMsgExpr = 1;
             c->errStat.sourceIdExpr = srcId;
@@ -102,6 +115,7 @@ void ppl_tbAdd(ppl_context *c, const int srcLineN, const long srcId, const char 
         }
         if ((cmdOrExpr) && (c->errStat.sourceIdCmd < 0)) t->amErrMsgCmd = 1;
     }
+    // The first error in a command, likewise
     if ((cmdOrExpr) && (c->errStat.sourceIdCmd < 0) && (strlen(c->errStat.errBuff) > 0)) {
         c->errStat.sourceIdCmd = srcId;
         c->errStat.errPosCmd = errPos;
@@ -136,6 +150,7 @@ void ppl_tbAddExpr(ppl_context *c, const pplExpr *expr, const int errType, const
 //! \param [in] c - The Pyxplot context
 
 void ppl_tbWrite(ppl_context *c) {
+    // h1 and h2 are the positions in the message of characters to highlight
     char msg[LSTR_LENGTH];
     int i = 0, j, k;
     char *out = msg;
@@ -146,9 +161,11 @@ void ppl_tbWrite(ppl_context *c) {
 
     if (!c->errStat.status) return; // No error!
 
+    // Start with a line naming the type of error
     snprintf(out + i, outLen - i, "\n");
     i += strlen(out + i);
 
+    // Name the type of error
     switch (c->errStat.errType) {
         case ERR_INTERNAL:
             snprintf(out + i, outLen - i, "Internal error:");
@@ -196,24 +213,30 @@ void ppl_tbWrite(ppl_context *c) {
     snprintf(out + i, outLen - i, "\n");
     ppl_error(&c->errcontext, ERR_PREFORMED, -1, -1, msg);
 
+    // Print each level of the traceback, from the outermost inwards: where the error occurred, and the line in which it
+    // did
     for (j = c->errStat.tracebackDepth - 1; j >= 0; j--) {
         i = 0;
         h1 = -1;
         traceback *t = &c->errStat.tbLevel[j];
         snprintf(out + i, outLen - i, "In %s", (t->source[0] == '\0') ? "keyboard entry" : t->source);
         i += strlen(out + i);
+        // The line number, position and context, if known
         if (t->errLine >= 0) {
             snprintf(out + i, outLen - i, ", line %d", t->errLine);
             i += strlen(out + i);
         }
+        // The position in the line
         if (t->errPos >= 0) {
             snprintf(out + i, outLen - i, ", position %d below", t->errPos);
             i += strlen(out + i);
         }
+        // The context, e.g. the function being called
         if (t->context[0] != '\0') {
             snprintf(out + i, outLen - i, " (%s)", t->context);
             i += strlen(out + i);
         }
+        // The line itself, for levels other than the innermost, with the position of the error highlighted
         if ((t->linetext != NULL) && (j > 0)) {
             snprintf(out + i, outLen - i, ":\n %s", t->linetext);
             h1 = i + 3 + t->errPos;
@@ -221,12 +244,16 @@ void ppl_tbWrite(ppl_context *c) {
         ppl_error(&c->errcontext, ERR_PREFORMED, h1, -1, msg);
     }
 
+    // Finally print the innermost line, with an arrow pointing up to the position of the error in the command and an
+    // arrow pointing down to the position in the expression, followed by the message itself
     i = 1;
     strcpy(out, "\n");
+    // If the innermost line is known, print it with arrows
     if ((c->errStat.tracebackDepth > 0) && (c->errStat.tbLevel[0].linetext != NULL)) {
         const int lp = c->errStat.errPosCmd;
         const int lp2 = c->errStat.errPosExpr;
         traceback *t = &c->errStat.tbLevel[0];
+        // The message about the error in the command, and an arrow pointing up from it to its position in the line
         if ((t->sourceId == c->errStat.sourceIdCmd) && (lp >= 0)) {
             ppl_snprintfTrunc(out + i, outLen - i, "%s\n", c->errStat.errMsgCmd);
             i += strlen(out + i);
@@ -241,6 +268,7 @@ void ppl_tbWrite(ppl_context *c) {
         h2 = i + 1 + lp2;
         snprintf(out + i, outLen - i, " %s\n", t->linetext);
         i += strlen(out + i);
+        // An arrow pointing to the position of the error in the expression
         if ((t->sourceId == c->errStat.sourceIdExpr) && (lp2 >= 0)) {
             for (k = 0; ((k < lp2) && (i < outLen - 8)); k++, i++) out[i] = ' ';
             snprintf(out + i, outLen - i, "/|\\\n");

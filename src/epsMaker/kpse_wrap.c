@@ -19,9 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
-// Wrapper for libkpathsea which provides an alternative implementation of the
-// library -- directly forking kpsewhich -- for use on machines such as Macs
-// where libkpathsea is tricky to install.
+// Finds the TeX font files (tfm, pfa, pfb, map and enc) needed to convert LaTeX's dvi output into postscript, using the
+// kpathsea library if it is available. Otherwise, at startup, it runs kpsewhich once for each type of file to learn the
+// directories in which TeX searches for it, and then searches those directories itself, recursing into the
+// subdirectories of those marked with !!.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -68,25 +69,31 @@ void ppl_kpse_wrap_init(ppl_context *c) {
     sigset_t sigs;
     pplerr_context *ec = &c->errcontext;
 
+    // SIGCHLD is unblocked again after each kpsewhich process has been read
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
+    // Start with empty lists of paths
     for (j = 0; j < N_FILE_TYPES; j++) {
         ppl_kpse_PathList[j][0] = NULL;
         for (i = 0; i < MAX_PATHS; i++) ppl_kpse_PathRecursive[j][i] = 0;
     }
 
+    // Ask kpsewhich for the search path of each type of file
     for (j = 0; j < N_FILE_TYPES; j++) {
         pplcsp_forkKpseWhich(c, FileTypes[j], &fstdout);
 
         // Wait for kpsewhich process's stdout to become readable. Get bored if this takes more than a second.
         TrialNumber = 1;
+        // Retry the wait up to three times if it is interrupted by a signal
         while (1) {
             waitperiod.tv_sec = 1;
             waitperiod.tv_nsec = 0;
             FD_ZERO(&readable);
             FD_SET(fstdout, &readable);
+            // Wait for output, or a timeout
             if (pselect(fstdout + 1, &readable, NULL, NULL, &waitperiod, NULL) == -1) {
+                // Retry if interrupted by a signal
                 if ((errno == EINTR) && (TrialNumber < 3)) {
                     TrialNumber++;
                     continue;
@@ -97,6 +104,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
             }
             break;
         }
+        // Give up on this type of file if kpsewhich did not respond
         if (!FD_ISSET(fstdout, &readable)) {
             ppl_error(ec, ERR_GENERIC, -1, -1, "Got bored waiting for kpsewhich to return data.");
             sigprocmask(SIG_UNBLOCK, &sigs, NULL);
@@ -115,10 +123,12 @@ void ppl_kpse_wrap_init(ppl_context *c) {
 
         // Split up returned data into a list of paths
         for (i = s = k = 0; ppl_kpse_FilePaths[j][i] != '\0'; i++) {
+            // A path starting with !! is searched recursively
             if (ppl_kpse_FilePaths[j][i] == '!') {
                 if (!s) ppl_kpse_PathRecursive[j][k] = 1;
                 continue;
             }
+            // A colon or newline ends a path; strip any trailing slashes, and terminate it
             if ((ppl_kpse_FilePaths[j][i] == ':') || (ppl_kpse_FilePaths[j][i] == '\n')) {
                 for (l = i - 1; ((l >= 0) && (ppl_kpse_FilePaths[j][l] == PATHLINK[0])); l--)
                     ppl_kpse_FilePaths[j][l] = '\0';
@@ -126,9 +136,11 @@ void ppl_kpse_wrap_init(ppl_context *c) {
                 ppl_kpse_FilePaths[j][i] = '\0';
                 continue;
             }
+            // The first character of a new path
             if (!s) {
                 s = 1;
                 ppl_kpse_PathList[j][k++] = ppl_kpse_FilePaths[j] + i;
+                // There is a fixed limit on the number of paths
                 if (k == MAX_PATHS) {
                     k--;
                     ppl_error(ec, ERR_GENERIC, -1, -1, "kpsewhich returned too many paths");
@@ -139,6 +151,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
 
         // If debugging, log a list of the paths that we've extracted
         if (DEBUG) {
+            // Log each path
             for (i = 0; ppl_kpse_PathList[j][i] != NULL; i++) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Using path for %s files: <%s> [%srecursive]", FileTypes[j],
                                   ppl_kpse_PathList[j][i], ppl_kpse_PathRecursive[j][i] ? "" : "non-");
@@ -160,6 +173,7 @@ void ppl_kpse_wrap_init(ppl_context *c) {
 //! \return The full path of the file, stored in a static buffer, or NULL if it was not found
 
 char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned char recurse) {
+    // The result is returned in a static buffer, shared by the recursive calls
     char msg[PPL_MSG_LENGTH];
     int pos;
     DIR *dp;
@@ -172,7 +186,9 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
     found = 0;
     snprintf(buffer, FNAME_LENGTH, "%s%s%s", path, PATHLINK, s);
     buffer[FNAME_LENGTH - 1] = '\0';
+    // The file is in this directory
     if (access(buffer, R_OK) == 0) {
+        // Log the file found
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "KPSE found file <%s>", buffer);
             ppl_log(ec, msg);
@@ -180,11 +196,13 @@ char *ppl_kpse_wrap_test_path(pplerr_context *ec, char *s, char *path, unsigned 
         found = 1;
         return buffer;
     }
+    // Otherwise, search each subdirectory, until the file is found
     if (recurse) {
         snprintf(buffer, FNAME_LENGTH, "%s%s", path, PATHLINK);
         buffer[FNAME_LENGTH - 1] = '\0';
         pos = strlen(buffer);
         if ((dp = opendir(buffer)) == NULL) return NULL;
+        // Search each subdirectory
         while (((dirp = readdir(dp)) != NULL) && (!found)) {
             if ((strcmp(dirp->d_name, ".") == 0) || (strcmp(dirp->d_name, "..") == 0)) continue;
             buffer[pos] = '\0';
@@ -210,10 +228,12 @@ char *ppl_kpse_wrap_find_file(pplerr_context *ec, char *s, char **paths, unsigne
     char msg[PPL_MSG_LENGTH];
     int i;
     char *output;
+    // Log the search
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Searching for file <%s>", s);
         ppl_log(ec, msg);
     }
+    // Search each directory in turn
     for (i = 0; paths[i] != NULL; i++) {
         output = ppl_kpse_wrap_test_path(ec, s, paths[i], RecurseList[i]);
         if (output != NULL) return output;

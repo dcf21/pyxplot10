@@ -19,9 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
-// Provides routines for mapping between coordinate positions on axes and
-// positions on a postscript page. Outputs xpos and ypos are measured in
-// postscript points.
+// Maps between values on a graph's axes and positions on the postscript page, in postscript points. A value is first
+// converted to a fractional position along its axis (0 at one end, 1 at the other), allowing for logarithmic axes and
+// for axes linked to others through a using expression, whose mapping is tabulated; the fractions are then placed on
+// the page, in two dimensions or by projecting the three-dimensional cube of the graph onto the page.
 
 #define _PPL_EPS_PLOT_CANVAS_C 1
 
@@ -45,12 +46,15 @@
 //! \return The position along the axis, in the range 0 to 1, or NaN if the value cannot be placed on the axis
 
 double eps_plot_axis_GetPosition(const double xin, pplset_axis *xa, const int xrn, const unsigned char AllowOffBounds) {
+    // With no axis, the value is already a fractional position
     int imin, imax, i;
     if (xa == NULL) return xin;
     if (xa->AxisLinearInterpolation != NULL) // Axis is linearly interpolated
     {
         imin = xa->AxisTurnings[xrn];
         imax = xa->AxisTurnings[xrn + 1];
+        // An axis whose mapping is tabulated: find the interval of the table containing the value, within the monotonic
+        // section xrn, and interpolate within it
         for (i = imin; i < imax; i++) {
             if (((xa->AxisLinearInterpolation[i] < xin) && (xa->AxisLinearInterpolation[i + 1] >= xin)) ||
                 ((xa->AxisLinearInterpolation[i] > xin) && (xa->AxisLinearInterpolation[i + 1] <= xin)))
@@ -61,7 +65,9 @@ double eps_plot_axis_GetPosition(const double xin, pplset_axis *xa, const int xr
         }
         return GSL_NAN;
     }
+    // Values outside the axis's range have no position, unless positions off the ends are allowed
     if (!AllowOffBounds) {
+        // The axis may run in either direction
         if (xa->MaxFinal > xa->MinFinal) {
             if ((xin < xa->MinFinal) || (xin > xa->MaxFinal)) return GSL_NAN;
         } else {
@@ -99,19 +105,23 @@ double eps_plot_axis_InvGetPosition(const double xin, pplset_axis *xa) {
 //! \return One if the value lies within the range of the axis, zero otherwise
 
 int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
+    // Variables for the range of the axis
     int xrn, swapI, xminset = 0, xmaxset = 0;
     double xmin = 0, xmax = 0, swapD;
 
+    // An axis whose mapping is tabulated: the value is in range if it lies on any monotonic section of the table
     if (xa->AxisLinearInterpolation != NULL) {
         for (xrn = 0; xrn <= xa->AxisValueTurnings; xrn++)
             if (gsl_finite(eps_plot_axis_GetPosition(xin, xa, xrn, 0))) return 1;
         return 0;
     }
 
+    // The minimum set by the user, if any
     if (xa->HardMinSet) {
         xminset = 1;
         xmin = xa->HardMin;
     }
+    // The maximum set by the user, if any
     if (xa->HardMaxSet) {
         xmaxset = 1;
         xmax = xa->HardMax;
@@ -119,6 +129,7 @@ int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
     if (xa->HardAutoMinSet) { xminset = 0; }
     if (xa->HardAutoMaxSet) { xmaxset = 0; }
 
+    // Reversed ranges are written with the larger value first
     if (xa->RangeReversed) {
         swapI = xminset;
         xminset = xmaxset;
@@ -128,6 +139,7 @@ int eps_plot_axis_InRange(pplset_axis *xa, const double xin) {
         xmax = swapD;
     }
 
+    // Test the value against the limits which are set
     if (xminset && xmaxset) return (((xin >= xmin) && (xin <= xmax)) || ((xin <= xmin) && (xin >= xmax)));
     if (xminset) return (xin > xmin);
     if (xmaxset) return (xin < xmax);
@@ -154,14 +166,17 @@ void eps_plot_ThreeDimProject(const double xap, const double yap, const double z
                               const double zdepth, double *xpos, double *ypos, double *depth) {
     double x, y, z, x2, y2, z2, x3, y3, z3;
 
+    // Position relative to the centre of the cube
     x = width * (xap - 0.5);
     y = height * (yap - 0.5);
     z = zdepth * (zap - 0.5);
 
+    // Rotate about the vertical axis by the xy view angle
     x2 = x * cos(sg->XYview.real) + y * sin(sg->XYview.real);
     y2 = -x * sin(sg->XYview.real) + y * cos(sg->XYview.real);
     z2 = z;
 
+    // Tilt about the horizontal axis by the yz view angle; the page's vertical is z3, and y3 is the depth
     x3 = x2;
     y3 = y2 * cos(sg->YZview.real) - z2 * sin(sg->YZview.real);
     z3 = y2 * sin(sg->YZview.real) + z2 * cos(sg->YZview.real);
@@ -214,6 +229,7 @@ void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap
     *zap = 0.5;
     if (ThreeDim) *zap = eps_plot_axis_GetPosition(zin, za, zrn, 1);
 
+    // Values which cannot be placed on an axis have no position
     if ((!gsl_finite(*xap)) || (!gsl_finite(*yap)) || (!gsl_finite(*zap))) {
         *xpos = *ypos = GSL_NAN;
         return;
@@ -236,6 +252,7 @@ void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap
         if (theta_y != NULL) *theta_y = atan2(sin(sg->XYview.real), cos(sg->XYview.real) * sin(sg->YZview.real));
         if (theta_z != NULL) *theta_z = atan2(0, cos(sg->YZview.real));
 
+        // The directions are zero if undefined
         if ((theta_x != NULL) && (!gsl_finite(*theta_x))) *theta_x = 0.0;
         if ((theta_y != NULL) && (!gsl_finite(*theta_y))) *theta_y = 0.0;
         if ((theta_z != NULL) && (!gsl_finite(*theta_z))) *theta_z = 0.0;
@@ -245,10 +262,12 @@ void eps_plot_GetPosition(double *xpos, double *ypos, double *depth, double *xap
         *ypos = origin_y + height * (*yap);
         *depth = 0.0;
 
+        // In two dimensions, x points right, and y and z point up
         if (theta_x != NULL) *theta_x = M_PI / 2;
         if (theta_y != NULL) *theta_y = 0.0;
         if (theta_z != NULL) *theta_z = 0.0;
     }
 
+    // Done
     return;
 }

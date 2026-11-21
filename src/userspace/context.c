@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Creates and frees the ppl_context structure, which holds the whole state of a Pyxplot session: its settings, variable
+// namespaces, evaluation stack, error status, multiplot canvas and the state of the command-line shell. Almost every
+// function in Pyxplot is passed this structure. Creating it also sets up the default settings, units and variables.
+
 #define _CONTEXT_C 1
 
 #include <stdlib.h>
@@ -48,17 +52,22 @@
 //! \return The new context, or NULL if memory allocation failed
 
 ppl_context *ppl_contextInit() {
+    // Allocate the context itself
     int i;
     ppl_context *out = malloc(sizeof(ppl_context));
     if (out == NULL) return NULL;
 
+    // Allocate the settings
     out->set = (ppl_settings *) malloc(sizeof(ppl_settings));
+    // Failure to allocate memory returns NULL
     if (out->set == NULL) {
         free(out);
         out = NULL;
         return NULL;
     }
 
+    // Set up error reporting and memory management, and then the default settings, and forget any data file previously
+    // read by the $ operator
     out->errcontext.error_input_linenumber = -1;
     out->errcontext.error_input_filename[0] = '\0';
     strcpy(out->errcontext.error_source, "main     ");
@@ -68,27 +77,32 @@ ppl_context *ppl_contextInit() {
     ppl_dollarOp_deconfig(out);
     out->dollarStat.lastFilename[0] = '\0';
 
+    // No error has occurred yet
     out->errStat.status = out->errStat.tracebackDepth = 0;
     out->errStat.errPosExpr = out->errStat.oldErrPosExpr = -1;
     out->errStat.errPosCmd = out->errStat.oldErrPosCmd = -1;
     ppl_tbClear(out);
 
+    // The multiplot canvas is empty, no worker threads have been created, and no error position is recorded
     out->canvas_items = NULL;
     out->workerClones = NULL;
     out->workerNClones = 0;
     out->replotFocus = -1;
     out->algebraErrPos = -1;
 
+    // Create the stack on which expressions are evaluated
     out->stackSize = STACK_DEFAULT;
     out->stack = (pplObj *) malloc(STACK_DEFAULT * sizeof(pplObj));
     out->stackPtr = 0;
     out->stackFull = 0;
+    // Failure to allocate memory returns NULL
     if (out->stack == NULL) {
         free(out);
         out = NULL;
         return NULL;
     }
 
+    // The state of the command-line shell: no input has been read, and no loop, subroutine or exit is being unwound
     out->tokenBuff = NULL;
     out->tokenBuffLen = 0;
     out->parserStack = NULL;
@@ -112,6 +126,7 @@ ppl_context *ppl_contextInit() {
     strcpy(out->errcontext.error_source, "main     ");
     out->errcontext.errorCount = 0;
 
+    // Set up the built-in object types, physical units, and default variables and functions
     pplObjInit(out);
     ppl_makeDefaultUnits(out);
     ppl_makeDefaultVars(out);

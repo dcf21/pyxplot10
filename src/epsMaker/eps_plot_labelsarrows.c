@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws the arrows and text labels which have been placed on a graph with "set arrow" and "set label". Their positions
+// may be given in the coordinates of any axis, or of the graph or page; they are converted to positions on the page,
+// clipped to the faces of the graph where necessary, and drawn with eps_primitive_arrow() or as typeset text. Called by
+// eps_plot.c while rendering a graph.
+
 #define _PPL_EPS_PLOT_LABELSARROWS 1
 
 #include <stdlib.h>
@@ -82,6 +87,7 @@ static int fetchAxis(EPSComm *x, const int system, pplset_axis *axes, const int 
     } else if (system == SW_SYSTEM_SECOND) {
         a = &axes[2];
     } else if (system == SW_SYSTEM_AXISN) {
+        // The axis number must be in range
         if ((axisN < 0) || (axisN >= MAX_AXES)) {
             *out = 0.0;
             ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Axis number out of range");
@@ -95,6 +101,7 @@ static int fetchAxis(EPSComm *x, const int system, pplset_axis *axes, const int 
     }
 
     if (!a->RangeFinalised) { a = &axes[1]; } // Default to first axis if desired axis doesn't exist
+    // The position must have the same units as the axis's range, if one was set
     if (a->HardUnitSet && (!ppl_unitsDimEqual(in, &a->HardUnit))) {
         ppl_snprintfTrunc(msg, sizeof(msg),
                           "Position specified for %s dimensionally incompatible with the range specified for the axis. "
@@ -105,6 +112,7 @@ static int fetchAxis(EPSComm *x, const int system, pplset_axis *axes, const int 
         *out = 0.5;
         return 1;
     }
+    // The position must have the same units as the data plotted against the axis
     if (a->DataUnitSet && (!ppl_unitsDimEqual(in, &a->DataUnit))) {
         ppl_snprintfTrunc(msg, sizeof(msg),
                           "Position specified for %s dimensionally incompatible with data plotted against the axis. "
@@ -115,6 +123,7 @@ static int fetchAxis(EPSComm *x, const int system, pplset_axis *axes, const int 
         *out = 0.5;
         return 1;
     }
+    // If the axis does not exist, place the item in the middle of the graph
     if (!a->RangeFinalised) {
         *out = 0.5;
         return 0;
@@ -132,6 +141,7 @@ static int fetchAxis(EPSComm *x, const int system, pplset_axis *axes, const int 
 //! \param [in,out] ypos - The vertical position, in postscript points
 
 static void addPageCoordinates(const int system, const pplObj *in, const double theta, double *xpos, double *ypos) {
+    // Only page and graph coordinates are offsets on the page
     if ((system == SW_SYSTEM_PAGE) || (system == SW_SYSTEM_GRAPH)) {
         *xpos += in->real * sin(theta) * M_TO_PS;
         *ypos += in->real * cos(theta) * M_TO_PS;
@@ -159,10 +169,12 @@ static int clipArrowEnd(double *pos[6], const double grad[3][6], const int xyz, 
     if (ap[1 - P] < 0.0) return 1; // Both ends lie beyond the face
     for (k = 0; k < 6; k++) pos[k][P] += grad[xyz][k] * (apv - t);
 
+    // Remove the arrowhead from the end which has been clipped
     if (P == 0) {
         if (*ArrowType == SW_ARROWTYPE_TWOWAY) *ArrowType = SW_ARROWTYPE_HEAD;
     } else {
         if (*ArrowType == SW_ARROWTYPE_HEAD) *ArrowType = SW_ARROWTYPE_NOHEAD;
+        // An arrow with two heads keeps only the head at its start
         if (*ArrowType == SW_ARROWTYPE_TWOWAY) {
             // Reverse the arrow, so that its remaining head is at its end
             for (k = 0; k < 6; k++) {
@@ -192,12 +204,14 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
     ppllabel_object *li;
     withWords ww, ww_default;
 
+    // Arrows are drawn in solid black lines unless their style says otherwise
     ppl_withWordsZero(x->c, &ww_default);
     ww_default.USEcolor = 1;
     ww_default.color = COLOR_BLACK;
     ww_default.USElinetype = ww_default.USElinewidth = 1;
     ww_default.linetype = ww_default.linewidth = 1.0;
 
+    // The labels' text was typeset in order, starting from this page
     pageno = x->LaTeXpageno = x->current->SetLabelTextID;
 
     // Loop through all arrows, rendering them in turn
@@ -301,6 +315,8 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                                                  1.0}};
                                         double *pos[6] = {xpos, ypos, depth, xap, yap, zap};
 
+                                        // Clip each end of the arrow to each face of the graph, skipping arrows which
+                                        // lie wholly outside it
                                         if (clipArrowEnd(pos, grad, 0, 0.0, 0, &ArrowType)) continue;
                                         if (clipArrowEnd(pos, grad, 0, 1.0, 0, &ArrowType)) continue;
                                         if (clipArrowEnd(pos, grad, 0, 0.0, 1, &ArrowType)) continue;
@@ -315,6 +331,7 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                                         if (clipArrowEnd(pos, grad, 2, 1.0, 1, &ArrowType)) continue;
                                     }
 
+                                    // Draw the arrow, if both ends can be placed on the page
                                     ppl_withWordsMerge(x->c, &ww, &ai->style, &ww_default, NULL, NULL, NULL, 1);
                                     if ((gsl_finite(xpos[0])) && (gsl_finite(ypos[0])) && (gsl_finite(xpos[1])) &&
                                         (gsl_finite(ypos[1])))
@@ -341,6 +358,7 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
 
     // Loop through all text labels, rendering them in turn
     for (li = x->current->label_list; li != NULL; li = li->next)
+        // Labels with no text are skipped
         if ((li->text != NULL) && (li->text[0] != '\0')) {
             pplset_axis *xa, *ya, *za = NULL;
             double xin, yin, zin = 0.5;
@@ -377,9 +395,12 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
                             ppl_withWordsMerge(x->c, &ww, &li->style, &ww_default, NULL, NULL, NULL, 1);
                             eps_core_SetColor(x, &ww, 0);
                             if (eps_core_isVisible(x))
+                                // Draw the label, if it can be placed on the page, through the depth-sorting buffer
                                 if ((gsl_finite(xpos_)) && (gsl_finite(ypos_)) && (gsl_finite(depth))) {
                                     char *colstr = NULL, *text = NULL;
                                     colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
+                                    // Typeset the label at its position, offset by its gap in the direction of its
+                                    // alignment
                                     if (colstr != NULL) {
                                         double fs = x->current->settings.FontSize;
                                         if (li->fontsizeSet) fs = li->fontsize;
@@ -394,5 +415,6 @@ void eps_plot_labelsarrows(EPSComm *x, const double origin_x, const double origi
             pageno++;
         }
 
+    // Done
     return;
 }

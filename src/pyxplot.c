@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The entry point of Pyxplot. main() initialises the context, settings, parser and memory allocator, reads the
+// configuration file and command-line switches, starts the child support process (children.c), which creates a private
+// temporary directory and runs the viewers and other helpers, and then runs each script named on the command line, or
+// an interactive session. On exit, or on SIGINT, it saves the readline history and frees everything.
+
 #define _PYXPLOT_C 1
 
 #include <stdio.h>
@@ -76,6 +81,7 @@ sigjmp_buf *ppl_sigjmpFromSigInt = NULL;
 //! \return The exit status of the process: 1 if any errors were reported in script files or piped input, else 0
 
 int main(const int argc, char **argv) {
+    // Variables for setting up the session and its temporary directory
     char msg[PPL_MSG_LENGTH];
     int i, fail = 0, exitStatus;
     int tempdirnumber = 1;
@@ -84,6 +90,7 @@ int main(const int argc, char **argv) {
     ppl_context *context;
     struct stat statinfo;
 
+    // Signals to unblock when exiting after SIGINT, and the wait used while the temporary directory is created
     sigset_t sigs;
 
     struct timespec waitperiod, waitedperiod; // A time.h timespec specifier for a 50ms nanosleep wait
@@ -95,6 +102,7 @@ int main(const int argc, char **argv) {
     context = ppl_contextInit();
     setenv("TZ", "UTC", 1);
     if (DEBUG) ppl_log(&context->errcontext, "Initialising Pyxplot.");
+    // Log the timezone in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Detected timezone <%s>.", context->set->term_default.timezone);
         ppl_log(&context->errcontext, msg);
@@ -133,6 +141,7 @@ int main(const int argc, char **argv) {
     // Scan command-line options for any switches
     for (i = 1; i < argc; i++) {
         if (strlen(argv[i]) == 0) continue;
+        // Words not starting with a dash are scripts to run, so the session is not interactive unless - is also given
         if (argv[i][0] != '-') {
             if (context->willBeInteractive == 1) context->willBeInteractive = 0;
             continue;
@@ -202,6 +211,7 @@ int main(const int argc, char **argv) {
     if (getcwd(context->errcontext.session_default.cwd, FNAME_LENGTH) == NULL) {
         ppl_fatal(&context->errcontext, __FILE__, __LINE__, "Could not read current working directory.");
     } // Store cwd
+    // Find a temporary directory name which is not in use
     while (1) {
         ppl_snprintfTrunc(tempdirpath, sizeof(tempdirpath), "/tmp/pyxplot_%d_%d", getpid(), tempdirnumber);
         if (access(tempdirpath, F_OK) != 0) break;
@@ -226,6 +236,7 @@ int main(const int argc, char **argv) {
         // Wait for temporary directory to appear, and change directory into it
         if (DEBUG) ppl_log(&context->errcontext, "Waiting for temporary directory to appear.");
         ppl_snprintfTrunc(tempdirpath, sizeof(tempdirpath), "%s", context->errcontext.session_default.tempdir);
+        // Wait for up to five seconds for the child process to create the temporary directory
         for (i = 0; i < 100; i++) {
             if (access(tempdirpath, F_OK) == 0) break;
             nanosleep(&waitperiod, &waitedperiod);
@@ -233,6 +244,7 @@ int main(const int argc, char **argv) {
         if (access(tempdirpath, F_OK) != 0) {
             fail = 1;
         } // If it never turns up, fail.
+        // The directory must be a directory owned by this user
         else {
             stat(tempdirpath, &statinfo); // Otherwise stat it and make sure it's a directory we own
             if (!S_ISDIR(statinfo.st_mode)) fail = 1;
@@ -252,6 +264,7 @@ int main(const int argc, char **argv) {
         // Scan command line and process all script files we have been given
         for (i = 1; i < argc; i++) {
             if (strlen(argv[i]) == 0) continue;
+            // A dash on its own means an interactive session at that point; any other switch has already been handled
             if (argv[i][0] == '-') {
                 if (argv[i][1] == '\0') ppl_interactiveSession(context);
                 continue;
@@ -277,6 +290,7 @@ int main(const int argc, char **argv) {
 
     // Save GNU Readline history
 #ifdef HAVE_READLINE
+    // Save the readline history of interactive sessions
     if (context->willBeInteractive > 0) {
         if (DEBUG) ppl_log(&context->errcontext, "Saving GNU Readline history.");
         if (snprintf(tempdirpath, FNAME_LENGTH, "%s%s%s", context->errcontext.session_default.homedir, PATHLINK,

@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// The time module: functions which make date objects from calendar dates, Julian dates and unix times, measure and
+// format the intervals between dates, format dates as strings, and pause execution. The conversions themselves are in
+// userspace/calendars.c.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -106,6 +110,8 @@ void pplfunc_timefromMJD(ppl_context *c, pplObj *in, const int nArgs, int *statu
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // Each component of the date must be a real, dimensionless, finite number, and the hour, minute and second must be
+    // integers
     char *FunctionDescription = "fromCalendar(year,month,day,hour,min,sec)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double t, offset;
@@ -121,6 +127,7 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
     if (ppl_funcCheckInt(&call, &in[3], "hour", "function's fourth input (hours) must be an integer")) return;
     if (ppl_funcCheckInt(&call, &in[4], "min", "function's fifth input (minutes) must be an integer")) return;
     if (ppl_funcCheckInt(&call, &in[5], "sec", "function's sixth input (seconds) must be an integer")) return;
+    // The optional timezone must be a string
     if ((nArgs > 6) && (in[6].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -153,6 +160,7 @@ void pplfunc_timefromCalendar(ppl_context *c, pplObj *in, const int nArgs, int *
 
 void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
     char *FunctionDescription = "interval(t2,t1)";
+    // Both arguments must be dates
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -161,6 +169,7 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *stat
                           FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
+    // The second argument must be a date
     if (in[1].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -185,8 +194,10 @@ void pplfunc_timeInterval(ppl_context *c, pplObj *in, const int nArgs, int *stat
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // Both arguments must be dates, and the optional format a string
     char *FunctionDescription = "intervalStr(t2,t1,<s>)";
     char *format = NULL, *out = NULL;
+    // The first argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -195,6 +206,7 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
                           FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
+    // The second argument must be a date
     if (in[1].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -203,6 +215,7 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
                           FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
+    // The optional format must be a string
     if ((nArgs > 2) && (in[2].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -212,7 +225,9 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
         return;
     }
 
+    // A buffer for the output string
     out = (char *) malloc(8192);
+    // Failure to allocate memory is reported as an error
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -224,6 +239,7 @@ void pplfunc_timeIntervalStr(ppl_context *c, pplObj *in, const int nArgs, int *s
     {
         format = (char *) in[2].auxil;
         ppl_timeDiffStr(c, out, 8192, in[1].real, in[0].real, format, status, errText); // The interval from t1 to t2
+        // Report a bad format string
         if (*status) {
             *errType = ERR_NUMERICAL;
             return;
@@ -293,9 +309,11 @@ void pplfunc_timenow(ppl_context *c, pplObj *in, const int nArgs, int *status, i
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // The first argument must be a date, and the optional format and timezone strings
     char *FunctionDescription = "string(t,<s>,<timezone>)";
     char *format = NULL, *out = NULL, timezone[FNAME_LENGTH];
     double offset;
+    // The first argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -304,6 +322,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
                           FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
+    // The optional format must be a string
     if ((nArgs > 1) && (in[1].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -312,6 +331,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
                           FunctionDescription, pplObjTypeNames[in[1].objType]);
         return;
     }
+    // The optional timezone must be a string
     if ((nArgs > 2) && (in[2].objType != PPLOBJ_STR)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -321,7 +341,9 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
         return;
     }
 
+    // A buffer for the output string
     out = (char *) malloc(8192);
+    // Failure to allocate memory is reported as an error
     if (out == NULL) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -336,6 +358,7 @@ void pplfunc_timestring(ppl_context *c, pplObj *in, const int nArgs, int *status
     ppl_calendarTimezoneOffset(c, in[0].real, timezone, &offset);
     ppl_dateString(c, out, 8192, in[0].real + offset, format, timezone, status, errText);
     ppl_calendarTimezoneUnset(c);
+    // Report a date which cannot be expressed in the current calendar, or a bad format string
     if (*status) {
         *errType = ERR_NUMERICAL;
         return;
@@ -382,6 +405,7 @@ void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status
     const double p = in[0].real - currentUnixTime();
     char *FunctionDescription = "sleepUntil(d)";
     struct timespec waitperiod, waitperiod2; // A time.h timespec specifier for a 50ms nanosleep wait
+    // The argument must be a date
     if (in[0].objType != PPLOBJ_DATE) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -390,6 +414,7 @@ void pplfunc_sleepUntil(ppl_context *c, pplObj *in, const int nArgs, int *status
                           FunctionDescription, pplObjTypeNames[in[0].objType]);
         return;
     }
+    // Sleep until the date, if it is in the future, restarting the sleep if it is interrupted by a signal
     if (p > 0) {
         waitperiod.tv_sec = floor(p);
         waitperiod.tv_nsec = fmod(p * 1e9, 1e9);

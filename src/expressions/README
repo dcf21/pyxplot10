@@ -1,0 +1,50 @@
+expressions
+===========
+
+Compiling and evaluating algebraic expressions. Every expression in Pyxplot,
+whether typed on its own, in a command, in a function definition or in a
+"using" modifier, is compiled into bytecode by expCompile.c and executed by the
+stack machine in expEval.c. Several modules split their header in two: a .h
+file of types, and a _fns.h file of functions.
+
+expCompile.c, expCompile.h, expCompile_fns.h
+    The compiler. It tokenises an expression, checking which tokens may follow
+    which to find syntax errors, and then compiles the tokens into bytecode
+    with the shunting-yard algorithm. expCompile.h defines the bytecode
+    instructions and the operator codes.
+
+expEval.c, expEval.h
+    The evaluator: a stack machine which executes the bytecode. It also casts
+    values between types, and implements the string substitution operator %.
+
+expEvalOps.c, expEvalOps.h
+    The arithmetic operators, for every combination of types they accept:
+    numbers with units, strings, dates, colors, vectors, matrices, lists and
+    dictionaries.
+
+expEvalSlice.c, expEvalSlice.h
+    The [] operator, which takes items and slices from strings, lists,
+    vectors, matrices and dictionaries.
+
+expEvalCalculus.c, expEvalCalculus.h
+    The int_dx() and diff_dx() functions, which numerically integrate and
+    differentiate expressions using GSL.
+
+fnCall.c, fnCall.h
+    Calls function objects: built-in functions, user-defined functions,
+    subroutines, and functions made by interpolate, histogram and fft. Also
+    constructs objects when a type is called, e.g. vector(3).
+
+dollarOp.c, dollarOp.h
+    The $ operator, which refers to columns of the data file being read, e.g.
+    in "plot 'data' using 1:$2**2".
+
+traceback.c, traceback.h, traceback_fns.h
+    Records errors with a traceback as they unwind through nested expressions,
+    functions and commands, and prints them with arrows pointing to where
+    each one occurred.
+
+expThreadSafe.c, expThreadSafe.h
+    Decides whether an expression can be evaluated on several threads at once,
+    and creates the worker contexts in which threads evaluate expressions, e.g.
+    when the plot command samples a function in parallel.

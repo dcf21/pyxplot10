@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Tables of the keywords which each of Pyxplot's settings can take, e.g. the names of the plot styles or of the output
+// terminals. Each table is used both to parse settings typed by the user and to display them, in commands such as set
+// and show, in configuration files, and in error messages.
+
 #define _SETTINGTYPES_C 1
 
 #include <stdlib.h>
@@ -29,6 +33,9 @@
 #include "coreUtils/errorReport.h"
 #include "settings/settingTypes.h"
 
+// Each setting has three parallel tables: _STR lists the keywords; _ACL gives the minimum number of characters to which
+// each keyword may be abbreviated; and _INT gives the numeric value of each keyword (see settingTypes.h), terminated by
+// -1.
 char *SW_BOOL_STR[] = {"true", "false"};
 int SW_BOOL_ACL[] = {1, 1};
 int SW_BOOL_INT[] = {SW_BOOL_TRUE, SW_BOOL_FALSE, -1};
@@ -163,6 +170,7 @@ int SW_TERMCOL_ACL[] = {1, 1, 1, 2, 1, 1, 1, 1};
 int SW_TERMCOL_INT[] = {SW_TERMCOL_NOR, SW_TERMCOL_RED, SW_TERMCOL_GRN,
                         SW_TERMCOL_BRN, SW_TERMCOL_BLU, SW_TERMCOL_MAG,
                         SW_TERMCOL_CYN, SW_TERMCOL_WHT, -1};
+// The ANSI escape sequences which switch a terminal into each of the colors above
 char *SW_TERMCOL_TXT[] = {"\x1b[0m",     "\x1b[01;31m", "\x1b[01;32m", "\x1b[01;33m",
                           "\x1b[01;34m", "\x1b[01;35m", "\x1b[01;36m", "\x1b[01;37m"};
 
@@ -202,8 +210,10 @@ void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, 
     static int latch = 0;
     static char *dummyout = "";
     first = *id_list;
+    // Step through the two tables in parallel until we find <id>
     while (1) {
         if (*id_list == id) return name_list;
+        // The end of the table: the value is not a valid one for this setting
         if (*id_list == -1) {
             if (latch == 1) return dummyout; // Prevent recursive calling
             latch = 1;
@@ -229,6 +239,7 @@ void *ppl_fetchSettingName(pplerr_context *context, int id, const int *id_list, 
 //! \return The setting value corresponding to <name>, or -1 if it was not found
 
 int ppl_fetchSettingByName(const pplerr_context *context, const char *name, const int *id_list, char **name_list) {
+    // Step through the two tables in parallel until we find <name>
     while (1) {
         if (*id_list == -1) return -1;
         if (ppl_strCmpNoCase(name, *name_list) == 0) return *id_list;

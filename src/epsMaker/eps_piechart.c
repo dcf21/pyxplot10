@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws pie charts, made with the piechart command. The sizes of the wedges are read from a data file, vectors or
+// functions in the same way as for plots; each wedge is labelled using a format expression evaluated with the variables
+// percentage, label and wedgesize, and the labels are typeset by LaTeX. Labels are placed inside the wedges, around the
+// outside of the pie, or in a key beside it, choosing automatically between the first two according to whether they fit
+// inside.
+
 #define _PPL_EPS_PIECHART 1
 
 #include <stdlib.h>
@@ -67,6 +73,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_pie_ReadAccessibleData(EPSComm *x) {
+    // Variables for reading the data
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
     int j, status = 0, errCount = DATAFILE_NERRS, NExpect = 1, Ncolumns;
@@ -80,9 +87,11 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     double *ordinate_raster, acc;
     dataBlock *blk;
 
+    // There is nothing to draw without a data source
     if (pd == NULL) return;
     NUsing = pd->NUsing;
     UsingList = (pplExpr **) ppl_memAlloc((USING_ITEMS_MAX + 8) * sizeof(pplExpr *));
+    // Failure to allocate memory is reported as an error
     if (UsingList == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (A)");
         *(x->status) = 1;
@@ -93,6 +102,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     // Malloc pointer to data table where data to be plotted will be stored
     x->current->plotdata = (dataTable **) ppl_memAlloc(1 * sizeof(dataTable *));
     x->current->DatasetTextID = (int *) ppl_memAlloc(1 * sizeof(int));
+    // Failure to allocate memory is reported as an error
     if (x->current->plotdata == NULL) {
         ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (B)");
         *(x->status) = 1;
@@ -122,6 +132,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         char ascii[] = "\"Item %d\"%($0)";
         pplExpr *exptmp = NULL;
         ppl_expCompile(c, 0, 0, "", ascii, &end, 1, 0, 0, &exptmp, &ep, &es, msg);
+        // Report a failure to compile the default label expression
         if (es || c->errStat.status) {
             ppl_tbClear(c);
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (C)");
@@ -131,6 +142,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         LabelExpr = pplExpr_tmpcpy(exptmp);
         pplExpr_free(exptmp);
         exptmp = NULL;
+        // Failure to allocate memory is reported as an error
         if (LabelExpr == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (D)");
             *(x->status) = 1;
@@ -138,6 +150,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         }
     }
 
+    // Add any using items needed by the style modifiers
     if (eps_plot_AddUsingItemsForWithWords(c, &pd->ww_final, &NExpect, &autoUsingList, &UsingList, &NUsing, &nObjs,
                                            msg)) {
         ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
@@ -147,6 +160,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
 
     if (pd->filename != NULL) // Read data from file
     {
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from file '%s' for piechart item %d", pd->filename,
                               x->current->id);
@@ -158,6 +172,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
                              pd->continuity, 0, &status, msg, &errCount, x->iterDepth + 1);
         else x->current->plotdata[0] = pd->PersistentDataTable;
     } else if (pd->vectors != NULL) {
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from vectors for piechart item %d", x->current->id);
             ppl_log(&c->errcontext, msg);
@@ -170,6 +185,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         int rXl = x->current->settings.samples;
         pplObj *uX = &x->current->settings.Tmin;
 
+        // Log progress in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Reading data from functions for piechart item %d", x->current->id);
             ppl_log(&c->errcontext, msg);
@@ -180,6 +196,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
                           UsingList, autoUsingList, NExpect, nObjs, LabelExpr, pd->SelectCriterion, NULL,
                           pd->continuity, &status, msg, &errCount, x->iterDepth + 1);
     }
+    // Report a failure to read the data
     if (status) {
         ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
         x->current->plotdata[0] = NULL;
@@ -190,10 +207,12 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
     Ncolumns = x->current->plotdata[0]->Ncolumns_real;
     blk = x->current->plotdata[0]->first;
     acc = 0.0;
+    // Add up the sizes of all the wedges
     while (blk != NULL) {
         for (j = 0; j < blk->blockPosition; j++) { acc += fabs(blk->data_real[0 + Ncolumns * j]); }
         blk = blk->next;
     }
+    // The total must be positive and finite
     if ((!gsl_finite(acc)) || (acc <= 0.0)) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Sum of sizes of all pie wedges is not a finite number.");
         ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
@@ -201,6 +220,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
         acc = 1;
         *(x->status) = 1;
     }
+    // Log the total in debugging mode
     if (DEBUG) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Sum of sizes of all pie wedges = %e", acc);
         ppl_log(&c->errcontext, msg);
@@ -214,6 +234,7 @@ void eps_pie_ReadAccessibleData(EPSComm *x) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_pie_YieldUpText(EPSComm *x) {
+    // Variables for evaluating the labels
     char msg[PPL_MSG_LENGTH];
     ppl_context *c = x->c;
     int j, Ncolumns, errCount = DATAFILE_NERRS;
@@ -223,6 +244,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
     pplObj DummyTemp_l, DummyTemp_p, DummyTemp_w;
     pplObj *var_l, *var_p, *var_w;
 
+    // There is nothing to label without data
     if ((pd = x->current->plotitems) == NULL) return;
     if (x->current->plotdata[0] == NULL) return;
     x->current->FirstTextID = x->NTextItems;
@@ -235,6 +257,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
         int end = 0, ep = 0, es = 0;
         pplExpr *exptmp = NULL;
         ppl_expCompile(c, 0, 0, "", ascii, &end, 1, 0, 0, &exptmp, &ep, &es, msg);
+        // Report a failure to compile the default format expression
         if (es || c->errStat.status) {
             ppl_tbClear(c);
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (E)");
@@ -244,6 +267,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
         formatExpr = pplExpr_tmpcpy(exptmp);
         pplExpr_free(exptmp);
         exptmp = NULL;
+        // Failure to allocate memory is reported as an error
         if (formatExpr == NULL) {
             ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory. (F)");
             *(x->status) = 1;
@@ -254,7 +278,9 @@ void eps_pie_YieldUpText(EPSComm *x) {
     // Labels of pie wedges
     Ncolumns = x->current->plotdata[0]->Ncolumns_real;
     blk = x->current->plotdata[0]->first;
+    // Loop over the blocks of the data table
     while (blk != NULL) {
+        // Evaluate the label of each wedge
         for (j = 0; j < blk->blockPosition; j++) {
             // Set values of variables [percentage, label, wedgesize] for this wedge
             const int stkLevelOld = c->stackPtr;
@@ -272,6 +298,7 @@ void eps_pie_YieldUpText(EPSComm *x) {
             var_w->real = blk->data_real[0 + Ncolumns * j];
             pplObjNum(var_p, 0, var_w->real / pd->PieChart_total * 100.0, 0);
             o = ppl_expEval(c, formatExpr, &lOp, 1, x->iterDepth + 1);
+            // Warn about a format expression which fails, or which does not return a string
             if (c->errStat.status || (c->dollarStat.warntxt[0] != '\0') || (o == NULL)) {
                 if (ppl_errorCountTake(&errCount)) { // Only report a limited number of errors
                     char *errt = NULL;
@@ -344,6 +371,7 @@ static double labelMargin(const double X, const double Y, const double a, const 
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_pie_RenderEPS(EPSComm *x) {
+    // Variables for drawing the pie chart
     ppl_context *c = x->c;
     int j, Ncolumns, lt, WedgeNumber, l, m;
     double xpos, ypos, rad, angle, size, vtitle;
@@ -352,6 +380,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     double lw, lw_scale;
     withWords ww, ww_txt;
 
+    // There is nothing to draw without data
     if ((pd = x->current->plotitems) == NULL) return;
     if (x->current->plotdata[0] == NULL) return;
     x->LaTeXpageno = x->current->FirstTextID;
@@ -374,13 +403,16 @@ void eps_pie_RenderEPS(EPSComm *x) {
     blk = x->current->plotdata[0]->first;
     angle = 0.0;
     WedgeNumber = 0;
+    // Loop over the blocks of the data table
     while (blk != NULL) {
+        // Fill each wedge with the next color from the palette, going clockwise from the top
         for (j = 0; j < blk->blockPosition; j++) {
             // Work out what fillcolor to use
             for (l = 0; l < PALETTE_LENGTH; l++)
                 if (c->set->palette_current[l] == -1) break; // l now contains length of palette
             m = WedgeNumber % l; // m is now the palette color number to use
             while (m < 0) m += l;
+            // A named color, or one given by its components
             if (c->set->palette_current[m] > 0) {
                 ww.fillcolor = c->set->palette_current[m];
                 ww.USEfillcolor = 1;
@@ -416,9 +448,11 @@ void eps_pie_RenderEPS(EPSComm *x) {
     else lw_scale = x->current->settings.LineWidth;
     lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
+    // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
+    // Write the line width and type
     if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Draw circumference of piechart
@@ -429,7 +463,9 @@ void eps_pie_RenderEPS(EPSComm *x) {
     Ncolumns = x->current->plotdata[0]->Ncolumns_real;
     blk = x->current->plotdata[0]->first;
     angle = 0.0;
+    // Loop over the blocks of the data table
     while (blk != NULL) {
+        // Draw the line along the edge of each wedge
         for (j = 0; j < blk->blockPosition; j++) {
             size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 360.0;
             if (eps_core_isVisible(x))
@@ -448,6 +484,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
 
     // Write text on piechart
     ppl_withWordsZero(c, &ww_txt);
+    // Write the labels in the color set with "set textcolor"
     if (x->current->settings.TextColor > 0) {
         ww_txt.color = x->current->settings.TextColor;
         ww_txt.USEcolor = 1;
@@ -461,6 +498,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
     }
     eps_core_SetColor(x, &ww_txt, 1);
 
+    // Write the labels, unless they are invisible
     if (eps_core_isVisible(x)) {
         int ItemNo = 0;
         double *TextWidth, *TextHeight, TotalHeight = 0.0;
@@ -473,9 +511,12 @@ void eps_pie_RenderEPS(EPSComm *x) {
         TextHeight = (double *) malloc(x->current->plotdata[0]->Nrows * sizeof(double));
         if ((TextWidth == NULL) || (TextHeight == NULL)) goto END_LABEL_PRINTING;
         blk = x->current->plotdata[0]->first;
+        // Loop over the blocks of the data table
         while (blk != NULL) {
+            // Measure the typeset label of each wedge
             for (j = 0; j < blk->blockPosition; j++) {
                 dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, x->LaTeXpageno + ItemNo);
+                // A label which LaTeX did not typeset is skipped
                 if (dviPage == NULL) {
                     ItemNo++;
                     continue;
@@ -503,9 +544,12 @@ void eps_pie_RenderEPS(EPSComm *x) {
         blk = x->current->plotdata[0]->first;
         angle = 0.0;
         ItemNo = 0;
+        // Loop over the blocks of the data table
         while (blk != NULL) {
+            // Place the label of each wedge
             for (j = 0; j < blk->blockPosition; j++) {
                 size = fabs(blk->data_real[0 + Ncolumns * j]) / pd->PieChart_total * 2 * M_PI; // Angular size of wedge
+                // Wedges with no label are skipped
                 if (blk->text[j] != NULL) {
                     int ArrowType;
                     double a = angle + size / 2; // Central angle of wedge
@@ -513,9 +557,11 @@ void eps_pie_RenderEPS(EPSComm *x) {
                     // Test different radii where label can be placed
                     best_label_rpos = 0.7;
                     best_label_margin = -1e10;
+                    // Find the distance from the centre at which the label fits furthest within its wedge
                     for (label_rpos = 0.7; label_rpos >= 0.3; label_rpos -= 0.05) {
                         min_margin = 1e10;
 
+                        // The margin is the smallest margin of any corner of the label
                         min_margin =
                                 fmin(min_margin,
                                      labelMargin(rad * sin(a) * label_rpos - TextWidth[ItemNo] / 2,
@@ -532,6 +578,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                                 fmin(min_margin,
                                      labelMargin(rad * sin(a) * label_rpos + TextWidth[ItemNo] / 2,
                                                  rad * cos(a) * label_rpos + TextHeight[ItemNo] / 2, a, size, rad));
+                        // Keep the best position so far
                         if (min_margin > best_label_margin) {
                             best_label_margin = min_margin;
                             best_label_rpos = label_rpos;
@@ -553,6 +600,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                     } else if (ArrowType == SW_PIEKEYPOS_OUTSIDE) { // Labelling pie wedges around edge of pie
                         int hal, val, pageno = x->LaTeXpageno++;
                         double vtop;
+                        // Align the label away from the pie, according to the direction in which it lies
                         if (a < 5 * M_PI / 180) {
                             hal = SW_HALIGN_CENT;
                             val = SW_VALIGN_BOT;
@@ -609,6 +657,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                             if (c->set->palette_current[l] == -1) break; // l now contains length of palette
                         m = ItemNo % l; // m is now the palette color number to use
                         while (m < 0) m += l;
+                        // A named color, or one given by its components
                         if (c->set->palette_current[m] > 0) {
                             ww.fillcolor = c->set->palette_current[m];
                             ww.USEfillcolor = 1;
@@ -626,6 +675,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                         // Fill icon
                         eps_core_SetFillColor(x, &ww);
                         eps_core_SwitchTo_FillColor(x, 1);
+                        // Fill the square beside the label in the wedge's color
                         if (eps_core_isVisible(x)) {
                             fprintf(x->epsbuffer,
                                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath fill\n",
@@ -640,6 +690,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
                         eps_core_SetColor(x, &ww, 1);
                         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * ww.linewidth, ww.USElinetype ? ww.linetype : 1,
                                               0);
+                        // Stroke the outline of the square
                         if (eps_core_isVisible(x)) {
                             fprintf(x->epsbuffer,
                                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath stroke\n",
@@ -664,6 +715,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
             blk = blk->next;
         }
 
+    // Free the label sizes
     END_LABEL_PRINTING:
         free(TextWidth);
         TextWidth = NULL;
@@ -672,6 +724,7 @@ void eps_pie_RenderEPS(EPSComm *x) {
 
         // Title of piechart
         x->LaTeXpageno = x->current->TitleTextID;
+        // Write the title above the pie chart, and above any labels outside it
         if (x->current->settings.title[0] != '\0') {
             const int pageno = x->LaTeXpageno++;
             canvas_EPSRenderTextItem(x, NULL, pageno, xpos / M_TO_PS, (vtitle + 8) / M_TO_PS, SW_HALIGN_CENT,

@@ -1,0 +1,17 @@
+stringTools
+===========
+
+Low-level string handling, used by every other part of Pyxplot, including the
+helper programs. This code depends on nothing else in Pyxplot.
+
+asciidouble.c, asciidouble.h
+    Functions for parsing numbers from strings and rendering numbers as text,
+    reading lines from files, splitting, stripping and comparing strings,
+    matching abbreviations and wildcards, and measuring and indexing UTF-8
+    strings by character. Also provides ppl_snprintfTrunc() and
+    ppl_strAppendf(), which write into fixed-size buffers safely.
+
+strConstants.h
+    The standard sizes of Pyxplot's character buffers: LSTR_LENGTH for long
+    strings such as command lines, FNAME_LENGTH for filenames, and SSTR_LENGTH
+    for short strings.

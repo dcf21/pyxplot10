@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Writes Pyxplot objects to a file as Pyxplot expressions which recreate them, e.g. vector([1,2])*unit(m). This is used
+// by the save command to record the values of variables, and by the file.dump() method. Numbers are written to full
+// precision, and objects which cannot be recreated, such as functions and files, are written as types.null().
+
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
@@ -63,16 +67,20 @@ static void pplObjDump_escaped(FILE *output, const char *str, const char *suffix
 //! \param [in] output - The file handle to write to
 
 void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
+    // Numbers are written with 17 significant figures, enough to recreate any double exactly
     char msg[SSTR_LENGTH];
     int t;
     const int NSigFigs = 17;
 
+    // Stop if the user has pressed Ctrl-C
     if (cancellationFlag) return;
+    // A missing object is written as null
     if (o == NULL) {
         fprintf(output, "types.null()");
         return;
     }
     t = o->objType;
+    // Write each type of object in the syntax which recreates it
     switch (t) {
         case PPLOBJ_NUM:
             fprintf(output, "%s", ppl_unitsNumericDisplay(c, o, 0, SW_DISPLAY_T, NSigFigs));
@@ -94,6 +102,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
         case PPLOBJ_COL: {
             int n;
             const int ct = floor(o->exponent[0] + 0.01);
+            // Colors are written as a call to the function for their color space, with the right number of components
             if (ct == SW_COLSPACE_CMYK) {
                 fprintf(output, "cmyk(");
                 n = 4;
@@ -109,15 +118,19 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
                 n = 0;
             }
 
+            // Write the components, separated by commas
             if (n >= 1) { fprintf(output, "%s", ppl_numericDisplay(o->exponent[8], c->numdispBuff[0], NSigFigs, 0)); }
+            // Second component
             if (n >= 2) {
                 fprintf(output, ",");
                 fprintf(output, "%s", ppl_numericDisplay(o->exponent[9], c->numdispBuff[0], NSigFigs, 0));
             }
+            // Third component
             if (n >= 3) {
                 fprintf(output, ",");
                 fprintf(output, "%s", ppl_numericDisplay(o->exponent[10], c->numdispBuff[0], NSigFigs, 0));
             }
+            // Fourth component
             if (n >= 4) {
                 fprintf(output, ",");
                 fprintf(output, "%s", ppl_numericDisplay(o->exponent[11], c->numdispBuff[0], NSigFigs, 0));
@@ -131,7 +144,9 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             char *key;
             pplObj *item;
 
+            // Dictionaries are written as {key:value, ...}
             fprintf(output, "{");
+            // Write each item, skipping variables which are merely declared global, and zombies
             while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
                 if (cancellationFlag) break;
                 if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
@@ -152,6 +167,8 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             pplObj *item;
             fprintf(output, "module({");
 
+            // Modules and class instances are written as a module made from a dictionary of their members, skipping
+            // global declarations and zombies
             while ((item = (pplObj *) ppl_dictIterate(&iter, &key)) != NULL) {
                 if (cancellationFlag) break;
                 if ((item->objType == PPLOBJ_GLOB) || (item->objType == PPLOBJ_ZOM))
@@ -169,6 +186,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             listIterator *iter = ppl_listIterateInit((list *) o->auxil);
             pplObj *item;
             fprintf(output, "[");
+            // Write each item of the list
             while ((item = (pplObj *) ppl_listIterate(&iter)) != NULL) {
                 if (cancellationFlag) break;
                 if (!first) fprintf(output, ",");
@@ -190,6 +208,8 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             gsl_vector *v = ((pplVector *) (o->auxil))->v;
             fprintf(output, "vector([");
 
+            // Write each element, scaled into the display units found above. A vector's units are found by printing the
+            // units of a value of 1 with the vector's dimensions.
             for (j = 0; j < v->size; j++) {
                 if (cancellationFlag) break;
                 if (j > 0) fprintf(output, ",");
@@ -197,6 +217,7 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             }
             fprintf(output, "])");
 
+            // Multiply by the units
             if (!o->dimensionless) fprintf(output, "%s", unit);
             break;
         }
@@ -213,10 +234,12 @@ void pplObjDump(ppl_context *c, pplObj *o, FILE *output) {
             {
                 fprintf(output, "matrix([");
 
+                // Write each row of the matrix, scaled into the display units found above
                 for (j = 0; j < m->size1; j++) {
                     if (cancellationFlag) break;
                     if (j > 0) fprintf(output, ",");
                     fprintf(output, "[");
+                    // Write each element of the row
                     for (k = 0; k < m->size2; k++) {
                         if (cancellationFlag) break;
                         if (k > 0) fprintf(output, ",");

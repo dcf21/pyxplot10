@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws ellipse canvas items, made with the ellipse command, into the postscript buffer during the final rendering pass
+// of canvasDraw.c. An ellipse is drawn as a circle in a scaled and rotated coordinate system, which is then unscaled
+// before stroking so that the line width is uniform.
+
 #define _PPL_EPS_ELLIPSE 1
 
 #include <stdlib.h>
@@ -36,6 +40,7 @@
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_ellps_RenderEPS(EPSComm *x) {
+    // Variables for the shape and style of the ellipse
     int lt;
     unsigned char filled = 0, stroked = 0;
     double lw, lw_scale, xc, yc, a, b, r;
@@ -64,9 +69,11 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     else lw_scale = x->current->settings.LineWidth;
     lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
+    // The line type is the one requested, or solid
     if (ww.USElinetype) lt = ww.linetype;
     else lt = 1;
 
+    // Write the line width and type
     if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
 
     // Set up postscript axes so that a unit circle produces the desired ellipse
@@ -108,6 +115,7 @@ void eps_ellps_RenderEPS(EPSComm *x) {
     } else {
         a_inv = 1.0 / a;
     }
+    // Avoid dividing by a semi-minor axis of zero
     if (b < 1e-8) {
         b_inv = 1e8;
     } else {

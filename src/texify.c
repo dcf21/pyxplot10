@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Converts Pyxplot expressions and strings into LaTeX, for the texify() function and for the automatic titles in graph
+// legends. Expressions are tokenised with the expression compiler's tokeniser, so that each kind of token can be
+// rendered appropriately: numbers with their units, string literals in roman type, variable names with Greek letters
+// and subscripts, brackets of alternating shapes, and functions in the default namespace using the LaTeX templates in
+// their definitions. Strings are escaped so that LaTeX prints them literally.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -98,11 +104,15 @@ static char *LatexVarNamesTo[] = {
 //! \param [in|out] textRm - Flag indicating whether the LaTeX output is currently in a \textrm block
 
 static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, int *mathMode, int *textRm) {
+    // Variables for scanning the name, and the position of the end of the output before any final digits
     int i, ji = 0, jg, a, l, m, k = 0, kno_ = 0;
 
+    // Variable names are written in math mode
     texSetMode(out, outlen, &k, mathMode, textRm, 1, 0);
+    // Convert each part of the name, separated by underscores
     while ((isalnum(in[ji])) || (in[ji] == '_')) {
         a = 0;
+        // Check whether the name starts with the name of a Greek letter
         for (i = 0; LatexVarNamesFr[i] != NULL; i++) {
             for (jg = 0; LatexVarNamesFr[i][jg] != '\0'; jg++)
                 if (LatexVarNamesFr[i][jg] != in[ji + jg]) break;
@@ -128,8 +138,10 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
                 break;
             }
         }
+        // Digits at the end of a name become a subscript
         if ((a == 0) && (ji > 1)) {
             for (jg = 0; isdigit(in[ji + jg]); jg++);
+            // Rewrite the digits as a subscript
             if ((jg > 0) && (!isalnum(in[ji + jg])) && (in[ji + jg] != '_')) {
                 k = kno_;
                 snprintf(out + k, outlen - 1 - k, "_{"); // We have an underscore number at the end of variable name
@@ -141,12 +153,14 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
                 a = 1;
             }
         }
+        // Copy any other characters as they are
         if (a == 0) {
             for (jg = 0; (isalnum(in[ji + jg])); jg++)
                 if (k < outlen - 1) out[k++] = in[ji + jg];
             ji += jg;
         }
         kno_ = k;
+        // Underscores are escaped
         if (in[ji] == '_') {
             if (k < outlen - 1) out[k++] = '\\';
             if (k < outlen - 1) out[k++] = '_';
@@ -164,14 +178,18 @@ static void ppl_texify_MakeGreek(const char *in, char *out, const int outlen, in
 //! \param [in] outlen - The size of the buffer <out>
 
 void ppl_texify_string(const char *in, char *out, const int inlen, const int outlen) {
+    // Variables for tracking whether quotes are opening or closing ones
     int i, j, DoubleQuoteLevel = 0, QuoteLevel = 0;
 
+    // Escape each character which is special to LaTeX
     for (i = j = 0; ((in[i] != '\0') && ((inlen < 0) || (i < inlen))); i++) {
+        // Stop with an ellipsis if the output is nearly full
         if (j > outlen - 16) {
             strcpy(out + j, "...");
             j += strlen(out + j);
             break;
         }
+        // Escape the character
         if (in[i] == '\\') {
             strcpy(out + j, "$\\backslash$");
             j += strlen(out + j);
@@ -258,6 +276,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     char errbuff[LSTR_LENGTH];
     int *stkpos, i, k, lastOpMultDiv = 0;
 
+    // Math mode and roman type are tracked in the caller's variables if supplied, so that nested calls can share them
     int mm = 0, tr = 0;
     int *mathMode = (mm_in == NULL) ? &mm : mm_in;
     int *textRm = (tr_in == NULL) ? &tr : tr_in;
@@ -268,10 +287,12 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     // First tokenise expression
     ppl_expTokenise(c, in, end, dollarAllowed, equalsAllowed, allowCommaOperator, 0, 0, 0, &tlen, &errPos, &errType,
                     errbuff);
+    // Give up if the expression cannot be tokenised
     if (errPos >= 0) {
         *end = 0;
         return;
     }
+    // Give up if there is nothing to convert
     if (tlen <= 0) {
         *end = 0;
         return;
@@ -279,6 +300,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
 
     // Backup tokenised version
     tokenBuff = (pplTokenCode *) malloc(tlen * sizeof(pplTokenCode));
+    // Give up if memory cannot be allocated
     if (tokenBuff == NULL) {
         *end = 0;
         return;
@@ -288,6 +310,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
 
     // Malloc buffer for storing stack positions of numerical constants
     stkpos = (int *) malloc(tlen * sizeof(int));
+    // Give up if memory cannot be allocated
     if (stkpos == NULL) {
         *end = 0;
         return;
@@ -297,8 +320,11 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     // Evaluate numerical constants
     k = c->stackPtr;
     for (i = 0; i < tlen; i++)
+        // Each numeric literal is pushed onto the stack, and every character of it is noted as belonging to that stack
+        // entry
         if (tokenBuff[i].state == (unsigned char) 'L') {
             ppl_stackMustHave(c, 4);
+            // Give up if the stack is full
             if (c->stackFull) {
                 free(stkpos);
                 stkpos = NULL;
@@ -320,6 +346,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             int ei = i, upos, p, q = 0, errpos = -1;
             pplObj val;
             ppl_stackMustHave(c, 4);
+            // Give up if the stack is full
             if (c->stackFull) {
                 free(stkpos);
                 stkpos = NULL;
@@ -357,6 +384,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     // Evaluate minus signs if literal is right argument
     for (i = 0; i < tlen; i++)
         if ((tokenBuff[i].state == (unsigned char) 'I') && ((i < 1) || (tokenBuff[i - 1].state != (unsigned char) 'I')))
+            // Fold a minus sign into the following literal
             if (in[i] == '-') {
                 int ei = i, sp;
                 while ((tokenBuff[ei].state == (unsigned char) 'I') && (ei < tlen)) { ei++; } // ffw over minus sign
@@ -371,6 +399,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     for (i = 0; i < tlen; i++)
         if ((tokenBuff[i].state == (unsigned char) 'J') && (i > 0) && (tokenBuff[i - 1].state == (unsigned char) 'P') &&
             (stkpos[i - 1] >= 0))
+            // Fold a unit raised to a literal power into a single value
             if ((in[i] == '*') && (in[i + 1] == '*')) {
                 int ei = i, sp1, sp2, stat = 0, errpos = -1;
                 pplObj val;
@@ -393,6 +422,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
     // Evaluate * and / operators if unit() is either argument
     for (i = 0; i < tlen; i++)
         if ((tokenBuff[i].state == (unsigned char) 'J') && (i > 0) && (stkpos[i - 1] >= 0))
+            // Fold a literal multiplied or divided by a unit into a single value
             if (((in[i] == '*') && (in[i + 1] != '*')) || (in[i] == '/')) {
                 int ei = i, sp1, sp2, stat = 0, errpos = -1, gotUnit;
                 pplObj val;
@@ -421,11 +451,13 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         int opMultDiv = 0;
         const char o = tokenBuff[i].state; // Get tokenised markup state code
         texSetMode(out, outlen, &k, mathMode, textRm, 1, 0);
+        // A literal or unit, written as a number with units
         if (stkpos[i] >= 0) {
             double real = 0, imag = 0;
             pplObj *o = &c->stack[stkpos[i]];
             char *u = NULL;
             if (lastOpMultDiv) u = ppl_printUnit(c, o, &real, &imag, 0, 1, SW_DISPLAY_L);
+            // Values of one after a multiplication or division are written as their unit alone
             if ((real != 1) || (imag != 0)) {
                 snprintf(out + k, outlen - k, "%s",
                          ppl_unitsNumericDisplay(c, o, 0, SW_DISPLAY_L, 0) + 1); // Chop off initial $
@@ -444,6 +476,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             l = ei - i;
             while ((l > 1) && (in[i + l - 1] >= '\0') && ((unsigned char) in[i + l - 1] <= ' '))
                 l--; // Strip trailing spaces
+            // Strip the quotes from quoted strings
             if ((quoteType == '\'') || (quoteType == '\"')) {
                 l -= 2;
                 i++;
@@ -466,6 +499,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             while ((i < tlen) && (tokenBuff[i].state == o)) i++; // Skip to the end of the token
         } else if ((o == 'D') || (o == 'E') || (o == 'P')) // open or close brackets
         {
+            // Opening brackets are written as \left( for now, and their positions noted, so that their shape can be
+            // changed when the closing bracket is found
             if (in[i] == '(') {
                 snprintf(out + k, outlen - k, "\\left( ");
                 k += strlen(out + k);
@@ -476,8 +511,10 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                 snprintf(out + k, outlen - k, "\\right) ");
                 k += strlen(out + k);
                 bracketLevel--;
+                // Nested brackets cycle through round, square and curly shapes, from the inside out
                 if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) {
                     const int j = (highestBracketLevel - bracketLevel) % 3;
+                    // Round brackets
                     if (j == 1) {
                         out[k - 2] = ')';
                         out[k - 1] = ' ';
@@ -499,10 +536,12 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             i++;
         } else if ((o == 'F') || (o == 'H')) // -- or ++ operators
         {
+            // The decrement operator
             if (in[i] == '-') {
                 texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, "{\\tiny \\raisebox{0.8pt}{\\kern-0.1pt --\\kern0.5pt --}}");
             }
+            // The increment operator
             if (in[i] == '+') {
                 texSetMode(out, outlen, &k, mathMode, textRm, 1, 1);
                 snprintf(out + k, outlen - k, "{\\tiny \\raisebox{0.8pt}{\\kern-0.2pt +\\kern-0.2pt +}}");
@@ -519,6 +558,8 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             int ei = i;
             while ((ei < tlen) && (tokenBuff[ei].state == o)) { ei++; }
             if (((tokenBuff[ei].state == 'P') && in[ei] == '(') || (tokenBuff[ei].state == 'R')) mathrm = 1;
+            // Functions in the default namespace which have LaTeX templates are written using them, unless they have
+            // been redefined
             if ((o == 'G') && ((i < 1) || (tokenBuff[i - 1].state != 'R'))) {
                 int j, bi, cp[16], ncp, cbp;
                 char dummyVar[FNAME_LENGTH], dummyVarGreek[FNAME_LENGTH], *fname, *latex;
@@ -556,9 +597,12 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
 
                 // Work through latex model
                 ppl_texify_MakeGreek(dummyVar, dummyVarGreek, FNAME_LENGTH, mathMode, textRm);
+                // Write the template, replacing @? with the dummy variable, @< and @> with brackets, @1 to @6 with the
+                // arguments, and @0 with all of the arguments
                 for (j = 0; latex[j] != '\0'; j++) {
                     if (latex[j] != '@') snprintf(out + k, outlen - k, "%c", latex[j]);
                     else if (latex[j + 1] == '?') snprintf(out + k, outlen - k, "%s", dummyVarGreek);
+                    // An opening bracket
                     else if (latex[j + 1] == '<') {
                         snprintf(out + k, outlen - k, "\\left( ");
                         k += strlen(out + k);
@@ -569,8 +613,10 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                         snprintf(out + k, outlen - k, "\\right) ");
                         k += strlen(out + k);
                         bracketLevel--;
+                        // Nested brackets cycle through round, square and curly shapes, from the inside out
                         if ((bracketLevel >= 0) && (bracketLevel < MAX_BRACKETS)) {
                             const int j = (highestBracketLevel - bracketLevel) % 3;
+                            // Round brackets
                             if (j == 1) {
                                 out[k - 2] = ')';
                                 out[k - 1] = ' ';
@@ -595,7 +641,9 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
                         k += strlen(out + k);
                     } else if (latex[j + 1] == '0') {
                         int a, end;
+                        // Write all of the arguments, separated by commas
                         for (a = 0; a < ncp; a++) {
+                            // Separate the arguments with commas
                             if (a != 0) {
                                 snprintf(out + k, outlen - k, ",");
                                 k += strlen(out + k);
@@ -616,12 +664,14 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
 
             // If variable name is not a recognised function name, print name as a variable name
         variableName:
+            // Function names and the names of members are written in roman type
             if (mathrm) {
                 snprintf(out + k, outlen - k, "\\mathrm{");
                 k += strlen(out + k);
             }
             ppl_texify_MakeGreek(in + i, out + k, outlen - k, mathMode, textRm);
             k += strlen(out + k);
+            // Close the roman type
             if (mathrm) {
                 snprintf(out + k, outlen - k, "}");
                 k += strlen(out + k);
@@ -630,6 +680,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         variableDone:;
         } else if (o == 'I') // unary operator
         {
+            // Write the unary operator
             if (markupMatch(in + i, "-")) {
                 snprintf(out + k, outlen - k, "-");
                 { i += 1; };
@@ -657,6 +708,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             }
         } else if (o == 'J') // a binary operator
         {
+            // Write the binary operator
             if (markupMatch(in + i, "**")) {
                 snprintf(out + k, outlen - k, "\\,*\\kern-1.5pt *\\,\\,");
                 { i += 2; };
@@ -748,6 +800,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             }
         } else if (o == 'K') // a terniary operator
         {
+            // Write the ternary operator
             if (markupMatch(in + i, "?")) {
                 snprintf(out + k, outlen - k, "\\,?\\,");
                 { i += 1; };
@@ -795,6 +848,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
             }
         } else if (o == 'S') // assignment operator
         {
+            // Write the assignment operator
             if (markupMatch(in + i, "=")) {
                 snprintf(out + k, outlen - k, "=");
                 { i += 1; };
@@ -843,6 +897,7 @@ void ppl_texify_generic(ppl_context *c, char *in, const int inlen, int *end, cha
         lastOpMultDiv = opMultDiv;
     }
 
+    // Close math mode at the end of a complete expression
     if (inlen < 0) { texSetMode(out, outlen, &k, mathMode, textRm, 0, 0); }
     out[k] = '\0';
     free(stkpos);

@@ -1,0 +1,38 @@
+coreUtils
+=========
+
+General-purpose infrastructure on which the rest of Pyxplot is built: data
+structures, memory management, error reporting and access to the operating
+system. Each .c file has a matching .h file declaring its functions and types.
+
+backup.c
+    Makes a backup copy (filename~N) of an existing file before Pyxplot
+    overwrites it, when the user has turned on "set backup".
+
+dict.c
+    The dictionary type: (key, value) pairs kept sorted by key, with a binary
+    tree of key hashes for fast lookup. Dictionaries hold variable namespaces,
+    the members of modules and user-level dict objects, and many internal
+    tables.
+
+errorReport.c
+    Reports errors, warnings and informational messages to the user, prefixed
+    with the file and line being processed, and writes debugging logs. Errors
+    are counted so that Pyxplot can exit with a non-zero status, and a lock lets
+    threads report messages safely.
+
+getPasswd.c
+    Looks up users' home directories and real names in the password database,
+    e.g. to expand filenames such as ~/data.dat.
+
+list.c
+    The doubly-linked list type, which holds user-level list objects and any
+    internal sequence of items of unknown length.
+
+memAlloc.c
+    A pool allocator with nested, numbered contexts. Short-lived memory, such
+    as the results of parsing a command, is allocated in a context and freed
+    all at once when Pyxplot has finished with it.
+
+stringList.c
+    Splits strings into lists of words, for the help command.

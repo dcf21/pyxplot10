@@ -1,0 +1,167 @@
+epsMaker
+========
+
+Turns the multiplot canvas into postscript. canvasDraw.c renders every canvas
+item in a series of phases (reading data, deciding axis ranges, typesetting all
+text with LaTeX in one run, and writing postscript), then converts the result
+to the output format of the current terminal. Each type of canvas item has its
+own eps_*.c file; graphs are drawn by the eps_plot*.c files.
+
+bmp_a85.c, bmp_a85.h
+    Encodes binary data, such as images, in postscript's ASCII85 format.
+
+bmp_bmpread.c, bmp_bmpread.h
+    Reads Windows and OS/2 bitmap (BMP) images, including run-length encoded
+    ones, for the image command.
+
+bmp_gifread.c, bmp_gifread.h
+    Reads GIF images, decompressing their LZW-encoded data, for the image
+    command.
+
+bmp_image.h
+    The bitmap_data structure which describes an image, and constants for its
+    color type and compression.
+
+bmp_jpegread.c, bmp_jpegread.h
+    Reads JPEG images without decompressing them, so that their compressed data
+    can be embedded directly in postscript.
+
+bmp_optimise.c, bmp_optimise.h
+    Reduces the size of images, by converting them to paletted or greyscale
+    form and packing several pixels into each byte where possible.
+
+bmp_pngread.c, bmp_pngread.h
+    Reads PNG images using libpng, for the image command.
+
+canvasDraw.c, canvasDraw.h
+    Draws the whole canvas: calls each item's handler in each phase, runs
+    LaTeX, writes the final postscript file with its prolog and embedded fonts,
+    and converts it to other formats or sends it to a viewer.
+
+dvi_font.c, dvi_font.h
+    Loads the fonts used in LaTeX's output: reads TeX font metric files and
+    finds the Type 1 fonts which draw them, using the dvips font map.
+
+dvi_interpreter.c, dvi_interpreter.h
+    Interprets the operators of LaTeX's dvi output, writing postscript which
+    draws the same text, one page per piece of text on the canvas.
+
+dvi_read.c, dvi_read.h
+    Reads dvi files operator by operator, passing each to the interpreter.
+
+eps_arrow.c, eps_arrow.h
+    Draws arrow and line canvas items, and provides the arrow-drawing routine
+    used elsewhere.
+
+eps_box.c, eps_box.h
+    Draws box canvas items.
+
+eps_circle.c, eps_circle.h
+    Draws circle and arc canvas items.
+
+eps_comm.h
+    The EPSComm structure, which carries the state of the rendering process
+    between all of the functions in this directory.
+
+eps_core.c, eps_core.h
+    Sets line and fill colors, line widths and line types, writing postscript
+    only when they change, and tracks the bounding box of what has been drawn.
+
+eps_ellipse.c, eps_ellipse.h
+    Draws ellipse canvas items.
+
+eps_eps.c, eps_eps.h
+    Includes existing encapsulated postscript files in the output, for the eps
+    command.
+
+eps_image.c, eps_image.h
+    Includes bitmap images in the output, for the image command.
+
+eps_piechart.c, eps_piechart.h
+    Draws pie charts, with their labels and keys.
+
+eps_plot.c, eps_plot.h
+    Draws graphs: reads their data, samples their functions, collects their
+    text, and draws their datasets, axes, grids, legends, labels and arrows.
+
+eps_plot_axespaint.c, eps_plot_axespaint.h
+    Draws the axes of graphs, with their ticks and labels.
+
+eps_plot_canvas.c, eps_plot_canvas.h
+    Maps values on a graph's axes to positions on the page, including the
+    projection of three-dimensional graphs.
+
+eps_plot_colormap.c, eps_plot_colormap.h
+    Draws the colormap plot style as a bitmap image, and the color scales
+    beside graphs.
+
+eps_plot_contourmap.c, eps_plot_contourmap.h
+    Draws the contourmap plot style, tracing and labelling lines of constant
+    value through gridded data.
+
+eps_plot_filledregion.c, eps_plot_filledregion.h
+    Fills regions bounded by paths through data points, clipped to the edges of
+    the graph.
+
+eps_plot_gridlines.c, eps_plot_gridlines.h
+    Draws the grid lines of graphs.
+
+eps_plot_labelsarrows.c, eps_plot_labelsarrows.h
+    Draws the arrows and text labels placed on graphs with "set arrow" and "set
+    label".
+
+eps_plot_legend.c, eps_plot_legend.h
+    Lays out and draws the legends (keys) of graphs.
+
+eps_plot_linedraw.c, eps_plot_linedraw.h
+    Draws lines through series of data points, clipping them to the edges of
+    the graph.
+
+eps_plot_linkedaxes.c, eps_plot_linkedaxes.h
+    Handles axes linked to other axes, propagating ranges along the links,
+    including through "using" expressions.
+
+eps_plot_styles.c, eps_plot_styles.h
+    Draws datasets in each plot style, and their legend icons; assigns default
+    styles to successive datasets, and widens axis ranges to include the data.
+
+eps_plot_threedimbuff.c, eps_plot_threedimbuff.h
+    A buffer which sorts the postscript of three-dimensional graphs by depth,
+    so that nearer items hide further ones.
+
+eps_plot_ticking.c, eps_plot_ticking.h
+    Decides the final range of each axis, and where its ticks go, and generates
+    tick labels.
+
+eps_plot_ticking_auto.c, eps_plot_ticking_auto.h
+    Places ticks automatically on axes which are non-linear or have format
+    expressions, by sampling the labels along the axis.
+
+eps_plot_ticking_auto2.c, eps_plot_ticking_auto2.h
+    Places ticks automatically on ordinary linear and logarithmic axes.
+
+eps_plot_ticking_auto3.c, eps_plot_ticking_auto3.h
+    Places ticks on an axis linked to another axis of the same length, by
+    copying that axis's ticks.
+
+eps_point.c, eps_point.h
+    Draws point canvas items, with their labels.
+
+eps_polygon.c, eps_polygon.h
+    Draws polygon canvas items.
+
+eps_settings.c, eps_settings.h
+    Dimensions used throughout postscript output, such as the default line
+    width and the sizes of arrowheads and ticks, which can be scaled from the
+    configuration file.
+
+eps_style.c, eps_style.h
+    The dash patterns of line types, and the postscript procedures which draw
+    point and star types.
+
+eps_text.c, eps_text.h
+    Draws text canvas items.
+
+kpse_wrap.c, kpse_wrap.h
+    Finds TeX's font files, using the kpathsea library or by asking kpsewhich
+    where TeX looks for them.

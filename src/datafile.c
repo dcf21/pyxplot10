@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Reads the data plotted, fitted or tabulated by commands such as plot, fit, histogram and tabulate, from data files
+// (optionally through input filters), from functions sampled on a raster, or from vectors, into data tables. Applies
+// the modifiers which select and transform the data: using, every, index, select, label and sort. Data files may
+// contain blank lines, which separate blocks and indices, and comment lines giving the headings and units of columns or
+// rows. Large numbers of function samples are evaluated in parallel with OpenMP when the functions allow it.
+
 #define _DATAFILE_C 1
 
 #include <stdio.h>
@@ -81,6 +87,7 @@ dataBlock *ppldata_NewDataBlock(const int Ncolumns_real, const int Ncolumns_obj,
 
     if (length > 0) blockLength = length; // overriden when manually specified length > 0
 
+    // Allocate the block, and its arrays of real values, objects, line numbers, split flags and text labels
     output = (dataBlock *) ppl_memAlloc_incontext(sizeof(dataBlock), memContext);
     if (output == NULL) return NULL;
     output->data_real = (double *) ppl_memAlloc_incontext(blockLength * Ncolumns_real * sizeof(double), memContext);
@@ -113,6 +120,7 @@ dataTable *ppldata_NewDataTable(const int Ncolumns_real, const int Ncolumns_obj,
     dataTable *output;
     int i;
 
+    // Allocate the table, with its first block
     output = (dataTable *) ppl_memAlloc_incontext(sizeof(dataTable), memContext);
     if (output == NULL) return NULL;
     output->Ncolumns_real = Ncolumns_real;
@@ -138,6 +146,7 @@ rawDataBlock *ppldata_NewRawDataBlock(const int memContext) {
     rawDataBlock *output;
     int blockLength = 1 + DATAFILE_DATABLOCK_BYTES / (sizeof(char *) + sizeof(long int));
 
+    // Allocate the block, and its arrays of lines and line numbers
     output = (rawDataBlock *) ppl_memAlloc_incontext(sizeof(rawDataBlock), memContext);
     if (output == NULL) return NULL;
     output->text = (char **) ppl_memAlloc_incontext(blockLength * sizeof(char *), memContext);
@@ -157,6 +166,7 @@ rawDataBlock *ppldata_NewRawDataBlock(const int memContext) {
 rawDataTable *ppldata_NewRawDataTable(const int memContext) {
     rawDataTable *output;
 
+    // Allocate the table, with its first block
     output = (rawDataTable *) ppl_memAlloc_incontext(sizeof(rawDataTable), memContext);
     if (output == NULL) return NULL;
     output->Nrows = 0;
@@ -176,6 +186,7 @@ int ppldata_DataTable_AddRow(dataTable *i) {
     if (i == NULL) return 1;
     if (i->current == NULL) return 1;
     i->Nrows++;
+    // Move to the next row of the current block, or start a new block if it is full
     if (i->current->blockPosition < (i->current->blockLength - 1)) {
         i->current->blockPosition++;
         return 0;
@@ -197,6 +208,7 @@ int ppldata_RawDataTable_AddRow(rawDataTable *i) {
     if (i == NULL) return 1;
     if (i->current == NULL) return 1;
     i->Nrows++;
+    // Move to the next line of the current block, or start a new block if it is full
     if (i->current->blockPosition < (i->current->blockLength - 1)) {
         i->current->blockPosition++;
         return 0;
@@ -215,10 +227,12 @@ int ppldata_RawDataTable_AddRow(rawDataTable *i) {
 //! \param [in] i - The data table to print
 
 void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
+    // Variables for printing the table
     dataBlock *blk;
     pplObj v;
     int j, k, Ncolumns;
 
+    // Report an empty table
     if (i == NULL) {
         printf("<NULL data table>\n");
         return;
@@ -227,9 +241,12 @@ void ppldata_DataTable_List(ppl_context *c, dataTable *i) {
     printf("Memory context: %d\n", i->memContext);
     blk = i->first;
     Ncolumns = i->Ncolumns_real;
+    // Print each block of the table
     while (blk != NULL) {
+        // Print each row, with blank lines where the data are split
         for (j = 0; j < blk->blockPosition; j++) {
             if (blk->split[j]) printf("\n\n");
+            // Print each value in the row, with its units
             for (k = 0; k < Ncolumns; k++) {
                 v = i->firstEntries[k];
                 v.real = blk->data_real[j * Ncolumns + k];
@@ -266,11 +283,13 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
     int i, j, k;
     sigset_t sigs;
 
+    // SIGCHLD is unblocked again once the input filter has been launched
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
     // Implement the magic filename '' to refer to the last used filename
     if (filename[0] == '\0') filename = c->dollarStat.lastFilename;
+    // An empty filename means the last file used; otherwise remember this one
     else {
         strncpy(c->dollarStat.lastFilename, filename, FNAME_LENGTH);
         c->dollarStat.lastFilename[FNAME_LENGTH - 1] = '\0';
@@ -284,6 +303,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
         char fName[FNAME_LENGTH];
         {
             int j, k;
+            // Escape spaces in the filename before passing it to wordexp
             for (j = k = 0; ((filename[j] != '\0') && (k < FNAME_LENGTH - 1));) {
                 if (filename[j] == ' ') fName[k++] = '\\';
                 fName[k++] = filename[j++];
@@ -292,12 +312,15 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
         }
         if (wildcardMatchNumber < 0) wildcardMatchNumber = 0;
         C = wildcardMatchNumber;
+        // Expand ~ and environment variables in the filename
         if ((wordexp(fName, &wordExp, 0) != 0) || (wordExp.we_wordc <= 0)) {
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open file '%s'.", fName);
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return NULL;
         };
+        // Find the requested match of the wildcards among the files matching each word of the expanded filename
         for (i = 0; i < wordExp.we_wordc; i++) {
+            // Report a word which matches no files
             if ((glob(wordExp.we_wordv[i], 0, NULL, &globData) != 0) || ((i == 0) && (globData.gl_pathc == 0))) {
                 if (wildcardMatchNumber == 0)
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open file '%s'.", fName);
@@ -305,12 +328,14 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return NULL;
             }
+            // Count past the matches of this word
             if (C >= globData.gl_pathc) {
                 C -= globData.gl_pathc;
                 globfree(&globData);
                 continue;
             }
             filename = (char *) ppl_memAlloc(strlen(globData.gl_pathv[C]) + 1);
+            // Failure to allocate memory is reported as an error
             if (filename == NULL) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (00).");
                 globfree(&globData);
@@ -323,6 +348,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
             break;
         }
         wordfree(&wordExp);
+        // Report that fewer files matched than the number requested
         if (!done) {
             if (wildcardMatchNumber == 0)
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open file '%s'.", fName);
@@ -330,6 +356,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
             if (DEBUG) ppl_log(&c->errcontext, errtext);
             return NULL;
         }
+        // Return the filename to the caller, if requested
         if (filenameOut != NULL) {
             strncpy(filenameOut, filename, FNAME_LENGTH);
             filenameOut[FNAME_LENGTH - 1] = '\0';
@@ -338,16 +365,20 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
 
     // Check whether we have a specified coprocessor to work on this filetype
     dictIter = ppl_dictIterateInit(c->set->filters);
+    // Look for an input filter whose wildcard pattern matches the filename
     while (dictIter != NULL) {
         char *dkey = NULL;
+        // This filter matches
         if (ppl_strWildcardTest(filename, dictIter->key)) {
             filter = (char *) ((pplObj *) dictIter->data)->auxil;
+            // Log the filter in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Using input filter '%s'.", filter);
                 ppl_log(&c->errcontext, msg);
             }
             filterArgs = (char *) malloc(strlen(filter) + 1);
             argList = (char **) malloc((strlen(filter) / 2 + 3) * sizeof(char *));
+            // Failure to allocate memory is reported as an error
             if ((filterArgs == NULL) || (argList == NULL)) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (01).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
@@ -358,7 +389,9 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                 return NULL;
             };
             strcpy(filterArgs, filter);
+            // Split the filter command into words, with the filename as the last argument
             for (i = j = k = 0; filterArgs[i] != '\0'; i++) {
+                // The start of a word
                 if ((k == 0) && ((unsigned char) filterArgs[i] > ' ')) {
                     k = 1;
                     argList[j++] = filterArgs + i;
@@ -373,6 +406,7 @@ FILE *ppldata_LaunchCoProcess(ppl_context *c, char *filename, int wildcardMatchN
                     c, argList,
                     &i); // Fork process for input filter, and runned piped output through the standard IO library using fdopen()
             sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+            // Report a failure to open the filter's output
             if ((infile = fdopen(i, "r")) == NULL) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not open connection to input filter '%s'.",
                                   argList[0]);
@@ -439,6 +473,7 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
                         linenumber_count, block_count, index_number, usingRowCol, input->ascii, colHeads, NcolHeads,
                         colUnits, NcolUnits);
 
+    // Strip trailing whitespace from the expression
     while ((l > 0) && (input->ascii[l] >= '\0') && ((unsigned char) input->ascii[l] <= ' ')) l--;
     if (ppl_validFloat(input->ascii, &i) &&
         (i > l)) // using 1:2 -- number is column number -- "1" means "the contents of column 1", i.e. "$1".
@@ -447,6 +482,7 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
         if ((dbl > -4) && (dbl < MAX_DATACOLS)) namedColumn = 1;
     } else {
         for (i = 0; i < NcolHeads; i++)
+            // A using item which names a column heading selects that column
             if (strcmp(colHeads[i], input->ascii) == 0) {
                 dbl = i + 1.01;
                 namedColumn = 1;
@@ -454,6 +490,7 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
             }
     } // using ColumnName
 
+    // Evaluate the expression, or fetch the named or numbered column directly
     c->dollarStat.warntxt[0] = '\0';
     if (namedColumn) // Clean up these cases
     {
@@ -463,10 +500,12 @@ void ppldata_UsingConvert(ppl_context *c, pplExpr *input, char **columns_str, pp
         int lOp = 0;
         ppl_expEval(c, input, &lOp, 1, iterDepth + 1);
     }
+    // Report a failure to evaluate the expression
     if ((c->errStat.status) || (c->dollarStat.warntxt[0] != '\0')) {
         int errp = c->errStat.errPosExpr, prefix = 0;
         char *errt = NULL;
         if (errp < 0) errp = 0;
+        // Warnings from the $ operator take precedence
         if (c->dollarStat.warntxt[0] != '\0') {
             errt = c->dollarStat.warntxt;
             prefix = 0;
@@ -567,6 +606,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
         ppldata_UsingConvert(c, ex, columns_str, columns_val, Ncols, filename, file_linenumber, file_linenumbers,
                              linenumber_count, block_count, index_number, usingRowCol, colHeads, NcolHeads, colUnits,
                              NcolUnits, &fail, errtext, iterDepth);
+        // Give up on this row if the label could not be evaluated
         if (fail) {
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             {
@@ -575,6 +615,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
             }
         }
         ppl_castToBool(c, stkObj);
+        // Rows which fail the select criterion are skipped, leaving a break in the line if the data are discontinuous
         if (stkObj->real == 0) {
             ppl_stackClean(c, stkLevelOld); // Discard the condition's value, now that it has been tested
             *discontinuity = (continuity == DATAFILE_DISCONTINUOUS);
@@ -592,6 +633,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
         ppldata_UsingConvert(c, ex, columns_str, columns_val, Ncols, filename, file_linenumber, file_linenumbers,
                              linenumber_count, block_count, index_number, usingRowCol, colHeads, NcolHeads, colUnits,
                              NcolUnits, &fail, errtext, iterDepth);
+        // Give up on this row if the expression could not be evaluated
         if (fail) {
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             {
@@ -599,6 +641,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                 return;
             }
         }
+        // The label must be a string
         if (stkObj->objType != PPLOBJ_STR) {
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                               "%s:%ld: Label expression '%s' did not evaluate to a string, but to type <%s>.", filename,
@@ -624,6 +667,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
         ppldata_UsingConvert(c, ex, columns_str, columns_val, Ncols, filename, file_linenumber, file_linenumbers,
                              linenumber_count, block_count, index_number, usingRowCol, colHeads, NcolHeads, colUnits,
                              NcolUnits, &fail, errtext, iterDepth);
+        // Give up on this row if the expression could not be evaluated
         if (fail) {
             ppl_stackClean(c, stkLevelOld); // Discard anything left on the stack before giving up
             {
@@ -631,6 +675,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                 return;
             }
         }
+        // Columns of real values must be numbers, dates or booleans; other columns hold objects, such as colors
         if (!outObj) {
             if ((stkObj->objType != PPLOBJ_NUM) && (stkObj->objType != PPLOBJ_BOOL) &&
                 (stkObj->objType != PPLOBJ_DATE)) {
@@ -644,6 +689,7 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                     return;
                 }
             }
+            // Values must be real
             if ((stkObj->objType == PPLOBJ_NUM) && (stkObj->flagComplex)) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
                                   "%s:%ld: Data item calculated from expression '%s' was a complex number.", filename,
@@ -654,11 +700,13 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
                     return;
                 }
             }
+            // The first row sets the type and units of each column; later rows must match them
             if (out->Nrows == 0) {
                 out->firstEntries[i] = *stkObj;
                 out->firstEntries[i].refCount = 1; // no memory leak here, as all allowed types have no auxilary data
                 out->firstEntries[i].amMalloced = 0;
             } else {
+                // The value must have the same type as the first row's
                 if (out->firstEntries[i].objType != stkObj->objType) {
                     ppl_snprintfTrunc(
                             errtext, PPL_MSG_LENGTH,
@@ -695,8 +743,10 @@ void ppldata_ApplyUsingList(ppl_context *c, dataTable *out, pplExpr **usingExprs
         ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
     }
 
+    // Mark any break in the data before this row, and move on to the next row
     out->current->split[out->current->blockPosition] = *discontinuity;
     i = ppldata_DataTable_AddRow(out);
+    // Failure to allocate memory is reported as an error
     if (i) {
         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s:%ld: Out of memory storing data table.", filename,
                           file_linenumber);
@@ -745,26 +795,33 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
     unsigned char hadspace[MAX_DATACOLS];
     unsigned char hadcomma[MAX_DATACOLS];
 
+    // Each column starts at a word boundary
     for (i = 0; i < MAX_DATACOLS; i++) hadspace[i] = 1;
     for (i = 0; i < MAX_DATACOLS; i++) hadcomma[i] = 0;
 
+    // Make a row of data from the next word of each line read, until the lines run out
     while (!cancellationFlag) {
         int gotData = 0, Ncols = 0;
         rawDataBlock *blk = (*in)->first;
         char *rowData[MAX_DATACOLS];
         long file_linenumber[MAX_DATACOLS];
 
+        // Take the next word of each stored line as one column of the row
         while ((blk != NULL) && (Ncols < MAX_DATACOLS)) {
             file_linenumber[0] = -1;
+            // Each stored line
             for (i = 0; ((i < blk->blockPosition) && (Ncols < MAX_DATACOLS)); i++) {
                 char *s = blk->text[i];
+                // A line which has run out supplies a blank value
                 if (s == NULL) {
                     rowData[Ncols] = " ";
                     file_linenumber[Ncols] = -1;
                     Ncols++;
                 } else {
                     int caught = 0, p = 0;
+                    // Find the next word of the line, separated by whitespace or commas
                     for (; (s[p] != '\0'); p++) {
+                        // Whitespace separates words
                         if ((unsigned char) s[p] <= ' ') {
                             hadspace[Ncols] = 1;
                         } else if (s[p] == ',') {
@@ -779,7 +836,9 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
                         if (caught) break;
                     }
 
+                    // Move past the word
                     blk->text[i] += p;
+                    // A line with no more words supplies a blank value
                     if (!caught) {
                         rowData[Ncols] = " ";
                         file_linenumber[Ncols] = -1;
@@ -796,6 +855,7 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
         }
         if (!gotData) break;
 
+        // Apply the using expressions to the row
         ppldata_ApplyUsingList(c, out, usingExprs, labelExpr, selectExpr, continuity, &discontinuity, rowData, NULL,
                                Ncols, filename, file_linenumber[0], file_linenumber, linenumber_count, block_count,
                                index_number, DATAFILE_ROW, colHeads, NcolHeads, colUnits, NcolUnits, status, errtext,
@@ -803,6 +863,7 @@ void ppldata_RotateRawData(ppl_context *c, rawDataTable **in, dataTable *out, pp
         linenumber_count++;
     }
 
+    // Discard the stored lines, and start a new table for the next block
     ppl_memAlloc_Free(contextRaw);
     *in = ppldata_NewRawDataTable(contextRaw);
     return;
@@ -842,14 +903,17 @@ static int ppldata_sort_cmp(const void *xv, const void *yv) {
 //! \return A new, sorted data table, or <in> if it could not be sorted
 
 dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sortCol, const int ignoreContinuity) {
+    // Variables for sorting the table
     int i, io, Nc, Nd, Nr;
     long ji, jo;
     dataBlock *blk;
     ppldata_sorter *sorter;
     dataTable *output;
 
+    // There is nothing to sort without data
     if (in == NULL) return NULL;
 
+    // The numbers of columns, and of rows
     Nc = in->Ncolumns_obj;
     Nd = in->Ncolumns_real;
     Nr = in->Nrows;
@@ -859,8 +923,10 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
     // Transfer data from DataTable into a DataTable_sorter array which is in a format qsort() can sort
     blk = in->first;
     jo = 0;
+    // Make an array of pointers to the rows
     while (blk != NULL) {
         long ji;
+        // Each row of the block
         for (ji = 0; ji < blk->blockPosition; ji++, jo++) {
             sorter[jo].data_real = &(blk->data_real[Nd * ji]);
             sorter[jo].data_obj = &(blk->data_obj[Nc * ji]);
@@ -876,6 +942,7 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
     // Sort the DataTable_sorter array
     ppldata_sort_sortCol = sortCol - in->Ncolumns_real;
     for (i = 0, io = 0; io <= jo; io++)
+        // Sort each run of rows between breaks separately, unless the data are continuous
         if ((io == jo) || sorter[io].split) {
             qsort((void *) (sorter + i), io - i, sizeof(ppldata_sorter), ppldata_sort_cmp);
             sorter[i].split = (i != 0);
@@ -885,6 +952,7 @@ dataTable *ppldata_sort(const ppl_context *c, const dataTable *in, const int sor
 
     // Copy sorted data into a new dataTable, removing the sort column
     output = ppldata_NewDataTable(Nc, Nd - 1, in->memContext, Nr);
+    // Copy the rows into a new table, in sorted order, without the sort column
     if (output != NULL) {
         const int sc = sortCol - in->Ncolumns_real;
         int i, io;
@@ -932,12 +1000,14 @@ static char *ppldata_fetchFromSpool(parserLine **dataSpool) {
 
 int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols, char *errtext) {
     int i;
+    // Compile the expression for each column, $1, $2, ...
     for (i = 0; i < Ncols; i++) {
         int end = 0, ep = 0, es = 0;
         char ascii[16];
         pplExpr *exptmp = NULL;
         ppl_snprintfTrunc(ascii, sizeof(ascii), "%d", i + 1);
         ppl_expCompile(c, 0, 0, "", ascii, &end, 0, 0, 0, &exptmp, &ep, &es, errtext);
+        // Report a failure to compile the expression
         if (es || c->errStat.status) {
             ppl_tbClear(c);
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (03).");
@@ -947,6 +1017,7 @@ int ppldata_autoUsingList(ppl_context *c, pplExpr **usingExprs, const int Ncols,
         usingExprs[i] = pplExpr_tmpcpy(exptmp);
         pplExpr_free(exptmp);
         exptmp = NULL;
+        // Failure to allocate memory is reported as an error
         if (usingExprs[i] == NULL) {
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (04).");
             if (DEBUG) ppl_log(&c->errcontext, errtext);
@@ -1021,8 +1092,10 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
     FILE *filtered_input = NULL;
     char linebuffer[LSTR_LENGTH], *lineptr = linebuffer, *linebufferPtr = &linebuffer[0], *cptr;
 
+    // Variables for reading the data file
     int i, j, k, l, m;
 
+    // Column and row headings and units, read from comment lines in the file
     char **columnHeadings = NULL;
     int NcolumnHeadings = 0;
     char **rowHeadings = NULL;
@@ -1032,6 +1105,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
     pplObj *rowUnits = NULL;
     int NrowUnits = 0;
 
+    // The words of the current line
     char *colData[MAX_DATACOLS];
     rawDataTable *rawDataTab = NULL;
 
@@ -1040,6 +1114,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         ppl_snprintfTrunc(msg, sizeof(msg), "Opening datafile '%s'.", filename);
         ppl_log(&c->errcontext, msg);
     }
+    // Unless the number of columns is given, assume two
     if (Ncols < 0) {
         // If number of columns unspecified, assume two
         autoUsingExprs = 1;
@@ -1057,6 +1132,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
 
     // Open requested datafile
     if (strcmp(filename, "-") == 0) {
+        // A filename of - means standard input, which cannot contain several files
         if (wildcardMatchNumber > 0) {
             *status = 1;
             return;
@@ -1064,6 +1140,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         filtered_input = stdin;
         if (DEBUG) ppl_log(&c->errcontext, "Reading from stdin.");
     } else if (strcmp(filename, "--") == 0) {
+        // A filename of -- means data supplied inline after the command
         if (wildcardMatchNumber > 0) {
             *status = 1;
             return;
@@ -1072,6 +1149,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         if (DEBUG) ppl_log(&c->errcontext, "Reading from command line.");
     } else {
         filtered_input = ppldata_LaunchCoProcess(c, filename, wildcardMatchNumber, filenameOut, errtext);
+        // Report a file which cannot be opened
         if (filtered_input == NULL) {
             *status = 1;
             return;
@@ -1093,8 +1171,10 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         closeDataInput(filtered_input, readFromCommandLine);
         return;
     }
+    // When reading data in rows, the lines are stored and turned into columns later
     if (usingRowCol == DATAFILE_ROW) {
         rawDataTab = ppldata_NewRawDataTable(contextRaw);
+        // Failure to allocate memory is reported as an error
         if (rawDataTab == NULL) {
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s",
                               "Out of memory whilst trying to allocate data table to read data from file.");
@@ -1118,13 +1198,16 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
         ppl_strStrip(linebuffer, linebuffer);
         if (readFromCommandLine && (strcmp(linebuffer, "END") == 0)) break;
 
+        // Count lines, blocks and indices: one blank line starts a new block, two start a new index
         file_linenumber++;
 
+        // Skip leading whitespace
         for (j = 0; ((linebuffer[j] != '\0') && ((unsigned char) linebuffer[j] <= ' ')); j++);
         if (linebuffer[j] == '\0') // We have a blank line
         {
             if (prev_blanklines > 1) continue; // A very long gap in the datafile
             prev_blanklines++;
+            // Count consecutive blank lines
             if (prev_blanklines == 1) {
                 block_count++; // First newline gives us a new block
                 block_stepcnt = ((block_stepcnt - 1) % blockstep);
@@ -1135,6 +1218,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 index_number++; // Second newline gives us a new index
                 block_count = 0; // Zero block counter
                 block_stepcnt = 0;
+                // Log the new index in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Index %ld begins on line %ld of datafile.", index_number,
                                       file_linenumber);
@@ -1153,6 +1237,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 (usingRowCol == DATAFILE_COL)) // '# Columns:' means we have a list of column headings
             {
                 i += 8;
+                // Log progress in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Reading column headings as specified on line %ld of datafile",
                                       file_linenumber);
@@ -1161,7 +1246,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Count the column headings on the line
                 for (j = i; linebuffer[j] != '\0'; j++) {
+                    // Whitespace separates headings
                     if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
@@ -1173,6 +1260,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 strcpy(cptr, linebuffer + i);
                 columnHeadings = (char **) ppl_memAlloc_incontext(itemsOnLine * sizeof(char *), contextRough);
                 NcolumnHeadings = itemsOnLine;
+                // Failure to allocate memory is reported as an error
                 if ((cptr == NULL) || (columnHeadings == NULL)) {
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (05).");
                     *status = 1;
@@ -1182,7 +1270,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 }
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Split the line into headings
                 for (j = 0; cptr[j] != '\0'; j++) {
+                    // Terminate each heading at whitespace
                     if ((unsigned char) cptr[j] <= ' ') {
                         cptr[j] = '\0';
                         hadwhitespace = 1;
@@ -1192,9 +1282,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         hadwhitespace = 0;
                     }
                 }
+                // Log the headings in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld column headings read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
+                    // Log each heading
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Column heading %d: %s", k, columnHeadings[k]);
                         ppl_log(&c->errcontext, msg);
@@ -1204,6 +1296,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                        (usingRowCol == DATAFILE_ROW)) // '# Rows:' means we have a list of row headings
             {
                 i += 5;
+                // Log progress in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Reading row headings as specified on line %ld of datafile",
                                       file_linenumber);
@@ -1212,7 +1305,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Count the row headings on the line
                 for (j = i; linebuffer[j] != '\0'; j++) {
+                    // Whitespace separates headings
                     if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
@@ -1224,6 +1319,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 strcpy(cptr, linebuffer + i);
                 rowHeadings = (char **) ppl_memAlloc_incontext(itemsOnLine * sizeof(char *), contextRough);
                 NrowHeadings = itemsOnLine;
+                // Failure to allocate memory is reported as an error
                 if ((cptr == NULL) || (rowHeadings == NULL)) {
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (06).");
                     *status = 1;
@@ -1233,7 +1329,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 }
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Split the line into headings
                 for (j = 0; cptr[j] != '\0'; j++) {
+                    // Terminate each heading at whitespace
                     if ((unsigned char) cptr[j] <= ' ') {
                         cptr[j] = '\0';
                         hadwhitespace = 1;
@@ -1243,9 +1341,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         hadwhitespace = 0;
                     }
                 }
+                // Log the headings in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld row headings read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
+                    // Log each heading
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Row heading %d: %s", k, rowHeadings[k]);
                         ppl_log(&c->errcontext, msg);
@@ -1255,6 +1355,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                        0) // '# ColumnUnits:' means we have a list of column units
             {
                 i += 12;
+                // Log progress in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Reading column units as specified on line %ld of datafile",
                                       file_linenumber);
@@ -1263,7 +1364,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Count the column units on the line
                 for (j = i; linebuffer[j] != '\0'; j++) {
+                    // Whitespace separates units
                     if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
@@ -1275,6 +1378,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 strncpy(cptr, linebuffer + i, j - i + 2);
                 columnUnits = (pplObj *) ppl_memAlloc_incontext(itemsOnLine * sizeof(pplObj), contextRough);
                 NcolumnUnits = itemsOnLine;
+                // Failure to allocate memory is reported as an error
                 if ((cptr == NULL) || (columnUnits == NULL)) {
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (07).");
                     *status = 1;
@@ -1284,7 +1388,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 }
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Evaluate each unit in turn
                 for (k = 0; cptr[k] != '\0'; k++) {
+                    // Skip whitespace between units
                     if ((unsigned char) cptr[k] <= ' ') {
                         continue;
                     } else {
@@ -1294,6 +1400,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         columnUnits[itemsOnLine].refCount = 1;
                         pplObjNum(columnUnits + itemsOnLine, 0, 1, 0);
                         ppl_unitsStringEvaluate(c, cptr + k, columnUnits + itemsOnLine, &l, &m, errtext);
+                        // Warn about a unit which cannot be evaluated, and treat the column as dimensionless
                         if (m >= 0) {
                             pplObjNum(columnUnits + itemsOnLine, 0, 1, 0);
                             if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
@@ -1307,9 +1414,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         k += l;
                     }
                 }
+                // Log the units in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld column units read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
+                    // Log each unit
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Column unit %d: %s", k,
                                           ppl_unitsNumericDisplay(c, columnUnits + k, 0, 0, 0));
@@ -1319,6 +1428,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             } else if (strncmp(linebuffer + i, "RowUnits:", 9) == 0) // '# RowUnits:' means we have a list of row units
             {
                 i += 9;
+                // Log progress in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Reading row units as specified on line %ld of datafile",
                                       file_linenumber);
@@ -1327,7 +1437,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 while ((linebuffer[i] != '\0') && ((unsigned char) linebuffer[i] <= ' ')) i++;
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Count the row units on the line
                 for (j = i; linebuffer[j] != '\0'; j++) {
+                    // Whitespace separates units
                     if ((unsigned char) linebuffer[j] <= ' ') {
                         hadwhitespace = 1;
                     } else if (hadwhitespace) {
@@ -1339,6 +1451,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 strncpy(cptr, linebuffer + i, j - i + 2);
                 rowUnits = (pplObj *) ppl_memAlloc_incontext(itemsOnLine * sizeof(pplObj), contextRough);
                 NrowUnits = itemsOnLine;
+                // Failure to allocate memory is reported as an error
                 if ((cptr == NULL) || (rowUnits == NULL)) {
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory (08).");
                     *status = 1;
@@ -1348,7 +1461,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 }
                 itemsOnLine = 0;
                 hadwhitespace = 1;
+                // Evaluate each unit in turn
                 for (k = 0; cptr[k] != '\0'; k++) {
+                    // Skip whitespace between units
                     if ((unsigned char) cptr[k] <= ' ') {
                         continue;
                     } else {
@@ -1358,6 +1473,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         rowUnits[itemsOnLine].refCount = 1;
                         pplObjNum(rowUnits + itemsOnLine, 0, 1, 0);
                         ppl_unitsStringEvaluate(c, cptr + k, rowUnits + itemsOnLine, &l, &m, errtext);
+                        // Warn about a unit which cannot be evaluated, and treat the row as dimensionless
                         if (m >= 0) {
                             pplObjNum(rowUnits + itemsOnLine, 0, 1, 0);
                             if (ppl_errorCountTake(errCount)) { // Only report a limited number of errors
@@ -1371,9 +1487,11 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                         k += l;
                     }
                 }
+                // Log the units in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Total of %ld row units read.", itemsOnLine);
                     ppl_log(&c->errcontext, msg);
+                    // Log each unit
                     for (k = 0; k < itemsOnLine; k++) {
                         ppl_snprintfTrunc(msg, sizeof(msg), "Row unit %d: %s", k,
                                           ppl_unitsNumericDisplay(c, rowUnits + k, 0, 0, 0));
@@ -1400,12 +1518,14 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
                 ppldata_RotateRawData(c, &rawDataTab, *out, usingExprs, labelExpr, selectExpr, continuity, filename,
                                       block_count, index_number, rowHeadings, NrowHeadings, rowUnits, NrowUnits, status,
                                       errtext, errCount, iterDepth);
+            // Give up if the stored rows could not be processed
             if (*status) {
                 closeDataInput(filtered_input, readFromCommandLine);
                 return;
             }
             cptr = rawDataTab->current->text[rawDataTab->current->blockPosition] =
                     (char *) ppl_memAlloc_incontext(strlen(linebuffer) + 1, contextRaw);
+            // Failure to allocate memory is reported as an error
             if (cptr == NULL) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory whilst placing data into text spool.");
                 *status = 1;
@@ -1415,6 +1535,7 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             }
             strcpy(cptr, linebuffer);
             rawDataTab->current->fileLine[rawDataTab->current->blockPosition] = file_linenumber;
+            // Failure to allocate memory is reported as an error
             if (ppldata_RawDataTable_AddRow(rawDataTab)) {
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s", "Out of memory whilst placing data into text spool.");
                 *status = 1;
@@ -1429,7 +1550,9 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
             itemsOnLine = 0;
             hadwhitespace = 1;
             hadcomma = 0;
+            // Split the line into words at whitespace or commas
             for (i = 0; linebuffer[i] != '\0'; i++) {
+                // Whitespace separates words
                 if ((unsigned char) linebuffer[i] <= ' ') {
                     hadwhitespace = 1;
                 } else if (linebuffer[i] == ',') {
@@ -1446,12 +1569,14 @@ void ppldata_fromFile(ppl_context *c, dataTable **out, char *filename, const int
 
             // Add line numbers as first column to one-column datafiles
             if (itemsOnLine > 1) oneColumnInput = 0;
+            // One-column data files are plotted against line number
             if ((itemsOnLine == 1) && autoUsingExprs && oneColumnInput) {
                 colData[itemsOnLine++] = colData[0];
                 colData[0] = lineNumberStr;
                 ppl_snprintfTrunc(lineNumberStr, sizeof(lineNumberStr), "%ld", file_linenumber);
             }
 
+            // Apply the using expressions to the line
             ppldata_ApplyUsingList(c, *out, usingExprs, labelExpr, selectExpr, continuity, &discontinuity, colData,
                                    NULL, itemsOnLine, filename, file_linenumber, NULL, linenumber_count, block_count,
                                    index_number, DATAFILE_COL, columnHeadings, NcolumnHeadings, columnUnits,
@@ -1553,12 +1678,16 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
     s->iterDepth = iterDepth;
     s->blockStart = s->blockLen = 0;
 
+    // Only large numbers of samples are worth sharing between threads, and only if every function is safe to evaluate
+    // in parallel
     if ((s->nSamples < PARALLEL_MIN_SAMPLES) || (omp_get_max_threads() < 2)) return 0;
     for (j = 0; j < fnlist_len; j++)
         if (!ppl_expThreadSafe(c, fnlist[j], (const char *const *) dummyNames, nDummy)) return 0;
 
+    // Allocate space for the values of the functions at a block of samples
     s->results = (pplObj *) malloc(PARALLEL_BLOCK_SAMPLES * fnlist_len * sizeof(pplObj));
     s->failed = (unsigned char *) malloc(PARALLEL_BLOCK_SAMPLES);
+    // Failure to allocate memory means the functions are evaluated serially
     if ((s->results == NULL) || (s->failed == NULL)) {
         free(s->results);
         free(s->failed);
@@ -1566,6 +1695,7 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
         s->failed = NULL;
         return 0; // Fall back to evaluating the functions serially
     }
+    // Initialise each value
     for (p = 0; p < PARALLEL_BLOCK_SAMPLES * fnlist_len; p++) {
         s->results[p].refCount = 1;
         pplObjZom(&s->results[p], 0);
@@ -1582,6 +1712,7 @@ static int parallelSamplerInit(parallelSampler *s, ppl_context *c, pplExpr **fnl
 
 static void discardSample(parallelSampler *s, const long q, const int nEvaluated) {
     int g;
+    // Free the values of the functions already evaluated
     for (g = 0; g < nEvaluated; g++) {
         pplObj *r = &s->results[q * s->fnlist_len + g];
         ppl_garbageObject(r);
@@ -1596,6 +1727,7 @@ static void discardSample(parallelSampler *s, const long q, const int nEvaluated
 //! \param [in] start - The number of the first sample in the block
 
 static void parallelSamplerFill(parallelSampler *s, const long start) {
+    // Evaluate the functions at the samples of this block
     s->blockStart = start;
     s->blockLen = ppl_min(PARALLEL_BLOCK_SAMPLES, s->nSamples - start);
     memset(s->failed, 0, s->blockLen);
@@ -1608,7 +1740,9 @@ static void parallelSamplerFill(parallelSampler *s, const long start) {
         pplObj *dummy[2] = {NULL, NULL};
         long q;
         int a, k;
+        // Each thread gets its own copies of the dummy variables
         if (w != NULL) {
+            // Copy each dummy variable into the thread's own namespace
             for (a = 0; a < s->nDummy; a++) {
                 pplObj temp;
                 ppl_contextGetVarPointer(w, s->dummyNames[a], &dummy[a], &temp); // Creates the variable
@@ -1623,15 +1757,18 @@ static void parallelSamplerFill(parallelSampler *s, const long start) {
         }
 
 #pragma omp for schedule(dynamic, 256)
+        // Share the samples of the block between the threads
         for (q = 0; q < s->blockLen; q++) {
             const long sample = s->blockStart + q;
             int f;
+            // Samples which a thread cannot evaluate are left to be evaluated serially
             if ((w == NULL) || cancellationFlag) {
                 s->failed[q] = 1; // Evaluated serially later, if at all
                 continue;
             }
             dummy[0]->real = s->rasterX[sample % s->rasterXlen];
             if (s->nDummy > 1) dummy[1]->real = s->rasterY[sample / s->rasterXlen];
+            // Evaluate each function at this sample
             for (f = 0; f < s->fnlist_len; f++) {
                 const int stkLevelOld = w->stackPtr; // Stack: note its level, to discard the value afterwards
                 const pplObj *ob = ppl_expEval(w, s->fnlist[f], &k, 0, s->iterDepth);
@@ -1721,6 +1858,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
         ppl_snprintfTrunc(msg, sizeof(msg), "Evaluated supplied set of functions.");
         ppl_log(&c->errcontext, msg);
     }
+    // There is a fixed limit on the number of functions
     if (fnlist_len > USING_ITEMS_MAX) {
         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Too many functions supplied. A maximum of %d are allowed.",
                           USING_ITEMS_MAX);
@@ -1728,6 +1866,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         return;
     }
+    // Unless the number of columns is given, assume two
     if (Ncols < 0) {
         // If number of columns unspecified, assume two
         autoUsingExprs = 1;
@@ -1735,6 +1874,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                      c, usingExprs, Ncols = fnlist_len + (!parametric) + ((!parametric) && sampleGrid), errtext)))
             return;
     }
+    // Initialise the values of the functions
     for (a = 0; a < USING_ITEMS_MAX + 2; a++) {
         colData[a].refCount = 1;
         colData[a].objType = PPLOBJ_ZOM;
@@ -1752,6 +1892,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
     contextOutput = ppl_memAlloc_GetMemContext();
     *out = ppldata_NewDataTable(Ncols - NusingObjs, NusingObjs, contextOutput,
                                 sampleGrid ? (rasterXlen * rasterYlen) : rasterXlen);
+    // Failure to allocate memory is reported as an error
     if (*out == NULL) {
         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "%s",
                           "Out of memory whilst trying to allocate data table to read data from file.");
@@ -1777,16 +1918,20 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                                              rasterXlen, unitX, rasterY, rasterYlen, unitY, iterDepth);
         }
 
+        // Sample each point of the raster, or of the grid
         for (i2 = 0; i2 < i2len; i2++, discontinuity2 = 1)
+            // Each point along x
             for (i = 0; i < ilen; i++, p++) {
                 if (cancellationFlag) goto CANCEL;
 
                 // Get a pointer to the value of the variable 'x' in the user's variable space
                 ordinateVar[1] = NULL;
+                // Set the dummy variable, or variables, to the position of this sample
                 for (a = 0; a <= sampleGrid; a++) {
                     int am, rc;
                     char *v, *v2;
                     pplObj **ru;
+                    // The first dummy variable is x, or t or u for parametric plots; the second is y, or v
                     if (!a) {
                         v = "x";
                         v2 = sampleGrid ? "u" : "t";
@@ -1810,6 +1955,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                     ordinateVar[a]->flagComplex = 0;
                 }
 
+                // Set the dummy variables to this sample's position
                 ordinateVar[0]->real = rasterX[i];
                 if (sampleGrid) ordinateVar[1]->real = rasterY[i2];
                 if (sampleGrid)
@@ -1824,18 +1970,22 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                 if ((!parametric) && sampleGrid) colData[2] = *ordinateVar[1];
                 if (inParallel && (p >= parallel.blockStart + parallel.blockLen))
                     parallelSamplerFill(&parallel, p); // Evaluate the functions at the next block of samples
+                // Use values already evaluated in parallel, if there are any; otherwise evaluate the functions now
                 if (inParallel && (!parallel.failed[p - parallel.blockStart])) {
                     // The functions have already been evaluated in parallel: take ownership of their values
                     pplObj *r = &parallel.results[(p - parallel.blockStart) * fnlist_len];
+                    // Take each value
                     for (j = 0; j < fnlist_len; j++) {
                         memcpy(&colData[j + offset], &r[j], sizeof(pplObj));
                         pplObjZom(&r[j], 0);
                     }
                 } else
+                    // Evaluate each function
                     for (j = 0; j < fnlist_len; j++) {
                         const int stkLevelOld = c->stackPtr;
                         pplObj *ob;
                         ob = ppl_expEval(c, fnlist[j], &k, 0, iterDepth);
+                        // Report a failure to evaluate the function, and skip this sample
                         if (c->errStat.status) {
                             int errp = c->errStat.errPosExpr;
                             char *errt = NULL;
@@ -1860,6 +2010,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
                         ppl_stackClean(c, stkLevelOld); // Discard the expression's value, now that it has been copied
                     }
                 expectedNrows = (*out)->Nrows + 1;
+                // Apply the using expressions to the values
                 if (!(*status)) {
                     ppldata_ApplyUsingList(c, *out, usingExprs, labelExpr, selectExpr, continuity, &discontinuity2,
                                            NULL, colData, fnlist_len + offset - 1, buffer, 0, NULL, i, 0, 0,
@@ -1889,6 +2040,7 @@ void ppldata_fromFuncs(ppl_context *c, dataTable **out, pplExpr **fnlist, const 
             }
     }
 
+// If the user pressed control-C, free any values which were evaluated in parallel but not used
 CANCEL:
     // Free the values of any functions evaluated in parallel which were not used (e.g. if the user pressed Ctrl-C)
     if (inParallel) parallelSamplerFree(&parallel);
@@ -1942,6 +2094,7 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
         ppl_snprintfTrunc(msg, sizeof(msg), "Evaluated supplied set of functions.");
         ppl_log(&c->errcontext, msg);
     }
+    // There is a fixed limit on the number of vectors
     if (objListLen > USING_ITEMS_MAX) {
         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Too many functions supplied. A maximum of %d are allowed.",
                           USING_ITEMS_MAX);
@@ -1949,6 +2102,7 @@ void ppldata_fromVectors(ppl_context *c, dataTable **out, pplObj *objList, const
         if (DEBUG) ppl_log(&c->errcontext, errtext);
         return;
     }
+    // Unless the number of columns is given, assume two
     if (Ncols < 0) {
         // If number of columns unspecified, assume two
         autoUsingExprs = 1;
@@ -2065,9 +2219,12 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         const int posv1 = ptab[PARSE_INDEX_vmin];
         const int posv2 = ptab[PARSE_INDEX_vmax];
         int rasterXlog = 0, rasterYlog = 0;
+        // The raster of x values is taken from the plot command's range, or from the x1 axis, or from defaults;
+        // parametric plots use the range of t, or of u and v
         if (!parametric) {
             pplset_axis *X = &c->set->XAxes[1];
             rasterXlog = (X->log == SW_BOOL_TRUE); // Read from axis x1
+            // The lower limit from the command, or from the axis; otherwise a default relative to the upper limit
             if (minSet[0]) {
                 rasterXmin = min[0];
                 rasterXunits = unitRange[0];
@@ -2086,6 +2243,8 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 rasterXmin = rasterXlog ? 1.0 : -10.0;
                 pplObjNum(&rasterXunits, 0, 0, 0);
             }
+            // The upper limit from the command, or from the axis, if it has the same units; otherwise a default
+            // relative to the lower limit
             if ((maxSet[0]) && (ppl_unitsDimEqual(&rasterXunits, &unitRange[0]))) {
                 rasterXmax = max[0];
                 XmaxSet = 1;
@@ -2113,9 +2272,12 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             rasterYunits = c->set->graph_current.Vmin;
         }
 
+        // A range of t, or u, given in the command overrides the default
         if ((post1 > 0) && (stko[post1].objType != PPLOBJ_ZOM)) {
             rasterXmin = stko[post1].real;
+            // A lower limit alone must have the same type and units as the default range
             if ((post2 <= 0) || (stko[post2].objType == PPLOBJ_ZOM)) {
+                // The types must match
                 if (stko[post1].objType != rasterXunits.objType) {
                     *status = 1;
                     ppl_snprintfTrunc(
@@ -2124,6 +2286,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
+                // The units must match
                 if (!ppl_unitsDimEqual(&stko[post1], &rasterXunits)) {
                     *status = 1;
                     ppl_snprintfTrunc(
@@ -2135,8 +2298,10 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             }
             rasterXunits = stko[post1];
         }
+        // An upper limit given in the command
         if ((post2 > 0) && (stko[post2].objType != PPLOBJ_ZOM)) {
             rasterXmax = stko[post2].real;
+            // The types must match
             if (stko[post2].objType != rasterXunits.objType) {
                 *status = 1;
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH,
@@ -2144,6 +2309,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
+            // The units must match
             if (!ppl_unitsDimEqual(&stko[post2], &rasterXunits)) {
                 *status = 1;
                 ppl_snprintfTrunc(
@@ -2153,9 +2319,12 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 return;
             }
         }
+        // A range of v given in the command overrides the default
         if ((posv1 > 0) && (stko[posv1].objType != PPLOBJ_ZOM)) {
             rasterYmin = stko[posv1].real;
+            // A lower limit alone must have the same type and units as the default range
             if ((posv2 <= 0) || (stko[posv2].objType == PPLOBJ_ZOM)) {
+                // The types must match
                 if (stko[posv1].objType != rasterYunits.objType) {
                     *status = 1;
                     ppl_snprintfTrunc(
@@ -2164,6 +2333,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
+                // The units must match
                 if (!ppl_unitsDimEqual(&stko[posv1], &rasterYunits)) {
                     *status = 1;
                     ppl_snprintfTrunc(
@@ -2175,8 +2345,10 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             }
             rasterYunits = stko[posv1];
         }
+        // An upper limit given in the command
         if ((posv2 > 0) && (stko[posv2].objType != PPLOBJ_ZOM)) {
             rasterYmax = stko[posv2].real;
+            // The types must match
             if (stko[posv2].objType != rasterYunits.objType) {
                 *status = 1;
                 ppl_snprintfTrunc(
@@ -2185,6 +2357,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
+            // The units must match
             if (!ppl_unitsDimEqual(&stko[posv2], &rasterYunits)) {
                 *status = 1;
                 ppl_snprintfTrunc(
@@ -2195,6 +2368,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             }
         }
 
+        // Warn about logarithmic rasters with limits which are not positive
         if (rasterXlog && ((rasterXmin <= 0) || (rasterXmax <= 0)))
             ppl_warning(
                     &c->errcontext, ERR_NUMERICAL,
@@ -2209,6 +2383,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             int i;
             pplObj *spacing = &stko[poss];
             spacingSet = 1;
+            // Work out the number of samples from the spacing, for each raster
             for (i = 0; i <= sampleGrid; i++) {
                 double SpacingDbl, NumberOfSamplesDbl;
                 int *rast_log = i ? &rasterYlog : &rasterXlog;
@@ -2216,7 +2391,9 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 double *rast_max = i ? &rasterYmax : &rasterXmax;
                 pplObj *rast_unit = i ? &rasterYunits : &rasterXunits;
                 int *out = i ? &rasterYlen : &rasterXlen;
+                // On logarithmic rasters, the spacing is a factor
                 if (*rast_log) {
+                    // The factor must be dimensionless
                     if (!spacing->dimensionless) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2226,6 +2403,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
+                    // The factor must be reasonable
                     if ((spacing->real < 1e-200) || (spacing->real > 1e100)) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2238,6 +2416,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     if ((*rast_max > *rast_min) && (SpacingDbl < 1.0)) SpacingDbl = 1.0 / SpacingDbl;
                     if ((*rast_min > *rast_max) && (SpacingDbl > 1.0)) SpacingDbl = 1.0 / SpacingDbl;
                     NumberOfSamplesDbl = 1.0 + floor(log(*rast_max / *rast_min) / log(SpacingDbl));
+                    // There must be at least two samples
                     if (NumberOfSamplesDbl < 2) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2246,6 +2425,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
+                    // There may be no more than 1e7 samples
                     if (NumberOfSamplesDbl > 1e7) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2257,6 +2437,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     *rast_max = *rast_min * pow(SpacingDbl, NumberOfSamplesDbl - 1);
                     *out = (int) NumberOfSamplesDbl;
                 } else {
+                    // The spacing must have the same units as the raster
                     if (!ppl_unitsDimEqual(rast_unit, spacing)) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2271,6 +2452,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     if ((*rast_max > *rast_min) && (SpacingDbl < 0.0)) SpacingDbl = -SpacingDbl;
                     if ((*rast_min > *rast_max) && (SpacingDbl > 0.0)) SpacingDbl = -SpacingDbl;
                     NumberOfSamplesDbl = 1.0 + (*rast_max - *rast_min) / SpacingDbl;
+                    // There must be at least two samples
                     if (NumberOfSamplesDbl < 2) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2279,6 +2461,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
+                    // There may be no more than 1e6 samples
                     if (NumberOfSamplesDbl > 1e6) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2293,6 +2476,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             }
         } else {
             rasterXlen = c->set->graph_current.samples;
+            // Without a spacing, the number of samples is set with "set samples"
             if (sampleGrid) {
                 rasterXlen = (c->set->graph_current.SamplesXAuto == SW_BOOL_TRUE) ? c->set->graph_current.samples
                                                                                   : c->set->graph_current.SamplesX;
@@ -2307,6 +2491,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         unitY = rasterYunits;
         unitY.refCount = 1;
         rasterX = (double *) ppl_memAlloc(rasterXlen * sizeof(double));
+        // Failure to allocate memory is reported as an error
         if (rasterX == NULL) {
             *status = 1;
             ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (09).");
@@ -2316,8 +2501,10 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         if (!rasterXlog) ppl_linRaster(rasterX, rasterXmin, rasterXmax, rasterXlen);
         else ppl_logRaster(rasterX, rasterXmin, rasterXmax, rasterXlen);
 
+        // Make the raster of y values, when sampling a grid
         if (sampleGrid) {
             rasterY = (double *) ppl_memAlloc(rasterYlen * sizeof(double));
+            // Failure to allocate memory is reported as an error
             if (rasterY == NULL) {
                 *status = 1;
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (10).");
@@ -2374,10 +2561,12 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         int pos = ptab[PARSE_INDEX_every_list] + stkbase;
         const int o = ptab[PARSE_INDEX_every_item];
         if (o > 0)
+            // Read each item of the every modifier
             while (stk[pos].objType == PPLOBJ_NUM) {
                 long x;
                 pos = (int) round(stk[pos].real);
                 if (pos <= 0) break;
+                // There may be no more than six items
                 if (Nevery >= 6) {
                     ppl_warning(&c->errcontext, ERR_SYNTAX,
                                 "More than six numbers supplied to the every modifier -- trailing entries ignored.");
@@ -2410,10 +2599,13 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         int pos = ptab[PARSE_INDEX_using_list] + stkbase;
         const int o = ptab[PARSE_INDEX_using_item];
 
+        // Walk the linked list of using items on the parser stack
         if (o > 0)
+            // Each using item
             while (stk[pos].objType == PPLOBJ_NUM) {
                 pos = (int) round(stk[pos].real);
                 if (pos <= 0) break;
+                // There is a fixed limit on the number of using items
                 if (Nusing >= USING_ITEMS_MAX) {
                     *status = 1;
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Too many using items; maximum of %d are allowed.",
@@ -2421,6 +2613,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
+                // Each item is an expression, or blank for the default
                 if (stk[pos + o].objType == PPLOBJ_EXP) {
                     usingExprs[Nusing] = (pplExpr *) stk[pos + o].auxil;
                     hadNonNullUsingItem = 1;
@@ -2442,6 +2635,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             usingExprs[1] = usingExprs[0];
             ppl_snprintfTrunc(ascii, sizeof(ascii), "%d", 0);
             ppl_expCompile(c, pl->srcLineN, pl->srcId, pl->srcFname, ascii, &end, 0, 0, 0, &exptmp, &ep, &es, errtext);
+            // Report a failure to compile the default using expression
             if (es || c->errStat.status) {
                 ppl_tbClear(c);
                 *status = 1;
@@ -2452,6 +2646,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
             usingExprs[0] = pplExpr_tmpcpy(exptmp);
             pplExpr_free(exptmp);
             exptmp = NULL;
+            // Failure to allocate memory is reported as an error
             if (usingExprs[0] == NULL) {
                 *status = 1;
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (12).");
@@ -2467,6 +2662,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         int logi = 0, logj;
         ppl_snprintfTrunc(msg + logi, sizeof(msg) - (logi), "Using ");
         logi += strlen(msg + logi);
+        // Log each using item
         for (logj = 0; logj < Nusing; logj++) {
             if (logj == 0) msg[logi++] = ':';
             ppl_snprintfTrunc(msg + logi, sizeof(msg) - (logi), "%s", usingExprs[logj]->ascii);
@@ -2477,6 +2673,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
     // Check that number of using items matches number required
     if ((Ncols < 1) && (Nusing > 0))
         Ncols = Nusing; // If number of columns is specified as -1, any number of columns will do
+    // The number of using items must match the number of columns needed
     if ((Ncols >= 0) && (Nusing != Ncols)) {
         *status = 1;
         ppl_snprintfTrunc(
@@ -2504,6 +2701,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 if (pos <= 0) break;
                 Nexprs++;
             }
+            // There must be at least one expression
             if (Nexprs < 1) {
                 *status = 1;
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Fewer than one expression was supplied to evaluate.");
@@ -2511,18 +2709,22 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 return;
             }
             exprList = (pplExpr **) ppl_memAlloc(Nexprs * sizeof(pplExpr *));
+            // Failure to allocate memory is reported as an error
             if (exprList == NULL) {
                 *status = 1;
                 ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (13).");
                 if (DEBUG) ppl_log(&c->errcontext, errtext);
                 return;
             }
+            // Collect the expressions from the linked list on the parser stack
             for (i = 0, pos = pos1; stk[pos].objType == PPLOBJ_NUM; i++) {
                 pos = (int) round(stk[pos].real);
                 if (pos <= 0) break;
                 exprList[i] = (pplExpr *) stk[pos + ptab[PARSE_INDEX_expression]].auxil;
             }
 
+            // A single expression which evaluates to a string is a filename; expressions which evaluate to vectors
+            // supply vectors of data; others are functions to sample
             first = ppl_expEval(c, exprList[0], &i, 0, iterDepth);
             if ((!c->errStat.status) && (first->objType == PPLOBJ_STR) && (Nexprs == 1) &&
                 (rasterY == NULL)) // If we have a single expression that evaluates to a string, it's a filename
@@ -2539,15 +2741,18 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                 const int l = v->size;
                 int j;
                 vecs = (pplObj *) ppl_memAlloc(Nexprs * sizeof(pplObj));
+                // Failure to allocate memory is reported as an error
                 if (vecs == NULL) {
                     *status = 1;
                     ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Out of memory (14).");
                     if (DEBUG) ppl_log(&c->errcontext, errtext);
                     return;
                 }
+                // Evaluate each expression, which must be a vector of the same length as the first
                 for (i = 0; i < Nexprs; i++) {
                     int l2;
                     pplObj *obj = ppl_expEval(c, exprList[i], &j, 0, iterDepth);
+                    // Report a failure to evaluate the expression
                     if (c->errStat.status) {
                         *status = 1;
                         ppl_snprintfTrunc(errtext, PPL_MSG_LENGTH, "Could not evaluate vector expressions.");
@@ -2556,6 +2761,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                         if (DEBUG) ppl_log(&c->errcontext, errtext);
                         return;
                     }
+                    // The expression must evaluate to a vector
                     if (obj->objType != PPLOBJ_VEC) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2568,6 +2774,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                         return;
                     }
                     l2 = ((pplVector *) first->auxil)->v->size;
+                    // All the vectors must have the same length
                     if (l != l2) {
                         *status = 1;
                         ppl_snprintfTrunc(
@@ -2604,6 +2811,7 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
                                                          (parametric || XmaxSet) ? &rasterXmax : NULL, uX, &rX, &rXl);
                 }
 
+                // Sample the functions on the first pass only; later passes look for further files matching wildcards
                 if (wildcardMatchNumber <= 0)
                     ppldata_fromFuncs(c, out, exprList, Nexprs, rX, rXl, parametric, uX, rY, rYl, uY, usingExprs,
                                       autoUsingList, Ncols, NusingObjs, labelExpr, selectExpr, sortBy, continuity,
@@ -2623,5 +2831,6 @@ void ppldata_fromCmd(ppl_context *c, dataTable **out, const parserLine *pl, cons
         }
     }
 
+    // Done
     return;
 }

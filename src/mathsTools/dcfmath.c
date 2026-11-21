@@ -19,7 +19,9 @@
 
 // ----------------------------------------------------------------------------
 
-// A selection of useful mathematical functions which are not included in the standard C math library
+// Small mathematical helper functions which the standard C maths library lacks: minima and maxima, signs, unit
+// conversion between degrees and radians, linear and logarithmic rasters of sample points, sorting, and the greatest
+// common divisor. They are used throughout Pyxplot's calculation and plotting code.
 
 #define _PPL_DCFMATH_C 1
 
@@ -37,6 +39,7 @@ double ppl_machineEpsilon;
 
 void ppl_makeMachineEpsilon() {
     ppl_machineEpsilon = 1.0;
+    // Halve epsilon until adding half of it to one makes no difference
     do { ppl_machineEpsilon /= 2.0; } while ((1.0 + (ppl_machineEpsilon / 2.0)) != 1.0);
     return;
 }
@@ -158,6 +161,7 @@ int ppl_dblSort(const void *a, const void *b) {
 //! \return The greatest common divisor of <a> and <b>
 
 int ppl_gcd(int a, int b) {
+    // Euclid's algorithm: replace (a, b) with (b, a mod b) until b is zero
     while (b > 0) {
         const int tmp = a % b;
         a = b;

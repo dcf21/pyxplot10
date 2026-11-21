@@ -19,8 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
-// This file contains various numerical constants which are used by the eps
-// generation routines
+// Basic functions used by all of the code which writes postscript: setting the line and fill colors, line width and
+// line type, and tracking the bounding box of what has been drawn. The last color, width and type written are
+// remembered, so that postscript commands are only written when they change. A color of "" means invisible ink, in
+// which case nothing need be drawn.
 
 #define _PPL_EPS_CORE_C 1
 
@@ -56,6 +58,7 @@ void eps_core_clear(EPSComm *x) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void eps_core_WritePSColor(EPSComm *x) {
+    // Write the color only if it has changed, and is not invisible
     if ((strcmp(x->CurrentColor, x->LastPSColor) != 0) && (x->CurrentColor[0] != '\0')) {
         ppl_snprintfTrunc(x->LastPSColor, sizeof(x->LastPSColor), "%s", x->CurrentColor);
         fprintf(x->epsbuffer, "%s\n", x->LastPSColor);
@@ -80,6 +83,7 @@ int eps_core_isVisible(const EPSComm *x) {
 void eps_core_SetColor(EPSComm *x, withWords *ww, const unsigned char WritePS) {
     // Color may be specified as a named color, or as RGB components, or may not be specified at all, in which case we use black
     if (ww->USEcolor1234) {
+        // Colors with non-finite components are drawn in black
         if ((!gsl_finite(ww->color1)) || (!gsl_finite(ww->color2)) || (!gsl_finite(ww->color3))) {
             snprintf(x->CurrentColor, sizeof(x->CurrentColor), "0 0 0 setrgbcolor");
         } else if ((ww->Col1234Space == SW_COLSPACE_CMYK) && (!gsl_finite(ww->color4))) {
@@ -148,6 +152,7 @@ void eps_core_SetFillColor(EPSComm *x, withWords *ww) {
                                                   (void *) SW_COLOR_CMYK_K, sizeof(double)));
     else strcpy(x->CurrentFillColor, ""); // If no fill color is specified, we don't fill
 
+    // Done
     return;
 }
 
@@ -161,6 +166,7 @@ void eps_core_SwitchTo_FillColor(EPSComm *x, const unsigned char WritePS) {
     ppl_snprintfTrunc(
             TempColor, sizeof(TempColor), "%s",
             x->CurrentColor); // Buffer the color we're stroking with so we can restore it in eps_core_SwitchFrom_FillColor
+    // Write the fill color only if it has changed, and is not invisible
     if ((strcmp(x->CurrentFillColor, x->LastPSColor) != 0) && WritePS && (x->CurrentFillColor[0] != '\0')) {
         ppl_snprintfTrunc(x->LastPSColor, sizeof(x->LastPSColor), "%s", x->CurrentFillColor);
         fprintf(x->epsbuffer, "%s\n", x->LastPSColor);
@@ -176,6 +182,7 @@ void eps_core_SwitchTo_FillColor(EPSComm *x, const unsigned char WritePS) {
 //! \param [in] WritePS - If true, also write the postscript command to set the color
 
 void eps_core_SwitchFrom_FillColor(EPSComm *x, const unsigned char WritePS) {
+    // Write the line color only if it has changed, and is not invisible
     if ((strcmp(TempColor, x->LastPSColor) != 0) && WritePS && (TempColor[0] != '\0')) {
         ppl_snprintfTrunc(x->LastPSColor, sizeof(x->LastPSColor), "%s", TempColor);
         fprintf(x->epsbuffer, "%s\n", x->LastPSColor);

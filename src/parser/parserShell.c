@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Dispatches each command, once parserExecute.c has evaluated its parameters, to the function which implements it,
+// mostly in commands/ and canvasItems.c. A few short commands, such as pwd, quit, reset and !, are implemented here
+// directly. Lines which are bare expressions are evaluated, printed, and stored in the variable ans.
+
 #define _PARSERSHELL_C 1
 
 #include <stdio.h>
@@ -81,6 +85,7 @@
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int interactive, const int iterDepth) {
+    // d is the name of the command, as stored by the parser in the first slot of the output stack
     char msg[PPL_MSG_LENGTH];
     int contextNew;
     pplObj *stk = in->stk;
@@ -93,9 +98,11 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
         pplExpr *expr = (pplExpr *) stk[PARSE_arc_directive].auxil;
         pplObj *val = ppl_expEval(c, expr, &lastOpAssign, 1, iterDepth + 1);
         if (c->errStat.status) return; // On error, stop
+        // Print the value of the expression, unless it was an assignment, e.g. x=1
         if (!lastOpAssign) {
             // Print the result, in a heap buffer to keep this recursive function's stack frame small
             char *out = (char *) malloc(LSTR_LENGTH);
+            // Failure to allocate memory is reported as an error
             if (out == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             } else {
@@ -153,6 +160,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
         ppl_directive_cd(c, pl, in);
     else if ((strcmp(d, "circle") == 0) || (strcmp(d, "arc") == 0))
         ppl_directive_circle(c, pl, in, interactive, iterDepth);
+    // clear: empty the multiplot canvas, and tell the child process to close any windows showing old plots
     else if (strcmp(d, "clear") == 0) {
         ppl_directive_clear(c, pl, in, interactive);
         pplcsp_sendCommand(c, "A\n");
@@ -173,9 +181,12 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     else if (strcmp(d, "history") == 0) ppl_directive_history(c, pl, in);
     else if (strcmp(d, "if") == 0) ppl_directive_if(c, pl, in, interactive, iterDepth);
     else if (strcmp(d, "image") == 0) ppl_directive_image(c, pl, in, interactive, iterDepth);
+    // interpolate 2d, or interpolate bmp_r, bmp_g or bmp_b, which read one color channel of a bitmap image; the fifth
+    // character of the keyword identifies the channel
     else if (strcmp(d, "interpolate2d") == 0) {
         int type = INTERP_2D;
         char *tempstr = (char *) stk[PARSE_interpolate2d_bmp].auxil;
+        // Choose the type of interpolation from the keyword, if one was given
         if (stk[PARSE_interpolate2d_bmp].objType == PPLOBJ_STR) switch (tempstr[4]) {
                 case 'r':
                     type = INTERP_BMPR;
@@ -197,13 +208,16 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     else if (strcmp(d, "minimise") == 0) ppl_directive_minimise(c, pl, in, interactive, iterDepth);
     else if (strcmp(d, "move") == 0) ppl_directive_move(c, pl, in, interactive, iterDepth);
     else if (strcmp(d, "piechart") == 0) ppl_directive_piechart(c, pl, in, interactive, iterDepth);
+    // ! runs a shell command, and warns if it fails
     else if (strcmp(d, "pling") == 0) {
         int status = system((char *) stk[PARSE_pling_cmd].auxil);
+        // The command exited: warn about a non-zero exit status
         if (WIFEXITED(status)) {
             int ec = WEXITSTATUS(status);
             if (ec) {
                 if (DEBUG) ppl_log(&c->errcontext, "Pling command received non-zero return value.");
             }
+            // Report the non-zero exit status
             if (ec) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Shell returned exit code %d.", ec);
                 ppl_warning(&c->errcontext, ERR_GENERIC, msg);
@@ -222,9 +236,12 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     else if (strcmp(d, "print") == 0) ppl_directive_print(c, pl, in);
     else if (strcmp(d, "pwd") == 0) ppl_report(&c->errcontext, c->errcontext.session_default.cwd);
     else if (strcmp(d, "quit") == 0) c->shellExiting = 1;
+    // refresh: redraw the multiplot canvas, if the display is switched on
     else if (strcmp(d, "refresh") == 0) {
+        // Draw the canvas, with a buffer in which to record any items which could not be drawn
         if (c->set->term_current.display == SW_ONOFF_ON) {
             unsigned char *unsuccessful_ops = (unsigned char *) malloc(MULTIPLOT_MAXINDEX);
+            // Failure to allocate memory is reported as an error
             if (unsuccessful_ops == NULL) {
                 ppl_error(&c->errcontext, ERR_MEMORY, -1, -1, "Out of memory.");
             } else {
@@ -234,11 +251,13 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
             }
         }
     } else if (strcmp(d, "replot") == 0) ppl_directive_plot(c, pl, in, interactive, iterDepth, 1);
+    // reset: restore every setting to its default value, and clear the multiplot canvas
     else if (strcmp(d, "reset") == 0) {
         int i;
         c->set->term_current = c->set->term_default;
         c->set->graph_current = c->set->graph_default;
 
+        // Restore the default palettes
         for (i = 0; i < PALETTE_LENGTH; i++) {
             c->set->palette_current[i] = c->set->palette_default[i];
             c->set->paletteS_current[i] = c->set->paletteS_default[i];
@@ -247,6 +266,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
             c->set->palette3_current[i] = c->set->palette3_default[i];
             c->set->palette4_current[i] = c->set->palette4_default[i];
         }
+        // Restore the default settings of every axis
         for (i = 0; i < MAX_AXES; i++) {
             pplaxis_destroy(c, &(c->set->XAxes[i]));
             pplaxis_copy(c, &(c->set->XAxes[i]), &(c->set->XAxesDefault[i]));
@@ -255,6 +275,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
             pplaxis_destroy(c, &(c->set->ZAxes[i]));
             pplaxis_copy(c, &(c->set->ZAxes[i]), &(c->set->ZAxesDefault[i]));
         }
+        // Restore the default numbered plot styles, and then the default arrows and labels
         for (i = 0; i < MAX_PLOTSTYLES; i++) {
             ppl_withWordsDestroy(c, &(c->set->plot_styles[i]));
             ppl_withWordsCpy(c, &(c->set->plot_styles[i]), &(c->set->plot_styles_default[i]));
@@ -282,6 +303,7 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     else if (strcmp(d, "unset_error") == 0) ppl_directive_unseterror(c, pl, in, interactive);
     else if (strcmp(d, "while") == 0) ppl_directive_while(c, pl, in, interactive, iterDepth);
     else if (strcmp(d, "with") == 0) ppl_directive_with(c, pl, in, interactive, iterDepth);
+    // Any other command is missing from this list, which is an internal error
     else {
         snprintf(c->errStat.errBuff, LSTR_LENGTH, "Unimplemented command: %s", d);
         ppl_tbAddLine(c, pl, ERR_INTERNAL, 0, "");
@@ -290,5 +312,6 @@ void ppl_parserShell(ppl_context *c, parserLine *pl, parserOutput *in, const int
     // Ascend out of memory context
     ppl_memAlloc_AscendOutOfContext(contextNew);
 
+    // The command has been run
     return;
 }

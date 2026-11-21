@@ -19,7 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for memory management
+// Pyxplot's pool memory allocator. Memory for short-lived objects, such as the results of parsing a command, is
+// allocated in numbered contexts, which are nested; when Pyxplot has finished with a context, everything allocated in
+// it, and in any deeper context, is freed at once. This avoids having to free many small allocations individually, and
+// is much faster than calling malloc() for each of them.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,6 +33,7 @@
 
 #include "coreUtils/memAlloc.h"
 
+// The maximum number of nested allocation contexts
 #define PPL_MAX_CONTEXTS 250
 
 // ppl_memAlloc_memory functions
@@ -69,14 +73,17 @@ void fastmalloc_init() {
     int i;
     if (_fastmalloc_initialised == 1) return;
 
+    // Allocate the arrays which record the chain of blocks belonging to each context
     _fastmalloc_firstblocklist = (void **) malloc(PPL_MAX_CONTEXTS * sizeof(void *));
     _fastmalloc_currentblocklist = (void **) malloc(PPL_MAX_CONTEXTS * sizeof(void *));
     _fastmalloc_currentblock_alloc_ptr = (long *) malloc(PPL_MAX_CONTEXTS * sizeof(long));
 
+    // Every context starts with no blocks
     for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_firstblocklist[i] = NULL;
     for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_currentblocklist[i] = NULL;
     for (i = 0; i < PPL_MAX_CONTEXTS; i++) _fastmalloc_currentblock_alloc_ptr[i] = 0;
 
+    // Reset the statistics
     _fastmalloc_callcount = 0;
     _fastmalloc_bytecount = 0.0;
     _fastmalloc_malloccount = 0;
@@ -90,8 +97,10 @@ void fastmalloc_init() {
 void fastmalloc_freeall(const int context) {
     int i;
     void *ptr, *ptr2;
+    // Free the chain of blocks belonging to each context, from <context> downwards
     for (i = context; i < PPL_MAX_CONTEXTS; i++) {
         ptr = _fastmalloc_firstblocklist[i];
+        // The first word of each block points to the next block in the chain
         while (ptr != NULL) {
             ptr2 = *((void **) ptr);
             free(ptr);
@@ -111,6 +120,7 @@ void fastmalloc_freeall(const int context) {
 void fastmalloc_free(const int context) {
     void *ptr, *ptr2;
     ptr = _fastmalloc_firstblocklist[context];
+    // Free the chain of blocks; the first word of each block points to the next block in the chain
     while (ptr != NULL) {
         ptr2 = *((void **) ptr);
         free(ptr);
@@ -126,6 +136,7 @@ void fastmalloc_free(const int context) {
 
 void fastmalloc_close() {
     if (_fastmalloc_initialised == 0) return;
+    // Log how many calls to malloc() were saved
     if (DEBUG) {
         ppl_snprintfTrunc(
                 temp_merr_string, sizeof(temp_merr_string),
@@ -150,11 +161,14 @@ void fastmalloc_close() {
 //! \return Pointer to the allocated memory, or NULL on failure
 
 void *fastmalloc(int context, int size) {
+    // ptr is a newly-malloced block, if one is needed; out is the memory returned to the caller
     void *ptr, *out;
 
+    // Keep statistics
     _fastmalloc_callcount++;
     _fastmalloc_bytecount += size;
 
+    // Check that the context number is valid
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                           "FastMalloc asked to malloc memory in an unrecognised context %d.", context);
@@ -162,27 +176,34 @@ void *fastmalloc(int context, int size) {
         return NULL;
     }
 
+    // If the context has no blocks yet, or its current block does not have room, start a new block
     if ((_fastmalloc_currentblocklist[context] == NULL) ||
         (size > (FM_BLOCKSIZE - 2 - _fastmalloc_currentblock_alloc_ptr[context]))) // We need to malloc a new block
     {
         _fastmalloc_malloccount++;
+        // An allocation which would not fit in a standard block gets a block of its own, big enough to hold it after
+        // the link pointer and padding
         if (size > FM_BLOCKSIZE - sizeof(void **)) {
+            // Log the creation of the block
             if (MEMDEBUG1) {
                 ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                                   "Fastmalloc creating block of size %d bytes at memory level %d.", size, context);
                 (*mem_log)(errcontext, temp_merr_string);
             }
+            // Allocate the block
             if ((ptr = malloc(size + SYNCSTEP + sizeof(void **))) == NULL) {
                 (*mem_error)(errcontext, 100, -1, -1, "Out of memory.");
                 return NULL;
             } // This is a big malloc which needs to new block to itself
         } else {
+            // Log the creation of the block
             if (MEMDEBUG1) {
                 ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                                   "Fastmalloc creating block of size %d bytes at memory level %d.", FM_BLOCKSIZE,
                                   context);
                 (*mem_log)(errcontext, temp_merr_string);
             }
+            // Allocate a standard-sized block
             if ((ptr = malloc(FM_BLOCKSIZE)) == NULL) {
                 (*mem_error)(errcontext, 100, -1, -1, "Out of memory.");
                 return NULL;
@@ -193,6 +214,8 @@ void *fastmalloc(int context, int size) {
             _fastmalloc_firstblocklist[context] = ptr; // Insert link into previous block in chain
         else *((void **) _fastmalloc_currentblocklist[context]) = ptr;
         _fastmalloc_currentblocklist[context] = ptr;
+        // Allocations begin after the link to the next block, rounded up to a multiple of SYNCSTEP bytes; the
+        // allocation itself is likewise rounded up, so that every allocation is aligned
         _fastmalloc_currentblock_alloc_ptr[context] =
                 (sizeof(void **) + (SYNCSTEP - 1)); // Fastforward over link to next block
         _fastmalloc_currentblock_alloc_ptr[context] -= (_fastmalloc_currentblock_alloc_ptr[context] % SYNCSTEP);
@@ -247,16 +270,19 @@ void ppl_memAlloc_MemoryStop() {
 //! \return The number of the new allocation context, or -1 on failure
 
 int ppl_memAlloc_DescendIntoNewContext() {
+    // The memory management system must have been initialised
     if (ppl_memAlloc_mem_context < 0) {
         (*mem_error)(errcontext, 100, -1, -1,
                      "Call to ppl_memAlloc_DescendIntoNewContext() before call to ppl_memAlloc_MemoryInit().");
         return -1;
     }
+    // Refuse to go deeper than the maximum number of contexts
     if (ppl_memAlloc_mem_context >= (PPL_MAX_CONTEXTS + 1)) {
         (*mem_error)(errcontext, 100, -1, -1, "Too many memory contexts.");
         return -1;
     }
     _ppl_memAlloc_SetMemContext(ppl_memAlloc_mem_context + 1);
+    // Log the change of context
     if (MEMDEBUG1) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Descended into memory context %d.",
                           ppl_memAlloc_mem_context);
@@ -271,18 +297,22 @@ int ppl_memAlloc_DescendIntoNewContext() {
 //! \return The number of the current allocation context after freeing, or -1 on failure
 
 int ppl_memAlloc_AscendOutOfContext(const int context) {
+    // The memory management system must have been initialised. If <context> has already been freed, there is nothing to
+    // do.
     if (ppl_memAlloc_mem_context < 0) {
         (*mem_error)(errcontext, 100, -1, -1,
                      "Call to ppl_memAlloc_AscendOutOfContext() before call to ppl_memAlloc_MemoryInit().");
         return -1;
     }
     if (context > ppl_memAlloc_mem_context) return ppl_memAlloc_mem_context;
+    // Context zero is never freed
     if (context <= 0) {
         (*mem_error)(
                 errcontext, 100, -1, -1,
                 "Call to ppl_memAlloc_AscendOutOfContext() attempting to ascend out of lowest possible memory context.");
         return -1;
     }
+    // Log the change of context
     if (MEMDEBUG1) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Ascending out of memory context %d.",
                           ppl_memAlloc_mem_context);
@@ -297,6 +327,7 @@ int ppl_memAlloc_AscendOutOfContext(const int context) {
 //! \param [in] context - The number of the allocation context to make current
 
 void _ppl_memAlloc_SetMemContext(int context) {
+    // Check that the context number is valid
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                           "ppl_memAlloc_SetMemContext passed unrecognised context number %d.", context);
@@ -325,6 +356,7 @@ void ppl_memAlloc_FreeAll(int context) {
     if (ppl_memAlloc_mem_context < 0) return; // Memory management not initialised
     latch = 1;
 
+    // Check that the context number is valid
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                           "ppl_memAlloc_FreeAll() passed unrecognised context %d.", context);
@@ -333,6 +365,7 @@ void ppl_memAlloc_FreeAll(int context) {
         return;
     }
 
+    // Log the freeing of memory
     if (MEMDEBUG1) {
         sprintf(temp_merr_string, "Freeing all memory down to level %d.", context);
         (*mem_log)(errcontext, temp_merr_string);
@@ -352,6 +385,7 @@ void ppl_memAlloc_Free(int context) {
     if (latch == 1) return; // Prevent recursive calls
     latch = 1;
 
+    // Check that the context number is valid
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                           "ppl_memAlloc_Free() passed unrecognised context %d.", context);
@@ -360,6 +394,7 @@ void ppl_memAlloc_Free(int context) {
         return;
     }
 
+    // Log the freeing of memory
     if (MEMDEBUG1) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Freeing all memory down in level %d.", context);
         (*mem_log)(errcontext, temp_merr_string);
@@ -377,6 +412,7 @@ void ppl_memAlloc_Free(int context) {
 void *ppl_memAlloc(int size) {
     void *out;
 
+    // Check that there is a valid current context
     if ((ppl_memAlloc_mem_context < 0) || (ppl_memAlloc_mem_context >= PPL_MAX_CONTEXTS)) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                           "ppl_memAlloc_malloc() using unrecognised context %d.", ppl_memAlloc_mem_context);
@@ -384,12 +420,14 @@ void *ppl_memAlloc(int size) {
         return NULL;
     }
 
+    // Log the allocation
     if (MEMDEBUG2) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Request to malloc %d bytes at memory level %d.",
                           size, ppl_memAlloc_mem_context);
         (*mem_log)(errcontext, temp_merr_string);
     }
     out = fastmalloc(ppl_memAlloc_mem_context, size);
+    // Report failure to allocate memory
     if (out == NULL) {
         (*mem_error)(errcontext, 100, -1, -1, "Out of memory.");
         return NULL;
@@ -406,6 +444,7 @@ void *ppl_memAlloc(int size) {
 void *ppl_memAlloc_incontext(int size, int context) {
     void *out;
 
+    // Check that the context number is valid
     if ((context < 0) || (context >= PPL_MAX_CONTEXTS)) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string),
                           "ppl_memAlloc_incontext() passed unrecognised context %d.", context);
@@ -413,12 +452,14 @@ void *ppl_memAlloc_incontext(int size, int context) {
         return NULL;
     }
 
+    // Log the allocation
     if (MEMDEBUG2) {
         ppl_snprintfTrunc(temp_merr_string, sizeof(temp_merr_string), "Request to malloc %d bytes at memory level %d.",
                           size, context);
         (*mem_log)(errcontext, temp_merr_string);
     }
     out = fastmalloc(context, size);
+    // Report failure to allocate memory
     if (out == NULL) {
         (*mem_error)(errcontext, 100, -1, -1, "Out of memory.");
         return NULL;

@@ -1,0 +1,23 @@
+helpers
+=======
+
+Small stand-alone programs which are built and installed alongside Pyxplot.
+They share Pyxplot's string-handling and utility code, but not its
+interpreter.
+
+pyxplot_fitshelper.c
+    An input filter which converts FITS files into plain text, listing the
+    headers of each extension and the contents of its tables. Pyxplot runs it
+    automatically to read files ending in .fits. Without the cfitsio library,
+    it is a dummy which reports that FITS files are not supported.
+
+pyxplot_timehelper.sh
+    An input filter: a shell script which uses sed to replace the names of
+    days and months with numbers, so that dates written as text can be read by
+    Pyxplot. Pyxplot runs it by default to read files ending in .log, such as
+    web server logs.
+
+pyxplot_watch.c
+    The pyxplot_watch program, which watches a list of script files (which may
+    be given as wildcards) and runs Pyxplot on each of them whenever it is
+    modified.

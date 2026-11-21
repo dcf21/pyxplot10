@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Fills regions of graphs bounded by paths through data points, for the filledregion and yerrorshaded plot styles, and
+// for boxes (eps_plot_styles.c). The outline is collected point by point; where it crosses the edges of the graph, it
+// is clipped by walking around the edges of the graph between the crossing points, inserting the corners, so that only
+// the part of the region within the graph is filled and, optionally, stroked. Points where the outline crosses itself
+// flip which side of it is to be filled.
+
 #define _PPL_EPS_PLOT_FILLEDREGION_C 1
 
 #include <stdlib.h>
@@ -91,6 +97,7 @@ FilledRegionHandle *FilledRegion_Init(EPSComm *x, pplset_axis *xa, pplset_axis *
 //! \param [in] y - The y coordinate of the point, in data coordinates
 
 void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, const double x, const double y) {
+    // Variables for placing the point and finding where the outline crosses the edges of the graph
     FilledRegionPoint p;
     double xpos, ypos, depth, xap, yap, zap, ap1, ap2;
     unsigned char f1, f2;
@@ -102,6 +109,7 @@ void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, const double x, cons
                          fr->ya, fr->za, fr->xrn, fr->yrn, fr->zrn, fr->sg, fr->origin_x, fr->origin_y, fr->width,
                          fr->height, fr->zdepth, 1);
 
+    // Points which cannot be placed on the page are skipped
     if ((!gsl_finite(xpos)) || (!gsl_finite(ypos)) || (!gsl_finite(depth))) { return; }
 
     // Add this to a list of points describing the outline of the region which we are going to fill
@@ -115,6 +123,8 @@ void FilledRegion_Point(EPSComm *X, FilledRegionHandle *fr, const double x, cons
     p.xap = xap;
     p.yap = yap;
 
+    // Add the point to the outline, and count how many times the segment from the previous point crosses the edges of
+    // the graph
     ppl_listAppendCpy(fr->points, (void *) &p, sizeof(p));
 
     // Count the number of times which the path crosses the boundary of the clip region
@@ -179,6 +189,8 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
     else if (dir_y == -1) Y -= fabs(1e-15 * X);
     else if (dir_y == 1) Y += fabs(1e-15 * X);
 
+    // Count how many segments of the outline cross a ray from the point in the chosen direction; an odd number means
+    // the point is inside
     Npoints = fr->points->length;
     li2 = fr->points->first;
     p2 = (FilledRegionPoint *) (li2->data);
@@ -193,6 +205,7 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
 
         // Count how many segments cross lines travelling out up/left/down/right from (X,Y)
 
+        // A vertical ray, or a horizontal one
         if (dir_x == 0) {
             y_intersect =
                     (p2->y - p1->y) / (p2->x - p1->x) * (X - p1->x) + p1->y; // y point where line p1->p2 intersects x=X
@@ -223,15 +236,18 @@ static unsigned char TestPointInside(const FilledRegionHandle *fr, double X, dou
 
 static void psPoint(FilledRegionHandle *fr, const double X, const double Y, unsigned char *first_subpath,
                     unsigned char *first_point, const double linewidth) {
+    // Log progress in debugging mode
     if (DEBUG) {
         char msg[PPL_MSG_LENGTH];
         ppl_snprintfTrunc(msg, sizeof(msg), "Hopping to (%e,%e).", X, Y);
         ppl_log(&fr->x->c->errcontext, msg);
     }
+    // Start a new path, if this is the first point
     if (*first_subpath) {
         fprintf(fr->x->epsbuffer, "newpath ");
         *first_subpath = 0;
     }
+    // Move to the first point of each subpath, and draw lines to the others
     if (*first_point) {
         fprintf(fr->x->epsbuffer, "%.2f %.2f moveto\n", X, Y);
         *first_point = 0;
@@ -261,9 +277,12 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
 
     // Loop over multiple detached segments of filled region which may be caused by clipping it into pieces
     if (DEBUG) { ppl_log(&fr->x->c->errcontext, "New filled region."); }
+    // Draw each separate piece of the region which lies within the graph, starting from a crossing point which has not
+    // yet been used
     while (!fail) {
         // Find an axis crossing point which is unique
         l = -1;
+        // Prefer a crossing point which does not coincide with its neighbours
         for (i = 0; i < nac; i++) {
             if (CrossPointList[i].used) continue;
             l = i; // Fallback option; an unused crossing point
@@ -273,6 +292,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             if ((CrossPointList[i].x == CrossPointList[j].x) && (CrossPointList[i].y == CrossPointList[j].y)) continue;
             break;
         }
+        // Stop when all crossing points have been used
         if (l == -1) {
             if (DEBUG) { ppl_log(&fr->x->c->errcontext, "All axis-crossing points used."); }
             break;
@@ -284,6 +304,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             int i;
             ppl_log(&fr->x->c->errcontext, "New segment of filled region.");
             ppl_log(&fr->x->c->errcontext, "Summary of axis crossing points:");
+            // Log each crossing point in debugging mode
             for (i = 0; i < nac; i++) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "%d %s (%e,%e) face %d position %.4f sense %s %s", i,
                                   CrossPointList[i].used ? "[used]" : "      ", CrossPointList[i].x,
@@ -296,6 +317,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
 
         // Work out which face first axis crossing is on, and which direction we're moving going to next item in crossing point list
         face = CrossPointList[i].AxisFace;
+        // The direction in which the edge of the graph runs, anticlockwise, from this crossing point
         if (face == FACE_TOP) {
             dir_x = -1;
             dir_y = 0;
@@ -313,11 +335,14 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
 
         // Decide whether we are proceeding clockwise or anticlockwise around the region we're going to fill
         FillSide = inside_ahead;
+        // Log the direction of travel in debugging mode
         if (DEBUG) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Starting from %d; filling on %s.", i, FillSide ? "right" : "left");
             ppl_log(&fr->x->c->errcontext, msg);
         }
 
+        // Follow the outline inside the graph to the next crossing, then along the edge of the graph to the next
+        // crossing back in, until the piece is closed
         while (1) {
             CrossPointList[i].used = 1;
             if (CrossPointList[i].singleton) // Move along a line segment which streaks across canvas in one step
@@ -329,11 +354,13 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 if (((FilledRegionPoint *) CrossPointList[i].point->data)->FillSideFlip_prv % 2) FillSide = !FillSide;
                 for (inew = 0; inew < nac; inew++)
                     if (CrossPointList[inew].id == CrossPointList[i].twin) break;
+                // Report a missing twin crossing point
                 if (inew >= nac) {
                     ppl_error(&fr->x->c->errcontext, ERR_INTERNAL, -1, -1, "Failure within FilledRegion");
                     fail = 1;
                     break;
                 }
+                // Log the twin in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Twin of %d is %d.", i, inew);
                     ppl_log(&fr->x->c->errcontext, msg);
@@ -346,20 +373,24 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                         linewidth); // Cut point where line enters canvas
                 li = CrossPointList[i].point;
                 sense = CrossPointList[i].sense;
+                // Follow the outline from the crossing, in the direction which leads inside the graph
                 if (sense == OUTGOING) {
                     li = li->prev;
                     if (li == NULL) li = fr->points->last;
                 }
                 p = (FilledRegionPoint *) (li->data);
+                // Draw each point inside the graph, flipping the fill side where the outline crosses itself
                 while (p->inside) {
                     psPoint(fr, p->x, p->y, &first_subpath, &first_point, linewidth);
                     if ((sense == OUTGOING) && (p->FillSideFlip_fwd % 2)) FillSide = !FillSide;
                     else if ((sense == INCOMING) && (p->FillSideFlip_prv % 2)) FillSide = !FillSide;
                     lil = li;
+                    // Step backwards or forwards along the outline
                     if (sense == OUTGOING) {
                         li = li->prev;
                         if (li == NULL) li = fr->points->last;
                     } // Moving against flow in which line was originally drawn
+                    // Moving forwards
                     else {
                         li = li->next;
                         if (li == NULL) li = fr->points->first;
@@ -380,6 +411,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 }
                 psPoint(fr, CrossPointList[i].x, CrossPointList[i].y, &first_subpath, &first_point,
                         linewidth); // Cut point where line leaves canvas
+                // Log the crossing point in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Departed canvas at crossing point %d.", i);
                     ppl_log(&fr->x->c->errcontext, msg);
@@ -390,6 +422,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             // Skirt along edge of clip region to find next entry point
             for (k = i; ((CrossPointList[i].x == CrossPointList[k].x) && (CrossPointList[i].y == CrossPointList[k].y));
                  k = (k + 1) % nac)
+                // Use any other unused crossing point at the same place, flipping the fill side
                 if (!CrossPointList[k].used) {
                     i = k;
                     FillSide = !FillSide;
@@ -397,6 +430,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 }
             for (k = i; ((CrossPointList[i].x == CrossPointList[k].x) && (CrossPointList[i].y == CrossPointList[k].y));
                  k = (k + nac - 1) % nac)
+                // Use any other unused crossing point at the same place, flipping the fill side
                 if (!CrossPointList[k].used) {
                     i = k;
                     FillSide = !FillSide;
@@ -405,6 +439,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
             if (FillSide) j = (i + nac - 1) % nac; // Move anticlockwise around path
             else j = (i + 1) % nac; // Move clockwise around path
             CurrentFace = CrossPointList[i].AxisFace;
+            // Log the move along the edge in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(
                         msg, sizeof(msg),
@@ -419,6 +454,7 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                 double xap, yap;
                 const double xaps[6] = {9, 1, 0, 0, 1, 1};
                 const double yaps[6] = {9, 1, 1, 0, 0, 1};
+                // Add the corner at the end of this face of the graph, in the direction of travel
                 if (!FillSide) {
                     xap = xaps[CurrentFace + 1];
                     yap = yaps[CurrentFace + 1];
@@ -428,10 +464,12 @@ static void OutputPath(FilledRegionHandle *fr, FilledRegionAxisCrossing *CrossPo
                     yap = yaps[CurrentFace];
                     CurrentFace = ((CurrentFace + 2) % 4) + 1;
                 }
+                // Log the corner in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Corner (%e,%e)", xap, yap);
                     ppl_log(&fr->x->c->errcontext, msg);
                 }
+                // Place the corner on the page, in two or three dimensions
                 if (!fr->ThreeDim) {
                     psPoint(fr, fr->origin_x + fr->width * xap, fr->origin_y + fr->height * yap, &first_subpath,
                             &first_point, linewidth);
@@ -480,6 +518,7 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
     FilledRegionPoint *ct_pA, *ct_pB;
     const EPSComm *x = fr->x; // Makes if (eps_core_isVisible(x)) macro work
 
+    // Variables for finding where the outline crosses the edges of the graph, and where it crosses itself
     l = fr->points->length;
     li = fr->points->first;
     if (l < 2) return; // No points on outline to stroke
@@ -490,7 +529,9 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
     if (fr->Naxiscrossings < 1) {
         if (DEBUG) { ppl_log(&fr->x->c->errcontext, "New filled region never leaves clip region."); }
         if (DEBUG) { ppl_log(&fr->x->c->errcontext, "1. Fill it."); }
+        // If the outline never leaves the graph, simply fill it, unless the color is invisible
         if (eps_core_isVisible(x)) {
+            // Draw each point of the outline
             for (i = 0; i < l; i++) {
                 p = (FilledRegionPoint *) (li->data);
                 psPoint(fr, p->x, p->y, &first_subpath, &first_point, linewidth);
@@ -504,7 +545,9 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
         li = fr->points->first;
         first_point = first_subpath = 1;
         if (DEBUG) { ppl_log(&fr->x->c->errcontext, "2. Stroke its outline."); }
+        // Stroke the outline, unless the color is invisible
         if (eps_core_isVisible(x)) {
+            // Draw each point of the outline
             for (i = 0; i < l; i++) {
                 p = (FilledRegionPoint *) (li->data);
                 psPoint(fr, p->x, p->y, &first_subpath, &first_point, linewidth);
@@ -530,6 +573,7 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
     CrossPointList =
             (FilledRegionAxisCrossing *) ppl_memAlloc(fr->Naxiscrossings * 2 * sizeof(FilledRegionAxisCrossing));
     if (CrossPointList == NULL) return;
+    // Find where each segment of the outline crosses the edges of the graph, and where it crosses earlier segments
     for (i = 1, j = 0; i < l; i++) {
         p = (FilledRegionPoint *) (li->data);
         LineDraw_FindCrossingPoints(fr->x, lastx, lasty, 0, lastxap, lastyap, 0.5, p->x, p->y, 0, p->xap, p->yap, 0.5,
@@ -543,6 +587,7 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
         ct_li = fr->points->first;
         ct_pB = (FilledRegionPoint *) (ct_li->data);
         ct_li = ct_li->next;
+        // Test each earlier segment for an intersection with this one
         for (k = 1, kn = 0; k < (i - 1); k++) {
             ct_pA = ct_pB;
             ct_pB = (FilledRegionPoint *) (ct_li->data);
@@ -572,6 +617,7 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
 
         if (((!i1) || (!i2)) && (NCrossings > 0)) // We have crossed boundary
         {
+            // Record where the segment enters or leaves the graph
             if (!i1) {
                 CrossPointList[j].x = cx1;
                 CrossPointList[j].y = cy1;
@@ -583,6 +629,8 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
                 CrossPointList[j].AxisFace = f2;
                 CrossPointList[j].AxisPos = ap2;
             }
+            // A segment which crosses the whole graph enters and leaves it; it is recorded as a pair of twinned
+            // crossing points
             if ((!i1) && (!i2)) {
                 CrossPointList[j].x2 = cx2;
                 CrossPointList[j].y2 = cy2;
@@ -595,6 +643,7 @@ void FilledRegion_Finish(const EPSComm *X, FilledRegionHandle *fr, const int lin
             CrossPointList[j].used = 0;
             j++;
         }
+        // Record the second crossing point of a segment which crosses the whole graph
         if (((!i1) && (!i2)) && (NCrossings > 0)) {
             CrossPointList[j] = CrossPointList[j - 1];
             CrossPointList[j].x = cx2;

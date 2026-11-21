@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Compares Pyxplot objects, for the comparison operators (==, <, etc.), sorting and the cmp() function, and converts
+// colors between the RGB, HSB and CMYK color spaces. Objects of different types are ordered by type; within a type they
+// are compared by value, e.g. numbers numerically, strings alphabetically, and lists item by item.
+
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
@@ -93,11 +97,14 @@ void pplcol_CMYKtoRGB(const double ci, const double mi, const double yi, const d
 //! \param [out] bo - Blue component, 0-1
 
 void pplcol_HSBtoRGB(double hi, const double si, const double bi, double *ro, double *go, double *bo) {
+    // The standard conversion from HSB to RGB: ch is the chroma, h2 the hue in sixths of a turn, x the second-largest
+    // component, and m the amount added to every component to match the brightness
     const double ch = si * bi;
     double h2;
     const int h2i = (int) (h2 = hi * 6);
     const double x = ch * (1.0 - fabs(fmod(h2, 2) - 1.0));
     const double m = bi - ch;
+    // Which sixth of the color wheel the hue falls in determines the order of the components
     switch (h2i) {
         case 0:
             *ro = ch;
@@ -140,6 +147,7 @@ void pplcol_HSBtoRGB(double hi, const double si, const double bi, double *ro, do
     *go += m;
     *bo += m;
 
+    // Clip the components to the range 0-1
     if (*ro < 0) *ro = 0;
     if (*ro > 1) *ro = 1;
     if (*go < 0) *go = 0;
@@ -247,6 +255,8 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     const int t2o = pplObjTypeOrder[t2];
     if (cancellationFlag) return 0;
     if (iterDepth > 250) return 0;
+    // Objects of different types: an error when comparing for the user, or ordered by type when sorting quietly (when c
+    // is NULL)
     if ((c != NULL) && (t1o != t2o)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -260,9 +270,12 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
     if (t1o == 0) return -2; // 0 - nulls are never equal
     if (t1o == 2) // 2 - numbers or booleans
     {
+        // Numbers with different units are ordered by their units when sorting, but cannot be compared by the user
         if (!ppl_unitsDimEqual(a, b)) {
+            // Sorting: order by the exponents of the units
             if (c == NULL) {
                 int i;
+                // Compare the exponent of each base unit in turn
                 for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
                     if (a->exponent[i] < b->exponent[i]) return -1;
                     if (a->exponent[i] > b->exponent[i]) return 1;
@@ -318,6 +331,7 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
             pplcol_RGBtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], &h1, &s1, &b1);
         else if (round(a->exponent[0]) == SW_COLSPACE_CMYK)
             pplcol_CMYKtoHSB(a->exponent[8], a->exponent[9], a->exponent[10], a->exponent[11], &h1, &s1, &b1);
+        // Colors are compared by hue, then brightness, then saturation, so convert both to HSB
         else {
             h1 = a->exponent[8];
             s1 = a->exponent[9];
@@ -327,6 +341,7 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
             pplcol_RGBtoHSB(b->exponent[8], b->exponent[9], b->exponent[10], &h2, &s2, &b2);
         else if (round(b->exponent[0]) == SW_COLSPACE_CMYK)
             pplcol_CMYKtoHSB(b->exponent[8], b->exponent[9], b->exponent[10], b->exponent[11], &h2, &s2, &b2);
+        // The second color, likewise
         else {
             h2 = b->exponent[8];
             s2 = b->exponent[9];
@@ -349,10 +364,12 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         gsl_vector *bv = ((pplVector *) b->auxil)->v;
         if (av->size < bv->size) return -1;
         if (av->size > bv->size) return 1;
+        // Vectors are compared by length, then units, then element by element
         for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
             if (a->exponent[i] < b->exponent[i]) return -1;
             if (a->exponent[i] > b->exponent[i]) return 1;
         }
+        // Compare the elements in turn
         for (i = 0; i < av->size; i++) {
             if (gsl_vector_get(av, i) < gsl_vector_get(bv, i)) return -1;
             if (gsl_vector_get(av, i) > gsl_vector_get(bv, i)) return 1;
@@ -380,11 +397,13 @@ int pplObjCmp(ppl_context *c, const pplObj *a, const pplObj *b, int *status, int
         gsl_matrix *bm = ((pplMatrix *) b->auxil)->m;
         if (am->size1 * am->size2 < bm->size1 * bm->size2) return -1;
         if (am->size1 * am->size2 > bm->size1 * bm->size2) return 1;
+        // Matrices are compared by number of elements, then units, then element by element
         for (i = 0; i < UNITS_MAX_BASEUNITS; i++) {
             if (a->exponent[i] < b->exponent[i]) return -1;
             if (a->exponent[i] > b->exponent[i]) return 1;
         }
         for (i = 0; i < am->size1; i++)
+            // Compare the elements in turn
             for (j = 0; j < am->size2; j++) {
                 if (gsl_matrix_get(am, i, j) < gsl_matrix_get(bm, i, j)) return -1;
                 if (gsl_matrix_get(am, i, j) > gsl_matrix_get(bm, i, j)) return 1;

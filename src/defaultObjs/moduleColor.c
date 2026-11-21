@@ -19,6 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
+// The colors module's functions wavelength() and spectrum(), which compute the color seen by the eye for monochromatic
+// light of a given wavelength, or for a spectrum given as a function of wavelength. The light is weighted by the CIE
+// color-matching functions to give XYZ color coordinates, which are converted to RGB. The named colors themselves are
+// set up in defaultVars.c.
+
 // Parts of this source file are modified from public domain code by John
 // Walker, including corrections by Andrew J. S. Hamilton.
 
@@ -126,6 +131,7 @@ static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const doub
     double rx, ry, rz, gx, gy, gz, bx, by, bz;
     double rw, gw, bw;
 
+    // The chromaticity coordinates of the primaries of the color system, with z = 1 - x - y
     xr = cs->xRed;
     yr = cs->yRed;
     zr = 1 - (xr + yr);
@@ -136,6 +142,7 @@ static void xyz_to_rgb(const struct colorSystem *cs, const double xc, const doub
     yb = cs->yBlue;
     zb = 1 - (xb + yb);
 
+    // The chromaticity of the white point
     xw = cs->xWhite;
     yw = cs->yWhite;
     zw = 1 - (xw + yw);
@@ -223,12 +230,16 @@ static int constrain_rgb(double *r, double *g, double *b) {
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // p0 is the position of the wavelength within the table of CIE color-matching functions; i and j are the table
+    // entries either side of it, with weights wi and wj
     char *FunctionDescription = "wavelength(lambda,norm)";
     pplFuncCall call = {c, in, status, errType, errText, FunctionDescription};
     double p0, wi, wj, x, y, z, r, g, b, norm;
     int i, j;
 
+    // The wavelength must have units of length, and the normalisation must be dimensionless
     if (ppl_funcCheckUnit(&call, &in[0], "first", "a wavelength", UNIT_LENGTH, 1)) return;
+    // Report a normalisation with units
     if (!in[1].dimensionless) {
         *status = 1;
         *errType = ERR_UNIT;
@@ -240,8 +251,10 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     }
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
 
+    // Wavelengths outside the table (in nm) give black
     norm = in[1].real;
     p0 = ((in[0].real * 1e9) - CIE_WLEN_MIN) / CIE_WLEN_STEPSIZE;
+    // Outside the table
     if ((!gsl_finite(p0)) || (p0 < 0) || (p0 >= N_CIE_STEPS - 1)) {
         pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
         return;
@@ -255,6 +268,7 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
     if (wi > 1) wi = 1;
     wj = 1 - wi;
 
+    // Interpolate the color-matching functions at the wavelength, to get the XYZ coordinates
     x = cie_color_match[i][0] * wi + cie_color_match[j][0] * wj;
     y = cie_color_match[i][1] * wi + cie_color_match[j][1] * wj;
     z = cie_color_match[i][2] * wi + cie_color_match[j][2] * wj;
@@ -271,6 +285,7 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
         z *= gamma;
     }
 
+    // Convert to RGB, bring the color within the gamut which can be displayed, and scale it by the normalisation
     xyz_to_rgb(&SMPTEsystem, x, y, z, &r, &g, &b);
     if (!inside_gamut(r, g, b)) constrain_rgb(&r, &g, &b);
     r *= fabs(norm);
@@ -299,12 +314,14 @@ void pplfunc_colWavelen(ppl_context *c, pplObj *in, const int nArgs, int *status
 //! \param [out] errText - Character buffer into which to write an error message, if an error occurred
 
 void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *status, int *errType, char *errText) {
+    // x, y and z accumulate the XYZ coordinates of the spectrum
     char *FunctionDescription = "spectrum(spec,norm)";
     pplFunc *fi;
     const int stkLevelOld = c->stackPtr;
     double x = 0, y = 0, z = 0, r, g, b, norm;
     int i;
 
+    // The first argument must be a function
     if (in[0].objType != PPLOBJ_FUNC) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -315,6 +332,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         return;
     }
     fi = (pplFunc *) in[0].auxil;
+    // Magic functions, such as diff_d, cannot be called in this way
     if ((fi == NULL) || (fi->functionType == PPL_FUNC_MAGIC)) {
         *status = 1;
         *errType = ERR_TYPE;
@@ -324,6 +342,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
                 FunctionDescription);
         return;
     }
+    // The normalisation must be dimensionless
     if (!in[1].dimensionless) {
         *status = 1;
         *errType = ERR_UNIT;
@@ -335,10 +354,12 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
     }
     pplObjColor(&OUTPUT, 0, SW_COLSPACE_RGB, 0, 0, 0, 0);
 
+    // The normalisation, which scales the brightness of the result
     norm = in[1].real;
 
     // Check there's enough space on the stack
     ppl_stackMustHave(c, 4);
+    // Report a full stack
     if (c->stackFull) {
         *status = 1;
         *errType = ERR_MEMORY;
@@ -346,6 +367,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         return;
     }
 
+    // Evaluate the spectrum at each wavelength in the table, and weight it by the color-matching functions
     for (i = 0; i < N_CIE_STEPS; i++) {
         const double wlen = (CIE_WLEN_MIN + i * CIE_WLEN_STEPSIZE) * 1e-9;
         double w;
@@ -414,6 +436,7 @@ void pplfunc_colSpectrum(ppl_context *c, pplObj *in, const int nArgs, int *statu
         z *= gamma;
     }
 
+    // Convert to RGB, bring the color within the gamut which can be displayed, and scale it by the normalisation
     xyz_to_rgb(&SMPTEsystem, x, y, z, &r, &g, &b);
     if (!inside_gamut(r, g, b)) constrain_rgb(&r, &g, &b);
     r *= fabs(norm);

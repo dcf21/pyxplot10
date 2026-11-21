@@ -19,7 +19,11 @@
 
 // ----------------------------------------------------------------------------
 
-// This file contains routines for adding legends to plots
+// Draws the legend (key) of a graph. GraphLegend_YieldUpText() collects each dataset's title, or makes one
+// automatically from the plot command, to be typeset by LaTeX; GraphLegend_Render() then measures the typeset titles,
+// arranges them into columns, which are justified to fill the space available, and places the legend at the requested
+// position, beside the appropriate corner of the cube for three-dimensional plots, before drawing each entry's icon
+// (eps_plot_styles.c) and title.
 
 #define _PPL_EPS_PLOT_LEGEND_C 1
 
@@ -114,6 +118,7 @@ int eps_yieldTextItem(EPSComm *x, char *text) {
     CanvasTextItem *i;
     if ((text == NULL) || (text[0] == '\0')) return 0;
     i = (CanvasTextItem *) ppl_memAlloc(sizeof(CanvasTextItem));
+    // Failure to allocate memory is reported as an error
     if (i == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (q).");
         *(x->status) = 1;
@@ -134,6 +139,7 @@ int eps_yieldTextItem(EPSComm *x, char *text) {
 
 int eps_yieldTextItemCopy(EPSComm *x, const char *text) {
     char *out = (char *) ppl_memAlloc(strlen(text) + 1);
+    // Failure to allocate memory is reported as an error
     if (out == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (r).");
         *(x->status) = 1;
@@ -148,19 +154,24 @@ int eps_yieldTextItemCopy(EPSComm *x, const char *text) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void GraphLegend_YieldUpText(EPSComm *x) {
+    // Variables for building automatic titles
     canvas_plotdesc *pd;
     char *cptr, *buffer;
     int j, k, inlen;
 
+    // There is nothing to do if the key is turned off
     if (x->current->settings.key != SW_ONOFF_ON) return;
 
+    // Collect the title of each dataset in turn
     pd = x->current->plotitems;
     while (pd != NULL) // loop over all datasets
     {
+        // Datasets with notitle have no entry in the legend
         if (pd->NoTitleSet) {
             pd = pd->next;
             continue;
         } // notitle set
+        // Use the title given by the user, or make one which describes the plot command
         else if (pd->TitleSet) {
             pd->TitleFinal = pd->title;
             if (eps_yieldTextItem(x, pd->title)) return;
@@ -170,18 +181,22 @@ void GraphLegend_YieldUpText(EPSComm *x) {
             pd->TitleFinal = cptr = (char *) ppl_memAlloc(LSTR_LENGTH);
             buffer = (char *) ppl_memAlloc(LSTR_LENGTH);
             if (buffer == NULL) cptr = NULL;
+            // Build the title from the parts of the plot command, converted into LaTeX
             if (cptr != NULL) {
                 k = 0;
+                // Parametric plots
                 if (pd->parametric) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, "parametric");
                     k += strlen(cptr + k);
                 }
+                // The range of the parameter
                 if (pd->TRangeSet) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " [%s:%s]",
                                    ppl_unitsNumericDisplay(x->c, &pd->Tmin, 0, SW_DISPLAY_L, 0),
                                    ppl_unitsNumericDisplay(x->c, &pd->Tmax, 1, SW_DISPLAY_L, 0));
                     k += strlen(cptr + k);
                 }
+                // The functions plotted, or the name of the data file
                 if ((pd->function) || (pd->vectors != NULL)) {
                     for (j = 0; j < pd->NFunctions; j++) // Print out the list of functions which we are plotting
                     {
@@ -201,6 +216,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                 }
                 if (pd->ContinuitySet) // Print continuous / discontinuous flag
                 {
+                    // The continuity of the data
                     if (pd->continuity == DATAFILE_DISCONTINUOUS) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, " discontinuous");
                         k += strlen(cptr + k);
@@ -213,47 +229,58 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                 {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, "%s", " axes ");
                     k += strlen(cptr + k);
+                    // The first axis
                     if (pd->axis1set) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis1xyz], pd->axis1);
                         k += strlen(cptr + k);
                     }
+                    // The second axis
                     if (pd->axis2set) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis2xyz], pd->axis2);
                         k += strlen(cptr + k);
                     }
+                    // The third axis
                     if (pd->axis3set) {
                         ppl_strAppendf(cptr, LSTR_LENGTH, &k, "$%c%d$", "xyzc"[pd->axis3xyz], pd->axis3);
                         k += strlen(cptr + k);
                     }
                 }
+                // The every modifier
                 if (pd->EverySet > 0) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " every $%ld$", pd->EveryList[0]);
                     k += strlen(cptr + k);
                 } // Print out 'every' clause of plot command
+                // Its second field
                 if (pd->EverySet > 1) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[1]);
                     k += strlen(cptr + k);
                 }
+                // Its third field
                 if (pd->EverySet > 2) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[2]);
                     k += strlen(cptr + k);
                 }
+                // Its fourth field
                 if (pd->EverySet > 3) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[3]);
                     k += strlen(cptr + k);
                 }
+                // Its fifth field
                 if (pd->EverySet > 4) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[4]);
                     k += strlen(cptr + k);
                 }
+                // Its sixth field
                 if (pd->EverySet > 5) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, ":$%ld$", pd->EveryList[5]);
                     k += strlen(cptr + k);
                 }
+                // The index modifier
                 if (pd->IndexSet) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " index $%d$", pd->index);
                     k += strlen(cptr + k);
                 } // Print index to use
+                // The label modifier
                 if (pd->label != NULL) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " label ");
                     k += strlen(cptr + k);
@@ -261,6 +288,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                     ppl_texify_generic(x->c, pd->label->ascii, -1, &inlen, cptr + k, LSTR_LENGTH - k, NULL, NULL);
                     k += strlen(cptr + k);
                 } // Print label string
+                // The select modifier
                 if (pd->SelectCriterion != NULL) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, "%s", " select ");
                     k += strlen(cptr + k);
@@ -269,10 +297,12 @@ void GraphLegend_YieldUpText(EPSComm *x) {
                                        NULL);
                     k += strlen(cptr + k);
                 } // Print select criterion
+                // The using modifier
                 if ((pd->NUsing > 0) || (pd->UsingRowCols != DATAFILE_COL)) {
                     ppl_strAppendf(cptr, LSTR_LENGTH, &k, " using %s",
                                    (pd->UsingRowCols == DATAFILE_COL) ? "" : "rows");
                     k += strlen(cptr + k); // Print using list
+                    // Each using item
                     for (j = 0; j < pd->NUsing; j++) {
                         ppl_strAppendChar(cptr, LSTR_LENGTH, &k, (j != 0) ? ':' : ' ');
                         inlen = strlen(pd->UsingList[j]->ascii);
@@ -297,6 +327,7 @@ void GraphLegend_YieldUpText(EPSComm *x) {
 //! \return The first dataset at or after <pd> which has a title, or NULL if there are no more
 
 static canvas_plotdesc *titledDataset(canvas_plotdesc *pd, int *iDataSet) {
+    // Skip datasets with no title, counting every dataset
     for (; pd != NULL; pd = pd->next) {
         (*iDataSet)++;
         if ((!pd->NoTitleSet) && (pd->TitleFinal != NULL) && (pd->TitleFinal[0] != '\0')) return pd;
@@ -356,6 +387,7 @@ void GraphLegend_ArrangeToHeight(const EPSComm *x, const double TrialHeight, dou
 //! \param [in] zdepth - The depth of the graph, in postscript points, for 3D plots
 
 void GraphLegend_Render(EPSComm *x, const double width, const double height, const double zdepth) {
+    // Variables for arranging the legend
     double fs = x->current->settings.FontSize, CombinedHeight = 0.0, MinimumHeight = 0.0;
     double xoff = 0, yoff = 0;
     double ColumnX[MAX_LEGEND_COLUMNS], ColumnHeight[MAX_LEGEND_COLUMNS];
@@ -368,6 +400,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     postscriptPage *dviPage;
     withWords ww;
 
+    // There is nothing to do if the key is turned off
     if (x->current->settings.key != SW_ONOFF_ON) return;
 
     // Loop over all legend items to calculate their individual heights and widths, as well as the combined height of all of them
@@ -384,6 +417,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                 continue;
             }
             dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
+            // If LaTeX did not typeset the title, give it zero size
             if (dviPage == NULL) {
                 pd->TitleFinal_width = 0;
                 pd->TitleFinal_height = 0;
@@ -411,6 +445,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     // If number of columns is manually specified, repeatedly reduce height of legend until the desired number of columns is exceeded.
     if (x->current->settings.KeyColumns > 0) {
         BestHeight = TrialHeight = CombinedHeight + 2;
+        // Reduce the height until there are too many columns, or the titles no longer fit
         while (TrialHeight > MinimumHeight) {
             GraphLegend_ArrangeToHeight(x, TrialHeight, &AttainedHeight, &Ncolumns, ColumnX, ColumnHeight,
                                         ColumnNItems);
@@ -425,6 +460,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     else if ((kp == SW_KEYPOS_ABOVE) || (kp == SW_KEYPOS_BELOW)) {
         hfixed = 1;
         BestHeight = TrialHeight = CombinedHeight + 2;
+        // Reduce the height until the legend is wider than the plot, or the titles no longer fit
         while (TrialHeight > MinimumHeight) {
             GraphLegend_ArrangeToHeight(x, TrialHeight, &AttainedHeight, &Ncolumns, ColumnX, ColumnHeight,
                                         ColumnNItems);
@@ -445,18 +481,22 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     GraphLegend_ArrangeToHeight(x, BestHeight, &AttainedHeight, &Ncolumns, ColumnX, ColumnHeight, ColumnNItems);
     TrialHeight = vfixed ? (height - 2 * LEGEND_MARGIN) : AttainedHeight; // Vertical justification
     for (j = 0; j < Ncolumns; j++)
+        // Do not stretch columns of fewer than two items, or columns which would need gaps larger than the maximum
         if ((ColumnNItems[j] < 2) || (ColumnHeight[j] < TrialHeight - LEGEND_VGAP_MAXIMUM * (ColumnNItems[j] - 1))) {
             TrialHeight = AttainedHeight;
             break;
         }
     for (j = 0; j < Ncolumns; j++)
+        // Spread out the items in each column which can be stretched to the full height
         if (ColumnHeight[j] >= TrialHeight - LEGEND_VGAP_MAXIMUM * (ColumnNItems[j] - 1)) {
             double GapPerItem = (TrialHeight - ColumnHeight[j]) / (ColumnNItems[j] - 1), gap = 0.0;
+            // Unless the gap is undefined, move each item in the column down by the gaps above it
             if (gsl_finite(GapPerItem)) {
                 {
                     int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
                     for (pd = titledDataset(x->current->plotitems, &iDataSet); pd != NULL;
                          pd = titledDataset(pd->next, &iDataSet)) {
+                        // Only items in this column
                         if (pd->TitleFinal_col == j) {
                             pd->TitleFinal_ypos -= gap;
                             gap += GapPerItem;
@@ -470,6 +510,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     if (hfixed && (ColumnX[Ncolumns] < width - 2 * LEGEND_MARGIN) && (Ncolumns > 1) &&
         (ColumnX[Ncolumns] >= width - 2 * LEGEND_MARGIN - LEGEND_HGAP_MAXIMUM * (Ncolumns - 1))) {
         const double GapPerColumn = (width - 2 * LEGEND_MARGIN - ColumnX[Ncolumns]) / Ncolumns;
+        // Unless the gap is undefined, spread out the columns
         if (gsl_finite(GapPerColumn)) {
             {
                 int iDataSet = -1; // Counts over all datasets, including those skipped because they have no title
@@ -485,6 +526,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
 
     // Translate legend to desired place on canvas (2D case)
     if (!x->current->ThreeDim) {
+        // Place the legend in the requested position relative to the plot
         switch (kp) {
             case SW_KEYPOS_TR:
                 xoff = width - ColumnX[Ncolumns] - LEGEND_MARGIN;
@@ -545,6 +587,8 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
     else {
         SortByAzimuthTarget = -999;
 
+        // Place the legend in the requested position relative to the cube, noting the direction in which it lies from
+        // the centre of the plot
         switch (kp) {
             case SW_KEYPOS_TR:
                 SortByAzimuthTarget = 1 * M_PI / 4;
@@ -591,6 +635,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                 yoff = -LEGEND_MARGIN;
                 break;
 
+            // Positions above and below the plot
             case SW_KEYPOS_ABOVE:
                 xoff = -ColumnX[Ncolumns] / 2 + x->current->settings.OriginX.real * M_TO_PS;
                 yoff = AttainedHeight + LEGEND_MARGIN + x->current->PlotTopMargin;
@@ -611,6 +656,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
             double xap, yap, zap, data[3 * 8];
             const double origin_x = x->current->settings.OriginX.real * M_TO_PS;
             const double origin_y = x->current->settings.OriginY.real * M_TO_PS;
+            // Project each corner of the cube onto the page
             for (i = 0; i < 8; i++) {
                 xap = ((i & 1) != 0);
                 yap = ((i & 2) != 0);
@@ -635,6 +681,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
         }
     }
 
+    // Apply any offset requested by the user, and move each entry to its place
     xoff += x->current->settings.KeyXOff.real * M_TO_PS;
     yoff += x->current->settings.KeyYOff.real * M_TO_PS;
     {
@@ -654,6 +701,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
             int xyzaxis[3];
             pplset_axis *a1, *a2, *a3, *axissets[3];
             dataTable *data = x->current->plotdata[iDataSet];
+            // Datasets with no data have no icon
             if ((data == NULL) || (data->Nrows < 1)) {
                 x->LaTeXpageno++;
                 return;
@@ -672,6 +720,7 @@ void GraphLegend_Render(EPSComm *x, const double width, const double height, con
                                 xyzaxis[0], xyzaxis[1], xyzaxis[2]);
             pageno = x->LaTeXpageno++;
             ppl_withWordsZero(x->c, &ww);
+            // Write the titles in the color set with "set textcolor"
             if (x->current->settings.TextColor > 0) {
                 ww.color = x->current->settings.TextColor;
                 ww.USEcolor = 1;

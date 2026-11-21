@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Builds the parser's model of Pyxplot's command syntax when Pyxplot starts. The grammar of every command, generated
+// into parser/cmdList.c from buildScripts/parser_data.dat, is read into a tree of parserNode structures for each
+// command, which parserCompile.c then matches each line of input against.
+
 #define _PARSERINIT_C 1
 
 #include <stdio.h>
@@ -36,6 +40,8 @@
 
 #include "userspace/context.h"
 
+// The syntax trees of all commands, sorted into 27 lists by the first letter of the command: one list for each of the
+// letters a-z, and one for commands which begin with punctuation, such as ! and ?
 list *pplParserCmdList[27];
 
 //! ppl_parserStartNode - Open a new node in the syntax tree being built from the command list, and push it onto the
@@ -46,7 +52,9 @@ list *pplParserCmdList[27];
 //! \param [in] type - The type of the new node, one of the PN_TYPE_* constants
 
 static void ppl_parserStartNode(pplerr_context *c, parserNode **stk, int *i, const int type) {
+    // Create the new node, with no children and no storage information yet
     parserNode *newNode = (parserNode *) malloc(sizeof(parserNode));
+    // Failure to allocate memory is fatal
     if (newNode == NULL) {
         ppl_fatal(c, __FILE__, __LINE__, "Out of memory.");
         exit(1);
@@ -60,6 +68,9 @@ static void ppl_parserStartNode(pplerr_context *c, parserNode **stk, int *i, con
     newNode->varName = NULL;
     newNode->firstChild = newNode->nextSibling = NULL;
 
+    // If this node is not the root, link it into the tree as the last child of the node at the top of the stack. Items
+    // must sit inside a sequence (SEQ) node, so one is opened implicitly if the parent is, e.g., a list of
+    // alternatives.
     if ((*i) >
         0) // If this new node is not the root context, check whether we need to insert an implicit sequence between *list* *seq* STUFF stuff stuff *endseq* *endlist*
     {
@@ -91,9 +102,11 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
     int j = 1; // Count characters taken; start at 1 for closing bracket
     int varNameStart = -1, varNameEnd = -1;
 
+    // Close any implicit SEQ nodes, which have no closing bracket of their own
     while (((*i) > 0) && (stk[(*i) - 1]->type == PN_TYPE_SEQ))
         (*i)--; // Automatically close SEQs; they don't have closing grammar
 
+    // Check that the bracket being closed matches the node which is open
     if ((*i) <= 0) {
         ppl_snprintfTrunc(
                 msg, sizeof(msg),
@@ -106,33 +119,41 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
         ppl_fatal(c, __FILE__, __LINE__, msg);
     }
 
+    // A closing ] may be followed by storage information, ]@varname@value@ACL@stackpos@listlen, saying where the
+    // repeated items are stored
     if (cmdText[j] == '@') {
         int k, l;
+        // Only [ ] structures can carry storage information
         if (type != PN_TYPE_REP) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Unexpected storage information after non [ ] data structure.");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         j++;
+        // If the variable name begins with '0', zero repeats are allowed
         if (cmdText[j] == '0') {
             type = PN_TYPE_REP2;
             stk[(*i) - 1]->type = type;
             j++;
         } // If storage variable name begins '0', zero repeats are allowed; a REP2 item, not a REP item
+        // Read the name of the variable in which the list of repeats is stored
         if (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) {
             varNameStart = j;
             while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++; // FFW over variable name
             varNameEnd = j;
         }
+        // Skip over the value field, which is unused for repeats
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
+        // Skip over the autocomplete level, which is unused for repeats
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
         }
         while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
+        // Read the position on the output stack where the list of repeats is stored
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
@@ -140,6 +161,7 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
         k = (int) ppl_getFloat(cmdText + j, NULL);
         while (((unsigned char) cmdText[j] > ' ') && (cmdText[j] != '@')) j++;
         stk[(*i) - 1]->outStackPos = k;
+        // Read the length of the stack used by each repeated item
         if (cmdText[j++] != '@') {
             ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
             ppl_fatal(c, __FILE__, __LINE__, msg);
@@ -150,8 +172,10 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
         while ((cmdText[j] != '\0') && (cmdText[j] != '\n') && ((unsigned char) cmdText[j] < ' '))
             j++; // FFW over trailing whitespace
 
+        // Store a copy of the variable name in the node
         if (varNameStart > -1) {
             stk[(*i) - 1]->varName = (char *) malloc((varNameEnd - varNameStart + 1) * sizeof(char));
+            // Failure to allocate memory is fatal
             if (stk[(*i) - 1]->varName == NULL) {
                 ppl_fatal(c, __FILE__, __LINE__, "Out of memory whilst setting up Pyxplot's command line parser.");
                 exit(1);
@@ -171,13 +195,16 @@ static void ppl_parserRollBack(pplerr_context *c, parserNode **stk, int *i, int 
 //! \return Zero
 
 int ppl_parserInit(ppl_context *c) {
+    // inPos is the position reached in the text of the command list
     char msg[PPL_MSG_LENGTH];
     pplerr_context *e = &c->errcontext;
     int i;
     int inPos = 0;
 
+    // Create an empty list of commands for each initial letter
     for (i = 0; i < 27; i++) {
         pplParserCmdList[i] = ppl_listInit(1);
+        // Failure to allocate memory is fatal
         if (pplParserCmdList[i] == NULL) {
             ppl_fatal(e, __FILE__, __LINE__, "Out of memory.");
             exit(1);
@@ -189,6 +216,8 @@ int ppl_parserInit(ppl_context *c) {
         int stackPos = 0, cmdLetter, rootStackLen, nc = 0;
         parserNode *defnStack[16];
 
+        // Each command's definition is on one line, which begins with the length of the stack of variables which the
+        // command produces. The first letter of the command decides which list it is stored in.
         while ((ppl_cmdList[inPos] != '\0') && ((unsigned char) ppl_cmdList[inPos] <= ' '))
             inPos++; // Ignore whitespace
         rootStackLen =
@@ -241,6 +270,7 @@ int ppl_parserInit(ppl_context *c) {
             {
                 while ((stackPos >= 0) && (defnStack[stackPos - 1]->type == PN_TYPE_SEQ))
                     stackPos--; // Automatically close SEQs; they don't have closing grammar
+                // A ~ must separate the items of a ( ) structure
                 if ((stackPos < 0) || (defnStack[stackPos - 1]->type != PN_TYPE_PER)) {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Tilda should be used only in permutation structures (char pos %d).", inPos);
@@ -251,6 +281,7 @@ int ppl_parserInit(ppl_context *c) {
             {
                 while ((stackPos >= 0) && (defnStack[stackPos - 1]->type == PN_TYPE_SEQ))
                     stackPos--; // Automatically close SEQs; they don't have closing grammar
+                // A | must separate the alternatives of a < > structure
                 if ((stackPos < 0) || (defnStack[stackPos - 1]->type != PN_TYPE_ORA)) {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Pipe alternatives should only be used inside ORA structures (char pos %d).",
@@ -289,6 +320,10 @@ int ppl_parserInit(ppl_context *c) {
                     ppl_parserStartNode(e, defnStack, &stackPos,
                                         PN_TYPE_SEQ); // Match words have to go in sequences, not, e.g. "ora" structures
 
+                // Each item has the form @matchstr@varname@outstr@acLevel@stackpos@listlen: the text to match (or a
+                // type of value, such as %e for an expression); the variable in which to store what was matched; the
+                // string to store, if different from the matched text; the minimum number of characters for an
+                // abbreviation to match; and where the variable goes on the output stack
                 if ((newNode = (parserNode *) malloc(sizeof(parserNode))) == NULL) {
                     ppl_fatal(e, __FILE__, __LINE__, "Out of memory whilst setting up Pyxplot's command line parser.");
                     exit(1);
@@ -296,10 +331,13 @@ int ppl_parserInit(ppl_context *c) {
                 newNode->type = PN_TYPE_ITEM;
                 newNode->firstChild = newNode->nextSibling = NULL;
 
+                // Read the text to match. The special items DATABLOCK and CODEBLOCK match inline data and { } blocks of
+                // code.
                 strStart = inPos;
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
                     inPos++; // FFW over match string
                 newNode->matchString = (char *) malloc((inPos - strStart + 1) * sizeof(char));
+                // Failure to allocate memory is fatal
                 if (newNode->matchString == NULL) {
                     ppl_fatal(e, __FILE__, __LINE__, "Out of memory whilst setting up Pyxplot's command line parser.");
                     exit(1);
@@ -308,34 +346,41 @@ int ppl_parserInit(ppl_context *c) {
                 newNode->matchString[inPos - strStart] = '\0';
                 if (strcmp(newNode->matchString, "DATABLOCK") == 0) newNode->type = PN_TYPE_DATABLK;
                 if (strcmp(newNode->matchString, "CODEBLOCK") == 0) newNode->type = PN_TYPE_CODEBLK;
+                // The match string must be followed by an @
                 if (ppl_cmdList[inPos++] != '@') {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after @matchstr...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
 
+                // Read the name of the variable in which the match is stored
                 strStart = inPos;
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
                     inPos++; // FFW over variable name
                 newNode->varName = (char *) malloc((inPos - strStart + 1) * sizeof(char));
+                // Failure to allocate memory is fatal
                 if (newNode->varName == NULL) {
                     ppl_fatal(e, __FILE__, __LINE__, "Out of memory whilst setting up Pyxplot's command line parser.");
                     exit(1);
                 }
                 strncpy(newNode->varName, ppl_cmdList + strStart, inPos - strStart);
                 newNode->varName[inPos - strStart] = '\0';
+                // The variable name must be followed by an @
                 if (ppl_cmdList[inPos++] != '@') {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after @matchstr@varname...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
 
+                // Read the string to store when this item is matched
                 strStart = inPos;
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@'))
                     inPos++; // FFW over output string literal
+                // If none is given, the matched text itself is stored
                 if (strStart == inPos) {
                     newNode->outString =
                             newNode->matchString; // No outString is specified, assume it is the same as matchString
                 } else {
                     newNode->outString = (char *) malloc((inPos - strStart + 1) * sizeof(char));
+                    // Failure to allocate memory is fatal
                     if (newNode->outString == NULL) {
                         ppl_fatal(e, __FILE__, __LINE__,
                                   "Out of memory whilst setting up Pyxplot's command line parser.");
@@ -344,14 +389,17 @@ int ppl_parserInit(ppl_context *c) {
                     strncpy(newNode->outString, ppl_cmdList + strStart, inPos - strStart);
                     newNode->outString[inPos - strStart] = '\0';
                 }
+                // The string to store must be followed by an @
                 if (ppl_cmdList[inPos++] != '@') {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after @matchstr@varname@str...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
                 }
 
+                // Read the minimum number of characters which an abbreviation of the match string must have
                 k = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->acLevel = k;
+                // Read the position on the output stack where the match is stored
                 if (ppl_cmdList[inPos++] != '@') {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Syntax error: expecting @ after ]@varname@value@ACL...");
                     ppl_fatal(e, __FILE__, __LINE__, msg);
@@ -359,6 +407,7 @@ int ppl_parserInit(ppl_context *c) {
                 l = (int) ppl_getFloat(ppl_cmdList + inPos, NULL);
                 while (((unsigned char) ppl_cmdList[inPos] > ' ') && (ppl_cmdList[inPos] != '@')) inPos++;
                 newNode->outStackPos = l;
+                // Read the length of the output stack, for items which hold lists
                 if (ppl_cmdList[inPos++] != '@') {
                     ppl_snprintfTrunc(msg, sizeof(msg),
                                       "Syntax error: expecting @ after ]@varname@value@ACL@stackpos...");
@@ -378,6 +427,8 @@ int ppl_parserInit(ppl_context *c) {
                         newNode; // Add new node into hierarchy, either as first child of parent, or into linked list of siblings
             } else if (ppl_cmdList[inPos] == '=') {
                 parserNode *newNode, **target;
+                // An = marks the point beyond which a failure to match the rest of the command is a syntax error,
+                // rather than a sign that a different command was meant
                 if ((newNode = (parserNode *) calloc(1, sizeof(parserNode))) == NULL) {
                     ppl_fatal(e, __FILE__, __LINE__, "Out of memory whilst setting up Pyxplot's command line parser.");
                     exit(1);

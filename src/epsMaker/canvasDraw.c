@@ -19,6 +19,13 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws the multiplot canvas: every canvas item (plots, text, arrows, images and so on) is rendered to a single
+// postscript file, which is then converted to the output format of the current terminal, or shown in a viewer.
+// Rendering proceeds in phases: each type of canvas item has a handler for each phase, listed in the tables below,
+// which reads its data, samples its functions, decides its axis ranges, collects its text, and finally writes its
+// postscript. Between phases, all of the text is typeset in a single LaTeX run, and the dvi output is interpreted into
+// postscript fragments which are placed where each item needs them.
+
 #define _CANVASDRAW_C 1
 
 #include <stdlib.h>
@@ -99,15 +106,18 @@ static void convertToFinalFormat(ppl_context *c, EPSComm *comm, const char *comm
                                  const char *tempNegated, const char *tool, const char *format, const int canInvert) {
     char msg[LSTR_LENGTH];
 
+    // Report a failure of the converter, or else copy its output to the requested file
     if (system(command) != 0) {
         // Run ghostscript
         ppl_snprintfTrunc(msg, sizeof(msg), "Error encountered whilst using %s to generate %s output", tool, format);
         ppl_error(&c->errcontext, ERR_GENERIC, -1, -1, msg);
     } else {
         const char *src = tempOut;
+        // Invert the colors of bitmap output if requested
         if (canInvert && (c->set->term_current.TermInvert == SW_ONOFF_ON)) {
             // Run convert to negate image
             ppl_snprintfTrunc(msg, sizeof(msg), "%s %s -negate %s", CONVERT_COMMAND, tempOut, tempNegated);
+            // Report a failure of ImageMagick
             if (system(msg) != 0) {
                 ppl_snprintfTrunc(msg, sizeof(msg),
                                   "Error encountered whilst using ImageMagick to generate negated %s output", format);
@@ -116,6 +126,7 @@ static void convertToFinalFormat(ppl_context *c, EPSComm *comm, const char *comm
             src = tempNegated;
             remove(tempOut);
         }
+        // Report a failure to copy the output
         if (filecopy(comm, src, comm->FinalFilename) != 0) {
             // Move ghostscript output to desired target file
             ppl_snprintfTrunc(msg, sizeof(msg), "Could not write output to file '%s'", comm->FinalFilename);
@@ -188,6 +199,7 @@ static void (*AfterHandlers[])(EPSComm *) = {NULL, NULL, NULL, canvas_CallLaTeX,
 //! \param [in] iterDepth - The depth of recursion, used to prevent infinite recursion
 
 void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int iterDepth) {
+    // Variables for the rendering process; a lock prevents recursive calls while a canvas is being drawn
     char msg[PPL_MSG_LENGTH];
     static int lock = 0;
     int i, j, termtype, status = 0, CSPCommand = 0;
@@ -230,6 +242,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
     comm.termtype = termtype = c->set->term_current.TermType;
     comm.FinalFilename =
             c->set->term_current.output; // The final filename of whatever kind of output we're planning to produce
+    // With no output filename set, use pyxplot.<terminal name>
     if ((comm.FinalFilename == NULL) || (comm.FinalFilename[0] == '\0')) {
         comm.FinalFilename = FinalFilenameTemp; // If final target filename is blank, use pyxplot.<filetype>
         ppl_snprintfTrunc(FinalFilenameTemp, sizeof(FinalFilenameTemp), "pyxplot.%s",
@@ -244,6 +257,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         lock = 0;
         return;
     }
+    // A wildcard may not match more than one file
     if (WordExp.we_wordc > 1) {
         ppl_snprintfTrunc(msg, sizeof(msg), "Filename '%s' is ambiguous.", comm.FinalFilename);
         ppl_error(&c->errcontext, ERR_FILE, -1, -1, msg);
@@ -268,6 +282,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         ppl_createBackupIfRequired(c, comm.EPSFilename);
         comm.title = comm.EPSFilename; // Filename 'foo/bar/myplot.eps' --> title 'myplot.eps'
         for (i = 0; comm.title[i] != '\0'; i++)
+            // Strip the directory from the filename to make the document title
             if ((comm.title[i] == PATHLINK[0]) && ((i == 0) || (comm.title[i - 1] != '\\'))) {
                 comm.title += i + 1;
                 i = -1;
@@ -279,6 +294,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         if (snprintf(EPSFilenameTemp, FNAME_LENGTH, "%s%spyxplot_%d_%ld.eps", c->errcontext.session_default.tempdir,
                      PATHLINK, getpid(), TempFile_counter) >= FNAME_LENGTH)
             ppl_fatal(&c->errcontext, __FILE__, __LINE__, "Path of temporary directory is too long.");
+        // In X11 terminals, number the documents; otherwise title them with the output filename
         if ((termtype == SW_TERMTYPE_X11S) || (termtype == SW_TERMTYPE_X11M) || (termtype == SW_TERMTYPE_X11P)) {
             comm.title = TitleTemp; // In X11 terminals, we give eps files numbered titles
             ppl_snprintfTrunc(TitleTemp, sizeof(TitleTemp), "Pyxplot Output %ld", TempFile_counter);
@@ -286,6 +302,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
             comm.title =
                     comm.FinalFilename; // In other terminals, we give eps files filename titles, with path cut off front
             for (i = 0; comm.title[i] != '\0'; i++)
+                // Strip the directory from the filename to make the document title
                 if ((comm.title[i] == PATHLINK[0]) && ((i == 0) || (comm.title[i - 1] != '\\'))) {
                     comm.title += i;
                     i = 0;
@@ -322,6 +339,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
 
     // Loop over all of the items on the canvas zeroing the plot bounding boxes
     if (comm.itemlist != NULL)
+        // Loop over the items, zeroing their margins
         for (item = comm.itemlist->first; item != NULL; item = item->next) {
             item->PlotLeftMargin = 0.0;
             item->PlotRightMargin = 0.0;
@@ -350,6 +368,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
 
         // Loop over all of the items on the canvas
         if (comm.itemlist != NULL)
+            // Call each item's handler for this phase
             for (item = comm.itemlist->first; item != NULL; item = item->next) {
                 if (item->deleted) continue; // ... except those which have been deleted
                 if (unsuccessful_ops[item->id]) continue; // ... or which have already failed
@@ -378,6 +397,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
             }
         if (AfterHandler != NULL)
             (*AfterHandler)(&comm); // At the end of each phase, a canvas-wide handler may be called
+        // The failure of a canvas-wide handler is fatal
         if (status) {
             if (comm.epsbuffer != NULL) fclose(comm.epsbuffer);
             lock = 0;
@@ -390,6 +410,7 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
         (termtype == SW_TERMTYPE_X11P)) // X11 terminals
     {
         EnvDisplay = getenv("DISPLAY"); // Check whether the environment variable DISPLAY is set
+        // Report missing viewers or displays; otherwise send the file to the viewer, through the child-process helper
         if (c->set->term_current.viewer == SW_VIEWER_NULL) {
             ppl_error(
                     &c->errcontext, ERR_GENERIC, -1, -1,
@@ -399,7 +420,10 @@ void ppl_canvas_draw(ppl_context *c, unsigned char *unsuccessful_ops, const int 
                     &c->errcontext, ERR_GENERIC, -1, -1,
                     "An attempt is being made to use an X11 terminal for output, but your DISPLAY environment variable is not set; there is no accessible X11 display.");
         } else {
+            // In non-interactive sessions, windows which close when Pyxplot exits would be useless, so use X11_persist
+            // instead
             if (!c->willBeInteractive) {
+                // Warn that the terminal is being changed
                 if (termtype != SW_TERMTYPE_X11P) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -515,6 +539,7 @@ static void fprintfLineCount(FILE *output, const char *text, int *linecount) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void canvas_CallLaTeX(EPSComm *x) {
+    // Variables for running LaTeX and reading its output, which is parsed to find any error messages
     char msg[LSTR_LENGTH];
     int linecount = 1, i, j, pid, LatexStatus, LatexStdIn, LatexOut;
     char filename[FNAME_LENGTH], *str_buffer;
@@ -526,15 +551,18 @@ void canvas_CallLaTeX(EPSComm *x) {
     fd_set readable;
     sigset_t sigs;
 
+    // Variables for parsing LaTeX's error messages, which take the form filename:line:message
     int ErrLineNo = 0, ErrReadState = 0, ErrReadPos = 0, NCharsRead = 0, ReadErrorState = 0, TrialNumber;
     char ErrFilename[FNAME_LENGTH] = "", ErrMsg[FNAME_LENGTH] = "";
     char TempErrFilename[FNAME_LENGTH], TempErrLineNo[FNAME_LENGTH], TempErrMsg[FNAME_LENGTH];
 
     if (ppl_listLen(x->TextItems) < 1) return; // We have no text to give to latex, and so don't need to fork
 
+    // SIGCHLD is unblocked again once LaTeX has finished
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGCHLD);
 
+    // The parts of the LaTeX document: each text item is typeset on a page of its own, after a blank first page
     const char TextHeader1[] = "\\documentclass{article}\n\\pagestyle{empty}\n\\usepackage{upgreek}\n";
     const char TextHeader2[] =
             "\\begin{document}\n\\begin{center}{\\bf This page has been left deliberately blank.}\\end{center}\n\\newpage\n";
@@ -552,6 +580,7 @@ void canvas_CallLaTeX(EPSComm *x) {
 
     // Make string buffer
     str_buffer = (char *) malloc(LSTR_LENGTH);
+    // Failure to allocate memory is reported as an error
     if (str_buffer == NULL) {
         ppl_error(&x->c->errcontext, ERR_MEMORY, -1, -1, "Out of memory (y).");
         return;
@@ -560,6 +589,7 @@ void canvas_CallLaTeX(EPSComm *x) {
     // Start writing LaTeX document
     ppl_snprintfTrunc(filename, sizeof(filename), "%s.tex", x->TeXFilename);
     output = fopen(filename, "w");
+    // Report a failure to create the document
     if (output == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Could not create temporary LaTeX document");
         *(x->status) = 1;
@@ -573,6 +603,7 @@ void canvas_CallLaTeX(EPSComm *x) {
 
     // Sequentially print out text strings
     ListIter = ppl_listIterateInit(x->TextItems);
+    // Write each text item, noting which lines of the document it occupies, so that errors can be traced back to it
     while (ListIter != NULL) {
         TempTextItem = (CanvasTextItem *) ListIter->data;
         TempTextItem->LaTeXstartline = linecount;
@@ -593,14 +624,18 @@ void canvas_CallLaTeX(EPSComm *x) {
     // Wait for latex process's stdout to become readable. Get bored if this takes too long.
     FirstIter = 1;
     LatexStatus = 0;
+    // Read LaTeX's output until it finishes, or stops responding, which happens when it waits for input after an error
     while (1) {
+        // Wait for output, retrying up to three times if interrupted by a signal
         for (TrialNumber = 1;;) {
             waitperiod.tv_sec = FirstIter ? 15 : 4; // Wait 15 seconds first time around; otherwise wait 4 seconds
             waitperiod.tv_nsec = 0;
+            // Once an error has been seen, wait only half a second for more output
             if (ReadErrorState) {
                 waitperiod.tv_nsec = 500000000;
                 waitperiod.tv_sec = 0;
             } // If we've had an error message, only wait 0.5 sec
+            // Log the timeout in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "pselect waiting for %ld seconds and %ld nanoseconds",
                                   waitperiod.tv_sec, waitperiod.tv_nsec);
@@ -608,11 +643,14 @@ void canvas_CallLaTeX(EPSComm *x) {
             }
             FD_ZERO(&readable);
             FD_SET(LatexOut, &readable);
+            // Report failure if the wait fails
             if (pselect(LatexOut + 1, &readable, NULL, NULL, &waitperiod, NULL) == -1) {
+                // Log the failure in debugging mode
                 if (DEBUG) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "pselect returned -1. errno=%d", errno);
                     ppl_log(&x->c->errcontext, msg);
                 }
+                // Retry if interrupted by a signal
                 if ((errno == EINTR) && (TrialNumber < 3)) {
                     TrialNumber++;
                     continue;
@@ -620,6 +658,7 @@ void canvas_CallLaTeX(EPSComm *x) {
                 LatexStatus = 1;
                 break;
             }
+            // Log the state of the pipe in debugging mode
             if (DEBUG) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "pipe is %s",
                                   (FD_ISSET(LatexOut, &readable)) ? "readable" : "unreadable");
@@ -629,19 +668,25 @@ void canvas_CallLaTeX(EPSComm *x) {
         }
         if (LatexStatus) break;
         FirstIter = 0;
+        // If LaTeX stops responding, assume it has stopped with an error
         if (!FD_ISSET(LatexOut, &readable)) {
             LatexStatus = 1;
             if (DEBUG) ppl_log(&x->c->errcontext, "latex's output pipe has not become readable within time limit");
             break;
         } else {
+            // Read the output, and parse it for error messages
             if ((NCharsRead = read(LatexOut, str_buffer, LSTR_LENGTH)) > 0) {
+                // Parse each character
                 for (j = 0; j < NCharsRead; j++) {
+                    // The end of a line ends any error message
                     if (str_buffer[j] == '\n') {
+                        // Record the error message which has just ended
                         if (ErrReadState == 2) {
                             TempErrMsg[ErrReadPos] = '\0';
                             ppl_snprintfTrunc(ErrFilename, sizeof(ErrFilename), "%s", TempErrFilename);
                             ppl_snprintfTrunc(ErrMsg, sizeof(ErrMsg), "%s", TempErrMsg);
                             ErrLineNo = (int) ppl_getFloat(TempErrLineNo, NULL);
+                            // Log the error in debugging mode
                             if (DEBUG) {
                                 ppl_snprintfTrunc(msg, sizeof(msg), "Received LaTeX error on line %d of file <%s>",
                                                   ErrLineNo, ErrFilename);
@@ -652,9 +697,11 @@ void canvas_CallLaTeX(EPSComm *x) {
                         }
                         ErrReadState = ErrReadPos = 0;
                     } else if (str_buffer[j] == ':') {
+                        // Colons separate the filename, line number and message
                         if (ErrReadState == 0) {
                             TempErrFilename[ErrReadPos] = '\0';
                             ErrReadPos = 0;
+                            // LaTeX's own errors start "! LaTeX Error:", and refer to the document we wrote
                             if (strcmp(TempErrFilename, "! LaTeX Error") == 0) {
                                 ppl_snprintfTrunc(TempErrFilename, sizeof(TempErrFilename), "%s", filename);
                                 strcpy(TempErrLineNo, "-1");
@@ -674,6 +721,7 @@ void canvas_CallLaTeX(EPSComm *x) {
                             TempErrMsg[ErrReadPos++] = str_buffer[j];
                         }
                     } else {
+                        // Accumulate the characters of the filename, line number or message
                         if (ErrReadState == 0) {
                             TempErrFilename[ErrReadPos++] = str_buffer[j];
                         } else if (ErrReadState == 1) {
@@ -705,6 +753,7 @@ void canvas_CallLaTeX(EPSComm *x) {
             unsigned char ExactHit =
                     0; // Cycle through all text items and see whether error line number is in the middle of one of them
             ListIter = ppl_listIterateInit(x->TextItems);
+            // Find the text item containing the line where the error occurred
             while (ListIter != NULL) {
                 TempTextItem = (CanvasTextItem *) ListIter->data;
                 if (TempTextItem->LaTeXstartline > ErrLineNo)
@@ -727,11 +776,13 @@ void canvas_CallLaTeX(EPSComm *x) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Error was: %s",
                               ErrMsg); // Output the actual error which LaTeX returned to us
             ppl_error(&x->c->errcontext, ERR_PREFORMED, -1, -1, msg);
+            // Show the command which made the canvas item, and the text which LaTeX failed to typeset
             if (SuspectTextItem != NULL) {
                 canvas_item *ptr = ((canvas_itemlist *) x->c->canvas_items)
                                            ->first; // Cycle through all canvas items to find the culprit
                 for (ptr = ((canvas_itemlist *) x->c->canvas_items)->first;
                      ((ptr != NULL) && (ptr->id != SuspectTextItem->CanvasMultiplotID)); ptr = ptr->next);
+                // Show the command
                 if (ptr != NULL) {
                     ppl_snprintfTrunc(
                             msg, sizeof(msg),
@@ -783,6 +834,7 @@ void canvas_CallLaTeX(EPSComm *x) {
 
 void canvas_MakeEPSBuffer(EPSComm *x) {
     x->epsbuffer = tmpfile();
+    // Report a failure to create the buffer
     if (x->epsbuffer == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Could not create temporary eps buffer file.");
         *(x->status) = 1;
@@ -799,6 +851,7 @@ void canvas_MakeEPSBuffer(EPSComm *x) {
 
 static int fontListedEarlier(list *fonts, const dviFontDetails *font) {
     listIterator *iter = ppl_listIterateInit(fonts);
+    // Look through the fonts which come before this one in the list
     while ((iter != NULL) && (iter->data != font)) {
         if (strcmp(((dviFontDetails *) iter->data)->basePsName, font->basePsName) == 0) return 1;
         ppl_listIterate(&iter);
@@ -811,6 +864,7 @@ static int fontListedEarlier(list *fonts, const dviFontDetails *font) {
 //! \param [in] x - The state of the EPS/PS rendering process for the canvas currently being drawn
 
 void canvas_EPSWrite(EPSComm *x) {
+    // Variables for writing the output file
     char msg[PPL_MSG_LENGTH];
     int i;
     double PAGEwidth, PAGEheight, margin_left, margin_top, margin_bottom;
@@ -882,6 +936,7 @@ void canvas_EPSWrite(EPSComm *x) {
     fprintf(epsout, "%%%%DocumentFonts:"); // %%DocumentFonts has a list of all of the fonts that we use
     if (x->dvi != NULL) ListIter = ppl_listIterateInit(x->dvi->fonts);
     else ListIter = NULL;
+    // List each Type 1 font once, however many TeX fonts are derived from it
     while (ListIter != NULL) {
         const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
         if (!fontListedEarlier(x->dvi->fonts, font)) fprintf(epsout, " %s", font->basePsName);
@@ -909,6 +964,7 @@ void canvas_EPSWrite(EPSComm *x) {
     }
     if (x->dvi != NULL) ListIter = ppl_listIterateInit(x->dvi->fonts);
     else ListIter = NULL;
+    // Embed each font file in the output
     while (ListIter != NULL) {
         const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
         PFAfilename = font->pfaPath;
@@ -917,6 +973,7 @@ void canvas_EPSWrite(EPSComm *x) {
         if ((PFAfilename != NULL) && !fontListedEarlier(x->dvi->fonts, font)) {
             fprintf(epsout, "%%%%BeginFont: %s\n", font->basePsName);
             PFAfile = fopen(PFAfilename, "r");
+            // Report a font file which cannot be opened
             if (PFAfile == NULL) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "Could not open pfa file '%s'", PFAfilename);
                 ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -925,6 +982,7 @@ void canvas_EPSWrite(EPSComm *x) {
                 return;
             }
             while (fgets(msg, FNAME_LENGTH, PFAfile) != NULL)
+                // Report a failure to copy the font file
                 if (fputs(msg, epsout) == EOF) {
                     ppl_snprintfTrunc(msg, sizeof(msg), "Error while writing to file '%s'.", x->EPSFilename);
                     ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -945,6 +1003,7 @@ void canvas_EPSWrite(EPSComm *x) {
     // Define re-encoded, slanted or extended versions of fonts, as instructed by the TeX font map
     if (x->dvi != NULL) ListIter = ppl_listIterateInit(x->dvi->fonts);
     else ListIter = NULL;
+    // Write each font's setup
     while (ListIter != NULL) {
         const dviFontDetails *const font = (dviFontDetails *) ListIter->data;
         if (font->fontSetup != NULL) fprintf(epsout, "%s", font->fontSetup);
@@ -975,6 +1034,7 @@ void canvas_EPSWrite(EPSComm *x) {
     for (i = 0; i < N_POINTTYPES; i++)
         if (x->PointTypesUsed[i]) fprintf(epsout, "%s\n", eps_PointTypes[i]);
     for (i = 0; i < N_STARTYPES; i++)
+        // Define the star symbols, if any are used
         if (x->StarTypesUsed[i]) {
             fprintf(epsout, "%s\n", eps_StarCore);
             break;
@@ -997,6 +1057,7 @@ void canvas_EPSWrite(EPSComm *x) {
     // Now write any global transformations needed by the enlarge and landscape terminals.
     if (x->c->set->term_current.TermType == SW_TERMTYPE_PS)
         fprintf(epsout, "%.2f %.2f translate\n", margin_left - x->bb_left, margin_bottom - x->bb_bottom);
+    // Write the transformations needed by the landscape and enlarge options
     if ((LandscapifyText[0] != '\0') || (EnlargementText[0] != '\0')) {
         fprintf(epsout, "%% Global transformations to give %soutput%s\n",
                 (LandscapifyText[0] != '\0') ? "landscape " : "",
@@ -1010,6 +1071,7 @@ void canvas_EPSWrite(EPSComm *x) {
     fflush(x->epsbuffer);
     rewind(x->epsbuffer);
     while (fgets(msg, FNAME_LENGTH, x->epsbuffer) != NULL)
+        // Report a failure to copy the buffer
         if (fputs(msg, epsout) == EOF) {
             ppl_snprintfTrunc(msg, sizeof(msg), "Error while writing to file '%s'.", x->EPSFilename);
             ppl_error(&x->c->errcontext, ERR_FILE, -1, -1, msg);
@@ -1065,6 +1127,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     if (buffer == NULL) return;
     out = buffer;
 
+    // Text cannot be drawn before LaTeX has typeset it
     if (x->dvi == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1,
                   "Attempting to display a text item before latex has generated it");
@@ -1073,6 +1136,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
 
     // Fetch requested page of postscript
     dviPage = (postscriptPage *) ppl_listGetItem(x->dvi->output->pages, pageno + 1);
+    // Report text which LaTeX did not typeset
     if (dviPage == NULL) {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Not all text items were rendered by LaTeX");
         *(x->status) = 1;
@@ -1095,6 +1159,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     if (halign == SW_HALIGN_LEFT) xanchor = ab_left;
     else if (halign == SW_HALIGN_CENT) xanchor = (ab_left + ab_right) / 2.0;
     else if (halign == SW_HALIGN_RIGHT) xanchor = ab_right;
+    // Report an invalid horizontal alignment
     else {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Illegal halign value passed to canvas_EPSRenderTextItem");
         *(x->status) = 1;
@@ -1103,6 +1168,7 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
     if (valign == SW_VALIGN_TOP) yanchor = bb_top;
     else if (valign == SW_VALIGN_CENT) yanchor = (ab_top + ab_bottom) / 2.0;
     else if (valign == SW_VALIGN_BOT) yanchor = ab_bottom;
+    // Report an invalid vertical alignment
     else {
         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1, "Illegal valign value passed to canvas_EPSRenderTextItem");
         *(x->status) = 1;
@@ -1150,8 +1216,10 @@ void canvas_EPSRenderTextItem(EPSComm *x, char **strout, int pageno, double xpos
 
     // Copy postscript description of page out of dvi buffer
     ListIter = ppl_listIterateInit(dviPage->text);
+    // Copy each fragment of postscript
     while (ListIter != NULL) {
         cptr = (char *) ListIter->data;
+        // Copy each character, replacing the marker byte 0x01 with the text's color
         while (*cptr != '\0') {
             if (*cptr != '\x01') snprintf(out + bufpos, BUFLEN - bufpos, "%c", *cptr);
             else
@@ -1196,6 +1264,7 @@ void canvas_EPSLandscapify(EPSComm *x, char *transform) {
 //! \param [out] transform - Character buffer into which to write the postscript coordinate transformation
 
 void canvas_EPSEnlarge(EPSComm *x, char *transform) {
+    // Variables for the transformation
     double EPSwidth, EPSheight, PAGEwidth, PAGEheight;
     double margin_left, margin_right, margin_top, margin_bottom;
     double scaling_x, scaling_y, translate_x, translate_y;

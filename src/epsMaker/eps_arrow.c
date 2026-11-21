@@ -19,6 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws arrow and line canvas items into the postscript buffer, during the final rendering pass of canvasDraw.c.
+// eps_primitive_arrow() draws an arrow with an optional head at either end, and is also used to draw arrows on plots
+// and in three-dimensional plots, where it passes postscript to the depth-sorting buffer in eps_plot_threedimbuff.c.
+
 #define _PPL_EPS_ARROW 1
 
 #include <stdlib.h>
@@ -90,6 +94,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
 
     // Set color of arrow
     eps_core_SetColor(x, with_data, !ThreeDim);
+    // In three-dimensional plots, the color is written with each piece of postscript, so keep a copy of it
     if (ThreeDim) {
         last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
         if (last_colstr == NULL) return;
@@ -101,9 +106,11 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
     else lw_scale = x->current->settings.LineWidth;
     lw = EPS_DEFAULT_LINEWIDTH * lw_scale;
 
+    // The line type is the one requested, or solid
     if (with_data->USElinetype) lt = with_data->linetype;
     else lt = 1;
 
+    // In two dimensions, write the line width and type now
     if (!ThreeDim) {
         if (eps_core_isVisible(x)) eps_core_SetLinewidth(x, lw, lt, 0.0);
     }
@@ -129,6 +136,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                         sin((direction + M_PI) + EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on other side
         y5 = y1 - EPS_ARROW_HEADSIZE * lw_scale * cos((direction + M_PI) + EPS_ARROW_ANGLE / 2);
 
+        // The point where the back of the arrowhead crosses the stalk
         x4 = x1 -
                 EPS_ARROW_HEADSIZE * lw_scale * sin(direction + M_PI) * (1.0 - EPS_ARROW_CONSTRICT) *
                         cos(EPS_ARROW_ANGLE / 2); // Point where back of arrowhead crosses stalk
@@ -136,6 +144,7 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                 EPS_ARROW_HEADSIZE * lw_scale * cos(direction + M_PI) * (1.0 - EPS_ARROW_CONSTRICT) *
                         cos(EPS_ARROW_ANGLE / 2);
 
+        // Draw the arrowhead as a filled quadrilateral, in two or three dimensions
         if (eps_core_isVisible(x)) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -164,12 +173,14 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
                         sin(direction + EPS_ARROW_ANGLE / 2); // Pointy back of arrowhead on other side
         y5 = y2 - EPS_ARROW_HEADSIZE * lw_scale * cos(direction + EPS_ARROW_ANGLE / 2);
 
+        // The point where the back of the arrowhead crosses the stalk
         x4 = x2 -
                 EPS_ARROW_HEADSIZE * lw_scale * sin(direction) * (1.0 - EPS_ARROW_CONSTRICT) *
                         cos(EPS_ARROW_ANGLE / 2); // Point where back of arrowhead crosses stalk
         y4 = y2 -
                 EPS_ARROW_HEADSIZE * lw_scale * cos(direction) * (1.0 - EPS_ARROW_CONSTRICT) * cos(EPS_ARROW_ANGLE / 2);
 
+        // Draw the arrowhead as a filled quadrilateral, in two or three dimensions
         if (eps_core_isVisible(x)) {
             ppl_snprintfTrunc(
                     msg, sizeof(msg),
@@ -189,12 +200,14 @@ void eps_primitive_arrow(EPSComm *x, const int ArrowType, double x1, double y1, 
 
     // Draw stalk of arrow
     if (eps_core_isVisible(x)) {
+        // In two dimensions, draw a single line; in three, draw it in short pieces, so that each can be depth-sorted
         if (!ThreeDim) {
             fprintf(x->epsbuffer, "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nstroke\n", xstart, ystart, xend, yend);
         } else {
             int i;
             const int Nsteps = 100;
             double path = 0.0, element = hypot(xend - xstart, yend - ystart) / Nsteps;
+            // Draw each piece of the stalk
             for (i = 0; i < Nsteps; i++) {
                 ppl_snprintfTrunc(msg, sizeof(msg), "newpath\n%.2f %.2f moveto\n%.2f %.2f lineto\nstroke\n",
                                   xstart + (xend - xstart) / Nsteps * i, ystart + (yend - ystart) / Nsteps * i,

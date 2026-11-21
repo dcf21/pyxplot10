@@ -19,7 +19,10 @@
 
 // ----------------------------------------------------------------------------
 
-// Functions for manupulating linked lists
+// Pyxplot's dictionary type: a list of (key, value) pairs, kept sorted by key, with a binary tree of key hashes for
+// fast lookup. Dictionaries hold Pyxplot's variable namespaces, the members of modules and class instances, and
+// user-level dict objects, and are used for many internal tables. Items may be allocated with malloc() or in a
+// temporary memory context from memAlloc.c.
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -77,6 +80,7 @@ int ppl_dictFree(dict *in) {
     dictItem *ptr, *ptrnext;
     if ((in == NULL) || (!in->useMalloc)) return 0;
     ptr = in->first;
+    // Free each item in turn, with its key and data
     while (ptr != NULL) {
         ptrnext = ptr->next;
         free(ptr->key);
@@ -101,6 +105,7 @@ int ppl_dictHash(const char *str, const int strLen) {
     unsigned int hash = 5381;
     int c, i = 0;
     if (strLen < 0)
+        // djb2: hash = hash * 33 + c, for each character in turn
         while ((c = *str++)) hash = ((hash << 5) + hash) + c;
     else
         while ((i++ < strLen) && ((c = *str++))) hash = ((hash << 5) + hash) + c;
@@ -128,10 +133,15 @@ static void *dictAlloc(const dict *in, const int size) {
 static void ppl_dictHashAdd(dict *in, const char *str, const int hash, dictItem *item) {
     dictHash **ptr = &in->hashTree;
 
+    // Descend the tree to the place where this hash belongs; larger hashes are stored down the prev branch, and smaller
+    // ones down the next branch
     while ((*ptr) != NULL) {
         if ((*ptr)->hash < hash) ptr = &((*ptr)->prev);
         else if ((*ptr)->hash > hash) ptr = &((*ptr)->next);
+        // An entry with this hash already exists
         else {
+            // If it is for the same key, point it at the new item; otherwise this is a genuine hash clash, and the new
+            // key is left out of the tree
             if (strcmp((*ptr)->item->key, str) == 0) {
                 (*ptr)->item = item;
                 return;
@@ -161,12 +171,14 @@ static void ppl_dictHashAdd(dict *in, const char *str, const int hash, dictItem 
 static dictItem *ppl_dictHashLookup(dict *in, const char *str, int slen, const int hash, int *clash) {
     dictHash **ptr = &in->hashTree;
 
+    // Descend the tree towards the entry with this hash
     if (str == NULL) return NULL;
     if (slen <= 0) slen = strlen(str);
     *clash = 0;
     while ((*ptr) != NULL) {
         if ((*ptr)->hash < hash) ptr = &((*ptr)->prev);
         else if ((*ptr)->hash > hash) ptr = &((*ptr)->next);
+        // An entry with this hash: either it is the key we want, or a different key with the same hash
         else {
             if (strncmp((*ptr)->item->key, str, slen) == 0) return (*ptr)->item; // Found it
             *clash = 1;
@@ -184,19 +196,23 @@ static dictItem *ppl_dictHashLookup(dict *in, const char *str, int slen, const i
 //! \return The dictionary item which the removed hash entry pointed to, or NULL if none was found
 
 static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, int *clash) {
+    // ptr points to the link in the tree which we are currently examining
     dictHash **ptr = &in->hashTree;
 
+    // Descend the tree to find the entry for this key
     if (str == NULL) return NULL;
     *clash = 0;
     while ((*ptr) != NULL) {
         if ((*ptr)->hash < hash) ptr = &((*ptr)->prev);
         else if ((*ptr)->hash > hash) ptr = &((*ptr)->next);
+        // An entry with this hash: check whether it is the key we want
         else {
             if (strcmp((*ptr)->item->key, str) == 0) // Found it
             {
                 dictHash *old = *ptr;
                 dictHash **near = ptr, *nearEntry;
                 dictItem *out = (*ptr)->item;
+                // An entry with no prev branch is replaced by its next branch
                 if (old->prev == NULL) {
                     *ptr = old->next;
                     if (in->useMalloc) {
@@ -205,6 +221,7 @@ static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, i
                     }
                     return out;
                 }
+                // An entry with no next branch is replaced by its prev branch
                 if (old->next == NULL) {
                     *ptr = old->prev;
                     if (in->useMalloc) {
@@ -213,6 +230,8 @@ static dictItem *ppl_dictHashRemove(dict *in, const char *str, const int hash, i
                     }
                     return out;
                 }
+                // An entry with two branches is replaced by the nearest entry in one of its subtrees, which is detached
+                // from the subtree. Which side to take is chosen from the hash, to keep the tree balanced on average.
                 if (hash & 1) {
                     while ((*near)->prev != NULL) near = &((*near)->prev);
                     nearEntry = *near;
@@ -254,11 +273,15 @@ int ppl_dictLen(const dict *in) {
 //! \return Zero on success, or one if memory allocation failed
 
 int ppl_dictAppend(dict *in, const char *key, void *item) {
+    // ptr scans through the list; prev is the item before it; cmp records the comparison of keys
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
     int cmp = -1, hash;
 
+    // Find the position in the alphabetically-sorted list where the key belongs, or an existing item with this key.
+    // Keys are sorted case-insensitively, with an exact comparison to find matching keys.
     if (key == NULL) return 1;
     ptr = in->first;
+    // Walk along the list until we reach a key which sorts after the new one, or which matches it
     while (ptr != NULL) {
         if (((cmp = ppl_strCmpNoCase(ptr->key, key)) > 0) || ((cmp = strcmp(ptr->key, key)) == 0)) break;
         prev = ptr;
@@ -266,6 +289,7 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
     }
     if (cmp == 0) // Overwrite an existing entry in dictionary
     {
+        // Free the old data, unless it is in a memory context which will be freed as a whole
         if (in->useMalloc) {
             free(ptr->data);
             ptr->data = NULL;
@@ -277,7 +301,9 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
         ptrnew->prev = prev;
         ptrnew->next = ptr;
         ptrnew->key = (char *) dictAlloc(in, (strlen(key) + 1));
+        // Allocating the key failed: free the new item and give up
         if (ptrnew->key == NULL) {
+            // Memory from a memory context cannot be freed individually
             if (in->useMalloc) {
                 free(ptrnew);
                 ptrnew = NULL;
@@ -292,6 +318,7 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
         else ptr->prev = ptrnew;
         in->length++;
 
+        // Add the new key to the tree of hashes
         hash = ppl_dictHash(key, -1);
         ppl_dictHashAdd(in, key, hash, ptrnew);
     }
@@ -306,16 +333,21 @@ int ppl_dictAppend(dict *in, const char *key, void *item) {
 //! \return Zero on success, or one if memory allocation failed
 
 int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int size) {
+    // ptr scans through the list; prev is the item before it; cpy is the copy of the data; cmp records the comparison
+    // of keys
     dictItem *ptr = NULL, *ptrnew = NULL, *prev = NULL;
     void *cpy;
     int cmp = -1, hash;
 
+    // Copy the data
     if (key == NULL) return 1;
     cpy = dictAlloc(in, size);
     if (cpy == NULL) return 1;
     memcpy(cpy, item, size);
 
+    // Find the position in the alphabetically-sorted list where the key belongs, or an existing item with this key
     ptr = in->first;
+    // Walk along the list until we reach a key which sorts after the new one, or which matches it
     while (ptr != NULL) {
         if (((cmp = ppl_strCmpNoCase(ptr->key, key)) > 0) || ((cmp = strcmp(ptr->key, key)) == 0)) break;
         prev = ptr;
@@ -323,6 +355,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
     }
     if (cmp == 0) // Overwrite an existing entry in dictionary
     {
+        // Free the old data, unless it is in a memory context which will be freed as a whole
         if (in->useMalloc) {
             free(ptr->data);
             ptr->data = NULL;
@@ -331,7 +364,9 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         ptrnew = ptr;
     } else {
         ptrnew = (dictItem *) dictAlloc(in, sizeof(dictItem));
+        // Allocating the new item failed: free the copy of the data and give up
         if (ptrnew == NULL) {
+            // Memory from a memory context cannot be freed individually
             if (in->useMalloc) {
                 free(cpy);
                 cpy = NULL;
@@ -341,7 +376,9 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         ptrnew->prev = prev;
         ptrnew->next = ptr;
         ptrnew->key = (char *) dictAlloc(in, (strlen(key) + 1));
+        // Allocating the key failed: free the copy of the data and the new item, and give up
         if (ptrnew->key == NULL) {
+            // Memory from a memory context cannot be freed individually
             if (in->useMalloc) {
                 free(cpy);
                 cpy = NULL;
@@ -359,6 +396,7 @@ int ppl_dictAppendCpy(dict *in, const char *key, const void *item, const int siz
         else ptr->prev = ptrnew;
         in->length++;
 
+        // Add the new key to the tree of hashes
         hash = ppl_dictHash(key, -1);
         ppl_dictHashAdd(in, key, hash, ptrnew);
     }
@@ -387,11 +425,13 @@ void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
     int clash;
     dictItem *ptr;
 
+    // Nothing can be found in a missing dictionary, or under a missing key
     if (key == NULL) return NULL;
     if (in == NULL) { return NULL; }
 
     // Check hash table
     ptr = ppl_dictHashLookup(in, key, -1, hash, &clash);
+    // Without a clash, the hash tree gives the definitive answer
     if (!clash) {
         if (ptr == NULL) return NULL;
         return ptr->data;
@@ -399,6 +439,7 @@ void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
 
     // Hash table clash; need to exhaustively search dictionary
     ptr = in->first;
+    // The list is sorted, so the search can stop once it passes the place where the key would be
     while (ptr != NULL) {
         if (strcmp(ptr->key, key) == 0) return ptr->data;
         else if (ppl_strCmpNoCase(ptr->key, key) > 0) break;
@@ -418,15 +459,18 @@ void *ppl_dictLookupHash(dict *in, const char *key, const int hash) {
 //! \param [out] ptrout - Set to the matching dictionary item, or NULL if none was found
 
 void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int SubsMaxLen, dictItem **ptrout) {
+    // The names of functions which may be followed by the name of a dummy variable, e.g. int_dx
     int hash, clash, i, k, keylen;
     char *magicFns[] = {"diff_d", "int_d", NULL};
     dictItem *ptr;
 
+    // Nothing can be found under a missing key, or in a missing dictionary
     if (key == NULL) {
         *ptrout = NULL;
         return;
     }
     SubsString[0] = '\0';
+    // A missing dictionary contains nothing
     if (in == NULL) {
         *ptrout = NULL;
         return;
@@ -437,14 +481,18 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
     keylen = k;
     hash = ppl_dictHash(key, keylen);
     ptr = ppl_dictHashLookup(in, key, keylen, hash, &clash);
+    // The hash tree found the name
     if (ptr != NULL) {
         *ptrout = ptr;
         return;
     }
+    // After a hash clash, search the list for a key which matches the whole of the name
     if (clash) {
         ptr = in->first;
+        // Compare each key with the start of <key>; the key must end where the name does
         while (ptr != NULL) {
             for (k = 0; (((unsigned char) ptr->key[k] > ' ') && (ptr->key[k] == key[k])); k++);
+            // A match: the key has ended, and so has the alphanumeric name in <key>
             if ((ptr->key[k] == '\0') && (!(isalnum(key[k]) || (key[k] == '_')))) {
                 *ptrout = ptr;
                 return;
@@ -468,8 +516,10 @@ void ppl_dictLookupWithWildcard(dict *in, char *key, char *SubsString, const int
             if (l == 0) continue; // Dummy variable was too short
             SubsString[l] = '\0';
             ptr = in->first;
+            // Look for the function itself, e.g. int_d, in the dictionary
             while (ptr != NULL) {
                 for (k = 0; (((unsigned char) ptr->key[k] > ' ') && (ptr->key[k] == magicFns[i][k])); k++);
+                // A key which is exactly the function's name
                 if ((magicFns[i][k] == '\0') && (ptr->key[k] == '\0')) {
                     *ptrout = ptr;
                     return;
@@ -501,6 +551,7 @@ int ppl_dictContains(dict *in, const char *key) {
 
     // Hash table clash; need to exhaustively search dictionary
     ptr = in->first;
+    // Search for an exact match
     while (ptr != NULL) {
         if (strcmp(ptr->key, key) == 0) return 1;
         ptr = ptr->next;
@@ -514,9 +565,11 @@ int ppl_dictContains(dict *in, const char *key) {
 //! \return Zero if an item was removed, or one if the key was not found
 
 int ppl_dictRemoveKey(dict *in, const char *key) {
+    // ptr is the item removed from the hash tree, or the item found by searching the list
     int hash, clash;
     dictItem *ptr;
 
+    // Nothing can be removed under a missing key, or from a missing dictionary
     if (key == NULL) return 1;
     if (in == NULL) return 1;
 
@@ -524,6 +577,7 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
     hash = ppl_dictHash(key, -1);
     ptr = ppl_dictHashRemove(in, key, hash, &clash);
     if ((ptr == NULL) && (!clash)) return 1; // Key not present
+    // The hash tree identified the item: unlink it from the list
     if (!clash) {
         _ppl_dictRemoveEngine(in, ptr);
         return 0;
@@ -531,7 +585,9 @@ int ppl_dictRemoveKey(dict *in, const char *key) {
 
     // Hash table clash; need to exhaustively search dictionary
     ptr = in->first;
+    // After a hash clash, search the sorted list for the key
     while (ptr != NULL) {
+        // Found it: unlink it from the list; or stop once we pass the place where it would be
         if (strcmp(ptr->key, key) == 0) {
             _ppl_dictRemoveEngine(in, ptr);
             return 0;
@@ -550,6 +606,7 @@ int ppl_dictRemove(dict *in, const void *item) {
     dictItem *ptr;
     if (in == NULL) return 1;
     ptr = in->first;
+    // Search for an item with this data pointer, and remove it by its key
     while (ptr != NULL) {
         if (ptr->data == item) { return ppl_dictRemoveKey(in, ptr->key); }
         ptr = ptr->next;
@@ -565,6 +622,7 @@ void _ppl_dictRemoveEngine(dict *in, dictItem *ptr) {
     if (in == NULL) return;
     if (ptr == NULL) return;
 
+    // Free the item's data and key, unless they are in a memory context which will be freed as a whole
     if (in->useMalloc) {
         free(ptr->data);
         ptr->data = NULL;
@@ -576,12 +634,14 @@ void _ppl_dictRemoveEngine(dict *in, dictItem *ptr) {
     if (ptr->prev != NULL) ptr->prev->next = ptr->next; // We are the last item in the list, but not the first item
     if (in->last == ptr) in->last = ptr->prev;
     if (in->first == ptr) in->first = ptr->next;
+    // Free the item itself
     if (in->useMalloc) {
         free(ptr);
         ptr = NULL;
     }
     in->length--;
 
+    // The item has been removed
     return;
 }
 

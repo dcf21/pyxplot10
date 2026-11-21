@@ -19,6 +19,12 @@
 
 // ----------------------------------------------------------------------------
 
+// Draws datasets on graphs in each of Pyxplot's plot styles (points, lines, error bars, boxes, steps, arrows, filled
+// regions, surfaces and so on), and the icons which represent them in legends. Also assigns default colors, line types
+// and point types to successive datasets; says how many columns of data each style needs; and, while data are read,
+// widens the ranges of the axes to include the data, checking that the data have consistent units. Colormaps and
+// contourmaps are drawn by eps_plot_colormap.c and eps_plot_contourmap.c.
+
 #define _PPL_EPS_PLOT_STYLES_C 1
 
 #include <stdlib.h>
@@ -67,7 +73,9 @@ void eps_withwords_default(const EPSComm *x, withWords *output, const pplset_gra
                            const int Ccounter, const int LTcounter, const int PTcounter, const unsigned char color) {
     int i, j;
 
+    // Start from blank style modifiers
     ppl_withWordsZero(x->c, output);
+    // In monochrome, plot everything in black; in color, use the next color of the palette
     if (!color) {
         output->color = COLOR_BLACK;
         output->USEcolor = 1;
@@ -76,6 +84,7 @@ void eps_withwords_default(const EPSComm *x, withWords *output, const pplset_gra
             if (x->c->set->palette_current[j] == -1) break; // j now contains length of palette
         i = Ccounter % j; // i is now the palette color number to use
         while (i < 0) i += j;
+        // A named color, or one given by its components
         if (x->c->set->palette_current[i] > 0) {
             output->color = x->c->set->palette_current[i];
             output->USEcolor = 1;
@@ -120,8 +129,11 @@ void eps_withwords_default_counterinc(const EPSComm *x, int *Ccounter, int *LTco
                                       const unsigned char color, const withWords *ww_final, const pplset_graph *sg) {
     const int style = ww_final->linespoints;
 
+    // Advance each counter which this dataset used, so that the next dataset gets the next color, line type or point
+    // type
     if (ww_final->AUTOcolor && (style != SW_STYLE_COLORMAP) && (style != SW_STYLE_CONTOURMAP)) { (*Ccounter)++; }
 
+    // Styles which draw lines use up a line type
     if (ww_final->AUTOlinetype &&
         ((style == SW_STYLE_ARROWS_HEAD) || (style == SW_STYLE_ARROWS_NOHEAD) || (style == SW_STYLE_ARROWS_TWOHEAD) ||
          (style == SW_STYLE_BOXES) || (style == SW_STYLE_FILLEDREGION) || (style == SW_STYLE_FSTEPS) ||
@@ -135,17 +147,20 @@ void eps_withwords_default_counterinc(const EPSComm *x, int *Ccounter, int *LTco
         (*LTcounter)++;
     }
 
+    // Styles which draw points use up a point type
     if (ww_final->AUTOpointtype &&
         ((style == SW_STYLE_LINESPOINTS) || (style == SW_STYLE_POINTS) || (style == SW_STYLE_STARS))) {
         (*PTcounter)++;
     }
 
+    // Contourmaps use up a color and line type for each contour
     if (style == SW_STYLE_CONTOURMAP) {
         const int Ncontours = (sg->ContoursListLen >= 0) ? sg->ContoursListLen : sg->ContoursN;
         if (ww_final->AUTOcolor) { (*Ccounter) += Ncontours; }
         if (ww_final->AUTOlinetype) { (*LTcounter) += Ncontours; }
     }
 
+    // Done
     return;
 }
 
@@ -156,6 +171,7 @@ void eps_withwords_default_counterinc(const EPSComm *x, int *Ccounter, int *LTco
 //! \return The number of columns of data required
 
 int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsigned char ThreeDim) {
+    // The number of columns depends on the style, and on whether the plot is three-dimensional
     if (style == SW_STYLE_POINTS) return 2 + (ThreeDim != 0);
     else if (style == SW_STYLE_LINES) return 2 + (ThreeDim != 0);
     else if (style == SW_STYLE_LINESPOINTS) return 2 + (ThreeDim != 0);
@@ -192,6 +208,7 @@ int eps_plot_styles_NDataColumns(pplerr_context *ec, const int style, const unsi
     else if (style == SW_STYLE_COLORMAP) return 3;
     else if (style == SW_STYLE_CONTOURMAP) return 3;
 
+    // Any other style is an internal error
     ppl_fatal(ec, __FILE__, __LINE__, "Unrecognised style type passed to eps_plot_styles_NDataColumns()");
     return -1;
 }
@@ -302,6 +319,7 @@ static void usageUpdateBoxFrom(const usageRange *r, pplset_axis *axis, const ppl
 static int usageUnitsCheck(EPSComm *x, const int id, const int xyz, const int xyzn, pplset_axis *axis,
                            const pplObj *value) {
     char msg[PPL_MSG_LENGTH];
+    // The data must have the same units as any range set for the axis
     if ((axis->HardUnitSet) && (!ppl_unitsDimEqual(&axis->HardUnit, value))) {
         ppl_snprintfTrunc(msg, sizeof(msg),
                           "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> as "
@@ -311,6 +329,7 @@ static int usageUnitsCheck(EPSComm *x, const int id, const int xyz, const int xy
         ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
         return 1;
     }
+    // The data must have the same units as other data plotted against the axis
     if ((axis->DataUnitSet) && (!ppl_unitsDimEqual(&axis->DataUnit, value))) {
         ppl_snprintfTrunc(msg, sizeof(msg),
                           "Axis %c%d on plot %d has data plotted against it with conflicting physical units of <%s> "
@@ -320,6 +339,7 @@ static int usageUnitsCheck(EPSComm *x, const int id, const int xyz, const int xy
         ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
         return 1;
     }
+    // The first data plotted set the units of the axis
     if (!axis->DataUnitSet) {
         axis->DataUnitSet = 1;
         axis->DataUnit = *value;
@@ -351,6 +371,7 @@ static void finishFactoringBoxes(usageRange *r, const int style, const pplset_gr
         return;
     usageReset(r);
     usageCheck(r, a2, lasty);
+    // Process the last box or step of the run
     if (ptBset) {
         // We have one final box/step to process
         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
@@ -604,6 +625,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
         if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
         if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
         if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
+        // The third column is plotted against the z axis
         if (ThreeDim) {
             if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
             if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
@@ -613,6 +635,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
         if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
         if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
         if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
+        // The third column is plotted against the z axis
         if (ThreeDim) {
             if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
             if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
@@ -622,6 +645,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
         if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[1])) return 1;
         if (usageUnitsCheck(x, id, xyz1, n1, a1, &data->firstEntries[2 + ThreeDim])) return 1;
         if (usageUnitsCheck(x, id, xyz2, n2, a2, &data->firstEntries[3 + ThreeDim])) return 1;
+        // The third column is plotted against the z axis
         if (ThreeDim) {
             if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[2])) return 1;
             if (usageUnitsCheck(x, id, xyz3, n3, a3, &data->firstEntries[5])) return 1;
@@ -644,10 +668,14 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
     Ncolumns = data->Ncolumns_real;
     blk = data->first;
     i = 0;
+    // Loop over the blocks of the data table
     while (blk != NULL) {
+        // For each data point, check whether it lies within the axes' fixed ranges, and if so, widen the automatic
+        // ranges to include it
         for (j = 0; j < blk->blockPosition; j++) {
             const double *row = blk->data_real + Ncolumns * j; // The data in this row
             usageReset(&r);
+            // Each style has its own columns to test; error bars and boxes extend either side of the point
             if (style == SW_STYLE_POINTS) {
                 usageCheck(&r, a1, row[0]);
                 usageCheck(&r, a2, row[1]);
@@ -983,6 +1011,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
                 usageUpdate(&r, a2, row[1]);
                 usageUpdate(&r, a1, row[2 + ThreeDim]);
                 usageUpdate(&r, a2, row[3 + ThreeDim]);
+                // The third column is plotted against the z axis
                 if (ThreeDim) {
                     usageUpdate(&r, a3, row[2]);
                     usageUpdate(&r, a3, row[5]);
@@ -1003,6 +1032,8 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
                        (style == SW_STYLE_HISTEPS)) {
                 // Boxes and steps need slightly more complicated logic to take into account finite width of boxes/steps
 
+                // Boxes and steps extend half way to the neighbouring points, so the range is updated one point behind,
+                // as each box's width becomes known
                 const unsigned char logaxis = (a1->LogFinal == SW_BOOL_TRUE);
                 if (blk->split[j]) { finishFactoringBoxes(&r, style, sg, a1, a2, ptBset, ptCset, ptBx, ptCx, lasty); }
                 usageCheck(&r, a2, row[1]); // y-coordinates are easy
@@ -1012,9 +1043,11 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
                 ptBset = ptCset;
                 ptCx = logaxis ? log(row[0]) : (row[0]);
                 ptCset = 1;
+                // Process the box or step centred on the previous point
                 if (ptBset) {
                     if (ptAset) // We are processing a box in the midst of many
                     {
+                        // Automatic box widths extend half way to the neighbouring points
                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
                             usageCheckUpdate(&r, a1,
                                              logaxis ? exp(((ptBx + (ptAx + ptCx) / 2) / 2 - (ptCx - ptAx) / 4))
@@ -1056,6 +1089,7 @@ int eps_plot_styles_UpdateUsage(EPSComm *x, dataTable *data, const int style, un
                         }
                     } else // The first box/step we work out the width of
                     {
+                        // Automatic box widths extend half way to the neighbouring point
                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
                             usageCheckUpdate(&r, a1,
                                              logaxis ? exp((ptBx - (ptCx - ptBx) / 2)) : ((ptBx - (ptCx - ptBx) / 2)));
@@ -1149,6 +1183,7 @@ typedef struct boxDrawer {
 
 static int boxColourUpdate(boxDrawer *bd) {
     EPSComm *x = bd->x;
+    // Keep a copy of the current color for the depth-sorting buffer, if it has changed
     if ((bd->last_colstr == NULL) || (strcmp(bd->last_colstr, x->CurrentColor) != 0)) {
         bd->last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
         if (bd->last_colstr == NULL) return 1;
@@ -1172,6 +1207,7 @@ static int makeStep(boxDrawer *bd, const double X0, const double Y0, const doubl
     double pA[3] = {(X0) - (WIDTH), (Y0), 0}, pB[3] = {(X0) + (WIDTH), (Y0), 0};
     if (!eps_core_isVisible(x)) return 0;
     if (boxColourUpdate(bd)) return 1;
+    // On logarithmic axes, box positions are worked out in logarithms
     if (bd->logaxis) {
         pA[0] = exp(pA[0]);
         pB[0] = exp(pB[0]);
@@ -1191,6 +1227,7 @@ static int makeStep(boxDrawer *bd, const double X0, const double Y0, const doubl
 //! \return Zero on success, or nonzero if memory ran out
 
 static int makeBox(boxDrawer *bd, const double X0, const double Y0, const double WIDTH) {
+    // Variables for drawing the box
     EPSComm *x = bd->x;
     canvas_plotdesc *pd = bd->pd;
     const graphProjection *g = &bd->proj;
@@ -1201,6 +1238,7 @@ static int makeBox(boxDrawer *bd, const double X0, const double Y0, const double
     double pB[3] = {(X0) - (WIDTH), (Y0), 0};
     double pC[3] = {(X0) + (WIDTH), (Y0), 0};
     double pD[3] = {(X0) + (WIDTH), g->sg->BoxFrom.real, 0};
+    // On logarithmic axes, box positions are worked out in logarithms
     if (bd->logaxis) {
         pA[0] = exp(pA[0]);
         pB[0] = exp(pB[0]);
@@ -1265,6 +1303,7 @@ static int finishRowOfBoxes(boxDrawer *bd, const int style, unsigned char *ptAse
                             unsigned char *ptCset, const double ptBx, const double ptCx, const double ptCy) {
     const pplset_graph *sg = bd->proj.sg;
     int status = 0;
+    // Process the last box or step of the run
     if (*ptBset) {
         // We have one final box/step to process
         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
@@ -1328,12 +1367,15 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     pplset_axis *a[3] = {a1, a2, a3};
     dataBlock *blk;
 
+    // Warn about datasets with no data, describing them by their filename or functions
     if ((data == NULL) || (data->Nrows < 1)) {
         char *output = msg;
         int i = 0;
         ppl_strAppendf(output, sizeof(msg), &i, "plotted item");
         i += strlen(output + i);
+        // Data from a file or from vectors, or from functions
         if (!pd->function) {
+            // The name of the data file, or the vectors
             if (pd->filename != NULL) {
                 ppl_strAppendChar(output, sizeof(msg), &i, ' ');
                 ppl_strEscapify(pd->filename, output + i, sizeof(msg) - i);
@@ -1357,11 +1399,13 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
         return 0; // No data present
     }
 
+    // The number of columns of numbers and of objects in each row
     Ncolumns = data->Ncolumns_real;
     Ncol_obj = data->Ncolumns_obj;
     if (eps_plot_WithWordsCheckUsingItemsDimLess(x->c, &pd->ww_final, data->firstEntries, Ncolumns, Ncol_obj, NULL))
         return 1;
 
+    // The size of the graph
     if (!ThreeDim) {
         scale_x = width;
         scale_y = height;
@@ -1375,6 +1419,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
     // If axes have value-turning points, loop over all monotonic regions of axis space
     for (xrn = 0; xrn <= a[xn]->AxisValueTurnings; xrn++)
         for (yrn = 0; yrn <= a[yn]->AxisValueTurnings; yrn++)
+            // Each monotonic section of the z axis
             for (zrn = 0; zrn <= (ThreeDim ? a[zn]->AxisValueTurnings : 0); zrn++) {
                 blk = data->first;
 
@@ -1384,7 +1429,9 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                        scale_y, scale_z);
                     last_colstr = NULL;
 
+                    // Loop over the blocks of the data table
                     while (blk != NULL) {
+                        // Draw a line through each data point, breaking it where the data are split
                         for (j = 0; j < blk->blockPosition; j++) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
@@ -1392,7 +1439,9 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             if (blk->split[j]) { LineDraw_PenUp(x, ld); }
+                            // Draw the next segment, unless it is invisible
                             if (eps_core_isVisible(x)) {
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -1409,13 +1458,17 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     LineDraw_PenUp(x, ld);
                 }
 
+                // Points, dots and stars
                 if ((style == SW_STYLE_POINTS) || (style == SW_STYLE_LINESPOINTS) || (style == SW_STYLE_STARS) ||
                     (style == SW_STYLE_DOTS)) // POINTS, DOTS, STARS
                 {
                     last_colstr = NULL;
 
+                    // Start from the first block of the data table
                     blk = data->first;
+                    // Loop over the blocks of the data table
                     while (blk != NULL) {
+                        // Draw each data point
                         for (j = 0; j < blk->blockPosition; j++) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             double final_pointsize = 0.0;
@@ -1435,12 +1488,15 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                             if (style == SW_STYLE_DOTS) final_pointsize *= 0.05; // Dots are 1/20th size of points
                             else if (style == SW_STYLE_STARS) final_pointsize *= 12.0; // Stars are BIG
                             eps_core_SetColor(x, &pd->ww_final, 0);
+                            // Draw the point, unless it is invisible
                             if (eps_core_isVisible(x)) {
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
                                     strcpy(last_colstr, x->CurrentColor);
                                 }
+                                // Points and dots use the point symbols; stars have their own symbols
                                 if (style != SW_STYLE_STARS) {
                                     pt = (style == SW_STYLE_DOTS)
                                             ? 16
@@ -1469,6 +1525,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 char *text = NULL;
                                 const double xsp = (x->current->settings.TextVAlign == SW_VALIGN_CENT) ? 1.7 : 1.13;
                                 const double ysp = (x->current->settings.TextHAlign == SW_HALIGN_CENT) ? 1.7 : 1.13;
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -1491,6 +1548,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     }
                 }
 
+                // Error bars and error ranges
                 if ((style == SW_STYLE_XERRORBARS) || (style == SW_STYLE_YERRORBARS) ||
                     (style == SW_STYLE_ZERRORBARS) || (style == SW_STYLE_XYERRORBARS) ||
                     (style == SW_STYLE_YZERRORBARS) || (style == SW_STYLE_XZERRORBARS) ||
@@ -1504,14 +1562,18 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     double b, ps, min[3], max[3];
                     int NDirections = 0;
 
+                    // The size of the bars at the ends of the error bars, and of the points
                     b = 0.0005 * sg->bar;
                     ps = pd->ww_final.pointsize * EPS_DEFAULT_PS / M_TO_PS;
 
+                    // Draw the error bars with line segments
                     ld = LineDraw_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x,
                                        scale_y, scale_z);
                     last_colstr = NULL;
 
+                    // Loop over the blocks of the data table
                     while (blk != NULL) {
+                        // Draw each data point's error bars
                         for (j = 0; j < blk->blockPosition; j++) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
@@ -1519,8 +1581,11 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             LineDraw_PenUp(x, ld);
+                            // Draw the error bars, unless they are invisible
                             if (eps_core_isVisible(x)) {
                                 for (i = 0; i < 3; i++) { min[i] = max[i] = row[i]; }
+                                // Work out the extent of the error bars in each direction, which are given either as
+                                // errors or as ranges
                                 if (style == SW_STYLE_XERRORBARS) {
                                     NDirections = 1;
                                     ac[0] = 1;
@@ -1613,26 +1678,32 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     max[2] = row[8];
                                 }
 
+                                // On logarithmic axes, error bars may not extend to zero or below
                                 if (a[0]->LogFinal == SW_BOOL_TRUE) {
                                     if (min[0] < DBL_MIN) min[0] = DBL_MIN;
                                     if (max[0] < DBL_MIN) max[0] = DBL_MIN;
                                 }
+                                // On logarithmic axes, error bars may not extend to zero or below
                                 if (a[1]->LogFinal == SW_BOOL_TRUE) {
                                     if (min[1] < DBL_MIN) min[1] = DBL_MIN;
                                     if (max[1] < DBL_MIN) max[1] = DBL_MIN;
                                 }
+                                // On logarithmic axes, error bars may not extend to zero or below
                                 if (a[2]->LogFinal == SW_BOOL_TRUE) {
                                     if (min[2] < DBL_MIN) min[2] = DBL_MIN;
                                     if (max[2] < DBL_MIN) max[2] = DBL_MIN;
                                 }
 
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
                                     strcpy(last_colstr, x->CurrentColor);
                                 }
 
+                                // Draw an error bar in each direction which has one
                                 for (i = 0; i < 3; i++)
+                                    // Draw the error bar, with bars across its ends
                                     if (ac[i]) {
                                         LineDraw_Point(x, ld, (i == xn) ? (min[xn]) : (row[xn]),
                                                        (i == yn) ? (min[yn]) : (row[yn]),
@@ -1683,6 +1754,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                             // label point if instructed to do so
                             if ((blk->text[j] != NULL) && (blk->text[j][0] != '\0')) {
                                 char *text = NULL;
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -1692,6 +1764,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                      row[xn], row[yn], ThreeDim ? row[zn] : 0.0, a[xn], a[yn], a[zn],
                                                      xrn, yrn, zrn, sg, origin_x, origin_y, scale_x, scale_y, scale_z,
                                                      0);
+                                // Labels of points off the edge of the graph are skipped
                                 if (!gsl_finite(xpos)) {
                                     x->LaTeXpageno++;
                                     continue;
@@ -1713,6 +1786,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                        scale_y, scale_z);
                     last_colstr = NULL;
 
+                    // Impulses run from the value set with "set boxfrom", which must have the same units as the data
                     if (a[yn]->DataUnitSet && (!ppl_unitsDimEqual(&sg->BoxFrom, &a[yn]->DataUnit))) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -1721,7 +1795,9 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 ppl_printUnit(x->c, &sg->BoxFrom, NULL, NULL, 1, 1, 0));
                         ppl_error(&x->c->errcontext, ERR_GENERIC, -1, -1, msg);
                     } else {
+                        // Loop over the blocks of the data table
                         while (blk != NULL) {
+                            // Draw a line from the box origin to each data point
                             for (j = 0; j < blk->blockPosition; j++) {
                                 const double *row = blk->data_real + Ncolumns * j; // The data in this row
                                 // Work out style information for next point
@@ -1729,9 +1805,11 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                                  &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                                 eps_core_SetColor(x, &pd->ww_final, 0);
                                 LineDraw_PenUp(x, ld);
+                                // Draw the impulse, unless it is invisible
                                 if (eps_core_isVisible(x)) {
                                     double boxfrom = sg->BoxFrom.real;
                                     if ((a[yn]->LogFinal == SW_BOOL_TRUE) && (boxfrom < DBL_MIN)) boxfrom = DBL_MIN;
+                                    // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                     if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                         last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                         if (last_colstr == NULL) break;
@@ -1749,6 +1827,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 // label point if instructed to do so
                                 if ((blk->text[j] != NULL) && (blk->text[j][0] != '\0')) {
                                     char *text = NULL;
+                                    // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                     if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                         last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                         if (last_colstr == NULL) break;
@@ -1758,6 +1837,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                          ThreeDim, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, a[xn],
                                                          a[yn], a[zn], xrn, yrn, zrn, sg, origin_x, origin_y, scale_x,
                                                          scale_y, scale_z, 0);
+                                    // Labels of points off the edge of the graph are skipped
                                     if (!gsl_finite(xpos)) {
                                         x->LaTeXpageno++;
                                         continue;
@@ -1783,11 +1863,15 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
                     lw = pd->ww_final.pointlinewidth;
 
+                    // Draw the limits with line segments
                     ld = LineDraw_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x,
                                        scale_y, scale_z);
                     last_colstr = NULL;
 
+                    // Loop over the blocks of the data table
                     while (blk != NULL) {
+                        // Draw a bar and an arrow at each data point, pointing up for lower limits and down for upper
+                        // limits
                         for (j = 0; j < blk->blockPosition; j++) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
@@ -1795,6 +1879,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             LineDraw_PenUp(x, ld);
+                            // Draw the limit, unless it is invisible
                             if (eps_core_isVisible(x)) {
                                 eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, &theta[0], &theta[1],
                                                      &theta[2], ThreeDim, row[xn], row[yn], ThreeDim ? row[zn] : 0.0,
@@ -1806,20 +1891,24 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     continue;
                                 }
 
+                                // The direction in which the arrow points is that of the vertical axis
                                 if (xn == 1) an = 0;
                                 else if (yn == 1) an = 1;
                                 else an = 2;
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
                                     strcpy(last_colstr, x->CurrentColor);
                                 }
 
+                                // The offsets of the ends of the bar, and of the tip of the arrow
                                 offset_barx = ps * sin(theta[an] + M_PI / 2);
                                 offset_bary = ps * cos(theta[an] + M_PI / 2);
                                 offset_arrx = sgn * 2 * ps * sin(theta[an]);
                                 offset_arry = sgn * 2 * ps * cos(theta[an]);
 
+                                // Draw the bar across the point
                                 LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, -offset_barx,
                                                -offset_bary, 0, 0, 0, 0, pd->ww_final.linetype, lw, last_colstr);
                                 LineDraw_Point(x, ld, row[xn], row[yn], ThreeDim ? row[zn] : 0.0, offset_barx,
@@ -1859,6 +1948,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                             // label point if instructed to do so
                             if ((blk->text[j] != NULL) && (blk->text[j][0] != '\0')) {
                                 char *text = NULL;
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -1875,6 +1965,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     }
                 }
 
+                // Boxes and steps
                 else if ((style == SW_STYLE_BOXES) || (style == SW_STYLE_WBOXES) || (style == SW_STYLE_STEPS) ||
                          (style == SW_STYLE_FSTEPS) ||
                          (style == SW_STYLE_HISTEPS)) // BOXES, WBOXES, STEPS, FSTEPS, HISTEPS
@@ -1882,10 +1973,13 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     double ptAx, ptBx = 0, ptBy = 0, ptCx = 0, ptCy = 0;
                     unsigned char ptAset = 0, ptBset = 0, ptCset = 0;
 
+                    // Draw the outlines of the boxes and steps with line segments
                     ld = LineDraw_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x,
                                        scale_y, scale_z);
                     last_colstr = NULL;
 
+                    // Boxes and steps run from the value set with "set boxfrom", which must have the same units as the
+                    // data, and their widths must have the units of the x axis
                     if (a[yn]->DataUnitSet && (!ppl_unitsDimEqual(&sg->BoxFrom, &a[yn]->DataUnit))) {
                         ppl_snprintfTrunc(
                                 msg, sizeof(msg),
@@ -1914,9 +2008,13 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 zn,
                                 logaxis,
                                 NULL};
+                        // Loop over the blocks of the data table
                         while (blk != NULL) {
+                            // Each box or step is drawn when the next point is read, since its width depends on its
+                            // neighbours
                             for (j = 0; j < blk->blockPosition; j++) {
                                 const double *row = blk->data_real + Ncolumns * j; // The data in this row
+                                // A split in the data ends the run of boxes or steps
                                 if (blk->split[j]) {
                                     if (finishRowOfBoxes(&bd, style, &ptAset, &ptBset, &ptCset, ptBx, ptCx, ptCy))
                                         break;
@@ -1929,9 +2027,11 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 ptCx = logaxis ? log(row[0]) : (row[0]);
                                 ptCy = row[1];
                                 ptCset = 1;
+                                // Draw the box or step centred on the previous point
                                 if (ptBset) {
                                     if (ptAset) // We are processing a box in the midst of many
                                     {
+                                        // Automatic box widths extend half way to the neighbouring points
                                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
                                             if (makeBox(&bd, (ptBx + (ptAx + ptCx) / 2) / 2, ptBy, (ptCx - ptAx) / 4))
                                                 break;
@@ -1947,6 +2047,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                         }
                                     } else // The first box/step we work out the width of
                                     {
+                                        // Automatic box widths extend half way to the neighbouring point
                                         if ((style == SW_STYLE_BOXES) && (sg->BoxWidth.real < 1e-200)) {
                                             if (makeBox(&bd, ptBx, ptBy, (ptCx - ptBx) / 2)) break;
                                         } else if (style == SW_STYLE_BOXES) {
@@ -1975,17 +2076,21 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     LineDraw_PenUp(x, ld);
                 }
 
+                // Arrows
                 else if ((style == SW_STYLE_ARROWS_HEAD) || (style == SW_STYLE_ARROWS_NOHEAD) ||
                          (style == SW_STYLE_ARROWS_TWOHEAD)) // ARROWS_HEAD, ARROWS_NOHEAD, ARROWS_TWOHEAD
                 {
                     double xpos2, ypos2, depth2, xap2, yap2, zap2, lw, theta;
                     lw = pd->ww_final.linewidth;
 
+                    // Draw the shafts of the arrows with line segments
                     ld = LineDraw_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y, scale_x,
                                        scale_y, scale_z);
                     last_colstr = NULL;
 
+                    // Loop over the blocks of the data table
                     while (blk != NULL) {
+                        // Draw an arrow for each data row, from its first point to its second
                         for (j = 0; j < blk->blockPosition; j++) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
@@ -1993,7 +2098,9 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                              &blk->data_obj[Ncol_obj * j], Ncolumns, Ncol_obj);
                             eps_core_SetColor(x, &pd->ww_final, 0);
                             LineDraw_PenUp(x, ld);
+                            // Draw the arrow, unless it is invisible
                             if (eps_core_isVisible(x)) {
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -2006,6 +2113,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                lw, last_colstr);
                                 LineDraw_PenUp(x, ld);
 
+                                // Find where the two ends of the arrow lie on the page
                                 eps_plot_GetPosition(&xpos, &ypos, &depth, &xap, &yap, &zap, NULL, NULL, NULL, ThreeDim,
                                                      row[xn], row[yn], ThreeDim ? row[zn] : 0.0, a[xn], a[yn], a[zn],
                                                      xrn, yrn, zrn, sg, origin_x, origin_y, scale_x, scale_y, scale_z,
@@ -2023,6 +2131,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                 theta = atan2(xpos2 - xpos, ypos2 - ypos);
                                 if (!gsl_finite(theta)) theta = 0.0;
 
+                                // Draw an arrowhead at the start, if it is within the graph
                                 if ((style == SW_STYLE_ARROWS_TWOHEAD) && (xap >= 0.0) && (xap <= 1.0) &&
                                     (yap >= 0.0) && (yap <= 1.0) && ((!ThreeDim) || ((zap >= 0.0) && (zap <= 1.0)))) {
                                     double x2 = xpos, y2 = ypos, x3, y3, x4, y4, x5, y5, theta_y = theta + M_PI;
@@ -2050,6 +2159,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     ThreeDimBuffer_writeps(x, depth, 1, lw, 0.0, 1.0, last_colstr, epsbuff);
                                 }
 
+                                // Draw an arrowhead at the end, if it is within the graph
                                 if (((style == SW_STYLE_ARROWS_TWOHEAD) || (style == SW_STYLE_ARROWS_HEAD)) &&
                                     (xap2 >= 0.0) && (xap2 <= 1.0) && (yap2 >= 0.0) && (yap2 <= 1.0) &&
                                     ((!ThreeDim) || ((zap2 >= 0.0) && (zap2 <= 1.0)))) {
@@ -2087,6 +2197,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                     x->LaTeXpageno++;
                                     continue;
                                 }
+                                // Keep a copy of the current color for the depth-sorting buffer, if it has changed
                                 if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                     last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                     if (last_colstr == NULL) break;
@@ -2109,7 +2220,9 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     fr = FilledRegion_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y,
                                            scale_x, scale_y, scale_z);
 
+                    // Loop over the blocks of the data table
                     while (blk != NULL) {
+                        // Add each data point to the outline of the region
                         for (j = 0; j < blk->blockPosition; j++) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
@@ -2131,11 +2244,13 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     FilledRegionHandle *fr;
                     int BlkNo = 0;
 
+                    // Outline the region along the tops of the error bars, then back along their bottoms
                     fr = FilledRegion_Init(x, a[xn], a[yn], a[zn], xrn, yrn, zrn, sg, ThreeDim, origin_x, origin_y,
                                            scale_x, scale_y, scale_z);
 
                     // First add all of the points along the tops of the error bars, moving from left to right
                     while (blk != NULL) {
+                        // Add each data point along the tops
                         for (j = 0; j < blk->blockPosition; j++) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             FilledRegion_Point(x, fr, row[xn], row[yn]);
@@ -2148,6 +2263,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                     for (BlkNo--; BlkNo >= 0; BlkNo--) {
                         blk = data->first;
                         for (j = 0; j < BlkNo; j++) blk = blk->next;
+                        // Add each data point along the bottoms, in reverse order
                         for (j = blk->blockPosition - 1; j >= 0; j--) {
                             const double *row = blk->data_real + Ncolumns * j; // The data in this row
                             // Work out style information for next point
@@ -2158,6 +2274,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                         }
                     }
 
+                    // Fill the region, and stroke its outline
                     eps_core_SetColor(x, &pd->ww_final, 1);
                     eps_core_SetFillColor(x, &pd->ww_final);
                     eps_core_SwitchTo_FillColor(x, 0);
@@ -2177,6 +2294,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                                                   ThreeDim, origin_x, origin_y, scale_x, scale_y, scale_z};
                     double x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4;
 
+                    // The data must form a complete grid
                     if (blk->blockPosition != ((long) XSize) * YSize) {
                         ppl_error(&x->c->errcontext, ERR_INTERNAL, -1, -1,
                                   "Surface plot yielded data grid of the wrong size.");
@@ -2184,19 +2302,25 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                         last_colstr = NULL;
                         for (fill = 1; fill >= 0; fill--)
                             for (Y = 0; Y < YSize - 1; Y++)
+                                // Draw each cell of the grid as a quadrilateral, filling all the cells first and then
+                                // stroking them
                                 for (X = 0; X < XSize - 1; X++) {
                                     j = X + Y * ((long) XSize);
                                     eps_plot_WithWordsFromUsingItems(
                                             x->c, &pd->ww_final, &blk->data_real[Ncolumns * j],
                                             &blk->data_obj[Ncol_obj * j], Ncolumns,
                                             Ncol_obj); // Work out style information for next point
+                                    // Use the fill color when filling, and the line color when stroking
                                     if (fill) {
                                         eps_core_SetFillColor(x, &pd->ww_final);
                                         eps_core_SwitchTo_FillColor(x, 0);
                                     } else {
                                         eps_core_SetColor(x, &pd->ww_final, 0);
                                     }
+                                    // Draw the cell, unless it is invisible
                                     if (eps_core_isVisible(x)) {
+                                        // Keep a copy of the current color for the depth-sorting buffer, if it has
+                                        // changed
                                         if ((last_colstr == NULL) || (strcmp(last_colstr, x->CurrentColor) != 0)) {
                                             last_colstr = (char *) ppl_memAlloc(strlen(x->CurrentColor) + 1);
                                             if (last_colstr == NULL) break;
@@ -2247,6 +2371,7 @@ int eps_plot_dataset(EPSComm *x, const dataTable *data, const int style, const u
                 // End looping over monotonic regions of axis space
             }
 
+    // Done
     return 0;
 }
 
@@ -2272,12 +2397,14 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
 
     if ((data == NULL) || (data->Nrows < 1)) return; // No data present
 
+    // Styles which draw lines are shown by a short line
     if ((style == SW_STYLE_LINES) || (style == SW_STYLE_LINESPOINTS) || (style == SW_STYLE_IMPULSES) ||
         (style == SW_STYLE_BOXES) || (style == SW_STYLE_WBOXES) || (style == SW_STYLE_STEPS) ||
         (style == SW_STYLE_FSTEPS) || (style == SW_STYLE_HISTEPS) || (style == SW_STYLE_SURFACE) ||
         (style == SW_STYLE_CONTOURMAP)) {
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.linewidth, pd->ww_final.linetype, 0);
+        // Draw the line, unless it is invisible
         if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", xpos - scale * 0.60 / 2, ypos,
                     xpos + scale * 0.60 / 2, ypos);
@@ -2286,9 +2413,11 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         }
     }
 
+    // Styles which draw points are shown by a point
     if ((style == SW_STYLE_POINTS) || (style == SW_STYLE_LINESPOINTS) || (style == SW_STYLE_STARS) ||
         (style == SW_STYLE_DOTS)) {
         double final_pointsize = pd->ww_final.pointsize;
+        // Dots are a twentieth of the size of points, but not too small to see
         if (style == SW_STYLE_DOTS) {
             final_pointsize *= 0.05;
             if (final_pointsize < 0.25) final_pointsize = 0.25;
@@ -2296,6 +2425,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         if (style == SW_STYLE_STARS) final_pointsize = 1;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, 1, 0);
+        // Draw the point, unless it is invisible
         if (eps_core_isVisible(x)) {
             int pt = (pd->ww_final.pointtype - 1) % N_POINTTYPES;
             if (style == SW_STYLE_DOTS) pt = 16; // Dots are always pt 17 (circle)
@@ -2308,12 +2438,14 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         }
     }
 
+    // Limits are shown by a bar and a small arrow
     else if ((style == SW_STYLE_LOWERLIMITS) || (style == SW_STYLE_UPPERLIMITS)) {
         double ps, sgn, eah_old = EPS_ARROW_HEADSIZE;
         ps = pd->ww_final.pointsize * EPS_DEFAULT_PS;
         sgn = ((style == SW_STYLE_UPPERLIMITS) ^ (a[yn]->MaxFinal > a[yn]->MinFinal)) ? 1.0 : -1.0;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, pd->ww_final.linetype, 0);
+        // Draw the bar and the arrow, unless they are invisible
         if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", xpos - ps, ypos - ps * sgn,
                     xpos + ps, ypos - ps * sgn);
@@ -2326,6 +2458,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         }
     }
 
+    // Arrows are shown by an arrow
     else if ((style == SW_STYLE_ARROWS_HEAD) || (style == SW_STYLE_ARROWS_NOHEAD) ||
              (style == SW_STYLE_ARROWS_TWOHEAD)) {
         int ArrowStyle;
@@ -2339,11 +2472,13 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
                                 &pd->ww_final);
     }
 
+    // Filled styles are shown by a filled square
     else if ((style == SW_STYLE_FILLEDREGION) || (style == SW_STYLE_YERRORSHADED) || (style == SW_STYLE_COLORMAP)) {
         double s = scale * 0.45 / 2;
         eps_core_SetColor(x, &pd->ww_final, 1);
         eps_core_SetFillColor(x, &pd->ww_final);
         eps_core_SwitchTo_FillColor(x, 1);
+        // Fill the square, unless it is invisible
         if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer,
                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath fill\n",
@@ -2355,6 +2490,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         }
         eps_core_SwitchFrom_FillColor(x, 1);
         eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.pointlinewidth, pd->ww_final.linetype, 0);
+        // Stroke the square, unless it is invisible
         if (eps_core_isVisible(x)) {
             fprintf(x->epsbuffer,
                     "newpath %.2f %.2f moveto %.2f %.2f lineto %.2f %.2f lineto %.2f %.2f lineto closepath stroke\n",
@@ -2366,6 +2502,7 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         }
     }
 
+    // Error bars are shown by a short line with bars at its ends
     else if ((style == SW_STYLE_XERRORBARS) || (style == SW_STYLE_YERRORBARS) || (style == SW_STYLE_ZERRORBARS) ||
              (style == SW_STYLE_XYERRORBARS) || (style == SW_STYLE_XZERRORBARS) || (style == SW_STYLE_XZERRORBARS) ||
              (style == SW_STYLE_XZERRORBARS) || (style == SW_STYLE_XERRORRANGE) || (style == SW_STYLE_YERRORRANGE) ||
@@ -2375,7 +2512,9 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         double b = 0.0005 * x->current->settings.bar * M_TO_PS;
         double ps = pd->ww_final.pointsize * EPS_DEFAULT_PS;
 
+        // Draw the error bar, unless it is invisible
         eps_core_SetColor(x, &pd->ww_final, 1);
+        // Draw the error bar, unless it is invisible
         if (eps_core_isVisible(x)) {
             eps_core_SetLinewidth(x, EPS_DEFAULT_LINEWIDTH * pd->ww_final.linewidth, pd->ww_final.linetype, 0);
             fprintf(x->epsbuffer, "newpath %.2f %.2f moveto %.2f %.2f lineto stroke\n", xpos - s, ypos, xpos + s, ypos);
@@ -2392,5 +2531,6 @@ void eps_plot_LegendIcon(EPSComm *x, const int i, canvas_plotdesc *pd, double xp
         }
     }
 
+    // Done
     return;
 }
